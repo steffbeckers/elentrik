@@ -9,4 +9,12 @@ export const NL: Readonly<Record<string, string>> = {
     "De beveiliging van {nominaal} A is te hoog voor een leiding van {doorsnede} mm². Maximaal {max} A.",
   "arei.doorsnede-beveiliging.onbekende-doorsnede":
     "Voor een leidingdoorsnede van {doorsnede} mm² is geen maximale beveiliging gekend. Controleer dit handmatig.",
+  "arei.kring.max-contactdozen.overschreden":
+    "Kring {kring} heeft {aantal} contactdozen. Maximaal {max} toegelaten.",
+  "arei.kring.min-doorsnede.contactdozen":
+    "Kring {kring} heeft contactdozen maar een leiding van {doorsnede} mm². Minimaal {min} mm² vereist.",
+  "arei.kring.min-doorsnede.verlichting":
+    "Kring {kring} heeft verlichting maar een leiding van {doorsnede} mm². Minimaal {min} mm² vereist.",
+  "arei.toestel.eigen-kring.gedeeld":
+    "Een {toestel} hoort op een eigen kring, maar kring {kring} voedt ook andere punten.",
 };

@@ -9,4 +9,12 @@ export const FR: Readonly<Record<string, string>> = {
     "La protection de {nominaal} A est trop élevée pour un câble de {doorsnede} mm². Maximum {max} A.",
   "arei.doorsnede-beveiliging.onbekende-doorsnede":
     "Aucune protection maximale n'est connue pour une section de {doorsnede} mm². Vérifiez-le manuellement.",
+  "arei.kring.max-contactdozen.overschreden":
+    "Le circuit {kring} compte {aantal} prises. Maximum admis : {max}.",
+  "arei.kring.min-doorsnede.contactdozen":
+    "Le circuit {kring} alimente des prises avec un câble de {doorsnede} mm². Minimum requis : {min} mm².",
+  "arei.kring.min-doorsnede.verlichting":
+    "Le circuit {kring} alimente de l'éclairage avec un câble de {doorsnede} mm². Minimum requis : {min} mm².",
+  "arei.toestel.eigen-kring.gedeeld":
+    "Un appareil de type {toestel} doit avoir son propre circuit, mais le circuit {kring} alimente aussi d'autres points.",
 };
