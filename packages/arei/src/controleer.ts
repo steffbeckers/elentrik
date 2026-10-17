@@ -22,7 +22,10 @@ export function controleer(doc: InstallatieDocument, regelset: Regelset): Bevind
   const bevindingen: Bevinding[] = [];
   for (const regel of regelset.regels) {
     for (const b of regel.check(analyse, doc)) {
-      const afgeweken = doc.afwijkingen.some((a) => a.regelId === b.regelId && b.nodeIds.includes(a.nodeId));
+      // Een afwijking geldt voor het onderwerp van de bevinding: nodeIds[0].
+      const onderwerp = b.nodeIds[0];
+      const afgeweken =
+        onderwerp !== undefined && doc.afwijkingen.some((a) => a.regelId === b.regelId && a.nodeId === onderwerp);
       bevindingen.push({ ...b, afgeweken });
     }
   }

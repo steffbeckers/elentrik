@@ -2,7 +2,7 @@ import type { Bevinding } from "../types";
 import { FR } from "./fr";
 import { NL } from "./nl";
 
-type Taal = "nl" | "fr";
+export type Taal = "nl" | "fr";
 type Catalogus = Readonly<Record<Taal, Readonly<Record<string, string>>>>;
 
 export const BERICHTEN: Catalogus = { nl: NL, fr: FR };

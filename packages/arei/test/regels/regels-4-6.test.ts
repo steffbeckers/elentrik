@@ -196,6 +196,26 @@ describe("regel 6: toestel-eigen-kring", () => {
     ]);
   });
 
+  test("een afwijking op de contactdoos van een .gedeeld-bevinding laat die bevinding gelden", () => {
+    const { doc, ids } = installatie()
+      .verdeelbord((b) =>
+        b.kring((k) => k.automaat(32).leiding(6).toestel("kookplaat").als("kookplaat").contactdozen(1).als("cd")),
+      )
+      .bouw();
+    const mutabel = kloon(doc);
+    const afwijking = (nodeId: string) => ({
+      regelId: "arei.toestel.eigen-kring",
+      nodeId,
+      motivatie: "bewuste keuze van de klant",
+      door: "Jan",
+      datum: "2026-10-17",
+    });
+    mutabel.afwijkingen.push(afwijking(ids["cd"]!));
+    expect(draai(regel, mutabel).map((b) => b.afgeweken)).toEqual([false]);
+    mutabel.afwijkingen.push(afwijking(ids["kookplaat"]!));
+    expect(draai(regel, mutabel).map((b) => b.afgeweken)).toEqual([true]);
+  });
+
   test("een wasmachine met een contactdoos geeft niets", () => {
     const { doc } = installatie()
       .verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).toestel("wasmachine").contactdozen(1)))

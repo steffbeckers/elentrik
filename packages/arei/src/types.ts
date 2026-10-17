@@ -6,6 +6,7 @@ export type Ernst = "fout" | "waarschuwing" | "info";
 export interface Bevinding {
   regelId: string;
   ernst: Ernst;
+  /** `nodeIds[0]` is het onderwerp van de bevinding; een afwijking geldt enkel voor dat onderwerp. */
   nodeIds: NodeId[];
   berichtSleutel: string;
   parameters: Record<string, string | number>;

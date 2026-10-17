@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { nieuwDocument, type Afwijking, type InstallatieDocument, type NodeId } from "@elentrik/model";
 import { analyseer } from "../src/analyse/index";
-import { controleer, formatteerBericht, type Bevinding, type Regel, type Regelset } from "../src/index";
+import { controleer, formatteerBericht, type Bevinding, type Regel, type Regelset, type Taal } from "../src/index";
 import { kloon } from "./hulp";
 
 vi.mock("../src/analyse/index", async (origineel) => {
@@ -66,7 +66,7 @@ describe("controleer", () => {
     ]);
   });
 
-  test("afgeweken is true bij zelfde regelId en nodeId, anders false", () => {
+  test("afgeweken is true bij zelfde regelId en nodeIds[0] (het onderwerp), anders false", () => {
     const doc = nieuwDocument();
     const a = "00000000-0000-7000-8000-00000000000a" as NodeId;
     const b = "00000000-0000-7000-8000-00000000000b" as NodeId;
@@ -77,6 +77,18 @@ describe("controleer", () => {
       [a, true],
       [b, false],
     ]);
+  });
+
+  test("een afwijking op een secundaire node markeert de bevinding niet als afgeweken", () => {
+    const doc = nieuwDocument();
+    const onderwerp = "00000000-0000-7000-8000-00000000000a" as NodeId;
+    const secundair = "00000000-0000-7000-8000-00000000000b" as NodeId;
+    doc.afwijkingen.push(afwijking("R1", secundair));
+    const regel = regelMet("R1", [bevinding("R1", "fout", [onderwerp, secundair])]);
+    expect(controleer(doc, regelsetVan(regel))[0]?.afgeweken).toBe(false);
+
+    doc.afwijkingen.push(afwijking("R1", onderwerp));
+    expect(controleer(doc, regelsetVan(regel))[0]?.afgeweken).toBe(true);
   });
 
   test("een afwijking voor een andere regel telt niet", () => {
@@ -141,6 +153,14 @@ describe("formatteerBericht", () => {
   test("een ontbrekende sleutel geeft de sleutel zelf terug", () => {
     expect(formatteerBericht(maak("niet.bestaand", {}), "nl", catalogus)).toBe("niet.bestaand");
     expect(formatteerBericht(maak("los", {}), "fr", catalogus)).toBe("los");
+  });
+
+  test("Taal is publiek geëxporteerd en dekt nl en fr", () => {
+    const talen: Taal[] = ["nl", "fr"];
+    expect(talen.map((t) => formatteerBericht(maak("test", { kring: "A", aantal: 1 }), t, catalogus))).toEqual([
+      "Kring A: 1",
+      "Circuit A: 1",
+    ]);
   });
 
   test("gebruikt standaard de BERICHTEN-catalogus", () => {
