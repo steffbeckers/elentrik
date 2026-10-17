@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "immer": "^11.1.21",
     "uuid": "^14.0.3",
     "zod": "^4.6.7"
   }

@@ -3,6 +3,16 @@ export { DocumentFout, type FoutCode } from "./fouten";
 export { nieuwId } from "./ids";
 export { nieuwDocument, parseDocument } from "./document";
 export {
+  pasPatchesToe,
+  verplaats,
+  verwijder,
+  voegToe,
+  wijzigEigenschappen,
+  type NodeInvoer,
+  type OperatieResultaat,
+  type Patch,
+} from "./operaties";
+export {
   BEVEILIGING_TYPES,
   PUNT_TYPES,
   TOEGELATEN_KINDEREN,
