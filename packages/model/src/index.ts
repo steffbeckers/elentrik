@@ -12,6 +12,13 @@ export {
   type OperatieResultaat,
   type Patch,
 } from "./operaties";
+export {
+  PLAATSBARE_TYPES,
+  plaats,
+  verwijderPlaatsing,
+  voegPaginaToe,
+  zetAchtergrond,
+} from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
 export {
   BEVEILIGING_TYPES,
