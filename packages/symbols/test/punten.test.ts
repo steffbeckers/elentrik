@@ -2,7 +2,7 @@ import type { Node, NodeVan } from "@elentrik/model";
 import { ToestelsoortSchema } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { KOLOM_BREEDTE_MM, tekenSymbool } from "../src/index";
-import { buitenVak, isGoedgevormd } from "./hulp";
+import { buitenVak, isGoedgevormd, raakt } from "./hulp";
 
 const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
 
@@ -99,6 +99,11 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(buitenVak(symbool)).toEqual([]);
     });
 
+    test("geleiders bereiken in en uit", () => {
+      expect(raakt(symbool, maat.in)).toBe(true);
+      expect(raakt(symbool, maat.uit)).toBe(true);
+    });
+
     test("is goedgevormde XML zonder NaN of undefined", () => {
       expect(isGoedgevormd(symbool)).toBe(true);
       expect(symbool.svg).not.toMatch(/NaN|undefined|Infinity/);
@@ -126,6 +131,7 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       const svg = svgVan({});
       expect(svg).toMatch(/<path d="M4 5 A3 3 0 0 0 10 5"/);
       expect(svg).toContain('<line x1="7" y1="0" x2="7" y2="8"');
+      expect(svg).toContain('<line x1="7" y1="8" x2="7" y2="10"');
     });
 
     test("randaarde, kinderbeveiliging en waterdicht verschijnen alleen als ze aan staan", () => {
@@ -154,7 +160,20 @@ describe("symbolen voor punten, leiding en onderbord", () => {
     test("is een cirkel met een kruis erin", () => {
       const svg = svgVan();
       expect(svg).toContain('<circle cx="7" cy="5" r="3"');
-      expect(svg.match(/<line /g)).toHaveLength(3);
+      expect(svg.match(/<line /g)).toHaveLength(4);
+    });
+
+    test("de geleider loopt rechtdoor van cirkel naar uit, en de versiering ligt rechts ervan", () => {
+      expect(svgVan()).toContain('<line x1="7" y1="8" x2="7" y2="10"');
+      expect(svgVan("tl")).toMatch(/<rect x="8\.2" y="8\.6" width="3\.8" height="0\.8"/);
+      const padGetallen = [...(svgVan("spot").match(/<path d="([^"]+)"/)?.[1] ?? "").matchAll(/-?[\d.]+/g)].map((m) =>
+        Number(m[0]),
+      );
+      const padX = padGetallen.filter((_, i) => i % 2 === 0);
+      expect(padX).toHaveLength(3);
+      expect(Math.min(...padX)).toBeGreaterThanOrEqual(9.5);
+      expect(Math.max(...padX)).toBeLessThanOrEqual(12);
+      expect(svgVan("led")).toMatch(/<text x="8" y="9\.8" font-size="1\.8" text-anchor="start"/);
     });
 
     test("standaard en zonder soort zijn gelijk", () => {
@@ -186,8 +205,9 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       tekenSymbool(schakelaar(soort, waterdicht)).svg;
     const hendels = (svg: string) => svg.match(/data-rol="hendel"/g)?.length ?? 0;
 
-    test("is een cirkel met r = 2", () => {
+    test("is een cirkel met r = 2 en een geleider naar uit", () => {
       expect(svgVan("enkel")).toContain('r="2"');
+      expect(svgVan("enkel")).toContain('<line x1="6" y1="8" x2="6" y2="10"');
     });
 
     test.each([

@@ -14,7 +14,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos aant
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="3.4" y="6.5" font-size="2" text-anchor="end" font-family="sans-serif" fill="currentColor" data-rol="aantal">3×</text>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="3.4" y="6.5" font-size="2" text-anchor="end" font-family="sans-serif" fill="currentColor" data-rol="aantal">3×</text>",
 }
 `;
 
@@ -32,7 +32,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos aant
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/><text x="3.4" y="6.5" font-size="2" text-anchor="end" font-family="sans-serif" fill="currentColor" data-rol="aantal">3×</text>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/><text x="3.4" y="6.5" font-size="2" text-anchor="end" font-family="sans-serif" fill="currentColor" data-rol="aantal">3×</text>",
 }
 `;
 
@@ -50,7 +50,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -68,7 +68,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
 }
 `;
 
@@ -86,7 +86,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/>",
 }
 `;
 
@@ -104,7 +104,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
 }
 `;
 
@@ -122,7 +122,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/>",
 }
 `;
 
@@ -140,7 +140,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
 }
 `;
 
@@ -158,7 +158,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/>",
 }
 `;
 
@@ -176,7 +176,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: contactdoos rand
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M4 5 A3 3 0 0 0 10 5" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="3.5" x2="10" y2="3.5" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="randaarde"/><line x1="5.4" y1="5.6" x2="6.2" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><line x1="8.6" y1="5.6" x2="7.8" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="kinderbeveiliging"/><path d="M12.8 0.4 L13.6 2 L12 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
 }
 `;
 
@@ -212,7 +212,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt aantal
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="3.4" y="5.8" font-size="2" text-anchor="end" font-family="sans-serif" fill="currentColor" data-rol="aantal">3×</text>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="3.4" y="5.8" font-size="2" text-anchor="end" font-family="sans-serif" fill="currentColor" data-rol="aantal">3×</text>",
 }
 `;
 
@@ -230,7 +230,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt led 1`
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="7" y="9.8" font-size="2" text-anchor="middle" font-family="sans-serif" fill="currentColor">LED</text>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="8" y="9.8" font-size="1.8" text-anchor="start" font-family="sans-serif" fill="currentColor">LED</text>",
 }
 `;
 
@@ -248,7 +248,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt noodve
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="0.8" stroke="currentColor" stroke-width="0.35" fill="currentColor"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="0.8" stroke="currentColor" stroke-width="0.35" fill="currentColor"/>",
 }
 `;
 
@@ -266,7 +266,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt spot 1
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M7 8.3 L8.2 9.8 L5.8 9.8 Z" stroke="currentColor" stroke-width="0.35" fill="none"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M10.75 8.3 L12 9.8 L9.5 9.8 Z" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -284,7 +284,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt standa
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -302,7 +302,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt tl 1`]
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><rect x="4.5" y="8.6" width="5" height="0.9" stroke="currentColor" stroke-width="0.35" fill="none"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/><rect x="8.2" y="8.6" width="3.8" height="0.8" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -320,7 +320,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt zonder
       "y": 10,
     },
   },
-  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/>",
+  "svg": "<line x1="7" y1="0" x2="7" y2="2" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="5" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="8" x2="7" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="2.88" x2="9.12" y2="7.12" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.88" y1="7.12" x2="9.12" y2="2.88" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -338,7 +338,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar dimme
       "y": 10,
     },
   },
-  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="7.6" y1="8.6" x2="10.6" y2="5.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/><line x1="10.6" y1="5.6" x2="9.6" y2="5.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/><line x1="10.6" y1="5.6" x2="10.6" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/>",
+  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="8" x2="6" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="7.6" y1="8.6" x2="10.6" y2="5.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/><line x1="10.6" y1="5.6" x2="9.6" y2="5.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/><line x1="10.6" y1="5.6" x2="10.6" y2="6.6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/>",
 }
 `;
 
@@ -356,7 +356,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar drukk
       "y": 10,
     },
   },
-  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="8.41" y1="2.59" x2="10.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="knop"/>",
+  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="8" x2="6" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="8.41" y1="2.59" x2="10.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="knop"/>",
 }
 `;
 
@@ -374,7 +374,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar dubbe
       "y": 10,
     },
   },
-  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="6.68" y1="4.12" x2="9.08" y2="1.72" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="8" x2="6" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="6.68" y1="4.12" x2="9.08" y2="1.72" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
 }
 `;
 
@@ -392,7 +392,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar enkel
       "y": 10,
     },
   },
-  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="8" x2="6" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
 }
 `;
 
@@ -410,7 +410,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar enkel
       "y": 10,
     },
   },
-  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><path d="M10.8 0.4 L11.6 2 L10 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
+  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="8" x2="6" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><path d="M10.8 0.4 L11.6 2 L10 2 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
 }
 `;
 
@@ -428,7 +428,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar kruis
       "y": 10,
     },
   },
-  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="4.59" x2="2.59" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="7.41" y1="7.41" x2="9.41" y2="9.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="7.41" x2="2.59" y2="9.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="8" x2="6" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="4.59" x2="2.59" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="7.41" y1="7.41" x2="9.41" y2="9.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="7.41" x2="2.59" y2="9.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
 }
 `;
 
@@ -446,7 +446,7 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar wisse
       "y": 10,
     },
   },
-  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="4.59" x2="2.59" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="6" y1="0" x2="6" y2="4" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="8" x2="6" y2="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="4.59" x2="9.41" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="4.59" x2="2.59" y2="2.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
 }
 `;
 

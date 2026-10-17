@@ -2,7 +2,7 @@ import { NodeSchema, TOEGELATEN_KINDEREN, ToestelsoortSchema } from "@elentrik/m
 import type { Node, NodeType } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { KOLOM_BREEDTE_MM, TOESTEL_AFKORTINGEN, tekenSymbool } from "../src/index";
-import { buitenVak, isGoedgevormd } from "./hulp";
+import { buitenVak, isGoedgevormd, raakt } from "./hulp";
 
 const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
 
@@ -52,6 +52,8 @@ describe("alle nodetypes", () => {
       expect(maat.in).toEqual({ x: maat.breedte / 2, y: 0 });
       expect(maat.uit).toEqual({ x: maat.breedte / 2, y: maat.hoogte });
       expect(buitenVak(symbool)).toEqual([]);
+      expect(raakt(symbool, maat.in)).toBe(true);
+      expect(raakt(symbool, maat.uit)).toBe(true);
       expect(isGoedgevormd(symbool)).toBe(true);
       expect(symbool.svg).not.toMatch(/NaN|undefined|Infinity/);
     });

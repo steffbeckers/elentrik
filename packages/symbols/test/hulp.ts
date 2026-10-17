@@ -114,3 +114,30 @@ export function buitenVak(symbool: Symbool): string[] {
   }
   return fouten;
 }
+
+const TOLERANTIE = 1e-9;
+
+/**
+ * `true` als een geleider van het symbool het punt bereikt: een `line`-eindpunt valt erop, of het
+ * ligt op de rand van een `rect` of op een `circle`. Zo controleren we dat een keten
+ * (`uit` van de ouder naar `in` van het kind) geen gat laat. Tekst en paden tellen niet mee.
+ */
+export function raakt(symbool: Symbool, punt: { x: number; y: number }): boolean {
+  const { x, y } = punt;
+  const gelijk = (a: number, b: number) => Math.abs(a - b) <= TOLERANTIE;
+  for (const [, element, tekst] of symbool.svg.matchAll(/<(line|circle|rect)\b([^>]*)>/g)) {
+    const a = attributen(tekst ?? "");
+    const n = (sleutel: string) => Number(a.get(sleutel) ?? NaN);
+    if (element === "line") {
+      if ((gelijk(n("x1"), x) && gelijk(n("y1"), y)) || (gelijk(n("x2"), x) && gelijk(n("y2"), y))) return true;
+    } else if (element === "circle") {
+      if (gelijk(Math.hypot(x - n("cx"), y - n("cy")), n("r"))) return true;
+    } else {
+      const [x0, y0, x1, y1] = [n("x"), n("y"), n("x") + n("width"), n("y") + n("height")];
+      const opLoodrecht = (gelijk(x, x0) || gelijk(x, x1)) && y >= y0 - TOLERANTIE && y <= y1 + TOLERANTIE;
+      const opWaterpas = (gelijk(y, y0) || gelijk(y, y1)) && x >= x0 - TOLERANTIE && x <= x1 + TOLERANTIE;
+      if (opLoodrecht || opWaterpas) return true;
+    }
+  }
+  return false;
+}

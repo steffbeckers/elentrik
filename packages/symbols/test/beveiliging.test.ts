@@ -1,7 +1,7 @@
 import type { Node, NodeVan } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { KOLOM_BREEDTE_MM, tekenSymbool } from "../src/index";
-import { buitenVak, isGoedgevormd } from "./hulp";
+import { buitenVak, isGoedgevormd, raakt } from "./hulp";
 
 const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
 
@@ -53,6 +53,11 @@ describe("symbolen voor voeding en beveiliging", () => {
 
     test("alle meetkunde ligt binnen het vak", () => {
       expect(buitenVak(symbool)).toEqual([]);
+    });
+
+    test("geleiders bereiken in en uit", () => {
+      expect(raakt(symbool, maat.in)).toBe(true);
+      expect(raakt(symbool, maat.uit)).toBe(true);
     });
 
     test("is goedgevormde XML zonder NaN of undefined", () => {

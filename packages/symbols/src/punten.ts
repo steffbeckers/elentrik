@@ -52,7 +52,7 @@ function aantalTekst(aantal: number, y: number): string {
 
 /**
  * Contactdoos: een halve cirkel (r = 3) met de open kant naar boven en een verticale lijn van het
- * aansluitpunt bovenaan tot onderaan de boog. 14 × 10 mm.
+ * aansluitpunt bovenaan door de boog tot `uit` onderaan. 14 × 10 mm.
  */
 export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
   const breedte = 14;
@@ -62,6 +62,7 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
   const boogY = 5;
   let svg =
     lijn(x, 0, x, boogY + r) +
+    lijn(x, boogY + r, x, hoogte) +
     pad(`M${getal(x - r)} ${getal(boogY)} A${getal(r)} ${getal(r)} 0 0 0 ${getal(x + r)} ${getal(boogY)}`);
   if (node.randaarde) svg += lijn(x - r, boogY - 1.5, x + r, boogY - 1.5, { data: { rol: "randaarde" } });
   if (node.kinderbeveiliging) {
@@ -75,9 +76,9 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
 }
 
 /**
- * Lichtpunt: een cirkel (r = 3) met een kruis erin. De soort voegt iets toe onder de cirkel
- * ("led": tekst, "tl": balk, "spot": driehoek) of in het midden ("noodverlichting": gevulde stip).
- * 14 × 10 mm.
+ * Lichtpunt: een cirkel (r = 3) met een kruis erin en een geleider naar `uit`. De soort voegt iets
+ * toe rechts van die geleider, onder de cirkel ("led": tekst, "tl": balk, "spot": driehoek) of in
+ * het midden ("noodverlichting": gevulde stip). 14 × 10 mm.
  */
 export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
   const breedte = 14;
@@ -89,17 +90,18 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
   let svg =
     lijn(x, 0, x, cy - r) +
     cirkel(x, cy, r) +
+    lijn(x, cy + r, x, hoogte) +
     lijn(x - k, cy - k, x + k, cy + k) +
     lijn(x - k, cy + k, x + k, cy - k);
   switch (node.soort) {
     case "led":
-      svg += tekst(x, 9.8, "LED", { anker: "middle", grootte: 2 });
+      svg += tekst(x + 1, 9.8, "LED", { anker: "start", grootte: 1.8 });
       break;
     case "tl":
-      svg += rechthoek(x - 2.5, 8.6, 5, 0.9);
+      svg += rechthoek(x + 1.2, 8.6, 3.8, 0.8);
       break;
     case "spot":
-      svg += pad(punten([x, 8.3], [x + 1.2, 9.8], [x - 1.2, 9.8]));
+      svg += pad(punten([x + 3.75, 8.3], [x + 5, 9.8], [x + 2.5, 9.8]));
       break;
     case "noodverlichting":
       svg += cirkel(x, cy, 0.8, { gevuld: true });
@@ -128,7 +130,7 @@ export function tekenSchakelaar(node: NodeVan<"schakelaar">): Symbool {
   const hendel = (x1: number, y1: number, x2: number, y2: number) => lijn(x1, y1, x2, y2, { data: { rol: "hendel" } });
   // Hendel vanaf de rand van de cirkel, onder 45 graden naar rechtsboven.
   const rechtsboven = hendel(x + d, cy - d, x + d + 2, cy - d - 2);
-  let svg = lijn(x, 0, x, cy - r) + cirkel(x, cy, r);
+  let svg = lijn(x, 0, x, cy - r) + cirkel(x, cy, r) + lijn(x, cy + r, x, hoogte);
   switch (node.soort) {
     case "enkel":
       svg += rechtsboven;
