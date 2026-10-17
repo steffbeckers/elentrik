@@ -203,6 +203,33 @@ describe("regel 6: toestel-eigen-kring", () => {
     expect(draai(regel, doc)).toEqual([]);
   });
 
+  test("een schakelaar voor een boiler telt niet als ander punt", () => {
+    const { doc } = installatie()
+      .verdeelbord((b) => b.kring((k) => k.automaat(20).leiding(2.5).schakelaar().toestel("boiler")))
+      .bouw();
+    expect(draai(regel, doc)).toEqual([]);
+  });
+
+  test("schakelaar, boiler en contactdoos: de schakelaar staat niet in nodeIds", () => {
+    const { doc, ids } = installatie()
+      .verdeelbord((b) =>
+        b.kring((k) =>
+          k
+            .automaat(20)
+            .leiding(2.5)
+            .schakelaar()
+            .toestel("boiler")
+            .als("boiler")
+            .contactdozen(1)
+            .als("cd"),
+        ),
+      )
+      .bouw();
+    const bevindingen = draai(regel, doc);
+    expect(bevindingen).toHaveLength(1);
+    expect(bevindingen[0]?.nodeIds).toEqual([ids["boiler"], ids["cd"]]);
+  });
+
   test("twee toestellen uit de lijst geven elk een bevinding met de andere punten", () => {
     const { doc, ids } = installatie()
       .verdeelbord((b) =>
