@@ -12,6 +12,7 @@ export {
   type OperatieResultaat,
   type Patch,
 } from "./operaties";
+export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
 export {
   BEVEILIGING_TYPES,
   PUNT_TYPES,

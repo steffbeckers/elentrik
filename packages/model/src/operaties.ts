@@ -26,7 +26,7 @@ function haal(doc: InstallatieDocument, id: NodeId): Node | undefined {
   return Object.hasOwn(doc.nodes, id) ? doc.nodes[id] : undefined;
 }
 
-function vereis(doc: InstallatieDocument, id: NodeId): Node {
+export function vereis(doc: InstallatieDocument, id: NodeId): Node {
   const node = haal(doc, id);
   if (!node) throw new DocumentFout("ONBEKENDE_NODE", { nodeId: id });
   return node;
@@ -48,20 +48,20 @@ function subboom(doc: InstallatieDocument, startId: NodeId): Set<NodeId> {
   return gezien;
 }
 
-function controleerType(ouder: Node, kind: { type: string }): void {
+export function controleerType(ouder: { type: Node["type"] }, kind: { type: string }): void {
   const toegelaten: readonly string[] = TOEGELATEN_KINDEREN[ouder.type];
   if (!toegelaten.includes(kind.type)) {
     throw new DocumentFout("NIET_TOEGELATEN_KIND", { ouder: ouder.type, kind: kind.type });
   }
 }
 
-function controleerIndex(index: number, lengte: number): void {
+export function controleerIndex(index: number, lengte: number): void {
   if (!Number.isInteger(index) || index < 0 || index > lengte) {
     throw new DocumentFout("ONGELDIGE_INDEX", { index, lengte });
   }
 }
 
-function resultaat<T extends object>(
+export function resultaat<T extends object>(
   doc: InstallatieDocument,
   recept: (draft: Draft<InstallatieDocument>) => void,
   extra?: T,
