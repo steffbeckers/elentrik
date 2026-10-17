@@ -7,6 +7,9 @@ type MetData = { data?: DataAttributen };
 
 const MAX_ABS = 1e15;
 const DATA_SLEUTEL = /^[a-z][a-z-]*$/;
+// Bewust ` \t\n\r` in plaats van `\s`: `\s` laat ook U+000B/U+000C en Unicode-spaties toe,
+// en die zijn deels ongeldig in XML 1.0.
+const PAD_TEKENS = /^[0-9MmLlHhVvCcSsQqTtAaZz., \t\n\r+\-eE]*$/;
 
 /**
  * Rondt af op maximaal 2 decimalen, "half weg van nul" (2.005 wordt "2.01", -2.005 wordt "-2.01").
@@ -26,9 +29,21 @@ export function getal(n: number): string {
   return n < 0 ? `-${afgerond}` : String(afgerond);
 }
 
-/** Escapet `&`, `<`, `>`, `"` en `'` voor gebruik in XML-tekst en -attributen. */
+/**
+ * Tekens die in XML 1.0 niet mogen voorkomen: C0-besturingstekens behalve tab, LF en CR,
+ * losse surrogaten (met de `u`-vlag matcht `\p{Surrogate}` alleen een los surrogaat, geldige
+ * paren zoals emoji blijven één teken) en U+FFFE/U+FFFF.
+ */
+const ONGELDIG_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|\p{Surrogate}/gu;
+
+/**
+ * Verwijdert eerst de tekens die in XML 1.0 ongeldig zijn (anders wordt de hele SVG onleesbaar,
+ * bijvoorbeeld door een verticale tab uit geplakte Word-tekst) en escapet daarna `&`, `<`, `>`,
+ * `"` en `'` voor gebruik in XML-tekst en -attributen.
+ */
 export function escapeXml(tekst: string): string {
   return tekst
+    .replace(ONGELDIG_XML, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -67,10 +82,12 @@ export function rechthoek(x: number, y: number, b: number, h: number, opties?: M
 }
 
 /**
- * `<path>`. `d` wordt NIET geëscaped of gecontroleerd: de aanroeper mag er uitsluitend
- * numerieke padgegevens in zetten (opdrachtletters, getallen uit `getal()`, spaties).
+ * `<path>`. `d` wordt niet geëscaped: de aanroeper mag er uitsluitend numerieke padgegevens in
+ * zetten (opdrachtletters, getallen uit `getal()`, spaties). Dat wordt afgedwongen: elk ander
+ * teken geeft een `RangeError`.
  */
 export function pad(d: string, opties?: MetData): string {
+  if (!PAD_TEKENS.test(d)) throw new RangeError(`Ongeldige tekens in padgegevens: "${d}"`);
   return `<path d="${d}" ${lijnstijl()}${dataAttributen(opties?.data)}/>`;
 }
 

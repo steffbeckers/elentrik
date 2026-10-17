@@ -58,6 +58,20 @@ describe("escapeXml", () => {
   test("escapet & eerst, zonder dubbele escaping", () => {
     expect(escapeXml("&lt;")).toBe("&amp;lt;");
   });
+
+  test("verwijdert tekens die in XML 1.0 ongeldig zijn", () => {
+    expect(escapeXml("a\u000Bb")).toBe("ab");
+    expect(escapeXml("\u0000")).toBe("");
+    expect(escapeXml("a\u0008\u000C\u000E\u001Fb￾￿c")).toBe("abc");
+    expect(escapeXml("a\uD800b")).toBe("ab");
+    expect(escapeXml("a\uDC00b")).toBe("ab");
+  });
+
+  test("behoudt geldige tekens: tab, LF, CR en surrogaatparen", () => {
+    expect(escapeXml("😀")).toBe("😀");
+    expect(escapeXml("a😀\uD800b")).toBe("a😀b");
+    expect(escapeXml("\t\n\r")).toBe("\t\n\r");
+  });
 });
 
 describe("builders", () => {
@@ -86,6 +100,11 @@ describe("builders", () => {
     expect(pad("M0 0L1 1")).toBe(
       '<path d="M0 0L1 1" stroke="currentColor" stroke-width="0.35" fill="none"/>',
     );
+  });
+
+  test("pad weigert tekens buiten numerieke padgegevens", () => {
+    expect(() => pad('M0 0"/><script>')).toThrow(RangeError);
+    expect(pad("M0.5,-1e2 L1 1 Z")).toContain('d="M0.5,-1e2 L1 1 Z"');
   });
 
   test("tekst met standaardwaarden", () => {
