@@ -15,5 +15,10 @@
   "dependencies": {
     "@elentrik/layout": "workspace:*",
     "@elentrik/symbols": "workspace:*"
+  },
+  "devDependencies": {
+    "@elentrik/arei": "workspace:*",
+    "@elentrik/model": "workspace:*",
+    "fast-xml-parser": "^5.11.2"
   }
 }
