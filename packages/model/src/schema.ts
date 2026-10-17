@@ -25,7 +25,10 @@ export const PartijSchema = z.strictObject({
 export const AfwijkingSchema = z.strictObject({
   regelId: z.string(),
   nodeId: Id,
-  motivatie: z.string(),
+  /** Verplichte tekst van minstens 10 tekens na het wegknippen van witruimte (spec §6.2). */
+  motivatie: z.string().refine((tekst) => tekst.trim().length >= 10, {
+    message: "motivatie moet minstens 10 tekens bevatten",
+  }),
   door: z.string(),
   datum: z.string(),
 });

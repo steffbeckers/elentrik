@@ -187,6 +187,19 @@ describe("valideerStructuur", () => {
     expect(valideerStructuur(doc)).toContainEqual({ code: "OUDER_INCONSISTENT", nodeId: "c" });
   });
 
+  test("SLEUTEL_INCONSISTENT: node.id verschilt van de sleutel in de map", () => {
+    const { doc } = basis();
+    doc.nodes["c"]!.id = "ander";
+    const problemen = valideerStructuur(doc);
+    expect(problemen).toContainEqual({ code: "SLEUTEL_INCONSISTENT", nodeId: "c" });
+    expect(problemen.filter((p) => p.code === "SLEUTEL_INCONSISTENT")).toHaveLength(1);
+  });
+
+  test("SLEUTEL_INCONSISTENT: een consistent document meldt het niet", () => {
+    const { doc } = basis();
+    expect(valideerStructuur(doc).filter((p) => p.code === "SLEUTEL_INCONSISTENT")).toEqual([]);
+  });
+
   test("DUBBEL_KIND: id staat in twee kinderlijsten", () => {
     const { doc, teller } = basis();
     doc.nodes["l2"] = leiding("l2", teller, ["c"]);

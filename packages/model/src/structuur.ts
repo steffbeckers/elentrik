@@ -29,7 +29,8 @@ export type StructuurProbleem = {
     | "OUDER_INCONSISTENT"
     | "DUBBEL_KIND"
     | "NIET_TOEGELATEN_KIND"
-    | "ONBEKENDE_VERWIJZING";
+    | "ONBEKENDE_VERWIJZING"
+    | "SLEUTEL_INCONSISTENT";
   nodeId: NodeId;
 };
 
@@ -44,7 +45,8 @@ export type StructuurProbleem = {
  *   CYCLUS; een node op een niet-bereikbare cyclus krijgt daarnaast ook
  *   ONBEREIKBAAR, de controles zijn onafhankelijk);
  * - OUDER_INCONSISTENT / DUBBEL_KIND / NIET_TOEGELATEN_KIND: het kind;
- * - ONBEKENDE_VERWIJZING: het niet-bestaande id.
+ * - ONBEKENDE_VERWIJZING: het niet-bestaande id;
+ * - SLEUTEL_INCONSISTENT: de sleutel in `doc.nodes` waarvan `node.id` verschilt.
  *
  * De volgorde van het resultaat volgt de volgorde van de controles.
  */
@@ -170,6 +172,11 @@ export function valideerStructuur(doc: InstallatieDocument): StructuurProbleem[]
   }
   for (const afwijking of doc.afwijkingen) {
     if (!haal(afwijking.nodeId)) meld("ONBEKENDE_VERWIJZING", afwijking.nodeId);
+  }
+
+  // 6. Sleutel en id van elke node moeten overeenkomen (operaties zoeken op sleutel)
+  for (const sleutel of ids) {
+    if (nodes[sleutel]?.id !== sleutel) meld("SLEUTEL_INCONSISTENT", sleutel);
   }
 
   return problemen;

@@ -10,6 +10,11 @@ enablePatches();
 export type NodeInvoer =
   Node extends infer N ? (N extends Node ? Omit<N, "id" | "parentId" | "kinderen"> : never) : never;
 
+/**
+ * Resultaat van een operatie. Immer bevriest (deep-freeze) het teruggegeven
+ * document, ook de ongewijzigde delen die het deelt met het invoerdocument.
+ * Een no-op `verplaats` geeft de invoerreferentie zelf terug.
+ */
 export type OperatieResultaat = {
   doc: InstallatieDocument;
   patches: Patch[];

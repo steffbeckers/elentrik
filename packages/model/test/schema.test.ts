@@ -169,10 +169,30 @@ describe("parseDocument", () => {
 
   test("afwijking en optionele partijvelden", () => {
     const doc: any = nieuwDocument();
-    doc.afwijkingen.push({ regelId: "r", nodeId: doc.rootId, motivatie: "m", door: "d", datum: "2026-10-17" });
+    doc.afwijkingen.push({ regelId: "r", nodeId: doc.rootId, motivatie: "voldoende lang", door: "d", datum: "2026-10-17" });
     doc.meta.keuringsorganisme = { naam: "Keuring", email: "a@b.be", adres: { straat: "s", nummer: "1", bus: "2", postcode: "9000", gemeente: "Gent", land: "BE" } };
     doc.meta.ean = "541234567890123456";
     expect(parseDocument(doc).afwijkingen).toHaveLength(1);
+  });
+});
+
+describe("afwijking motivatie", () => {
+  const metMotivatie = (motivatie: string) => {
+    const doc: any = nieuwDocument();
+    doc.afwijkingen.push({ regelId: "r", nodeId: doc.rootId, motivatie, door: "d", datum: "2026-10-17" });
+    return doc;
+  };
+
+  test("9 tekens worden geweigerd", () => {
+    expect(() => parseDocument(metMotivatie("123456789"))).toThrow();
+  });
+
+  test("10 tekens worden aanvaard", () => {
+    expect(parseDocument(metMotivatie("1234567890")).afwijkingen).toHaveLength(1);
+  });
+
+  test("witruimte telt niet mee: 9 tekens met spaties errond worden geweigerd", () => {
+    expect(() => parseDocument(metMotivatie("  123456789  "))).toThrow();
   });
 });
 
