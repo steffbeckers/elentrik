@@ -19,7 +19,7 @@ describe("waarborgen", () => {
       if (!set.gepubliceerd) continue;
       for (const regel of set.regels) {
         expect(regel.nagekeken, `${sleutel}/${regel.id} nagekeken`).toBe(true);
-        expect(regel.artikel, `${sleutel}/${regel.id} artikel`).not.toBe("");
+        expect(regel.artikel.trim(), `${sleutel}/${regel.id} artikel`).not.toBe("");
       }
     }
   });
@@ -28,8 +28,11 @@ describe("waarborgen", () => {
     for (const [sleutel, set] of Object.entries(REGELSETS)) {
       for (const regel of set.regels) {
         for (const berichtSleutel of regel.berichtSleutels) {
-          expect(BERICHTEN.nl[berichtSleutel], `${sleutel}/${regel.id} nl ${berichtSleutel}`).toBeTypeOf("string");
-          expect(BERICHTEN.fr[berichtSleutel], `${sleutel}/${regel.id} fr ${berichtSleutel}`).toBeTypeOf("string");
+          for (const taal of ["nl", "fr"] as const) {
+            const tekst = BERICHTEN[taal][berichtSleutel];
+            expect(tekst, `${sleutel}/${regel.id} ${taal} ${berichtSleutel}`).toBeTypeOf("string");
+            expect(tekst?.trim(), `${sleutel}/${regel.id} ${taal} ${berichtSleutel} leeg`).not.toBe("");
+          }
         }
       }
     }
