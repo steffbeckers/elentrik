@@ -34,7 +34,7 @@ export function getal(n: number): string {
  * losse surrogaten (met de `u`-vlag matcht `\p{Surrogate}` alleen een los surrogaat, geldige
  * paren zoals emoji blijven één teken) en U+FFFE/U+FFFF.
  */
-const ONGELDIG_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|\p{Surrogate}/gu;
+const ONGELDIG_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|\p{Surrogate}/gu;
 
 /**
  * Verwijdert eerst de tekens die in XML 1.0 ongeldig zijn (anders wordt de hele SVG onleesbaar,

@@ -62,7 +62,7 @@ describe("escapeXml", () => {
   test("verwijdert tekens die in XML 1.0 ongeldig zijn", () => {
     expect(escapeXml("a\u000Bb")).toBe("ab");
     expect(escapeXml("\u0000")).toBe("");
-    expect(escapeXml("a\u0008\u000C\u000E\u001Fb￾￿c")).toBe("abc");
+    expect(escapeXml("a\u0008\u000C\u000E\u001Fb\uFFFE\uFFFFc")).toBe("abc");
     expect(escapeXml("a\uD800b")).toBe("ab");
     expect(escapeXml("a\uDC00b")).toBe("ab");
   });
