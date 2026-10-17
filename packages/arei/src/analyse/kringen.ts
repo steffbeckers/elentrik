@@ -34,12 +34,14 @@ type OpenKring = { kring: Kring; volgendPunt: number; ruimtes: Set<Ruimte> };
  * Onveranderlijke lijst van differentieel-voorouders, dichtstbijzijnde eerst.
  * Een differentieel maakt één nieuwe cel boven de bestaande lijst; alle
  * nakomelingen delen die cel. De array wordt pas opgebouwd (en onthouden) als
- * een punt of kringbeveiliging erom vraagt.
+ * een punt of kringbeveiliging erom vraagt, en dan bevroren zodat delen veilig is.
  */
-type DiffCel = { id: NodeId; volgende: DiffCel | null; array?: NodeId[] };
+type DiffCel = { id: NodeId; volgende: DiffCel | null; array?: readonly NodeId[] };
 
-function alsArray(cel: DiffCel | null): NodeId[] {
-  if (cel === null) return [];
+const GEEN_DIFFERENTIELEN: readonly NodeId[] = Object.freeze([]);
+
+function alsArray(cel: DiffCel | null): readonly NodeId[] {
+  if (cel === null) return GEEN_DIFFERENTIELEN;
   if (cel.array) return cel.array;
   const ids: NodeId[] = [];
   let huidig: DiffCel | null = cel;
@@ -47,7 +49,7 @@ function alsArray(cel: DiffCel | null): NodeId[] {
     ids.push(huidig.id);
     huidig = huidig.volgende;
   }
-  const resultaat = huidig?.array ? ids.concat(huidig.array) : ids;
+  const resultaat = Object.freeze(huidig?.array ? ids.concat(huidig.array) : ids);
   cel.array = resultaat;
   return resultaat;
 }
@@ -80,7 +82,7 @@ type Kader = {
  *   onderbord krijgt een eigen reeks met prefix `${naam of kringlabel}.`.
  * - Punten krijgen per kring een nummer vanaf 1: `${kringLabel}${n}`.
  * - Punten onder dezelfde dichtstbijzijnde differentieel delen dezelfde
- *   `Keten.differentielen`-array; die mag niet gemuteerd worden.
+ *   `Keten.differentielen`-array; die is bevroren.
  */
 export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
   const kringen: Kring[] = [];
@@ -90,7 +92,7 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
   const zonderKring: NodeId[] = [];
   const puntenInVolgorde: NodeId[] = [];
   /** Per kring (in volgorde van `kringen`): de differentielen boven de beveiliging, dichtstbijzijnde eerst. */
-  const differentielenBovenKring: NodeId[][] = [];
+  const differentielenBovenKring: (readonly NodeId[])[] = [];
   let tellerId: NodeId | null = null;
 
   const hoofdReeks: Reeks = { prefix: "", volgende: 0 };
@@ -210,7 +212,7 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
  * begin van die paden. De eerste in pre-order is de buitenste, dus het laatste
  * element van elke lijst (die begint bij de dichtstbijzijnde).
  */
-function vindAlgemeenDifferentieel(lijsten: NodeId[][]): NodeId | null {
+function vindAlgemeenDifferentieel(lijsten: readonly (readonly NodeId[])[]): NodeId | null {
   const eerste = lijsten[0];
   if (eerste === undefined) return null;
   let gedeeld = eerste.length;

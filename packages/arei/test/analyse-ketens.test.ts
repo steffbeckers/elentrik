@@ -122,6 +122,34 @@ describe("analyseer: ketens", () => {
     });
   });
 
+  test("punten onder dezelfde differentieel delen een bevroren differentielen-array", () => {
+    const { doc, ids } = installatie()
+      .differentieel(
+        30,
+        (d) =>
+          d.verdeelbord((b) =>
+            b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1).als("a").lichtpunten(1).als("b")),
+          ),
+        { als: "d" },
+      )
+      .bouw();
+    const { ketens } = analyseer(doc);
+    expect(ketens[ids.a!]!.differentielen).toEqual([ids.d]);
+    expect(ketens[ids.b!]!.differentielen).toEqual([ids.d]);
+    const gedeeld = ketens[ids.a!]!.differentielen as NodeId[];
+    expect(() => gedeeld.push("x")).toThrow(TypeError);
+    expect(() => gedeeld.pop()).toThrow(TypeError);
+    expect(ketens[ids.b!]!.differentielen).toEqual([ids.d]);
+  });
+
+  test("de lege differentielen-lijst is ook bevroren", () => {
+    const basis = nieuwDocument();
+    const l = voegToe(basis, tellerVan(basis), LEIDING);
+    const cd = voegToe(l.doc, l.id, CONTACTDOOS);
+    const leeg = analyseer(cd.doc).ketens[cd.id]!.differentielen as NodeId[];
+    expect(() => leeg.push("x")).toThrow(TypeError);
+  });
+
   test("een diepe keten van 5.000 differentielen en een punt eronder geeft geen RangeError", () => {
     const doc = kloon(nieuwDocument());
     let ouder = tellerVan(doc);

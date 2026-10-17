@@ -19,8 +19,11 @@ export type Kring = {
 export type Keten = {
   leidingId: NodeId | null;
   beveiligingId: NodeId | null;
-  /** Begint bij het dichtstbijzijnde differentieel. */
-  differentielen: NodeId[];
+  /**
+   * Begint bij het dichtstbijzijnde differentieel. Punten onder dezelfde
+   * dichtstbijzijnde differentieel delen dezelfde (bevroren) array.
+   */
+  differentielen: readonly NodeId[];
 };
 
 export type Analyse = {
