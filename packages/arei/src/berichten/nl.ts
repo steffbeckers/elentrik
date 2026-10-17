@@ -24,4 +24,6 @@ export const NL: Readonly<Record<string, string>> = {
   "arei.situatie.niet-geplaatst.punt": "Punt {label} is nog niet op een situatieplan geplaatst.",
   "arei.leiding.onvolledig.kabeltype": "Bij deze leiding is het kabeltype nog niet ingevuld.",
   "arei.leiding.onvolledig.doorsnede": "Bij deze leiding is de doorsnede nog niet ingevuld.",
+  "arei.punt.zonder-beveiliging.ontbreekt":
+    "Dit punt hangt niet achter een automaat of zekering in een verdeelbord.",
 };

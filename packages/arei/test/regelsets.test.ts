@@ -14,7 +14,7 @@ describe("haalRegelset", () => {
 });
 
 describe("arei-2020@1", () => {
-  test("bevat de 9 regels in volgorde en is niet gepubliceerd", () => {
+  test("bevat de 10 regels in volgorde en is niet gepubliceerd", () => {
     const set = haalRegelset("arei-2020@1");
     expect(set.gepubliceerd).toBe(false);
     expect(set.regels.map((r) => r.id)).toEqual([
@@ -27,6 +27,7 @@ describe("arei-2020@1", () => {
       "arei.polen.stroomtype",
       "arei.situatie.niet-geplaatst",
       "arei.leiding.onvolledig",
+      "arei.punt.zonder-beveiliging",
     ]);
   });
 });

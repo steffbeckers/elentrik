@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { valideerStructuur, type InstallatieDocument } from "@elentrik/model";
 import { analyseer, controleer, haalRegelset, type Bevinding } from "../src/index";
 import { installatie, type BordBouwer } from "../src/testing/index";
+import { automaatZonderBord } from "./hulp";
 
 const regelset = haalRegelset("arei-2020@1");
 
@@ -26,6 +27,8 @@ function appartement(): InstallatieDocument {
     .bouw().doc;
 }
 
+const regelId = (id: string) => (b: Bevinding) => b.regelId === id;
+
 describe("referentie-installaties", () => {
   test("appartement: enkel info niet-geplaatst, één per punt", () => {
     const doc = appartement();
@@ -42,6 +45,7 @@ describe("referentie-installaties", () => {
       expect(b.berichtSleutel).toBe("arei.situatie.niet-geplaatst.punt");
     }
     expect(new Set(bevindingen.map((b) => b.nodeIds[0])).size).toBe(aantalPunten);
+    expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 
   test("rijwoning: precies één fout, max-contactdozen.overschreden op de kring met 9 contactdozen", () => {
@@ -64,6 +68,7 @@ describe("referentie-installaties", () => {
       parameters: { aantal: 9, max: 8 },
     });
     expect(waarschuwingen(bevindingen)).toEqual([]);
+    expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 
   test("woning met laadpaal en zonnepanelen (3N400V): geen fouten, geen waarschuwingen", () => {
@@ -83,5 +88,34 @@ describe("referentie-installaties", () => {
     const bevindingen = controleer(doc, regelset);
     expect(fouten(bevindingen)).toEqual([]);
     expect(waarschuwingen(bevindingen)).toEqual([]);
+    expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
+  });
+});
+
+describe("onbeveiligde installaties", () => {
+  const sleutels = (bevindingen: Bevinding[]) => fouten(bevindingen).map((b) => b.berichtSleutel);
+
+  test("verdeelbord > leiding 1.5 > contactdozen zonder automaat: regel 1 en regel 10 geven fouten", () => {
+    const { doc } = installatie()
+      .verdeelbord((b) => b.kring((k) => k.leiding(1.5).contactdozen(2)))
+      .bouw();
+    expect(valideerStructuur(doc)).toEqual([]);
+    const f = fouten(controleer(doc, regelset));
+    expect(f.filter(regelId("arei.differentieel.algemeen")).map((b) => b.berichtSleutel)).toEqual([
+      "arei.differentieel.algemeen.ontbreekt",
+    ]);
+    expect(f.filter(regelId("arei.punt.zonder-beveiliging"))).toHaveLength(2);
+    expect(f).toHaveLength(3);
+  });
+
+  test("automaat 32 > leiding > contactdozen zonder verdeelbord: regel 1 en regel 10 geven fouten", () => {
+    const { doc } = automaatZonderBord(2);
+    expect(valideerStructuur(doc)).toEqual([]);
+    const f = controleer(doc, regelset).filter((b) => b.ernst === "fout");
+    expect(sleutels(f).sort()).toEqual([
+      "arei.differentieel.algemeen.ontbreekt",
+      "arei.punt.zonder-beveiliging.ontbreekt",
+      "arei.punt.zonder-beveiliging.ontbreekt",
+    ]);
   });
 });

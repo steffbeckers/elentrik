@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 import { voegToe, type InstallatieDocument } from "@elentrik/model";
-import { controleer, type Bevinding, type Regel, type Regelset } from "../../src/index";
+import { analyseer, controleer, type Bevinding, type Regel, type Regelset } from "../../src/index";
 import { installatie } from "../../src/testing/index";
 import { PARAMETERS_AREI_2020_V1 } from "../../src/regelsets/arei-2020/parameters";
 import { maakRegelAlgemeenDifferentieel } from "../../src/regelsets/arei-2020/regels/algemeen-differentieel";
 import { maakRegelDoorsnedeBeveiliging } from "../../src/regelsets/arei-2020/regels/doorsnede-beveiliging";
 import { maakRegelNatteRuimteDifferentieel } from "../../src/regelsets/arei-2020/regels/natte-ruimte-differentieel";
-import { verwachtBekendeSleutels } from "../hulp";
+import { automaatZonderBord, verwachtBekendeSleutels } from "../hulp";
 
 function alleen(regel: Regel): Regelset {
   return { id: "test", versie: 1, gepubliceerd: false, regels: [regel] };
@@ -55,6 +55,29 @@ describe("regel 1: algemeen differentieel", () => {
   test("zonder kringen geeft een ontbrekend differentieel geen bevinding", () => {
     const { doc } = installatie().bouw();
     expect(draai(regel, doc)).toEqual([]);
+  });
+
+  test("punten zonder enige kring maar zonder differentieel geven .ontbreekt op de teller", () => {
+    const { doc } = installatie()
+      .verdeelbord((b) => b.kring((k) => k.leiding(1.5).contactdozen(2)))
+      .bouw();
+    expect(analyseer(doc).kringen).toEqual([]);
+    const tellerId = doc.nodes[doc.rootId]!.kinderen[0]!;
+    expect(draai(regel, doc)).toEqual([
+      {
+        regelId: "arei.differentieel.algemeen",
+        ernst: "fout",
+        nodeIds: [tellerId],
+        berichtSleutel: "arei.differentieel.algemeen.ontbreekt",
+        parameters: {},
+        afgeweken: false,
+      },
+    ]);
+  });
+
+  test("punten achter een automaat zonder verdeelbord geven .ontbreekt op de teller", () => {
+    const { doc } = automaatZonderBord(2);
+    expect(draai(regel, doc).map((x) => x.berichtSleutel)).toEqual(["arei.differentieel.algemeen.ontbreekt"]);
   });
 
   test("differentieel 500 geeft .te-ongevoelig", () => {

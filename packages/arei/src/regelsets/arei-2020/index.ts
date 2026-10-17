@@ -8,6 +8,7 @@ import { maakRegelMinDoorsnede } from "./regels/min-doorsnede";
 import { maakRegelNatteRuimteDifferentieel } from "./regels/natte-ruimte-differentieel";
 import { maakRegelNietGeplaatst } from "./regels/niet-geplaatst";
 import { maakRegelPolenStroomtype } from "./regels/polen-stroomtype";
+import { maakRegelPuntZonderBeveiliging } from "./regels/punt-zonder-beveiliging";
 import { maakRegelToestelEigenKring } from "./regels/toestel-eigen-kring";
 
 /** AREI-regelset 2020. Voorlopig: niet gepubliceerd tot alle regels nagekeken zijn. */
@@ -25,5 +26,6 @@ export const AREI_2020: Regelset = {
     maakRegelPolenStroomtype(PARAMETERS_AREI_2020_V1),
     maakRegelNietGeplaatst(),
     maakRegelLeidingOnvolledig(),
+    maakRegelPuntZonderBeveiliging(),
   ],
 };

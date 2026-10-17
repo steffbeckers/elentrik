@@ -24,4 +24,6 @@ export const FR: Readonly<Record<string, string>> = {
   "arei.situatie.niet-geplaatst.punt": "Le point {label} n'est pas encore placé sur un plan de situation.",
   "arei.leiding.onvolledig.kabeltype": "Le type de câble de cette liaison n'est pas encore renseigné.",
   "arei.leiding.onvolledig.doorsnede": "La section de cette liaison n'est pas encore renseignée.",
+  "arei.punt.zonder-beveiliging.ontbreekt":
+    "Ce point n'est pas alimenté par un disjoncteur ou un fusible dans un tableau de répartition.",
 };

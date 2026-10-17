@@ -14,7 +14,8 @@ export function maakRegelAlgemeenDifferentieel(p: Arei2020Parameters): Regel {
     check(analyse, doc) {
       const id = analyse.algemeenDifferentieelId;
       if (id === null) {
-        if (analyse.kringen.length === 0) return [];
+        // Zonder enig punt valt er niets te beschermen; punten zonder kring tellen wel mee.
+        if (Object.keys(analyse.ketens).length === 0) return [];
         return [
           {
             regelId: ID,
