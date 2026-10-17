@@ -3,6 +3,7 @@ import { opmaak, papierMaat, bruikbaar, STANDAARD_PAPIER_A4 } from "@elentrik/la
 import { XMLValidator } from "fast-xml-parser";
 import { describe, expect, test } from "vitest";
 import { schemaPaginaSvg, schemaStripSvg } from "../src/index";
+import { nummerNodeIds } from "./hulp";
 
 const kringen = (n: number) =>
   installatie()
@@ -17,13 +18,7 @@ const aantal = (tekst: string, deel: string): number => tekst.split(deel).length
 
 describe("schemaPaginaSvg", () => {
   test("snapshot voor een installatie met 2 kringen", () => {
-    // Node-id's zijn willekeurig; vervang ze door een volgnummer zodat de snapshot stabiel is.
-    const nummers = new Map<string, number>();
-    const svg = schemaPaginaSvg(opmaak(kringen(2)), 0).replace(/data-node-id="([^"]*)"/g, (_m, id: string) => {
-      if (!nummers.has(id)) nummers.set(id, nummers.size + 1);
-      return `data-node-id="n${nummers.get(id)}"`;
-    });
-    expect(svg).toMatchSnapshot();
+    expect(nummerNodeIds(schemaPaginaSvg(opmaak(kringen(2)), 0))).toMatchSnapshot();
   });
 
   test("vervolgpijl: driehoek en tekst aan de binnenkant", () => {
