@@ -1,0 +1,17 @@
+export type Papier = { formaat: "A4" | "A3"; marge_mm: number; cartoucheHoogte_mm: number };
+
+export const STANDAARD_PAPIER_A4: Papier = { formaat: "A4", marge_mm: 10, cartoucheHoogte_mm: 30 };
+
+/** Maat van het papier in mm, liggend. */
+export function papierMaat(formaat: Papier["formaat"]): { breedte: number; hoogte: number } {
+  return formaat === "A4" ? { breedte: 297, hoogte: 210 } : { breedte: 420, hoogte: 297 };
+}
+
+/** Ruimte voor het schema in mm: het papier min de marges rondom en de cartouche. */
+export function bruikbaar(papier: Papier): { breedte: number; hoogte: number } {
+  const { breedte, hoogte } = papierMaat(papier.formaat);
+  return {
+    breedte: breedte - 2 * papier.marge_mm,
+    hoogte: hoogte - 2 * papier.marge_mm - papier.cartoucheHoogte_mm,
+  };
+}

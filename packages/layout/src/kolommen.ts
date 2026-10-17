@@ -1,4 +1,4 @@
-import { analyseer } from "@elentrik/arei";
+import { analyseer, type Analyse } from "@elentrik/arei";
 import type { InstallatieDocument, NodeId } from "@elentrik/model";
 import { KOLOM_BREEDTE_MM, tekenSymbool, type Symbool } from "@elentrik/symbols";
 import { beveiligingLabel, leidingLabel } from "./labels";
@@ -14,9 +14,10 @@ import {
  * Legt het document in één strook: elk blad krijgt een eigen kolom en een node met kinderen staat
  * in de kolom van zijn eerste kind. Per node volgen op elkaar: het symbool, de teksten (kring,
  * beveiliging, leiding, punt, onderbord) en de verbindingen naar de kinderen. Alle doorlopingen
- * zijn iteratief. De teksten blijven ruw; escapen gebeurt in render.
+ * zijn iteratief. De teksten blijven ruw; escapen gebeurt in render. Een meegegeven `analyse` moet
+ * bij `doc` horen.
  */
-export function maakStrook(doc: InstallatieDocument): Strook {
+export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analyseer(doc)): Strook {
   // Verwijzingen naar ontbrekende nodes worden overgeslagen.
   const kinderenVan = (id: NodeId): NodeId[] =>
     doc.nodes[id]!.kinderen.filter((kind) => Object.hasOwn(doc.nodes, kind));
@@ -43,7 +44,6 @@ export function maakStrook(doc: InstallatieDocument): Strook {
   const symbolen = new Map<NodeId, Symbool>();
   for (const id of preOrder) symbolen.set(id, tekenSymbool(doc.nodes[id]!));
 
-  const analyse = analyseer(doc);
   const kringLabelVan = new Map<NodeId, string>();
   for (const kring of analyse.kringen) kringLabelVan.set(kring.beveiligingId, kring.label);
 
