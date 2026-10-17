@@ -89,31 +89,53 @@ export function valideerStructuur(doc: InstallatieDocument): StructuurProbleem[]
     if (!bereikt.has(id)) meld("ONBEREIKBAAR", id);
   }
 
-  // 3. Cycli: iteratieve DFS met kleuren over alle nodes. Een terugverwijzing
-  // naar een node op het huidige pad markeert het pad vanaf die node als cyclus.
-  const kleur = new Map<NodeId, 1 | 2>(); // 1 = op het pad, 2 = klaar
+  // 3. Cycli: iteratieve Tarjan (sterk samenhangende componenten) over alle
+  // nodes. Elke node in een component van meer dan één node, of met een
+  // verwijzing naar zichzelf, ligt op een cyclus en krijgt CYCLUS. Het resultaat
+  // hangt niet af van de volgorde van de sleutels.
+  const index = new Map<NodeId, number>();
+  const laag = new Map<NodeId, number>();
+  const opStapel = new Set<NodeId>();
+  const componentStapel: NodeId[] = [];
+  let volgnummer = 0;
+  const betreed = (id: NodeId): void => {
+    index.set(id, volgnummer);
+    laag.set(id, volgnummer);
+    volgnummer++;
+    componentStapel.push(id);
+    opStapel.add(id);
+  };
   for (const start of ids) {
-    if (kleur.has(start)) continue;
+    if (index.has(start)) continue;
     const pad: { id: NodeId; volgende: number }[] = [{ id: start, volgende: 0 }];
-    kleur.set(start, 1);
+    betreed(start);
     while (pad.length > 0) {
       const top = pad[pad.length - 1]!;
       const kinderen = haal(top.id)?.kinderen ?? [];
-      if (top.volgende >= kinderen.length) {
-        kleur.set(top.id, 2);
-        pad.pop();
+      if (top.volgende < kinderen.length) {
+        const kindId = kinderen[top.volgende++]!;
+        if (!haal(kindId)) continue;
+        if (!index.has(kindId)) {
+          betreed(kindId);
+          pad.push({ id: kindId, volgende: 0 });
+        } else if (opStapel.has(kindId)) {
+          laag.set(top.id, Math.min(laag.get(top.id)!, index.get(kindId)!));
+        }
         continue;
       }
-      const kindId = kinderen[top.volgende++]!;
-      if (!haal(kindId)) continue;
-      const staat = kleur.get(kindId);
-      if (staat === undefined) {
-        kleur.set(kindId, 1);
-        pad.push({ id: kindId, volgende: 0 });
-      } else if (staat === 1) {
-        let i = pad.length - 1;
-        while (i >= 0 && pad[i]!.id !== kindId) i--;
-        for (; i < pad.length; i++) meld("CYCLUS", pad[i]!.id);
+      pad.pop();
+      const ouder = pad[pad.length - 1];
+      if (ouder) laag.set(ouder.id, Math.min(laag.get(ouder.id)!, laag.get(top.id)!));
+      if (laag.get(top.id) !== index.get(top.id)) continue;
+      const component: NodeId[] = [];
+      let lid: NodeId;
+      do {
+        lid = componentStapel.pop()!;
+        opStapel.delete(lid);
+        component.push(lid);
+      } while (lid !== top.id);
+      if (component.length > 1 || kinderen.includes(top.id)) {
+        for (const id of component) meld("CYCLUS", id);
       }
     }
   }

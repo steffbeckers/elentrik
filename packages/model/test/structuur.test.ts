@@ -147,6 +147,40 @@ describe("valideerStructuur", () => {
     expect(valideerStructuur(doc)).toContainEqual({ code: "CYCLUS", nodeId: "l" });
   });
 
+  test("CYCLUS: elke node op een cyclus, ook als die via een afgewerkte node sluit", () => {
+    // ka -> [kb, kc], kb -> [ka], kc -> [kb]: alle drie liggen op een cyclus.
+    const specs: [string, string[]][] = [
+      ["ka", ["kb", "kc"]],
+      ["kb", ["ka"]],
+      ["kc", ["kb"]],
+    ];
+    const volgordes = [[0, 1, 2], [2, 1, 0], [1, 2, 0], [1, 0, 2], [0, 2, 1], [2, 0, 1]];
+    for (const volgorde of volgordes) {
+      const { doc } = basis();
+      for (const i of volgorde) {
+        const [id, kinderen] = specs[i]!;
+        doc.nodes[id] = leiding(id, null, kinderen);
+      }
+      const cyclus = valideerStructuur(doc)
+        .filter((p) => p.code === "CYCLUS")
+        .map((p) => p.nodeId)
+        .sort();
+      expect(cyclus).toEqual(["ka", "kb", "kc"]);
+    }
+  });
+
+  test("CYCLUS: node die alleen naar een cyclus verwijst is zelf geen cyclus", () => {
+    const { doc } = basis();
+    doc.nodes["a"] = leiding("a", null, ["b"]);
+    doc.nodes["b"] = leiding("b", null, ["a"]);
+    doc.nodes["x"] = leiding("x", null, ["a"]);
+    const cyclus = valideerStructuur(doc)
+      .filter((p) => p.code === "CYCLUS")
+      .map((p) => p.nodeId)
+      .sort();
+    expect(cyclus).toEqual(["a", "b"]);
+  });
+
   test("OUDER_INCONSISTENT: kind wijst naar een andere ouder", () => {
     const { doc, root } = basis();
     doc.nodes["c"]!.parentId = root;
