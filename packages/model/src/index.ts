@@ -3,6 +3,13 @@ export { DocumentFout, type FoutCode } from "./fouten";
 export { nieuwId } from "./ids";
 export { nieuwDocument, parseDocument } from "./document";
 export {
+  BEVEILIGING_TYPES,
+  PUNT_TYPES,
+  TOEGELATEN_KINDEREN,
+  valideerStructuur,
+  type StructuurProbleem,
+} from "./structuur";
+export {
   AdresSchema,
   AfwijkingSchema,
   InstallatieDocumentSchema,
