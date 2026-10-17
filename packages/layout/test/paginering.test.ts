@@ -9,15 +9,25 @@ import {
   STROOK_MARGE_MM,
   bruikbaar,
   maakStrook,
-  opmaak,
+  opmaak as opmaakZonderControle,
   papierMaat,
   type Papier,
   type SchemaElement,
   type SchemaOpmaak,
   type Strook,
 } from "../src/index";
-import { pagineer } from "../src/paginering";
+import { pagineer as pagineerZonderControle } from "../src/paginering";
 import { kloon } from "./hulp";
+
+/** Invariant voor elke paginering in dit bestand: geen enkele pagina is leeg. */
+function geenLegePagina(opm: SchemaOpmaak): SchemaOpmaak {
+  for (const pagina of opm.paginas) expect(pagina.elementen.length, `pagina ${pagina.index}`).toBeGreaterThan(0);
+  return opm;
+}
+const opmaak = (...args: Parameters<typeof opmaakZonderControle>): SchemaOpmaak =>
+  geenLegePagina(opmaakZonderControle(...args));
+const pagineer = (...args: Parameters<typeof pagineerZonderControle>): SchemaOpmaak =>
+  geenLegePagina(pagineerZonderControle(...args));
 
 type SymboolElement = Extract<SchemaElement, { soort: "symbool" }>;
 type LijnElement = Extract<SchemaElement, { soort: "lijn" }>;
@@ -146,6 +156,15 @@ describe("papier", () => {
     expect(bruikbaar(STANDAARD_PAPIER_A4)).toEqual({ breedte: 277, hoogte: 160 });
     expect(bruikbaar(PAPIER_A3)).toEqual({ breedte: 400, hoogte: 247 });
   });
+
+  test("zonder bruikbare breedte of hoogte gooien bruikbaar en opmaak een RangeError", () => {
+    const geenBreedte: Papier = { ...STANDAARD_PAPIER_A4, marge_mm: 200 };
+    const geenHoogte: Papier = { ...STANDAARD_PAPIER_A4, cartoucheHoogte_mm: 190 };
+    for (const papier of [geenBreedte, geenHoogte]) {
+      expect(() => bruikbaar(papier)).toThrow(RangeError);
+      expect(() => opmaakZonderControle(kringen(1), papier)).toThrow(RangeError);
+    }
+  });
 });
 
 describe("opmaak: kringen op A4", () => {
@@ -273,7 +292,8 @@ describe("opmaak: schaal", () => {
 });
 
 describe("opmaak: een kring breder dan een pagina", () => {
-  const opm = opmaak(vertakteKring(30));
+  // Zonder controle hier, zodat een lege pagina als falende test verschijnt en niet de hele suite breekt.
+  const opm = opmaakZonderControle(vertakteKring(30));
   // De boom is ook diep, dus de schaal kan kleiner zijn dan 1: de paginabreedte is W / schaal.
   const W = bruikbaar(STANDAARD_PAPIER_A4).breedte / opm.paginas[0]!.schaal;
 
@@ -287,6 +307,13 @@ describe("opmaak: een kring breder dan een pagina", () => {
       expect([0, ...opm.strook.kringGrenzen, opm.strook.breedte]).not.toContain(pagina.xTot);
     }
     expect(opm.paginas[opm.paginas.length - 1]!.xTot).toBe(opm.strook.breedte);
+  });
+
+  test("geen lege pagina: de eerste pagina knipt niet op de linkermarge maar op de volle breedte", () => {
+    geenLegePagina(opm);
+    expect(opm.strook.kringGrenzen).toEqual([STROOK_MARGE_MM]);
+    expect(opm.paginas[0]!.xTot).toBeCloseTo(W, 9);
+    expect(opm.waarschuwingen[0]).toEqual({ code: "KRING_TE_BREED", paginaIndex: 0 });
   });
 
   test("nog steeds elk symbool precies één keer, en vervolgen bij elke knip", () => {
@@ -353,17 +380,53 @@ describe("pagineer: randgevallen op een kunstmatige strook", () => {
     ]);
   });
 
+  const tekst = (x: number): SchemaElement => ({ soort: "tekst", x, y: 0, tekst: "t", grootte: 2, anker: "start", rol: "punt" });
+
   test("een grens net boven xVan + W telt nog als kandidaat (tolerantie 1e-9)", () => {
     const grens = 277 + 1e-12;
-    const opm = pagineer(strook([], 400, [grens]), STANDAARD_PAPIER_A4);
+    const opm = pagineer(strook([tekst(10), tekst(300)], 400, [grens]), STANDAARD_PAPIER_A4);
     expect(opm.paginas.map((p) => p.xTot)).toEqual([grens, 400]);
+    expect(opm.waarschuwingen).toEqual([]);
+  });
+
+  test("een grens op de linkermarge is geen kandidaat", () => {
+    const W = bruikbaar(STANDAARD_PAPIER_A4).breedte;
+    const opm = pagineer(strook([tekst(100), tekst(400)], 500, [STROOK_MARGE_MM]), STANDAARD_PAPIER_A4);
+    expect(opm.paginas.map((p) => [p.xVan, p.xTot])).toEqual([
+      [0, W],
+      [W, 500],
+    ]);
+    expect(opm.waarschuwingen).toEqual([{ code: "KRING_TE_BREED", paginaIndex: 0 }]);
+  });
+
+  test("een knip die een lege pagina zou geven, wijkt voor xVan + W met KRING_TE_BREED", () => {
+    const W = bruikbaar(STANDAARD_PAPIER_A4).breedte;
+    // Grens 100 zou [0, 100) leeg laten; grens 500 geeft daarna [W, 500) met de tekst op 300.
+    const opm = pagineer(strook([tekst(150), tekst(300), tekst(550)], 600, [100, 500]), STANDAARD_PAPIER_A4);
+    expect(opm.paginas.map((p) => [p.xVan, p.xTot])).toEqual([
+      [0, W],
+      [W, 500],
+      [500, 600],
+    ]);
+    expect(opm.waarschuwingen).toEqual([{ code: "KRING_TE_BREED", paginaIndex: 0 }]);
+  });
+
+  test("een horizontale lijn telt mee: een pagina met alleen een lijnstuk is niet leeg", () => {
+    const lijn: SchemaElement = { soort: "lijn", x1: 50, y1: 5, x2: 350, y2: 5, rol: "rail" };
+    const opm = pagineer(strook([tekst(20), lijn, tekst(450)], 500, [200, 400]), STANDAARD_PAPIER_A4);
+    expect(opm.paginas.map((p) => [p.xVan, p.xTot])).toEqual([
+      [0, 200],
+      [200, 400],
+      [400, 500],
+    ]);
+    expect(opm.paginas[1]!.elementen[0]).toEqual({ ...lijn, x1: 200, x2: 350 });
     expect(opm.waarschuwingen).toEqual([]);
   });
 
   test("zonder passende kandidaat: knippen op xVan + W met KRING_TE_BREED per pagina", () => {
     const W = bruikbaar(STANDAARD_PAPIER_A4).breedte;
     const breedte = 1000;
-    const opm = pagineer(strook([], breedte, []), STANDAARD_PAPIER_A4);
+    const opm = pagineer(strook([tekst(10), tekst(300), tekst(600), tekst(900)], breedte, []), STANDAARD_PAPIER_A4);
     const geforceerd = Math.ceil(breedte / W) - 1;
     expect(opm.paginas).toHaveLength(geforceerd + 1);
     opm.paginas.forEach((p, i) => {

@@ -2,7 +2,7 @@ import { analyseer, type Analyse } from "@elentrik/arei";
 import type { InstallatieDocument } from "@elentrik/model";
 import { maakStrook } from "./kolommen";
 import { STANDAARD_PAPIER_A4, bruikbaar, type Papier } from "./papier";
-import type { SchemaElement, Strook } from "./types";
+import { STROOK_MARGE_MM, type SchemaElement, type Strook } from "./types";
 
 /** Kleinste schaal. Is er een kleinere nodig om de strook in de hoogte te laten passen, dan volgt `SCHEMA_TE_HOOG`. */
 export const MIN_SCHAAL = 0.5;
@@ -48,8 +48,28 @@ export function pagineer(strook: Strook, papier: Papier): SchemaOpmaak {
   }
   const paginaBreedte = ruimte.breedte / schaal;
 
-  // Knippen: telkens de verste kandidaat die nog op de pagina past.
-  const kandidaten = [0, ...strook.kringGrenzen, strook.breedte];
+  // Per element het x-bereik dat de toewijzing bepaalt: een ankerpunt, of een horizontale lijn.
+  const bereiken = strook.elementen.map((e): { van: number; tot: number } => {
+    if (e.soort === "symbool") {
+      const anker = e.x + e.symbool.maat.breedte / 2;
+      return { van: anker, tot: anker };
+    }
+    if (e.soort !== "lijn") return { van: e.x, tot: e.x };
+    return { van: Math.min(e.x1, e.x2), tot: Math.max(e.x1, e.x2) };
+  });
+  /** Krijgt de pagina `[xVan, xTot)` minstens één element? Volgt dezelfde regels als de toewijzing hieronder. */
+  const heeftElementen = (xVan: number, xTot: number): boolean => {
+    const eerste = xVan === 0;
+    const laatste = xTot >= strook.breedte;
+    const ankerOp = (x: number): boolean => (eerste || x >= xVan - EPSILON) && (laatste || x < xTot - EPSILON);
+    return bereiken.some(
+      ({ van, tot }) => ankerOp(van) || (!eerste && tot - van > EPSILON && van < xVan - EPSILON && tot > xVan + EPSILON),
+    );
+  };
+
+  // Knippen: telkens de verste kandidaat die nog op de pagina past. Grenzen op of links van de
+  // linkerrand van de inhoud vallen af, anders ontstaat een lege eerste pagina.
+  const kandidaten = [...strook.kringGrenzen.filter((x) => x > STROOK_MARGE_MM + EPSILON), strook.breedte];
   const paginas: SchemaPagina[] = [];
   let xVan = 0;
   for (;;) {
@@ -58,7 +78,10 @@ export function pagineer(strook: Strook, papier: Papier): SchemaOpmaak {
     for (const kandidaat of kandidaten) {
       if (kandidaat > xVan + EPSILON && kandidaat <= grens + EPSILON && kandidaat > xTot) xTot = kandidaat;
     }
-    if (xTot === Number.NEGATIVE_INFINITY) {
+    // Een knip die een lege pagina geeft, wijkt voor een knip op de volle paginabreedte. Dat kan
+    // alleen als die nog voor de rechterrand valt; een lege laatste pagina is niet te vermijden.
+    const leeg = xTot !== Number.NEGATIVE_INFINITY && grens < strook.breedte - EPSILON && !heeftElementen(xVan, xTot);
+    if (xTot === Number.NEGATIVE_INFINITY || leeg) {
       xTot = grens;
       waarschuwingen.push({ code: "KRING_TE_BREED", paginaIndex: paginas.length });
     }
