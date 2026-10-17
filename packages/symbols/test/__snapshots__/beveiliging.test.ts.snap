@@ -1,0 +1,163 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`symbolen voor voeding en beveiliging > snapshot: aansluiting 1`] = `
+{
+  "maat": {
+    "breedte": 10,
+    "hoogte": 8,
+    "in": {
+      "x": 5,
+      "y": 0,
+    },
+    "uit": {
+      "x": 5,
+      "y": 8,
+    },
+  },
+  "svg": "<circle cx="5" cy="2" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="4" x2="5" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="5" y="2.9" font-size="2.5" text-anchor="middle" font-family="sans-serif" fill="currentColor">~</text>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: automaat 1 pool 1`] = `
+{
+  "maat": {
+    "breedte": 10,
+    "hoogte": 14,
+    "in": {
+      "x": 5,
+      "y": 0,
+    },
+    "uit": {
+      "x": 5,
+      "y": 14,
+    },
+  },
+  "svg": "<line x1="5" y1="0" x2="5" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="7.2" x2="5.8" y2="8.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="8.8" x2="5.8" y2="7.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="3.4" y2="8.6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="5" y2="14" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="4.2" x2="5.7" y2="2.8" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: automaat 2 polen 1`] = `
+{
+  "maat": {
+    "breedte": 10,
+    "hoogte": 14,
+    "in": {
+      "x": 5,
+      "y": 0,
+    },
+    "uit": {
+      "x": 5,
+      "y": 14,
+    },
+  },
+  "svg": "<line x1="5" y1="0" x2="5" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="7.2" x2="5.8" y2="8.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="8.8" x2="5.8" y2="7.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="3.4" y2="8.6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="5" y2="14" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="3.45" x2="5.7" y2="2.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="4.95" x2="5.7" y2="3.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: automaat 3 polen 1`] = `
+{
+  "maat": {
+    "breedte": 10,
+    "hoogte": 14,
+    "in": {
+      "x": 5,
+      "y": 0,
+    },
+    "uit": {
+      "x": 5,
+      "y": 14,
+    },
+  },
+  "svg": "<line x1="5" y1="0" x2="5" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="7.2" x2="5.8" y2="8.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="8.8" x2="5.8" y2="7.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="3.4" y2="8.6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="5" y2="14" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="2.7" x2="5.7" y2="1.3" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="4.2" x2="5.7" y2="2.8" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="5.7" x2="5.7" y2="4.3" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: automaat 4 polen 1`] = `
+{
+  "maat": {
+    "breedte": 10,
+    "hoogte": 14,
+    "in": {
+      "x": 5,
+      "y": 0,
+    },
+    "uit": {
+      "x": 5,
+      "y": 14,
+    },
+  },
+  "svg": "<line x1="5" y1="0" x2="5" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="7.2" x2="5.8" y2="8.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="8.8" x2="5.8" y2="7.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="3.4" y2="8.6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="12.5" x2="5" y2="14" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="1.95" x2="5.7" y2="0.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="3.45" x2="5.7" y2="2.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="4.95" x2="5.7" y2="3.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="6.45" x2="5.7" y2="5.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: differentieel 2 polen 1`] = `
+{
+  "maat": {
+    "breedte": 14,
+    "hoogte": 14,
+    "in": {
+      "x": 7,
+      "y": 0,
+    },
+    "uit": {
+      "x": 7,
+      "y": 14,
+    },
+  },
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="7.2" x2="7.8" y2="8.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="8.8" x2="7.8" y2="7.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="12.5" x2="5.4" y2="8.6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="12.5" x2="7" y2="14" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.3" y1="3.45" x2="7.7" y2="2.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="4.95" x2="7.7" y2="3.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><rect x="9" y="6.6" width="4.6" height="3" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="11.3" y="8.8" font-size="2" text-anchor="middle" font-family="sans-serif" fill="currentColor">ΔI</text>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: differentieel 4 polen 1`] = `
+{
+  "maat": {
+    "breedte": 14,
+    "hoogte": 14,
+    "in": {
+      "x": 7,
+      "y": 0,
+    },
+    "uit": {
+      "x": 7,
+      "y": 14,
+    },
+  },
+  "svg": "<line x1="7" y1="0" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="7.2" x2="7.8" y2="8.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="8.8" x2="7.8" y2="7.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="12.5" x2="5.4" y2="8.6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="12.5" x2="7" y2="14" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.3" y1="1.95" x2="7.7" y2="0.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="3.45" x2="7.7" y2="2.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="4.95" x2="7.7" y2="3.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="6.45" x2="7.7" y2="5.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><rect x="9" y="6.6" width="4.6" height="3" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="11.3" y="8.8" font-size="2" text-anchor="middle" font-family="sans-serif" fill="currentColor">ΔI</text>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: teller 1`] = `
+{
+  "maat": {
+    "breedte": 10,
+    "hoogte": 12,
+    "in": {
+      "x": 5,
+      "y": 0,
+    },
+    "uit": {
+      "x": 5,
+      "y": 12,
+    },
+  },
+  "svg": "<line x1="5" y1="0" x2="5" y2="1.5" stroke="currentColor" stroke-width="0.35" fill="none"/><rect x="0" y="1.5" width="10" height="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="10.5" x2="5" y2="12" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="5" y="7.4" font-size="2.5" text-anchor="middle" font-family="sans-serif" fill="currentColor">kWh</text>",
+}
+`;
+
+exports[`symbolen voor voeding en beveiliging > snapshot: zekering 1`] = `
+{
+  "maat": {
+    "breedte": 8,
+    "hoogte": 14,
+    "in": {
+      "x": 4,
+      "y": 0,
+    },
+    "uit": {
+      "x": 4,
+      "y": 14,
+    },
+  },
+  "svg": "<rect x="2" y="2" width="4" height="10" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4" y1="0" x2="4" y2="14" stroke="currentColor" stroke-width="0.35" fill="none"/>",
+}
+`;
