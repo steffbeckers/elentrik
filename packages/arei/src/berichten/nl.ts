@@ -17,4 +17,11 @@ export const NL: Readonly<Record<string, string>> = {
     "Kring {kring} heeft verlichting maar een leiding van {doorsnede} mm². Minimaal {min} mm² vereist.",
   "arei.toestel.eigen-kring.gedeeld":
     "Een {toestel} hoort op een eigen kring, maar kring {kring} voedt ook andere punten.",
+  "arei.polen.stroomtype.algemeen":
+    "Het algemeen differentieel heeft {polen} polen, maar bij stroomtype {stroomtype} worden {verwacht} polen verwacht.",
+  "arei.polen.stroomtype.te-veel":
+    "Deze beveiliging heeft {polen} polen, meer dan nodig bij stroomtype {stroomtype}.",
+  "arei.situatie.niet-geplaatst.punt": "Punt {label} is nog niet op een situatieplan geplaatst.",
+  "arei.leiding.onvolledig.kabeltype": "Bij deze leiding is het kabeltype nog niet ingevuld.",
+  "arei.leiding.onvolledig.doorsnede": "Bij deze leiding is de doorsnede nog niet ingevuld.",
 };

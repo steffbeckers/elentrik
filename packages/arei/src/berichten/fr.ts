@@ -17,4 +17,11 @@ export const FR: Readonly<Record<string, string>> = {
     "Le circuit {kring} alimente de l'éclairage avec un câble de {doorsnede} mm². Minimum requis : {min} mm².",
   "arei.toestel.eigen-kring.gedeeld":
     "Un appareil de type {toestel} doit avoir son propre circuit, mais le circuit {kring} alimente aussi d'autres points.",
+  "arei.polen.stroomtype.algemeen":
+    "Le différentiel général a {polen} pôles, alors que {verwacht} pôles sont attendus pour le type de courant {stroomtype}.",
+  "arei.polen.stroomtype.te-veel":
+    "Cette protection a {polen} pôles, plus que nécessaire pour le type de courant {stroomtype}.",
+  "arei.situatie.niet-geplaatst.punt": "Le point {label} n'est pas encore placé sur un plan de situation.",
+  "arei.leiding.onvolledig.kabeltype": "Le type de câble de cette liaison n'est pas encore renseigné.",
+  "arei.leiding.onvolledig.doorsnede": "La section de cette liaison n'est pas encore renseignée.",
 };

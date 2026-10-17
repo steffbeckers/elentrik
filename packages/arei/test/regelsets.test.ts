@@ -13,6 +13,24 @@ describe("haalRegelset", () => {
   });
 });
 
+describe("arei-2020@1", () => {
+  test("bevat de 9 regels in volgorde en is niet gepubliceerd", () => {
+    const set = haalRegelset("arei-2020@1");
+    expect(set.gepubliceerd).toBe(false);
+    expect(set.regels.map((r) => r.id)).toEqual([
+      "arei.algemeen-differentieel",
+      "arei.natte-ruimte-differentieel",
+      "arei.doorsnede-beveiliging",
+      "arei.kring.max-contactdozen",
+      "arei.kring.min-doorsnede",
+      "arei.toestel.eigen-kring",
+      "arei.polen.stroomtype",
+      "arei.situatie.niet-geplaatst",
+      "arei.leiding.onvolledig",
+    ]);
+  });
+});
+
 describe("waarborgen", () => {
   test("een gepubliceerde regelset bevat enkel nagekeken regels met een artikel", () => {
     for (const [sleutel, set] of Object.entries(REGELSETS)) {
