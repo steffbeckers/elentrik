@@ -83,7 +83,7 @@ describe("maakStrook: kringen naast elkaar", () => {
     expect(strook.breedte).toBe(2 * 4 + 2 * 24);
   });
 
-  test("tweede kring staat een rail lager, met drie verbindingsstukken", () => {
+  test("een bord met twee kinderen geeft vier segmenten: stam, rail en een stuk per kind", () => {
     const bord = symbolen(strook.elementen).find((s) => s.nodeId === ids["bord"]!)!;
     const k1 = symbolen(strook.elementen).find((s) => s.nodeId === ids["k1"]!)!;
     const k2 = symbolen(strook.elementen).find((s) => s.nodeId === ids["k2"]!)!;
@@ -92,30 +92,13 @@ describe("maakStrook: kringen naast elkaar", () => {
     expect(k2.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
     expect(cx(k2) - cx(k1)).toBeCloseTo(KOLOM_BREEDTE_MM, 10);
 
-    const naarK2 = lijnen(strook.elementen).filter((l) => l.y2 === k2.y && l.x2 === cx(k2));
-    expect(naarK2).toEqual([
-      { soort: "lijn", x1: cx(k2), y1: yRail, x2: cx(k2), y2: k2.y, rol: "verbinding" },
+    const naBord = strook.elementen.slice(strook.elementen.indexOf(bord) + 1);
+    expect(lijnen(naBord).slice(0, 4)).toEqual([
+      { soort: "lijn", x1: cx(bord), y1: bord.y + bord.symbool.maat.uit.y, x2: cx(bord), y2: yRail, rol: "verbinding" },
+      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k2), y2: yRail, rol: "rail" },
+      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k1), y2: k1.y + k1.symbool.maat.in.y, rol: "verbinding" },
+      { soort: "lijn", x1: cx(k2), y1: yRail, x2: cx(k2), y2: k2.y + k2.symbool.maat.in.y, rol: "verbinding" },
     ]);
-    const stukken = lijnen(strook.elementen).filter(
-      (l) => (l.x1 === cx(bord) && l.x2 === cx(bord) && l.y2 === yRail) || (l.y1 === yRail && l.y2 === yRail),
-    );
-    expect(stukken).toEqual([
-      { soort: "lijn", x1: cx(bord), y1: bord.y + bord.symbool.maat.hoogte, x2: cx(bord), y2: yRail, rol: "verbinding" },
-      { soort: "lijn", x1: cx(bord), y1: yRail, x2: cx(k2), y2: yRail, rol: "verbinding" },
-    ]);
-  });
-
-  test("het eerste kind heeft een rechte lijn van uit naar in", () => {
-    const bord = symbolen(strook.elementen).find((s) => s.nodeId === ids["bord"]!)!;
-    const k1 = symbolen(strook.elementen).find((s) => s.nodeId === ids["k1"]!)!;
-    expect(lijnen(strook.elementen)).toContainEqual({
-      soort: "lijn",
-      x1: cx(bord),
-      y1: bord.y + bord.symbool.maat.hoogte,
-      x2: cx(k1),
-      y2: k1.y,
-      rol: "verbinding",
-    });
   });
 });
 
@@ -228,6 +211,88 @@ describe("maakStrook: vertakkingen en randgevallen", () => {
     const strook = maakStrook(groot);
     expect(symbolen(strook.elementen).length).toBeGreaterThanOrEqual(5000);
     expect(strook.breedte).toBe(2 * 4 + 24);
+  });
+});
+
+describe("maakStrook: volgorde van de elementen", () => {
+  test("per node: symbool, teksten (kring, beveiliging, leiding, punt) en daarna de verbindingen", () => {
+    const { doc } = installatie()
+      .differentieel(300, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))))
+      .bouw();
+    const volgorde = maakStrook(doc).elementen.map((e) => {
+      if (e.soort === "symbool") return `symbool:${doc.nodes[e.nodeId]!.type}`;
+      if (e.soort === "tekst") return `tekst:${e.rol}:${e.tekst}`;
+      if (e.soort === "lijn") return `lijn:${e.rol}`;
+      return e.soort;
+    });
+    expect(volgorde).toEqual([
+      "symbool:aansluiting",
+      "lijn:verbinding",
+      "symbool:teller",
+      "lijn:verbinding",
+      "symbool:differentieel",
+      "tekst:beveiliging:300 mA A",
+      "lijn:verbinding",
+      "symbool:verdeelbord",
+      "lijn:verbinding",
+      "symbool:automaat",
+      "tekst:kring:A",
+      "tekst:beveiliging:16 A B",
+      "lijn:verbinding",
+      "symbool:leiding",
+      "tekst:leiding:XVB 3G2,5",
+      "lijn:verbinding",
+      "symbool:contactdoos",
+      "tekst:punt:A1",
+    ]);
+  });
+});
+
+describe("maakStrook: splitsing onder een node die geen bord is", () => {
+  const { doc, ids } = installatie()
+    .differentieel(300, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1).als("cd"))))
+    .bouw();
+  const groot = kloon(doc);
+  const cdId = ids["cd"]!;
+  const kinderIds: NodeId[] = [];
+  for (let i = 0; i < 2; i++) {
+    const id = nieuwId();
+    kinderIds.push(id);
+    groot.nodes[id] = {
+      id,
+      parentId: cdId,
+      kinderen: [],
+      type: "contactdoos",
+      aantal: 1,
+      randaarde: true,
+      kinderbeveiliging: true,
+      waterdicht: false,
+    };
+    groot.nodes[cdId]!.kinderen.push(id);
+  }
+  const strook = maakStrook(groot);
+  const syms = symbolen(strook.elementen);
+  const ouder = syms.find((s) => s.nodeId === cdId)!;
+  const k1 = syms.find((s) => s.nodeId === kinderIds[0]!)!;
+  const k2 = syms.find((s) => s.nodeId === kinderIds[1]!)!;
+  const yRail = ouder.y + ouder.symbool.maat.hoogte + VERTICALE_AFSTAND_MM;
+
+  test("beide kinderen staan een rail lager, in aangrenzende kolommen", () => {
+    expect(k1.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
+    expect(k2.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
+    expect(cx(k1)).toBeCloseTo(cx(ouder), 10);
+    expect(cx(k2) - cx(k1)).toBeCloseTo(KOLOM_BREEDTE_MM, 10);
+  });
+
+  test("de horizontale lijn heeft rol verbinding en er komt geen rail bij", () => {
+    const naOuder = strook.elementen.slice(strook.elementen.indexOf(ouder) + 1);
+    expect(lijnen(naOuder).slice(0, 4)).toEqual([
+      { soort: "lijn", x1: cx(ouder), y1: ouder.y + ouder.symbool.maat.uit.y, x2: cx(ouder), y2: yRail, rol: "verbinding" },
+      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k2), y2: yRail, rol: "verbinding" },
+      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k1), y2: k1.y + k1.symbool.maat.in.y, rol: "verbinding" },
+      { soort: "lijn", x1: cx(k2), y1: yRail, x2: cx(k2), y2: k2.y + k2.symbool.maat.in.y, rol: "verbinding" },
+    ]);
+    expect(lijnen(strook.elementen).filter((l) => l.rol === "rail")).toEqual([]);
   });
 });
 
