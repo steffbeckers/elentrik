@@ -9,7 +9,7 @@ import {
 } from "@elentrik/model";
 import { analyseer, kringLetter } from "../src/index";
 import { installatie } from "../src/testing/index";
-import { kloon } from "../../model/test/hulp";
+import { kloon } from "./hulp";
 
 const CONTACTDOOS = {
   type: "contactdoos",
@@ -80,15 +80,6 @@ describe("analyseer: kringen en nummering", () => {
     expect(a).toMatchObject({ id: ids.kA, beveiligingId: ids.kA, verdeelbordId: ids.bord, puntIds: [ids.a1, ids.a2] });
     expect(b).toMatchObject({ id: ids.kB, beveiligingId: ids.kB, verdeelbordId: ids.bord, puntIds: [ids.b1] });
     expect(analyse.zonderKring).toEqual([]);
-  });
-
-  test("velden die deze task nog niet vult zijn leeg of null", () => {
-    const { doc } = installatie()
-      .differentieel(300, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))))
-      .bouw();
-    const analyse = analyseer(doc);
-    expect(analyse.kringen[0]).toMatchObject({ leidingIds: [], ruimtes: [], minDoorsnede_mm2: null });
-    expect(analyse).toMatchObject({ ketens: {}, tellerId: null, algemeenDifferentieelId: null, nietGeplaatst: [] });
   });
 
   test("28 kringen: het 27e label is AA en het 28e AB", () => {
@@ -163,6 +154,31 @@ describe("analyseer: kringen en nummering", () => {
       )
       .bouw();
     expect(analyseer(doc).kringen.map((k) => k.label)).toEqual(["A", "A.A"]);
+  });
+
+  test("onderbord met een naam van alleen witruimte valt terug op het kringlabel", () => {
+    const { doc } = installatie()
+      .verdeelbord((b) =>
+        b.kring((k) =>
+          k
+            .automaat(32)
+            .leiding(6)
+            .onderbord((o) => o.kring((ok) => ok.automaat(16).leiding(2.5).contactdozen(1)), "  \t "),
+        ),
+      )
+      .bouw();
+    expect(analyseer(doc).kringen.map((k) => k.label)).toEqual(["A", "A.A"]);
+  });
+
+  test("punten worden in pre-order genummerd: leiding → [cd1 → cd2, cd3] geeft A1, A2, A3", () => {
+    const { doc, ids } = installatie()
+      .verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).als("leiding").contactdozen(1).als("cd1")))
+      .bouw();
+    const r2 = voegToe(doc, ids.cd1!, CONTACTDOOS);
+    const r3 = voegToe(r2.doc, ids.leiding!, CONTACTDOOS);
+    const analyse = analyseer(r3.doc);
+    expect(analyse.kringen[0]!.puntIds).toEqual([ids.cd1, r2.id, r3.id]);
+    expect(analyse.puntLabels).toEqual({ [ids.cd1!]: "A1", [r2.id]: "A2", [r3.id]: "A3" });
   });
 
   test("onderbord in een onderbord stapelt de prefixen", () => {
