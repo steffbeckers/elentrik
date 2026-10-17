@@ -1,11 +1,13 @@
 import type { Node } from "@elentrik/model";
 import { tekenAutomaat, tekenDifferentieel, tekenZekering } from "./beveiliging";
+import { tekenLeiding, tekenVerdeelbord } from "./leiding";
+import { tekenContactdoos, tekenLichtpunt, tekenSchakelaar, tekenToestel } from "./punten";
 import type { Symbool } from "./types";
 import { tekenAansluiting, tekenTeller } from "./voeding";
 
 /**
  * Tekent het symbool van een node. Uitputtende `switch`: een nieuw nodetype geeft een
- * compilatiefout. De types die nog geen symbool hebben, gooien tijdelijk `Error("NOG_NIET")`.
+ * compilatiefout.
  */
 export function tekenSymbool(node: Node): Symbool {
   switch (node.type) {
@@ -20,12 +22,17 @@ export function tekenSymbool(node: Node): Symbool {
     case "zekering":
       return tekenZekering(node);
     case "verdeelbord":
+      return tekenVerdeelbord(node);
     case "leiding":
+      return tekenLeiding(node);
     case "contactdoos":
+      return tekenContactdoos(node);
     case "lichtpunt":
+      return tekenLichtpunt(node);
     case "schakelaar":
+      return tekenSchakelaar(node);
     case "toestel":
-      throw new Error("NOG_NIET");
+      return tekenToestel(node);
     default: {
       const onbekend: never = node;
       throw new Error(`Onbekend nodetype: ${JSON.stringify(onbekend)}`);

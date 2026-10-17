@@ -82,13 +82,14 @@ export function rechthoek(x: number, y: number, b: number, h: number, opties?: M
 }
 
 /**
- * `<path>`. `d` wordt niet geëscaped: de aanroeper mag er uitsluitend numerieke padgegevens in
- * zetten (opdrachtletters, getallen uit `getal()`, spaties). Dat wordt afgedwongen: elk ander
- * teken geeft een `RangeError`.
+ * `<path>`; met `gevuld` is `fill="currentColor"`. `d` wordt niet geëscaped: de aanroeper mag er
+ * uitsluitend numerieke padgegevens in zetten (opdrachtletters, getallen uit `getal()`, spaties).
+ * Dat wordt afgedwongen: elk ander teken geeft een `RangeError`.
  */
-export function pad(d: string, opties?: MetData): string {
+export function pad(d: string, opties?: MetData & { gevuld?: boolean }): string {
   if (!PAD_TEKENS.test(d)) throw new RangeError(`Ongeldige tekens in padgegevens: "${d}"`);
-  return `<path d="${d}" ${lijnstijl()}${dataAttributen(opties?.data)}/>`;
+  const vulling = opties?.gevuld ? "currentColor" : "none";
+  return `<path d="${d}" ${lijnstijl(vulling)}${dataAttributen(opties?.data)}/>`;
 }
 
 /** `<text>`; de inhoud wordt geëscaped. */

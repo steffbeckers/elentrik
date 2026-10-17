@@ -102,6 +102,12 @@ describe("builders", () => {
     );
   });
 
+  test("pad kan gevuld zijn", () => {
+    expect(pad("M0 0L1 1Z", { gevuld: true })).toBe(
+      '<path d="M0 0L1 1Z" stroke="currentColor" stroke-width="0.35" fill="currentColor"/>',
+    );
+  });
+
   test("pad weigert tekens buiten numerieke padgegevens", () => {
     expect(() => pad('M0 0"/><script>')).toThrow(RangeError);
     expect(pad("M0.5,-1e2 L1 1 Z")).toContain('d="M0.5,-1e2 L1 1 Z"');

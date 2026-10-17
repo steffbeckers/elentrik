@@ -1,8 +1,7 @@
 import type { Node, NodeVan } from "@elentrik/model";
-import { XMLValidator } from "fast-xml-parser";
 import { describe, expect, test } from "vitest";
 import { KOLOM_BREEDTE_MM, tekenSymbool } from "../src/index";
-import type { Symbool } from "../src/index";
+import { buitenVak, isGoedgevormd } from "./hulp";
 
 const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
 
@@ -30,10 +29,6 @@ const varianten: ReadonlyArray<[string, Node]> = [
   ["aansluiting", aansluiting],
 ];
 
-function isGoedgevormd(symbool: Symbool): true | unknown {
-  return XMLValidator.validate(`<svg xmlns="http://www.w3.org/2000/svg">${symbool.svg}</svg>`);
-}
-
 describe("symbolen voor voeding en beveiliging", () => {
   test.each(varianten)("snapshot: %s", (_naam, node) => {
     expect(tekenSymbool(node)).toMatchSnapshot();
@@ -56,12 +51,8 @@ describe("symbolen voor voeding en beveiliging", () => {
       expect(maat.uit.y).toBe(maat.hoogte);
     });
 
-    test("alle coördinaten liggen binnen het vak", () => {
-      for (const [, naam, waarde] of symbool.svg.matchAll(/ (x1|x2|cx|x|y1|y2|cy|y)="([^"]+)"/g)) {
-        const grens = naam?.startsWith("x") || naam === "cx" ? maat.breedte : maat.hoogte;
-        expect(Number(waarde)).toBeGreaterThanOrEqual(0);
-        expect(Number(waarde)).toBeLessThanOrEqual(grens);
-      }
+    test("alle meetkunde ligt binnen het vak", () => {
+      expect(buitenVak(symbool)).toEqual([]);
     });
 
     test("is goedgevormde XML zonder NaN of undefined", () => {
@@ -105,16 +96,5 @@ describe("symbolen voor voeding en beveiliging", () => {
   test("teller toont kWh en aansluiting toont ~", () => {
     expect(tekenSymbool(teller).svg).toContain(">kWh</text>");
     expect(tekenSymbool(aansluiting).svg).toContain(">~</text>");
-  });
-
-  test("types die nog niet getekend worden gooien NOG_NIET", () => {
-    const leiding: NodeVan<"leiding"> = {
-      ...basis,
-      type: "leiding",
-      kabeltype: "",
-      doorsnede_mm2: 0,
-      aantalGeleiders: 3,
-    };
-    expect(() => tekenSymbool(leiding)).toThrow("NOG_NIET");
   });
 });
