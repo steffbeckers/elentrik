@@ -24,6 +24,18 @@ importers:
         specifier: workspace:*
         version: link:../model
 
+  packages/layout:
+    dependencies:
+      '@elentrik/arei':
+        specifier: workspace:*
+        version: link:../arei
+      '@elentrik/model':
+        specifier: workspace:*
+        version: link:../model
+      '@elentrik/symbols':
+        specifier: workspace:*
+        version: link:../symbols
+
   packages/model:
     dependencies:
       immer:
@@ -39,6 +51,21 @@ importers:
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2
+
+  packages/render:
+    dependencies:
+      '@elentrik/layout':
+        specifier: workspace:*
+        version: link:../layout
+      '@elentrik/symbols':
+        specifier: workspace:*
+        version: link:../symbols
+
+  packages/symbols:
+    dependencies:
+      '@elentrik/model':
+        specifier: workspace:*
+        version: link:../model
 
 packages:
 

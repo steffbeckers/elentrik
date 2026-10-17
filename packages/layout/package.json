@@ -1,0 +1,20 @@
+{
+  "name": "@elentrik/layout",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@elentrik/arei": "workspace:*",
+    "@elentrik/model": "workspace:*",
+    "@elentrik/symbols": "workspace:*"
+  }
+}
