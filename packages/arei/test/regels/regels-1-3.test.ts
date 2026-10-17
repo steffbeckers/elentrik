@@ -22,7 +22,7 @@ describe("regel 1: algemeen differentieel", () => {
   const regel = maakRegelAlgemeenDifferentieel(PARAMETERS_AREI_2020_V1);
 
   test("is voorlopig en heeft de verwachte metadata", () => {
-    expect(regel.id).toBe("arei.algemeen-differentieel");
+    expect(regel.id).toBe("arei.differentieel.algemeen");
     expect(regel.nagekeken).toBe(false);
     expect(regel.artikel).toBe("");
     expect(regel.ernst).toBe("fout");
@@ -42,10 +42,10 @@ describe("regel 1: algemeen differentieel", () => {
     const tellerId = doc.nodes[doc.rootId]!.kinderen[0]!;
     expect(draai(regel, doc)).toEqual([
       {
-        regelId: "arei.algemeen-differentieel",
+        regelId: "arei.differentieel.algemeen",
         ernst: "fout",
         nodeIds: [tellerId],
-        berichtSleutel: "arei.algemeen-differentieel.ontbreekt",
+        berichtSleutel: "arei.differentieel.algemeen.ontbreekt",
         parameters: {},
         afgeweken: false,
       },
@@ -57,7 +57,7 @@ describe("regel 1: algemeen differentieel", () => {
     expect(draai(regel, doc)).toEqual([]);
   });
 
-  test("differentieel 500 geeft .te-gevoelig-ingesteld", () => {
+  test("differentieel 500 geeft .te-ongevoelig", () => {
     const { doc, ids } = installatie()
       .differentieel(
         500,
@@ -67,10 +67,10 @@ describe("regel 1: algemeen differentieel", () => {
       .bouw();
     expect(draai(regel, doc)).toEqual([
       {
-        regelId: "arei.algemeen-differentieel",
+        regelId: "arei.differentieel.algemeen",
         ernst: "fout",
         nodeIds: [ids["algemeen"]],
-        berichtSleutel: "arei.algemeen-differentieel.te-gevoelig-ingesteld",
+        berichtSleutel: "arei.differentieel.algemeen.te-ongevoelig",
         parameters: { gevoeligheid: 500, max: 300 },
         afgeweken: false,
       },
@@ -82,7 +82,7 @@ describe("regel 2: natte-ruimte-differentieel", () => {
   const regel = maakRegelNatteRuimteDifferentieel(PARAMETERS_AREI_2020_V1);
 
   test("is voorlopig en heeft de verwachte metadata", () => {
-    expect(regel.id).toBe("arei.natte-ruimte-differentieel");
+    expect(regel.id).toBe("arei.differentieel.natte-ruimte");
     expect(regel.nagekeken).toBe(false);
     expect(regel.artikel).toBe("");
     expect(regel.ernst).toBe("fout");
@@ -111,10 +111,10 @@ describe("regel 2: natte-ruimte-differentieel", () => {
       .bouw();
     expect(draai(regel, doc)).toEqual([
       {
-        regelId: "arei.natte-ruimte-differentieel",
+        regelId: "arei.differentieel.natte-ruimte",
         ernst: "fout",
         nodeIds: [ids["punt"]],
-        berichtSleutel: "arei.natte-ruimte-differentieel.ontbreekt",
+        berichtSleutel: "arei.differentieel.natte-ruimte.ontbreekt",
         parameters: { reden: "badkamer", max: 30 },
         afgeweken: false,
       },
@@ -134,7 +134,7 @@ describe("regel 2: natte-ruimte-differentieel", () => {
     expect(draai(regel, doc)).toMatchObject([
       {
         nodeIds: [ids["wasmachine"]],
-        berichtSleutel: "arei.natte-ruimte-differentieel.ontbreekt",
+        berichtSleutel: "arei.differentieel.natte-ruimte.ontbreekt",
         parameters: { reden: "wasmachine", max: 30 },
       },
     ]);
@@ -216,7 +216,7 @@ describe("regel 3: doorsnede-beveiliging", () => {
     Object.values(doc.nodes).find((n) => n.type === "automaat")!.id;
 
   test("is voorlopig en heeft de verwachte metadata", () => {
-    expect(regel.id).toBe("arei.doorsnede-beveiliging");
+    expect(regel.id).toBe("arei.kring.doorsnede-beveiliging");
     expect(regel.nagekeken).toBe(false);
     expect(regel.artikel).toBe("");
     expect(regel.ernst).toBe("fout");
@@ -230,10 +230,10 @@ describe("regel 3: doorsnede-beveiliging", () => {
     const { doc } = kringMet(20, 1.5);
     expect(draai(regel, doc)).toEqual([
       {
-        regelId: "arei.doorsnede-beveiliging",
+        regelId: "arei.kring.doorsnede-beveiliging",
         ernst: "fout",
         nodeIds: [beveiligingIdVan(doc)],
-        berichtSleutel: "arei.doorsnede-beveiliging.te-hoog",
+        berichtSleutel: "arei.kring.doorsnede-beveiliging.te-hoog",
         parameters: { nominaal: 20, doorsnede: 1.5, max: 16 },
         afgeweken: false,
       },
@@ -244,10 +244,10 @@ describe("regel 3: doorsnede-beveiliging", () => {
     const { doc } = kringMet(16, 3);
     expect(draai(regel, doc)).toEqual([
       {
-        regelId: "arei.doorsnede-beveiliging",
+        regelId: "arei.kring.doorsnede-beveiliging",
         ernst: "waarschuwing",
         nodeIds: [beveiligingIdVan(doc)],
-        berichtSleutel: "arei.doorsnede-beveiliging.onbekende-doorsnede",
+        berichtSleutel: "arei.kring.doorsnede-beveiliging.onbekende-doorsnede",
         parameters: { doorsnede: 3 },
         afgeweken: false,
       },

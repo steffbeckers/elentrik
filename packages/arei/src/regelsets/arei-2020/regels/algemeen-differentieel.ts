@@ -1,16 +1,16 @@
 import type { Regel } from "../../../types";
 import type { Arei2020Parameters } from "../parameters";
 
-const ID = "arei.algemeen-differentieel";
+const ID = "arei.differentieel.algemeen";
 
-/** Regel 1: de installatie heeft een algemeen differentieel dat niet te gevoelig is ingesteld. */
+/** Regel 1: de installatie heeft een algemeen differentieel waarvan de gevoeligheid hoogstens het maximum is (anders is het te ongevoelig). */
 export function maakRegelAlgemeenDifferentieel(p: Arei2020Parameters): Regel {
   return {
     id: ID,
     artikel: "",
     ernst: "fout",
     nagekeken: false,
-    berichtSleutels: [`${ID}.ontbreekt`, `${ID}.te-gevoelig-ingesteld`],
+    berichtSleutels: [`${ID}.ontbreekt`, `${ID}.te-ongevoelig`],
     check(analyse, doc) {
       const id = analyse.algemeenDifferentieelId;
       if (id === null) {
@@ -32,7 +32,7 @@ export function maakRegelAlgemeenDifferentieel(p: Arei2020Parameters): Regel {
           regelId: ID,
           ernst: "fout",
           nodeIds: [id],
-          berichtSleutel: `${ID}.te-gevoelig-ingesteld`,
+          berichtSleutel: `${ID}.te-ongevoelig`,
           parameters: { gevoeligheid: node.gevoeligheid_mA, max: p.algemeenDifferentieelMax_mA },
         },
       ];

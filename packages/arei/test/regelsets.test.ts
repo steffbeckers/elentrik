@@ -18,9 +18,9 @@ describe("arei-2020@1", () => {
     const set = haalRegelset("arei-2020@1");
     expect(set.gepubliceerd).toBe(false);
     expect(set.regels.map((r) => r.id)).toEqual([
-      "arei.algemeen-differentieel",
-      "arei.natte-ruimte-differentieel",
-      "arei.doorsnede-beveiliging",
+      "arei.differentieel.algemeen",
+      "arei.differentieel.natte-ruimte",
+      "arei.kring.doorsnede-beveiliging",
       "arei.kring.max-contactdozen",
       "arei.kring.min-doorsnede",
       "arei.toestel.eigen-kring",

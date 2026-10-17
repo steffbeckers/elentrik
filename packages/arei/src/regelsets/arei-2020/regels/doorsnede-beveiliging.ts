@@ -1,7 +1,7 @@
 import type { Bevinding, Regel } from "../../../types";
 import type { Arei2020Parameters } from "../parameters";
 
-const ID = "arei.doorsnede-beveiliging";
+const ID = "arei.kring.doorsnede-beveiliging";
 
 /** Regel 3: de beveiliging van een kring is niet hoger dan de kleinste leidingdoorsnede toelaat. */
 export function maakRegelDoorsnedeBeveiliging(p: Arei2020Parameters): Regel {

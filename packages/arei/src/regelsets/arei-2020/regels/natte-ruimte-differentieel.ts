@@ -1,7 +1,7 @@
 import type { Bevinding, Regel } from "../../../types";
 import type { Arei2020Parameters } from "../parameters";
 
-const ID = "arei.natte-ruimte-differentieel";
+const ID = "arei.differentieel.natte-ruimte";
 
 /** Regel 2: punten in natte ruimtes en bepaalde toestellen hangen achter een laaggevoelig differentieel. */
 export function maakRegelNatteRuimteDifferentieel(p: Arei2020Parameters): Regel {
