@@ -1,4 +1,4 @@
-import { installatie } from "@elentrik/arei/testing";
+import { installatie, type BordBouwer } from "@elentrik/arei/testing";
 import { opmaak, papierMaat, bruikbaar, STANDAARD_PAPIER_A4 } from "@elentrik/layout";
 import { XMLValidator } from "fast-xml-parser";
 import { describe, expect, test } from "vitest";
@@ -65,6 +65,19 @@ describe("schemaPaginaSvg", () => {
     expect(svg).toContain(">p. 2</text>");
   });
 
+  test("het vervolglabel staat volledig boven de lijn, het pijltje op de lijn", () => {
+    const o = opmaak(kringen(20));
+    for (const pagina of o.paginas) {
+      const svg = schemaPaginaSvg(o, pagina.index);
+      const groepen = [...svg.matchAll(/<g class="vervolg"><path d="M[\d.-]+ ([\d.-]+) [^"]*"[^>]*\/><text[^>]* y="([\d.-]+)"/g)];
+      expect(groepen.length).toBe(pagina.elementen.filter((e) => e.soort === "vervolg").length);
+      for (const [, lijnY, tekstY] of groepen) {
+        expect(Number(tekstY)).toBeLessThan(Number(lijnY) - 0.5);
+      }
+    }
+    expect(schemaPaginaSvg(o, 0)).toContain('<g class="vervolg">');
+  });
+
   test("een paginaIndex buiten het bereik gooit een RangeError", () => {
     const o = opmaak(kringen(2));
     expect(() => schemaPaginaSvg(o, -1)).toThrow(RangeError);
@@ -101,6 +114,36 @@ describe("schemaStripSvg", () => {
     expect(svg).toContain('class="lijn-rail"');
     expect(svg).toContain('class="tekst-kring"');
     expect(svg.indexOf("data-node-id=")).toBeLessThan(svg.indexOf('class="lijn-verbinding"'));
+  });
+});
+
+describe("schaal", () => {
+  /** Kring met `diepte` geneste onderborden, zodat de strook hoger wordt dan het papier. */
+  const diep = (diepte: number) => {
+    const bouw = (b: BordBouwer, n: number): void => {
+      b.kring((k) => {
+        k.automaat(16).leiding(2.5);
+        if (n > 0) k.onderbord((o) => bouw(o, n - 1), `bord ${n}`);
+      });
+    };
+    return installatie()
+      .verdeelbord((b) => bouw(b, diepte))
+      .bouw().doc;
+  };
+
+  test("een afgeronde schaal overschrijdt de bruikbare hoogte nooit", () => {
+    let getest = 0;
+    for (let diepte = 1; diepte <= 12; diepte++) {
+      const o = opmaak(diep(diepte));
+      const pagina = o.paginas[0]!;
+      const geheel = Math.abs(pagina.schaal * 100 - Math.round(pagina.schaal * 100)) < 1e-6;
+      if (pagina.schaal >= 1 || pagina.schaal <= 0.5 || geheel) continue;
+      const x = Number(/scale\(([\d.]+)\)/.exec(schemaPaginaSvg(o, 0))![1]);
+      expect(x).toBeLessThanOrEqual(pagina.schaal);
+      expect(o.strook.hoogte * x).toBeLessThanOrEqual(bruikbaar(o.papier).hoogte + 1e-9);
+      getest++;
+    }
+    expect(getest).toBeGreaterThan(0);
   });
 });
 

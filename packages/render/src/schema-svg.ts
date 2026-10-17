@@ -9,6 +9,8 @@ const PIJL_LENGTE_MM = 2;
 const PIJL_HALVE_BREEDTE_MM = 1;
 /** Tekstgrootte van "p. N" in mm. */
 const PIJL_TEKST_MM = 2;
+/** Afstand van de tekstbasislijn boven de lijn waarop het vervolg staat, zodat de tekst de lijn niet raakt. */
+const PIJL_LABEL_BOVEN_LIJN_MM = 1.2;
 
 function elementSvg(element: SchemaElement): string {
   switch (element.soort) {
@@ -35,7 +37,7 @@ function elementSvg(element: SchemaElement): string {
       const label = tekstSvg(
         "vervolg",
         element.x - richting * (PIJL_LENGTE_MM + 0.5),
-        element.y + 0.7,
+        element.y - PIJL_LABEL_BOVEN_LIJN_MM,
         PIJL_TEKST_MM,
         element.richting === "rechts" ? "end" : "start",
         `p. ${element.paginaNummer}`,
@@ -55,7 +57,7 @@ function tekstSvg(
 ): string {
   return (
     `<text class="tekst-${escapeXml(rol)}" x="${getal(x)}" y="${getal(y)}" font-size="${getal(grootte)}" ` +
-    `text-anchor="${anker}" font-family="sans-serif" fill="currentColor">${escapeXml(tekst)}</text>`
+    `text-anchor="${escapeXml(anker)}" font-family="sans-serif" fill="currentColor">${escapeXml(tekst)}</text>`
   );
 }
 
