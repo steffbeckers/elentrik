@@ -68,3 +68,26 @@ test("maak, dupliceer en verwijder een project", async ({ page }) => {
 
   expect(dialogen).toEqual([]);
 });
+
+test("sneltoetsen blijven werken na een klik op een paneelknop", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", {
+    data: { naam: `${naam} editor`, klantnaam: "Janssens", stroomtype: "2x230V" },
+  });
+  const { id } = (await antwoord.json()) as { id: string };
+
+  await page.goto(`/projecten/${id}`);
+  await page.waitForLoadState("networkidle");
+
+  // Na een klik heeft de knop de focus; toch kiest de letter een ander onderdeel.
+  await page.getByTestId("onderdeel-contactdoos").click();
+  await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("l");
+  await expect(page.getByTestId("onderdeel-lichtpunt")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "false");
+
+  // Het meervoud van de teller komt uit de pluralisatie van i18n.
+  await expect(page.getByTestId("bevindingenteller")).toHaveAttribute(
+    "aria-label",
+    "0 fouten en 0 waarschuwingen",
+  );
+});

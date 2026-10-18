@@ -115,6 +115,11 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value++;
   }
 
+  /** Telt een wijziging die buiten de store is gebeurd (bv. een geladen concept), zodat de autosave ze bewaart. */
+  function markeerGewijzigd(): void {
+    gewijzigdSindsOpslaan.value++;
+  }
+
   function laad(project: TeLadenProject): void {
     document.value = project.document;
     projectId.value = project.id;
@@ -362,6 +367,7 @@ export const useEditorStore = defineStore("editor", () => {
     aantalFouten,
     aantalWaarschuwingen,
     laad,
+    markeerGewijzigd,
     pasToe,
     sluitGroep,
     ongedaanMaken,

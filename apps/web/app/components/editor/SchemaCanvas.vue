@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DocumentFout, magToevoegen } from "@elentrik/model";
-import { moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
+import { doelSoort, moetNegeren, spatieSchuift, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { markeringen as leidMarkeringenAf, type MarkeringSoort } from "~/editor/markeringen";
 import { useEditorStore } from "~/stores/editor";
 
@@ -161,10 +161,9 @@ function klikOpBasis(event: MouseEvent): void {
 
 // --- Sneltoetsen -----------------------------------------------------------
 
-/** Invoervelden en knoppen houden hun eigen toetsen (Enter, spatie, letters). */
-function isInvoer(doel: EventTarget | null): boolean {
-  if (!(doel instanceof HTMLElement)) return false;
-  return doel.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(doel.tagName);
+/** Tekstvelden houden al hun toetsen, knoppen alleen Enter en spatie (zie `doelSoort`). */
+function soortVan(doel: EventTarget | null): ReturnType<typeof doelSoort> {
+  return doel instanceof HTMLElement ? doelSoort(doel) : "overig";
 }
 
 /** De melding bij een mislukte verwijdering, per foutcode. */
@@ -183,6 +182,16 @@ const bevestigOpen = computed({
     if (!open) teVerwijderenAantal.value = null;
   },
 });
+
+/** Of de selectie een aansluiting of teller bevat: die zijn nooit te verwijderen (de store weigert dat). */
+function bevatVasteNode(ids: readonly string[]): boolean {
+  const doc = store.document;
+  if (!doc) return false;
+  return ids.some((id) => {
+    const type = Object.hasOwn(doc.nodes, id) ? doc.nodes[id]?.type : undefined;
+    return type === "aansluiting" || type === "teller";
+  });
+}
 
 /** Het aantal verschillende nodes in de takken van `ids` (de nodes zelf meegeteld). */
 function aantalInTakken(ids: readonly string[]): number {
@@ -228,8 +237,8 @@ function toetsIngedrukt(event: KeyboardEvent): void {
   ) {
     return;
   }
-  const doelIsInvoer = isInvoer(event.target);
-  if (event.key === " " && !doelIsInvoer) {
+  const soort = soortVan(event.target);
+  if (spatieSchuift(event.key, soort)) {
     ruimteIngedrukt.value = true;
     event.preventDefault();
     return;
@@ -239,7 +248,8 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     shiftKey: event.shiftKey,
     ctrlKey: event.ctrlKey,
     metaKey: event.metaKey,
-    doelIsInvoer,
+    doelIsInvoer: soort === "invoer",
+    doelIsKnop: soort === "knop",
     herhaald: event.repeat,
   });
   if (!actie) return;
@@ -253,7 +263,8 @@ function toetsIngedrukt(event: KeyboardEvent): void {
       store.voegToeBijSelectie();
       break;
     case "verwijder":
-      if (actie.heleTak) {
+      // Eerst de weigering (aansluiting of teller), dan pas de bevestiging: die is dan zinloos.
+      if (actie.heleTak && !bevatVasteNode(store.selectie)) {
         // Vanaf 5 nodes eerst een bevestiging (spec §4.4).
         const aantal = aantalInTakken(store.selectie);
         if (aantal >= BEVESTIG_VANAF) {

@@ -3,7 +3,7 @@
 import type { InstallatieDocument } from "@elentrik/model";
 import { getCurrentScope, onScopeDispose, ref, watch, type Ref } from "vue";
 import { bewaarConcept as bewaarConceptEcht, wisConcept as wisConceptEcht, type Concept } from "./concepten";
-import { ConflictFout, type BewaarInvoer, type Project } from "./useProjectenApi";
+import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./useProjectenApi";
 
 /**
  * - `opgeslagen`: de server heeft de laatste wijziging.
@@ -70,14 +70,6 @@ const TIJDELIJK = new Set([408, 429]);
  */
 export function waarschuwBijVerlaten(status: AutosaveStatus, event: { preventDefault(): void }): void {
   if (status !== "opgeslagen") event.preventDefault();
-}
-
-/** De HTTP-status van een fout zoals `$fetch` hem geeft (`status` of `statusCode`). */
-function httpStatus(fout: unknown): number | undefined {
-  if (typeof fout !== "object" || fout === null) return undefined;
-  const { status, statusCode } = fout as { status?: unknown; statusCode?: unknown };
-  const waarde = status ?? statusCode;
-  return typeof waarde === "number" ? waarde : undefined;
 }
 
 /**

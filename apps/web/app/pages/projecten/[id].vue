@@ -8,6 +8,7 @@ import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
 import { nieuwerConcept, wisConcept, type Concept } from "~/composables/concepten";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
+import { httpStatus } from "~/composables/useProjectenApi";
 import { useEditorStore } from "~/stores/editor";
 
 const route = useRoute();
@@ -38,13 +39,6 @@ const autosave = useAutosave({
 const concept = ref<Concept | null>(null);
 const conceptOpen = ref(false);
 
-function httpStatus(fout: unknown): number | undefined {
-  if (typeof fout !== "object" || fout === null) return undefined;
-  const { status, statusCode } = fout as { status?: unknown; statusCode?: unknown };
-  const waarde = status ?? statusCode;
-  return typeof waarde === "number" ? waarde : undefined;
-}
-
 async function laad(): Promise<void> {
   laadstatus.value = "laden";
   let project;
@@ -55,10 +49,10 @@ async function laad(): Promise<void> {
     return;
   }
   store.laad({ id: project.id, naam: project.naam, versie: project.versie, document: project.document });
-  laadstatus.value = "klaar";
-  // Een kapot conceptarchief mag het openen niet tegenhouden.
+  // Een kapot conceptarchief mag het openen niet tegenhouden. Pas na de conceptcontrole is de pagina klaar.
   concept.value = await nieuwerConcept(project).catch(() => null);
   conceptOpen.value = concept.value !== null;
+  laadstatus.value = "klaar";
 }
 
 function laadConcept(): void {
@@ -68,7 +62,7 @@ function laadConcept(): void {
   store.laad({ id, naam: c.naam, versie: c.versie, document: c.document });
   // Het concept staat nog niet op de server: als wijziging tellen, zodat de autosave het bewaart.
   // Is de server intussen verder dan `c.versie`, dan volgt een conflict.
-  store.gewijzigdSindsOpslaan++;
+  store.markeerGewijzigd();
 }
 
 async function verwerpConcept(): Promise<void> {

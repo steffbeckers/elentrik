@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   ConflictFout,
+  httpStatus,
   maakProjectenApi,
   type ProjectenFetch,
 } from "../app/composables/useProjectenApi";
@@ -56,6 +57,21 @@ describe("useProjectenApi", () => {
       ["/api/projecten/abc/dupliceer", { method: "POST" }],
       ["/api/projecten/abc", { method: "DELETE" }],
     ]);
+  });
+});
+
+describe("httpStatus", () => {
+  test("leest status of statusCode van een fout", () => {
+    expect(httpStatus({ status: 404 })).toBe(404);
+    expect(httpStatus({ statusCode: 409 })).toBe(409);
+    expect(httpStatus({ status: 422, statusCode: 500 })).toBe(422);
+  });
+
+  test("geeft undefined zonder numerieke status", () => {
+    expect(httpStatus(new Error("netwerk"))).toBeUndefined();
+    expect(httpStatus({ status: "404" })).toBeUndefined();
+    expect(httpStatus(null)).toBeUndefined();
+    expect(httpStatus("fout")).toBeUndefined();
   });
 });
 

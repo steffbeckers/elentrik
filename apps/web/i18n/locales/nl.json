@@ -66,7 +66,9 @@
         "kringenlijst": "Kringenlijst",
         "binnenkort": "Binnenkort"
       },
-      "bevindingen": "{fouten} fouten en {waarschuwingen} waarschuwingen",
+      "bevindingen": "{fouten} en {waarschuwingen}",
+      "aantalFouten": "{n} fout | {n} fouten",
+      "aantalWaarschuwingen": "{n} waarschuwing | {n} waarschuwingen",
       "ongedaanMaken": "Ongedaan maken (Ctrl+Z)",
       "opnieuw": "Opnieuw (Ctrl+Y)"
     },

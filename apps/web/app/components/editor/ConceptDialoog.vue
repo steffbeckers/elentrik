@@ -2,9 +2,10 @@
 const open = defineModel<boolean>("open", { default: false });
 const props = defineProps<{ /** Tijdstip van het concept, in ms sinds epoch. */ tijd: number }>();
 const emit = defineEmits<{ laden: []; verwerpen: [] }>();
+const { localeProperties } = useI18n();
 
 const tijdTekst = computed(() =>
-  new Date(props.tijd).toLocaleString("nl-BE", { dateStyle: "medium", timeStyle: "short" }),
+  new Date(props.tijd).toLocaleString(localeProperties.value.language, { dateStyle: "medium", timeStyle: "short" }),
 );
 
 function kies(keuze: "laden" | "verwerpen"): void {

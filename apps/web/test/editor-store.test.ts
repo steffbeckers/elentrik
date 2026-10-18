@@ -387,6 +387,20 @@ describe("afwijkingen en projectgegevens", () => {
   });
 });
 
+describe("markeerGewijzigd", () => {
+  test("telt een wijziging zonder het document of de undo-geschiedenis aan te raken", () => {
+    const store = laadNieuw();
+    const voor = doc(store);
+
+    store.markeerGewijzigd();
+    expect(store.gewijzigdSindsOpslaan).toBe(1);
+    store.markeerGewijzigd();
+    expect(store.gewijzigdSindsOpslaan).toBe(2);
+    expect(store.document).toBe(voor);
+    expect(store.terug).toHaveLength(0);
+  });
+});
+
 describe("voegToeBijSelectie op de teller", () => {
   test("in een nieuw project komt er een kring op de rail van het hoofdbord", () => {
     const store = laadNieuw();

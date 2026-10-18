@@ -7,7 +7,20 @@ defineProps<{ status: AutosaveStatus }>();
 const emit = defineEmits<{ opnieuwProberen: []; toonConflict: []; toonBevindingen: [] }>();
 
 const store = useEditorStore();
+const { t } = useI18n();
 const projectgegevensOpen = ref(false);
+
+/** "1 fout en 3 waarschuwingen": enkelvoud en meervoud via de pluralisatie van vue-i18n. */
+const bevindingenTekst = computed(() =>
+  t("editor.bovenbalk.bevindingen", {
+    fouten: t("editor.bovenbalk.aantalFouten", { n: store.aantalFouten }, store.aantalFouten),
+    waarschuwingen: t(
+      "editor.bovenbalk.aantalWaarschuwingen",
+      { n: store.aantalWaarschuwingen },
+      store.aantalWaarschuwingen,
+    ),
+  }),
+);
 
 const UITGESCHAKELDE_TABBLADEN = ["situatieschema", "kringenlijst"] as const;
 
@@ -103,12 +116,8 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
         color="neutral"
         variant="ghost"
         size="sm"
-        :aria-label="
-          $t('editor.bovenbalk.bevindingen', { fouten: store.aantalFouten, waarschuwingen: store.aantalWaarschuwingen })
-        "
-        :title="
-          $t('editor.bovenbalk.bevindingen', { fouten: store.aantalFouten, waarschuwingen: store.aantalWaarschuwingen })
-        "
+        :aria-label="bevindingenTekst"
+        :title="bevindingenTekst"
         data-testid="bevindingenteller"
         @click="emit('toonBevindingen')"
       >

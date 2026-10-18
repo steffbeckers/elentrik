@@ -45,6 +45,14 @@ function huidigeVersieUitConflict(fout: unknown): number | undefined {
   return typeof versie === "number" ? versie : undefined;
 }
 
+/** De HTTP-status van een fout zoals `$fetch` hem geeft (`status` of `statusCode`). */
+export function httpStatus(fout: unknown): number | undefined {
+  if (typeof fout !== "object" || fout === null) return undefined;
+  const { status, statusCode } = fout as { status?: unknown; statusCode?: unknown };
+  const waarde = status ?? statusCode;
+  return typeof waarde === "number" ? waarde : undefined;
+}
+
 export function maakProjectenApi(haal: ProjectenFetch) {
   return {
     lijst: () => haal("/api/projecten") as Promise<ProjectSamenvatting[]>,

@@ -1,5 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { moetNegeren, sneltoets, type Actie, type NegeerToets } from "../app/composables/sneltoetsen";
+import {
+  doelSoort,
+  moetNegeren,
+  spatieSchuift,
+  sneltoets,
+  type Actie,
+  type DoelElement,
+  type DoelSoort,
+  type NegeerToets,
+} from "../app/composables/sneltoetsen";
 
 type Toets = Parameters<typeof sneltoets>[0];
 
@@ -69,6 +78,26 @@ describe("sneltoets", () => {
     });
   });
 
+  describe("op een knop", () => {
+    test.each<[string, Toets, Actie]>([
+      ["Delete", toets("Delete", { doelIsKnop: true }), { soort: "verwijder", heleTak: false }],
+      ["Shift+Delete", toets("Delete", { doelIsKnop: true, shiftKey: true }), { soort: "verwijder", heleTak: true }],
+      ["c", toets("c", { doelIsKnop: true }), { soort: "kies", onderdeel: "contactdoos" }],
+      ["ArrowUp", toets("ArrowUp", { doelIsKnop: true }), { soort: "navigeer", richting: "op" }],
+      ["Escape", toets("Escape", { doelIsKnop: true }), { soort: "wisSelectie" }],
+      ["Ctrl+Z", toets("z", { doelIsKnop: true, ctrlKey: true }), { soort: "ongedaan" }],
+    ])("behandelt %s", (_naam, invoer, verwacht) => {
+      expect(sneltoets(invoer)).toEqual(verwacht);
+    });
+
+    test.each<[string, Toets]>([
+      ["Enter", toets("Enter", { doelIsKnop: true })],
+      ["spatie", toets(" ", { doelIsKnop: true })],
+    ])("laat %s bij de knop", (_naam, invoer) => {
+      expect(sneltoets(invoer)).toBeNull();
+    });
+  });
+
   describe("herhaalde toetsen", () => {
     test.each<[string, Toets]>([
       ["Enter", toets("Enter", { herhaald: true })],
@@ -82,6 +111,35 @@ describe("sneltoets", () => {
       expect(sneltoets(toets("ArrowUp", { herhaald: true }))).toEqual({ soort: "navigeer", richting: "op" });
       expect(sneltoets(toets("z", { ctrlKey: true, herhaald: true }))).toEqual({ soort: "ongedaan" });
     });
+  });
+});
+
+describe("doelSoort", () => {
+  test.each<[string, DoelElement, DoelSoort]>([
+    ["een knop", { tagName: "BUTTON", type: "button" }, "knop"],
+    ["een tekstinvoer", { tagName: "INPUT", type: "text" }, "invoer"],
+    ["een invoer zonder type", { tagName: "INPUT" }, "invoer"],
+    ["een getalinvoer", { tagName: "INPUT", type: "number" }, "invoer"],
+    ["een invoer van type button", { tagName: "INPUT", type: "button" }, "knop"],
+    ["een selectievakje", { tagName: "INPUT", type: "checkbox" }, "knop"],
+    ["een keuzerondje", { tagName: "INPUT", type: "radio" }, "knop"],
+    ["een invoer van type submit", { tagName: "INPUT", type: "submit" }, "knop"],
+    ["een tekstvak", { tagName: "TEXTAREA" }, "invoer"],
+    ["een keuzelijst", { tagName: "SELECT" }, "invoer"],
+    ["een bewerkbaar element", { tagName: "DIV", isContentEditable: true }, "invoer"],
+    ["een gewoon element", { tagName: "DIV", isContentEditable: false }, "overig"],
+    ["een svg-element", { tagName: "svg" }, "overig"],
+  ])("%s", (_naam, doel, verwacht) => {
+    expect(doelSoort(doel)).toBe(verwacht);
+  });
+});
+
+describe("spatieSchuift", () => {
+  test("alleen op een gewoon doel", () => {
+    expect(spatieSchuift(" ", "overig")).toBe(true);
+    expect(spatieSchuift(" ", "knop")).toBe(false);
+    expect(spatieSchuift(" ", "invoer")).toBe(false);
+    expect(spatieSchuift("a", "overig")).toBe(false);
   });
 });
 

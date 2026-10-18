@@ -18,8 +18,10 @@ export type Toets = {
   shiftKey: boolean;
   ctrlKey: boolean;
   metaKey: boolean;
-  /** Het doel van de toetsaanslag is een invoerveld (input, textarea, select, contenteditable). */
+  /** Het doel van de toetsaanslag is een tekstveld (input, textarea, select, contenteditable); zie `doelSoort`. */
   doelIsInvoer: boolean;
+  /** Het doel van de toetsaanslag is een knop: Enter en spatie blijven dan bij de knop, de rest werkt gewoon. */
+  doelIsKnop?: boolean;
   /** De toets blijft ingedrukt (`event.repeat`): verwijderen en toevoegen gebeuren dan niet nog eens. */
   herhaald?: boolean;
 };
@@ -46,6 +48,31 @@ export function moetNegeren(toets: NegeerToets): boolean {
   return (
     toets.defaultPrevented || toets.isComposing || toets.altKey || toets.doelInWidget || toets.overlayOpen
   );
+}
+
+/** Wat `doelSoort` van een element nodig heeft; een `HTMLElement` voldoet. */
+export type DoelElement = { tagName: string; type?: string; isContentEditable?: boolean };
+
+export type DoelSoort = "invoer" | "knop" | "overig";
+
+/** INPUT-types die geen tekst aannemen en zich als knop gedragen. */
+const KNOP_INVOER = new Set(["button", "checkbox", "radio", "submit"]);
+
+/**
+ * Hoe een element met toetsen omgaat: een `invoer` (tekstveld) houdt alle toetsen, een `knop` alleen
+ * Enter en spatie, en bij `overig` is de editor aan zet.
+ */
+export function doelSoort(doel: DoelElement): DoelSoort {
+  if (doel.isContentEditable) return "invoer";
+  const tag = doel.tagName.toUpperCase();
+  if (tag === "BUTTON") return "knop";
+  if (tag === "INPUT") return KNOP_INVOER.has((doel.type ?? "").toLowerCase()) ? "knop" : "invoer";
+  return tag === "TEXTAREA" || tag === "SELECT" ? "invoer" : "overig";
+}
+
+/** Spatie houdt de canvas vast om te schuiven, behalve in een tekstveld of op een knop (die gebruiken haar zelf). */
+export function spatieSchuift(key: string, soort: DoelSoort): boolean {
+  return key === " " && soort === "overig";
 }
 
 /** De sneltoets (kleine letter) per onderdeel; ook getoond in het paneel Onderdelen. */
@@ -76,6 +103,7 @@ export function sneltoets(toets: Toets): Actie | null {
     return null;
   }
   if (toets.doelIsInvoer) return null;
+  if (toets.doelIsKnop && (key === "Enter" || key === " ")) return null;
 
   if (key === "Enter") return toets.herhaald ? null : { soort: "toevoegen" };
   if (key === "Delete" || key === "Backspace") {
