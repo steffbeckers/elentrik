@@ -31,7 +31,7 @@
    - Als de strook hoger is dan de bruikbare hoogte, krijgen alle pagina's dezelfde `schaal = bruikbaar / strookhoogte`, met een minimum van `MIN_SCHAAL = 0.5`. Onder dat minimum volgt de waarschuwing `SCHEMA_TE_HOOG`, en blijft de schaal 0.5.
    - Daarna wordt de strook horizontaal geknipt op kolomgrenzen tussen kringen, met de bruikbare breedte gedeeld door de schaal.
    - Rails die over een knip lopen, worden afgebroken en krijgen een `vervolg`-markering met het paginanummer.
-   - Is een enkele kring breder dan een pagina, dan wordt toch geknipt, met de waarschuwing `KRING_TE_BREED`.
+   - Is een enkele kring breder dan een pagina, dan wordt toch geknipt, met de waarschuwing `KRING_TE_BREED`. Die knip valt op de verste kolomgrens binnen de kring die nog past, zodat geen symbool doormidden gaat en geen lege pagina ontstaat. Alleen een enkele kolom breder dan een pagina wordt op de volle paginabreedte geknipt.
 5. **Papier:** liggend.
    - A4 is 297 × 210 mm, A3 is 420 × 297 mm.
    - `marge_mm = 10`.

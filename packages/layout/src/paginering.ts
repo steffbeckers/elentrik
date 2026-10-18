@@ -11,6 +11,14 @@ export const MIN_SCHAAL = 0.5;
 const EPSILON = 1e-9;
 
 /**
+ * Valt ankerpunt `x` op de pagina `[xVan, xTot)`? Het interval is half open; de eerste pagina
+ * neemt ook alles links van `xVan`, de laatste ook `xTot` en alles rechts ervan.
+ */
+function ankerOp(x: number, xVan: number, xTot: number, eerste: boolean, laatste: boolean): boolean {
+  return (eerste || x >= xVan - EPSILON) && (laatste || x < xTot - EPSILON);
+}
+
+/**
  * Een pagina van het schema. De elementen staan in strookcoördinaten; render past toe
  * `translate(-xVan)` en daarna `scale(schaal)`.
  */
@@ -34,7 +42,8 @@ export function opmaak(
 
 /**
  * Verdeelt een strook over pagina's: schaal naar de bruikbare hoogte (niet kleiner dan
- * `MIN_SCHAAL`), knip greedy op kringgrenzen en wijs elk element toe aan een pagina. Horizontale
+ * `MIN_SCHAAL`), knip greedy op kringgrenzen (of anders op kolomgrenzen, met `KRING_TE_BREED`) en
+ * wijs elk element toe aan een pagina. Horizontale
  * lijnen over een knip worden in stukken geknipt en krijgen aan beide kanten een vervolg.
  */
 export function pagineer(strook: Strook, papier: Papier): SchemaOpmaak {
@@ -61,28 +70,38 @@ export function pagineer(strook: Strook, papier: Papier): SchemaOpmaak {
   const heeftElementen = (xVan: number, xTot: number): boolean => {
     const eerste = xVan === 0;
     const laatste = xTot >= strook.breedte;
-    const ankerOp = (x: number): boolean => (eerste || x >= xVan - EPSILON) && (laatste || x < xTot - EPSILON);
     return bereiken.some(
-      ({ van, tot }) => ankerOp(van) || (!eerste && tot - van > EPSILON && van < xVan - EPSILON && tot > xVan + EPSILON),
+      ({ van, tot }) =>
+        ankerOp(van, xVan, xTot, eerste, laatste) ||
+        (!eerste && tot - van > EPSILON && van < xVan - EPSILON && tot > xVan + EPSILON),
     );
   };
 
-  // Knippen: telkens de verste kandidaat die nog op de pagina past. Grenzen op of links van de
-  // linkerrand van de inhoud vallen af, anders ontstaat een lege eerste pagina.
-  const kandidaten = [...strook.kringGrenzen.filter((x) => x > STROOK_MARGE_MM + EPSILON), strook.breedte];
+  // Knippen: telkens de verste kandidaat die nog op de pagina past en geen lege pagina geeft, of
+  // anders de rechterrand van de strook. Eerst de kringgrenzen; past er geen, dan een kolomgrens
+  // binnen een kring, zodat geen symbool doormidden gaat. Alleen als ook geen kolomgrens past,
+  // wordt geknipt op de volle paginabreedte. Grenzen op de linkerrand van de inhoud vallen af,
+  // anders ontstaat een lege eerste pagina.
+  const linkerrand = strook.kolomGrenzen[0] ?? STROOK_MARGE_MM;
+  const binnen = (x: number): boolean => x > linkerrand + EPSILON && x < strook.breedte - EPSILON;
+  const kringKandidaten = [...strook.kringGrenzen.filter(binnen), strook.breedte];
+  const kolomKandidaten = [...strook.kolomGrenzen.filter(binnen), strook.breedte];
+  const verste = (kandidaten: readonly number[], xVan: number, grens: number): number | undefined => {
+    let beste: number | undefined;
+    for (const kandidaat of kandidaten) {
+      if (kandidaat <= xVan + EPSILON || kandidaat > grens + EPSILON) continue;
+      if (beste !== undefined && kandidaat <= beste) continue;
+      if (kandidaat >= strook.breedte || heeftElementen(xVan, kandidaat)) beste = kandidaat;
+    }
+    return beste;
+  };
   const paginas: SchemaPagina[] = [];
   let xVan = 0;
   for (;;) {
     const grens = xVan + paginaBreedte;
-    let xTot = Number.NEGATIVE_INFINITY;
-    for (const kandidaat of kandidaten) {
-      if (kandidaat > xVan + EPSILON && kandidaat <= grens + EPSILON && kandidaat > xTot) xTot = kandidaat;
-    }
-    // Een knip die een lege pagina geeft, wijkt voor een knip op de volle paginabreedte. Dat kan
-    // alleen als die nog voor de rechterrand valt; een lege laatste pagina is niet te vermijden.
-    const leeg = xTot !== Number.NEGATIVE_INFINITY && grens < strook.breedte - EPSILON && !heeftElementen(xVan, xTot);
-    if (xTot === Number.NEGATIVE_INFINITY || leeg) {
-      xTot = grens;
+    let xTot = verste(kringKandidaten, xVan, grens);
+    if (xTot === undefined) {
+      xTot = verste(kolomKandidaten, xVan, grens) ?? grens;
       waarschuwingen.push({ code: "KRING_TE_BREED", paginaIndex: paginas.length });
     }
     paginas.push({ index: paginas.length, xVan, xTot, schaal, elementen: [] });
@@ -91,13 +110,15 @@ export function pagineer(strook: Strook, papier: Papier): SchemaOpmaak {
   }
 
   const laatste = paginas.length - 1;
-  /** Pagina van een ankerpunt: half open `[xVan, xTot)`, de laatste pagina neemt ook `xTot`. */
+  /** Pagina van een ankerpunt, volgens `ankerOp`. De pagina's sluiten aan, dus binair zoeken volstaat. */
   const paginaVan = (x: number): number => {
     let laag = 0;
     let hoog = laatste;
     while (laag < hoog) {
       const midden = (laag + hoog) >> 1;
-      if (x < paginas[midden]!.xTot - EPSILON) hoog = midden;
+      const { xVan: van, xTot: tot } = paginas[midden]!;
+      if (ankerOp(x, van, tot, midden === 0, midden === laatste)) return midden;
+      if (midden > 0 && x < van - EPSILON) hoog = midden - 1;
       else laag = midden + 1;
     }
     return laag;

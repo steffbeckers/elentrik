@@ -24,8 +24,20 @@ function geenLegePagina(opm: SchemaOpmaak): SchemaOpmaak {
   for (const pagina of opm.paginas) expect(pagina.elementen.length, `pagina ${pagina.index}`).toBeGreaterThan(0);
   return opm;
 }
+/** Invariant voor elke opmaak van een echt document: geen symboolvak ligt over een knip. */
+function geenSymboolOverKnip(opm: SchemaOpmaak): SchemaOpmaak {
+  const knippen = opm.paginas.slice(0, -1).map((p) => p.xTot);
+  for (const e of opm.strook.elementen) {
+    if (e.soort !== "symbool") continue;
+    for (const knip of knippen) {
+      const over = e.x < knip - 1e-9 && e.x + e.symbool.maat.breedte > knip + 1e-9;
+      expect(over, `symbool ${e.nodeId} [${e.x}, ${e.x + e.symbool.maat.breedte}] over knip ${knip}`).toBe(false);
+    }
+  }
+  return opm;
+}
 const opmaak = (...args: Parameters<typeof opmaakZonderControle>): SchemaOpmaak =>
-  geenLegePagina(opmaakZonderControle(...args));
+  geenSymboolOverKnip(geenLegePagina(opmaakZonderControle(...args)));
 const pagineer = (...args: Parameters<typeof pagineerZonderControle>): SchemaOpmaak =>
   geenLegePagina(pagineerZonderControle(...args));
 
@@ -305,18 +317,27 @@ describe("opmaak: een kring breder dan een pagina", () => {
     expect(opm.strook.breedte).toBeGreaterThan(W);
     const teBreed = opm.waarschuwingen.filter((w) => w.code === "KRING_TE_BREED");
     expect(teBreed.length).toBeGreaterThan(0);
-    for (const w of teBreed) {
-      const pagina = opm.paginas[w.paginaIndex!]!;
-      expect(pagina.xTot - pagina.xVan).toBeCloseTo(W, 9);
-      expect([0, ...opm.strook.kringGrenzen, opm.strook.breedte]).not.toContain(pagina.xTot);
-    }
+    expect(teBreed.length).toBe(opm.paginas.length - 1);
     expect(opm.paginas[opm.paginas.length - 1]!.xTot).toBe(opm.strook.breedte);
   });
 
-  test("geen lege pagina: de eerste pagina knipt niet op de linkermarge maar op de volle breedte", () => {
+  test("zonder kringgrens knipt elke pagina op de verste binnenste kolomgrens die past", () => {
+    const binnen = opm.strook.kolomGrenzen.slice(1, -1);
+    for (const w of opm.waarschuwingen.filter((x) => x.code === "KRING_TE_BREED")) {
+      const pagina = opm.paginas[w.paginaIndex!]!;
+      expect(binnen).toContain(pagina.xTot);
+      expect(opm.strook.kringGrenzen).not.toContain(pagina.xTot);
+      expect(pagina.xTot - pagina.xVan).toBeLessThanOrEqual(W + 1e-9);
+      const volgende = opm.strook.kolomGrenzen.find((x) => x > pagina.xTot)!;
+      expect(volgende).toBeGreaterThan(pagina.xVan + W);
+    }
+  });
+
+  test("geen lege pagina en geen symbool over een knip: de eerste pagina knipt niet op de linkermarge", () => {
     geenLegePagina(opm);
+    geenSymboolOverKnip(opm);
     expect(opm.strook.kringGrenzen).toEqual([STROOK_MARGE_MM]);
-    expect(opm.paginas[0]!.xTot).toBeCloseTo(W, 9);
+    expect(opm.paginas[0]!.xTot).toBeGreaterThan(STROOK_MARGE_MM);
     expect(opm.waarschuwingen[0]).toEqual({ code: "KRING_TE_BREED", paginaIndex: 0 });
   });
 
@@ -326,19 +347,75 @@ describe("opmaak: een kring breder dan een pagina", () => {
   });
 });
 
+describe("opmaak: een contactdoos met veel bladkinderen", () => {
+  /** Eén kring waarin een contactdoos `n` contactdozen als bladkinderen heeft. */
+  function breedKind(n: number): InstallatieDocument {
+    const { doc, ids } = installatie()
+      .differentieel(300, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1).als("cd"))))
+      .bouw();
+    const groot = kloon(doc);
+    const cdId = ids["cd"]!;
+    for (let i = 0; i < n; i++) {
+      const id = nieuwId();
+      groot.nodes[id] = {
+        id,
+        parentId: cdId,
+        kinderen: [],
+        type: "contactdoos",
+        aantal: 1,
+        randaarde: true,
+        kinderbeveiliging: true,
+        waterdicht: false,
+      };
+      groot.nodes[cdId]!.kinderen.push(id);
+    }
+    expect(valideerStructuur(groot)).toEqual([]);
+    return groot;
+  }
+
+  // 23 en 46 gaven bij uniforme kolommen een lege laatste pagina; met adaptieve kolommen doen 11, 22
+  // en 44 dat met een knip op xVan + W.
+  test.each([11, 22, 23, 44, 46])("%i kinderen: geen lege pagina, geen symbool over een knip", (n) => {
+    // Zonder controle, zodat een lege pagina hieronder als falende verwachting verschijnt.
+    const opm = opmaakZonderControle(breedKind(n));
+    expect(opm.paginas.length).toBeGreaterThan(1);
+    expect(opm.paginas.filter((p) => p.elementen.length === 0).map((p) => [p.xVan, p.xTot])).toEqual([]);
+    geenSymboolOverKnip(opm);
+    controleerElkElementEenKeer(opm);
+    const binnen = opm.strook.kolomGrenzen.slice(1, -1);
+    for (const pagina of opm.paginas.slice(0, -1)) expect(binnen).toContain(pagina.xTot);
+  });
+});
+
 describe("pagineer: randgevallen op een kunstmatige strook", () => {
   const symbool: Symbool = {
     maat: { breedte: 10, hoogte: 10, in: { x: 5, y: 0 }, uit: { x: 5, y: 10 } },
     svg: "",
   };
-  const strook = (elementen: SchemaElement[], breedte: number, kringGrenzen: number[]): Strook => ({
-    breedte,
-    hoogte: 100,
-    elementen,
-    kolomVan: {},
-    kringGrenzen,
-    // Elke kring is hier één kolom breed.
-    kolomGrenzen: [STROOK_MARGE_MM, ...kringGrenzen.filter((x) => x > STROOK_MARGE_MM), breedte],
+  const strook = (
+    elementen: SchemaElement[],
+    breedte: number,
+    kringGrenzen: number[],
+    // Standaard is elke kring één kolom breed.
+    kolomGrenzen: number[] = [STROOK_MARGE_MM, ...kringGrenzen.filter((x) => x > STROOK_MARGE_MM), breedte],
+  ): Strook => ({ breedte, hoogte: 100, elementen, kolomVan: {}, kringGrenzen, kolomGrenzen });
+
+  test("past geen kringgrens, dan de verste binnenste kolomgrens met KRING_TE_BREED", () => {
+    const opm = pagineer(strook([tekst(10), tekst(150), tekst(300)], 400, [], [4, 100, 200, 300, 400]), STANDAARD_PAPIER_A4);
+    expect(opm.paginas.map((p) => [p.xVan, p.xTot])).toEqual([
+      [0, 200],
+      [200, 400],
+    ]);
+    expect(opm.waarschuwingen).toEqual([{ code: "KRING_TE_BREED", paginaIndex: 0 }]);
+  });
+
+  test("een kringgrens gaat voor een verdere kolomgrens", () => {
+    const opm = pagineer(strook([tekst(10), tekst(150), tekst(300)], 350, [100], [4, 100, 200, 300, 350]), STANDAARD_PAPIER_A4);
+    expect(opm.paginas.map((p) => [p.xVan, p.xTot])).toEqual([
+      [0, 100],
+      [100, 350],
+    ]);
+    expect(opm.waarschuwingen).toEqual([]);
   });
 
   test("een lijn over twee knippen: drie stukken en vervolgen in de juiste volgorde", () => {

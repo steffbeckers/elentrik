@@ -7,7 +7,7 @@ import {
   referentieWoning,
 } from "@elentrik/arei/testing";
 import { valideerStructuur, type InstallatieDocument } from "@elentrik/model";
-import { maakStrook, tekstBreedte, type SchemaElement } from "../src/index";
+import { maakStrook, opmaak, tekstBreedte, type SchemaElement } from "../src/index";
 
 const referenties: ReadonlyArray<readonly [string, () => InstallatieDocument]> = [
   ["appartement", referentieAppartement],
@@ -62,6 +62,16 @@ describe.each(referenties)("referentie %s: geen botsingen tussen kolommen", (_na
       }
     }
     expect(botsingen).toEqual([]);
+  });
+
+  test("op A4 ligt geen symbool over een knip en is geen pagina leeg", () => {
+    const opm = opmaak(doc);
+    for (const pagina of opm.paginas) expect(pagina.elementen.length).toBeGreaterThan(0);
+    for (const knip of opm.paginas.slice(0, -1).map((p) => p.xTot)) {
+      for (const s of strook.elementen) {
+        if (s.soort === "symbool") expect(s.x < knip - 1e-9 && s.x + s.symbool.maat.breedte > knip + 1e-9).toBe(false);
+      }
+    }
   });
 
   test("elk vak valt binnen zijn eigen kolom", () => {
