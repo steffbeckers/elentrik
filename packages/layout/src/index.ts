@@ -6,5 +6,5 @@ export { STANDAARD_PAPIER_A4, bruikbaar, papierMaat } from "./papier";
 export type { Papier } from "./papier";
 export { MIN_SCHAAL, opmaak } from "./paginering";
 export type { SchemaOpmaak, SchemaPagina, Waarschuwing } from "./paginering";
-export { RAIL_AFSTAND_MM, STROOK_MARGE_MM, VERTICALE_AFSTAND_MM } from "./types";
-export type { SchemaElement, Strook } from "./types";
+export { KRING_EINDE_AFSTAND_MM, RAIL_AFSTAND_MM, STROOK_MARGE_MM, VERTICALE_AFSTAND_MM } from "./types";
+export type { Aanknoping, SchemaElement, Strook, Vak } from "./types";

@@ -398,7 +398,7 @@ describe("pagineer: randgevallen op een kunstmatige strook", () => {
     kringGrenzen: number[],
     // Standaard is elke kring één kolom breed.
     kolomGrenzen: number[] = [STROOK_MARGE_MM, ...kringGrenzen.filter((x) => x > STROOK_MARGE_MM), breedte],
-  ): Strook => ({ breedte, hoogte: 100, elementen, kolomVan: {}, kringGrenzen, kolomGrenzen });
+  ): Strook => ({ breedte, hoogte: 100, elementen, kolomVan: {}, kringGrenzen, kolomGrenzen, vakken: {}, aanknopingen: [] });
 
   test("past geen kringgrens, dan de verste binnenste kolomgrens met KRING_TE_BREED", () => {
     const opm = pagineer(strook([tekst(10), tekst(150), tekst(300)], 400, [], [4, 100, 200, 300, 400]), STANDAARD_PAPIER_A4);

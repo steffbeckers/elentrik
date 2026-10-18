@@ -1,13 +1,17 @@
 import { analyseer, type Analyse } from "@elentrik/arei";
 import type { InstallatieDocument, Node, NodeId } from "@elentrik/model";
 import { KOLOM_BREEDTE_MM, tekenSymbool, type Symbool } from "@elentrik/symbols";
+import { heeftKringEinde, heeftRailEinde } from "./aanknopingen";
 import { beveiligingLabel, leidingLabel, tekstBreedte } from "./labels";
 import {
+  KRING_EINDE_AFSTAND_MM,
   RAIL_AFSTAND_MM,
   STROOK_MARGE_MM,
   VERTICALE_AFSTAND_MM,
+  type Aanknoping,
   type SchemaElement,
   type Strook,
+  type Vak,
 } from "./types";
 
 type TekstElement = Extract<SchemaElement, { soort: "tekst" }>;
@@ -27,7 +31,8 @@ const TEKST_GLYPH_HOOGTE = 0.7;
  *
  * Het schema groeit naar boven: de root staat onderaan (de grootste y), elk kind boven zijn ouder.
  * Een verbinding loopt van `uit` van de ouder (bovenkant) omhoog naar `in` van het kind (onderkant),
- * en een rail ligt boven de vertakkende node.
+ * en een rail ligt boven de vertakkende node. Naast de elementen levert de strook het vak van elk
+ * symbool en de aanknopingspunten (`kring-einde`, `rail-einde`), in pre-order.
  *
  * Kolommen zijn minstens `KOLOM_BREEDTE_MM` breed en groeien met wat erin staat: links van de
  * kolomlijn het verste symbool of de verste tekst plus 1 mm, rechts het verste symbool of de
@@ -40,6 +45,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   const kinderenVanNode = new Map<NodeId, NodeId[]>();
   const kinderenVan = (id: NodeId): NodeId[] => kinderenVanNode.get(id)!;
 
+  const ouderVan = new Map<NodeId, NodeId>();
   const preOrder: NodeId[] = [];
   const bezocht = new Set<NodeId>();
   const stapel: { id: NodeId; ouder: NodeId | null }[] = [{ id: doc.rootId, ouder: null }];
@@ -49,7 +55,10 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     bezocht.add(id);
     preOrder.push(id);
     kinderenVanNode.set(id, []);
-    if (ouder !== null) kinderenVanNode.get(ouder)!.push(id);
+    if (ouder !== null) {
+      kinderenVanNode.get(ouder)!.push(id);
+      ouderVan.set(id, ouder);
+    }
     const kinderen = doc.nodes[id]!.kinderen;
     for (let i = kinderen.length - 1; i >= 0; i--) stapel.push({ id: kinderen[i]!, ouder: id });
   }
@@ -124,6 +133,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   // Daarna wordt elke `d` omgezet naar een y die van onder naar boven loopt.
   const dVan = new Map<NodeId, number>([[doc.rootId, STROOK_MARGE_MM]]);
   const afstanden: SchemaElement[] = [];
+  const afstandAanknopingen: { soort: Aanknoping["soort"]; nodeId: NodeId; x: number; d: number }[] = [];
   let verste = STROOK_MARGE_MM;
 
   // Afstand vanaf de voeding van een aansluitpunt van een symbool op afstand `d`. `maat` meet de y van
@@ -143,12 +153,27 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     for (const tekst of tekstenVanNode.get(id)!) afstanden.push({ ...tekst, x: x + tekst.x, y: d + tekst.y });
 
     const kinderen = kinderenVan(id);
-    if (kinderen.length === 0) continue;
+    const ouderId = ouderVan.get(id);
+    const metRailEinde = heeftRailEinde(node, ouderId === undefined ? undefined : doc.nodes[ouderId]);
+    if (kinderen.length === 0) {
+      // De bovenkant van het vak is het enige dat boven de node nog vrij is.
+      if (metRailEinde) afstandAanknopingen.push({ soort: "rail-einde", nodeId: id, x: x + KOLOM_BREEDTE_MM / 2, d: d + hoogte });
+      if (heeftKringEinde(node, 0)) {
+        const dEinde = d + hoogte + KRING_EINDE_AFSTAND_MM;
+        verste = Math.max(verste, dEinde);
+        afstandAanknopingen.push({ soort: "kring-einde", nodeId: id, x, d: dEinde });
+      }
+      continue;
+    }
     const dUit = afstandVan(d, symbool, "uit");
-    const dRail = d + hoogte + VERTICALE_AFSTAND_MM;
+    const dRail = dUit + VERTICALE_AFSTAND_MM;
     const dKind = kinderen.length > 1 ? dRail + RAIL_AFSTAND_MM : dRail;
     for (const kind of kinderen) dVan.set(kind, dKind);
     const dIn = (kind: NodeId): number => afstandVan(dKind, symbolen.get(kind)!, "in");
+    if (metRailEinde) {
+      const laatste = kinderen[kinderen.length - 1]!;
+      afstandAanknopingen.push({ soort: "rail-einde", nodeId: id, x: cx(laatste) + KOLOM_BREEDTE_MM / 2, d: dRail });
+    }
 
     if (kinderen.length === 1) {
       const kind = kinderen[0]!;
@@ -171,12 +196,18 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
 
   // Omzetten: de voeding staat onderaan, dus y = hoogte − d. De bovenkant van een symbool ligt op
   // hoogte − (d + h). Een tekst houdt zijn glyph (ca. 0,7 × grootte hoog) op dezelfde plek, gespiegeld,
-  // zodat zijn basislijn op hoogte − d + 0,7 × grootte komt. Teksten blijven rechtop.
+  // zodat zijn basislijn op hoogte − d + 0,7 × grootte komt. Teksten blijven rechtop. Een `kring-einde`
+  // telt mee in `verste`, zodat ook het bovenste einde binnen de marge van de strook blijft.
   const hoogteStrook = verste + STROOK_MARGE_MM;
+  const vakken: Record<NodeId, Vak> = Object.create(null);
   const elementen = afstanden.map((element): SchemaElement => {
     switch (element.soort) {
-      case "symbool":
-        return { ...element, y: hoogteStrook - (element.y + element.symbool.maat.hoogte) };
+      case "symbool": {
+        const { breedte: vakBreedte, hoogte: vakHoogte } = element.symbool.maat;
+        const y = hoogteStrook - (element.y + vakHoogte);
+        vakken[element.nodeId] = { x: element.x, y, breedte: vakBreedte, hoogte: vakHoogte };
+        return { ...element, y };
+      }
       case "lijn":
         return { ...element, y1: hoogteStrook - element.y1, y2: hoogteStrook - element.y2 };
       case "tekst":
@@ -199,6 +230,8 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     kolomVan: alsRecord(kolomVan),
     kringGrenzen: [...grenzen].sort((a, b) => a - b),
     kolomGrenzen,
+    vakken,
+    aanknopingen: afstandAanknopingen.map(({ soort, nodeId, x, d }): Aanknoping => ({ soort, nodeId, x, y: hoogteStrook - d })),
   };
 }
 

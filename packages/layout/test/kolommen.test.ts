@@ -69,9 +69,11 @@ describe("maakStrook: een keten", () => {
     });
   });
 
-  test("hoogte is de bovenkant van het hoogste symbool plus marge, en de bovenste staat op de marge", () => {
+  test("hoogte is de bovenkant van het hoogste symbool plus marge, en boven de bovenste ligt het kring-einde op de marge", () => {
     const laatste = syms[syms.length - 1]!;
-    expect(laatste.y).toBeCloseTo(STROOK_MARGE_MM, 10);
+    // Het kring-einde ligt 5 mm boven het bovenste symbool en houdt de marge tot de rand van de strook.
+    expect(laatste.y).toBeCloseTo(STROOK_MARGE_MM + 5, 10);
+    expect(strook.aanknopingen.find((a) => a.soort === "kring-einde")!.y).toBeCloseTo(STROOK_MARGE_MM, 10);
     const root = syms[0]!;
     expect(strook.hoogte).toBeCloseTo(root.y + root.symbool.maat.hoogte + STROOK_MARGE_MM, 10);
     for (const s of syms) expect(s.y).toBeGreaterThanOrEqual(STROOK_MARGE_MM - 1e-9);

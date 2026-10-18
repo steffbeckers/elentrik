@@ -115,7 +115,7 @@
 **Interfaces:**
 - Produces:
   - `type Punt = { x: number; y: number }`
-  - `type SymboolMaat = { breedte: number; hoogte: number; in: Punt; uit: Punt }`, in mm. `in` is het aansluitpunt bovenaan en `uit` het aansluitpunt onderaan. Beide liggen op `x = breedte / 2`.
+  - `type SymboolMaat = { breedte: number; hoogte: number; in: Punt; uit: Punt }`, in mm. `in` is het aansluitpunt onderaan en `uit` het aansluitpunt bovenaan. Beide liggen op `x = breedte / 2`.
   - `type Symbool = { maat: SymboolMaat; svg: string }`: `svg` is de inhoud van een `<g>` in lokale coördinaten, met (0,0) linksboven.
   - `LIJNDIKTE_MM = 0.35`, `TEKSTGROOTTE_MM = 2.5`, `KOLOM_BREEDTE_MM = 24`. `KOLOM_BREEDTE_MM` staat hier, omdat symbols moet garanderen dat `breedte <= KOLOM_BREEDTE_MM - 4`.
   - `getal(n: number): string`: maximaal 2 decimalen, zonder afsluitende nullen, `-0` wordt `"0"`, en `NaN` of `Infinity` gooit een `RangeError`.
@@ -296,9 +296,9 @@
     - differentieel: `${gevoeligheid_mA} mA ${klasse}`.
 
 **Regels:**
-- **Rail onder een bord:** onder een `verdeelbord` met minstens één kind komt een `rail`-lijn op `y(bord) + hoogte + VERTICALE_AFSTAND_MM`, van `cx(eerste kind)` tot `cx(laatste kind)`. Bij één kind is die lijn 0 lang en wordt hij weggelaten. Daarvandaan lopen verticale verbindingen naar elk kind. Andere nodes met meerdere kinderen krijgen dezelfde vorm met rol `verbinding`.
+- **Rail boven een bord:** boven een `verdeelbord` met minstens één kind komt een `rail`-lijn op `y(bord) - VERTICALE_AFSTAND_MM`, van `cx(eerste kind)` tot `cx(laatste kind)`. Bij één kind is die lijn 0 lang en wordt hij weggelaten. Daarvandaan lopen verticale verbindingen naar elk kind. Andere nodes met meerdere kinderen krijgen dezelfde vorm met rol `verbinding`.
 - **Leidinglabel:** een tekst met rol `leiding` op `x = cx + 2`, verticaal gecentreerd op de leiding, met grootte 2 en anker `start`.
-- **Kringlabel:** een tekst met rol `kring` met het kringlabel uit de analyse, gecentreerd boven het symbool van de kringbeveiliging (`y = y(beveiliging) - 1`), met grootte 3.
+- **Kringlabel:** een tekst met rol `kring` met het kringlabel uit de analyse, links van de lijn, tussen de rail en de beveiliging, met grootte 3.
 - **Beveiligingslabel:** een tekst met rol `beveiliging` rechts van de beveiliging.
 - **Puntlabel:** een tekst met rol `punt` met het puntlabel (bv. "A3"), links van het symbool (`x = x - 1`), met anker `end` en grootte 2,5. Punten zonder label (zonder kring) krijgen geen puntlabel.
 - **Onderbordlabel:** een tekst met rol `onderbord` met `verdeelbord.naam`, als die niet leeg is, rechts van het bordsymbool.
