@@ -17,8 +17,9 @@
 
 1. **Eenheden:** alles is in millimeter op papier. Er wordt getekend op schaal 1:1, en de renderer schaalt alleen voor de paginering.
 2. **Kolomraster:** elk symbool staat gecentreerd op een verticale kolomlijn.
-   - `KOLOM_BREEDTE_MM = 24`.
-   - Een subboom met n bladkolommen is n × 24 mm breed.
+   - Een bladkolom is minstens 24 mm breed (`KOLOM_BREEDTE_MM = 24`), adaptief.
+   - De breedte volgt wat erin staat. Links van de kolomlijn reikt het verste symbool of de verste tekst (anker `end` of `middle`), plus 1 mm. Rechts reikt het verste symbool of de verste tekst (anker `start`). Elke kant is minstens 12 mm. Een tekst is geschat `tekens × grootte × 0,6` breed (`tekstBreedte`).
+   - Een subboom is zo breed als de som van zijn bladkolommen. `Strook.kolomGrenzen` geeft de linkerrand van elke bladkolom, gevolgd door de strookbreedte.
    - Een node met één kind staat in dezelfde kolom als dat kind. Zo ontstaan rechte verticale lijnen.
    - Een node met meerdere kinderen staat in de kolom van zijn eerste kind.
    - Een `verdeelbord` wordt getekend als horizontale rail van de eerste tot de laatste kindkolom. Andere nodes met meerdere kinderen krijgen een korte horizontale verbinding.

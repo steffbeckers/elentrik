@@ -184,17 +184,21 @@ describe("opmaak: kringen op A4", () => {
 
     test("schaal 1 en het aantal pagina's volgt de knipregel", () => {
       expect(opm.strook.hoogte).toBeLessThanOrEqual(bruikbaar(STANDAARD_PAPIER_A4).hoogte);
-      expect(opm.strook.breedte).toBe(2 * STROOK_MARGE_MM + 20 * KOLOM_BREEDTE_MM);
-      // Kring i begint op STROOK_MARGE_MM + i × KOLOM_BREEDTE_MM. De eerste pagina knipt bij de grootste
-      // grens <= W; elke volgende pagina begint op een grens en neemt floor(W / KOLOM_BREEDTE_MM) kringen.
-      const opEerste = Math.floor((W - STROOK_MARGE_MM) / KOLOM_BREEDTE_MM);
-      const perPagina = Math.floor(W / KOLOM_BREEDTE_MM);
+      // De kolom van kring 0 is 12 + 17,6 mm breed ("300 mA A" van het differentieel erboven), die
+      // van elke andere kring 12 + 13,2 mm ("16 A B").
+      const EERSTE = 29.6;
+      const KRING = 25.2;
+      expect(opm.strook.breedte).toBeCloseTo(2 * STROOK_MARGE_MM + EERSTE + 19 * KRING, 9);
+      // Kring i ≥ 1 begint op STROOK_MARGE_MM + EERSTE + (i - 1) × KRING. De eerste pagina knipt bij de
+      // grootste grens <= W; elke volgende pagina begint op een grens en neemt floor(W / KRING) kringen.
+      const opEerste = 1 + Math.floor((W - STROOK_MARGE_MM - EERSTE) / KRING);
+      const perPagina = Math.floor(W / KRING);
       const rest = 20 - opEerste;
       const laatste = rest % perPagina === 0 ? perPagina : rest % perPagina;
       // De laatste pagina moet ook de rechtermarge bevatten, anders klopt de formule niet.
-      expect(laatste * KOLOM_BREEDTE_MM + STROOK_MARGE_MM).toBeLessThanOrEqual(W);
+      expect(laatste * KRING + STROOK_MARGE_MM).toBeLessThanOrEqual(W);
       expect(opm.paginas).toHaveLength(1 + Math.ceil(rest / perPagina));
-      expect(opm.paginas[0]!.xTot).toBe(STROOK_MARGE_MM + opEerste * KOLOM_BREEDTE_MM);
+      expect(opm.paginas[0]!.xTot).toBeCloseTo(STROOK_MARGE_MM + EERSTE + (opEerste - 1) * KRING, 9);
       expect(opm.waarschuwingen).toEqual([]);
     });
 
@@ -333,6 +337,8 @@ describe("pagineer: randgevallen op een kunstmatige strook", () => {
     elementen,
     kolomVan: {},
     kringGrenzen,
+    // Elke kring is hier één kolom breed.
+    kolomGrenzen: [STROOK_MARGE_MM, ...kringGrenzen.filter((x) => x > STROOK_MARGE_MM), breedte],
   });
 
   test("een lijn over twee knippen: drie stukken en vervolgen in de juiste volgorde", () => {

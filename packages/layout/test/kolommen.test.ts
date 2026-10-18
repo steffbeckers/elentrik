@@ -41,7 +41,9 @@ describe("maakStrook: een keten", () => {
   test("elke node staat in kolom 0 en de breedte is een kolom plus marges", () => {
     expect(Object.keys(strook.kolomVan)).toHaveLength(9);
     for (const kolom of Object.values(strook.kolomVan)) expect(kolom).toBe(0);
-    expect(strook.breedte).toBe(2 * STROOK_MARGE_MM + KOLOM_BREEDTE_MM);
+    // Links 12 (puntlabel "A1" plus 1 mm), rechts 17,6 ("300 mA A" naast het differentieel).
+    expect(strook.breedte).toBeCloseTo(2 * STROOK_MARGE_MM + 12 + 17.6, 9);
+    expect(strook.kolomGrenzen).toEqual([STROOK_MARGE_MM, strook.breedte]);
   });
 
   test("een rechte verbinding per ouder-kindpaar", () => {
@@ -79,8 +81,9 @@ describe("maakStrook: kringen naast elkaar", () => {
     expect(strook.kolomVan[ids["k2"]!]).toBe(1);
   });
 
-  test("breedte is 2 x 4 + 2 x 24", () => {
-    expect(strook.breedte).toBe(2 * 4 + 2 * 24);
+  test("breedte is de marges plus de twee kolombudgetten", () => {
+    // Kolom 0: 12 + 17,6 ("300 mA A"); kolom 1: 12 + 13,2 ("16 A B").
+    expect(strook.breedte).toBeCloseTo(2 * 4 + 29.6 + 25.2, 9);
   });
 
   test("een bord met twee kinderen geeft vier segmenten: stam, rail en een stuk per kind", () => {
@@ -90,7 +93,9 @@ describe("maakStrook: kringen naast elkaar", () => {
     const yRail = bord.y + bord.symbool.maat.hoogte + VERTICALE_AFSTAND_MM;
     expect(k1.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
     expect(k2.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
-    expect(cx(k2) - cx(k1)).toBeCloseTo(KOLOM_BREEDTE_MM, 10);
+    // Rechterbudget van kolom 0 plus linkerbudget van kolom 1.
+    expect(cx(k2) - cx(k1)).toBeCloseTo(17.6 + 12, 10);
+    expect(cx(k2) - strook.kolomGrenzen[1]!).toBeCloseTo(12, 10);
 
     const naBord = strook.elementen.slice(strook.elementen.indexOf(bord) + 1);
     expect(lijnen(naBord).slice(0, 4)).toEqual([
@@ -102,8 +107,14 @@ describe("maakStrook: kringen naast elkaar", () => {
   });
 });
 
-describe("maakStrook: kringGrenzen", () => {
-  test("drie kringen geven [4, 28, 52]", () => {
+/** Verwacht dat `waarden` element per element `verwacht` benadert. */
+function benadert(waarden: readonly number[], verwacht: readonly number[]): void {
+  expect(waarden).toHaveLength(verwacht.length);
+  waarden.forEach((w, i) => expect(w, `index ${i}`).toBeCloseTo(verwacht[i]!, 9));
+}
+
+describe("maakStrook: kringGrenzen en kolomGrenzen", () => {
+  test("drie kringen: de kolombreedtes volgen de labels", () => {
     const { doc } = installatie()
       .differentieel(300, (d) =>
         d.verdeelbord((b) =>
@@ -114,7 +125,40 @@ describe("maakStrook: kringGrenzen", () => {
         ),
       )
       .bouw();
-    expect(maakStrook(doc).kringGrenzen).toEqual([4, 28, 52]);
+    const strook = maakStrook(doc);
+    // Links in elke kolom: puntlabel "A1" eindigt 8 mm links van de lijn en is 2 × 2,5 × 0,6 = 3 mm
+    // breed, plus 1 mm: 12. Rechts in kolom 0: "300 mA A" begint 8 mm rechts en is 9,6 mm breed: 17,6.
+    // Rechts in de andere kolommen: "16 A B" begint 6 mm rechts en is 7,2 mm breed: 13,2.
+    benadert(strook.kolomGrenzen, [4, 4 + 29.6, 4 + 29.6 + 25.2, 4 + 29.6 + 2 * 25.2 + 4]);
+    benadert(strook.kringGrenzen, strook.kolomGrenzen.slice(0, 3));
+    expect(strook.breedte).toBe(strook.kolomGrenzen[3]);
+  });
+
+  test("een strook zonder labels houdt kolommen van KOLOM_BREEDTE_MM", () => {
+    const strook = maakStrook(nieuwDocument());
+    expect(strook.kolomGrenzen).toEqual([STROOK_MARGE_MM, STROOK_MARGE_MM + KOLOM_BREEDTE_MM + STROOK_MARGE_MM]);
+  });
+
+  test("een lang puntlabel verbreedt de linkerkant van zijn kolom; de tekst blijft op zijn plaats", () => {
+    const { doc, ids } = installatie()
+      .differentieel(300, (d) =>
+        d.verdeelbord((b) =>
+          b
+            .kring((k) => k.automaat(16).leiding(1.5).lichtpunten(2))
+            .kring((k) =>
+              k.automaat(20).leiding(6).onderbord((o) => o.kring((k2) => k2.automaat(16).als("ga").leiding(2.5).contactdozen(1)), "Garage"),
+            ),
+        ),
+      )
+      .bouw();
+    const strook = maakStrook(doc);
+    const ga = symbolen(strook.elementen).find((s) => s.nodeId === ids["ga"]!)!;
+    const kolom = strook.kolomVan[ga.nodeId]!;
+    // "Garage.A1": 9 × 2,5 × 0,6 = 13,5 mm, eindigend 8 mm links van de lijn, plus 1 mm.
+    expect(cx(ga) - strook.kolomGrenzen[kolom]!).toBeCloseTo(22.5, 9);
+    const punt = strook.elementen.find((e) => e.soort === "tekst" && e.tekst === "Garage.A1")!;
+    expect(punt).toMatchObject({ anker: "end" });
+    expect((punt as { x: number }).x).toBeCloseTo(cx(ga) - 8, 9);
   });
 
   test("geen kringen geeft geen grenzen", () => {
@@ -145,7 +189,8 @@ describe("maakStrook: vertakkingen en randgevallen", () => {
     }
     expect(valideerStructuur(groot)).toEqual([]);
     const strook = maakStrook(groot);
-    expect(strook.breedte).toBe(2 * 4 + 2 * 24);
+    // Kolom 0: 12 + 17,6 ("300 mA A"); kolom 1 heeft alleen een contactdoos en "A3": 12 + 12.
+    expect(strook.breedte).toBeCloseTo(2 * 4 + 29.6 + 24, 9);
     const kinderen = groot.nodes[cdId]!.kinderen;
     expect(kinderen.map((id) => strook.kolomVan[id])).toEqual([0, 1]);
   });
@@ -210,7 +255,8 @@ describe("maakStrook: vertakkingen en randgevallen", () => {
     expect(valideerStructuur(groot)).toEqual([]);
     const strook = maakStrook(groot);
     expect(symbolen(strook.elementen).length).toBeGreaterThanOrEqual(5000);
-    expect(strook.breedte).toBe(2 * 4 + 24);
+    // Links: "A5001" is 5 × 1,5 = 7,5 mm, eindigend 8 mm links van de lijn, plus 1 mm. Rechts: 17,6.
+    expect(strook.breedte).toBeCloseTo(2 * 4 + 16.5 + 17.6, 9);
   });
 });
 
@@ -281,7 +327,9 @@ describe("maakStrook: splitsing onder een node die geen bord is", () => {
     expect(k1.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
     expect(k2.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
     expect(cx(k1)).toBeCloseTo(cx(ouder), 10);
-    expect(cx(k2) - cx(k1)).toBeCloseTo(KOLOM_BREEDTE_MM, 10);
+    // Rechterbudget van kolom 0 ("300 mA A") plus linkerbudget van kolom 1.
+    expect(cx(k2) - cx(k1)).toBeCloseTo(17.6 + 12, 10);
+    expect(strook.kolomVan[k2.nodeId]).toBe(strook.kolomVan[k1.nodeId]! + 1);
   });
 
   test("de horizontale lijn heeft rol verbinding en er komt geen rail bij", () => {

@@ -1,5 +1,13 @@
 import type { NodeVan } from "@elentrik/model";
 
+/** Geschatte breedte van één teken, als fractie van de tekstgrootte. */
+export const TEKEN_BREEDTE_FACTOR = 0.6;
+
+/** Geschatte breedte van `tekst` in mm bij tekstgrootte `grootte` (mm). */
+export function tekstBreedte(tekst: string, grootte: number): number {
+  return tekst.length * grootte * TEKEN_BREEDTE_FACTOR;
+}
+
 /** Doorsnede met maximaal 2 decimalen, zonder overbodige nullen en met een komma. Zonder Intl, voor een vast resultaat. */
 function doorsnedeTekst(mm2: number): string {
   return mm2

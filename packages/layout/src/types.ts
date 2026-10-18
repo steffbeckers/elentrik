@@ -25,6 +25,8 @@ export type Strook = {
   kolomVan: Record<NodeId, number>;
   /** x-posities (mm) waar een kringsubboom begint, oplopend en uniek. */
   kringGrenzen: number[];
+  /** Linkerrand (mm) van elke bladkolom, gevolgd door `breedte`; oplopend. */
+  kolomGrenzen: number[];
 };
 
 /** Verticale ruimte tussen de onderkant van een ouder en de bovenkant van een kind, in mm. */

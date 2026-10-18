@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   referentieAppartement,
+  referentieMetOnderbord,
   referentieRijwoning,
   referentieWoning,
 } from "../packages/arei/src/testing/index";
@@ -19,6 +20,7 @@ const referenties = [
   { naam: "appartement", bouw: referentieAppartement },
   { naam: "rijwoning", bouw: referentieRijwoning },
   { naam: "woning", bouw: referentieWoning },
+  { naam: "met-onderbord", bouw: referentieMetOnderbord },
 ];
 
 const secties: string[] = [];

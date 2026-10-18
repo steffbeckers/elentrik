@@ -37,6 +37,35 @@ export function referentieRijwoning(): InstallatieDocument {
   return referentieRijwoningMetIds().doc;
 }
 
+/**
+ * Hoofdbord met drie kringen. Kring C voedt het onderbord "Garage" met twee kringen van elk 4
+ * contactdozen (puntlabels "Garage.A1" … "Garage.B4"). Kring B ernaast heeft 8 lichtpunten, zodat
+ * lange labels van het onderbord naast een lange keten staan.
+ */
+export function referentieMetOnderbord(): InstallatieDocument {
+  return installatie()
+    .differentieel(300, (d) =>
+      d.verdeelbord((b) =>
+        b
+          .kring((k) => k.automaat(20).leiding(2.5).contactdozen(4, { ruimte: "leefruimte" }))
+          .kring((k) => k.automaat(16).leiding(1.5).lichtpunten(8))
+          .kring((k) =>
+            k
+              .automaat(40)
+              .leiding(10)
+              .onderbord(
+                (o) =>
+                  o
+                    .kring((k2) => k2.automaat(20).leiding(2.5).contactdozen(4))
+                    .kring((k2) => k2.automaat(16).leiding(2.5).contactdozen(4)),
+                "Garage",
+              ),
+          ),
+      ),
+    )
+    .bouw().doc;
+}
+
 /** Woning (3N400V) met laadpaal en omvormer, zonder fouten of waarschuwingen. */
 export function referentieWoning(): InstallatieDocument {
   return installatie({ stroomtype: "3N400V" })

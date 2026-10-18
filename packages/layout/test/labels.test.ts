@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
 import { installatie } from "@elentrik/arei/testing";
 import { voegToe, type NodeVan } from "@elentrik/model";
-import { beveiligingLabel, leidingLabel, maakStrook, type SchemaElement } from "../src/index";
+import {
+  TEKEN_BREEDTE_FACTOR,
+  beveiligingLabel,
+  leidingLabel,
+  maakStrook,
+  tekstBreedte,
+  type SchemaElement,
+} from "../src/index";
 
 type SymboolElement = Extract<SchemaElement, { soort: "symbool" }>;
 type LijnElement = Extract<SchemaElement, { soort: "lijn" }>;
@@ -56,6 +63,15 @@ describe("leidingLabel", () => {
     expect(leidingLabel(leiding({ doorsnede_mm2: 0.75 }))).toBe("XVB 3G0,75");
     expect(leidingLabel(leiding({ doorsnede_mm2: 1.504 }))).toBe("XVB 3G1,5");
     expect(leidingLabel(leiding({ aantalGeleiders: 5, doorsnede_mm2: 16 }))).toBe("XVB 5G16");
+  });
+});
+
+describe("tekstBreedte", () => {
+  test("aantal tekens × grootte × TEKEN_BREEDTE_FACTOR", () => {
+    expect(TEKEN_BREEDTE_FACTOR).toBe(0.6);
+    expect(tekstBreedte("Garage.A3", 2.5)).toBeCloseTo(9 * 2.5 * 0.6, 10);
+    expect(tekstBreedte("300 mA A", 2)).toBeCloseTo(9.6, 10);
+    expect(tekstBreedte("", 3)).toBe(0);
   });
 });
 
