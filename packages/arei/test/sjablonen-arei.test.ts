@@ -18,10 +18,18 @@ function bord(stroomtype: Stroomtype) {
 }
 
 describe("sjablonen volgens arei-2020@1", () => {
-  const gevallen: { id: string; stroomtype: Stroomtype }[] = [
-    ...SJABLONEN.map((s) => ({ id: s.id, stroomtype: "2x230V" as const })),
-    { id: "kookplaat", stroomtype: "3N400V" },
-  ];
+  const STROOMTYPES: Stroomtype[] = ["2x230V", "3x230V", "3N400V"];
+  const gevallen = STROOMTYPES.flatMap((stroomtype) =>
+    SJABLONEN.map((s) => ({ id: s.id, stroomtype })),
+  );
+
+  test.each(STROOMTYPES)("een nieuw project (%s): geen fouten of waarschuwingen", (stroomtype) => {
+    const { doc } = bord(stroomtype);
+    const ernstig = controleer(doc, regelset).filter(
+      (b) => b.ernst === "fout" || b.ernst === "waarschuwing",
+    );
+    expect(ernstig).toEqual([]);
+  });
 
   test.each(gevallen)("$id ($stroomtype): geen fouten of waarschuwingen", ({ id, stroomtype }) => {
     const { doc, bordId } = bord(stroomtype);

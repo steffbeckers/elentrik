@@ -133,9 +133,9 @@ describe("nieuwProjectDocument", () => {
     expect(haal(doc, differentieelId)).toMatchObject({ type: "differentieel", polen: 4 });
   });
 
-  test("3x230V: het differentieel heeft 2 polen", () => {
+  test("3x230V: het differentieel heeft 3 polen", () => {
     const { doc, differentieelId } = start("3x230V");
-    expect(haal(doc, differentieelId)).toMatchObject({ polen: 2 });
+    expect(haal(doc, differentieelId)).toMatchObject({ polen: 3 });
   });
 });
 

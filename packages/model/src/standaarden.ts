@@ -1,7 +1,7 @@
 import { DocumentFout } from "./fouten";
 import { nieuwDocument } from "./document";
 import { voegToe, type NodeInvoer } from "./operaties";
-import type { InstallatieDocument, Stroomtype } from "./schema";
+import type { InstallatieDocument, Polen, Stroomtype } from "./schema";
 import type { Sjabloon, SjabloonNode } from "./sjablonen";
 
 /** De onderdelen in het paneel "Onderdelen" van de editor. */
@@ -48,8 +48,19 @@ export const NIEUWE_KRING_AUTOMAAT: NodeInvoer = {
 };
 
 /**
+ * Aantal polen van het algemeen differentieel per stroomtype (ruling E6). Dit moet
+ * overeenkomen met `polenPerStroomtype` in de parameters van @elentrik/arei
+ * (regel 7); model mag arei niet importeren, dus staat het hier apart.
+ */
+const POLEN_PER_STROOMTYPE: Readonly<Record<Stroomtype, Polen>> = {
+  "2x230V": 2,
+  "3x230V": 3,
+  "3N400V": 4,
+};
+
+/**
  * Een nieuw project: aansluiting > teller > algemeen differentieel (300 mA, 40 A,
- * klasse A; 4 polen bij 3N400V, anders 2) > verdeelbord.
+ * klasse A; 2, 3 of 4 polen bij 2x230V, 3x230V of 3N400V) > verdeelbord.
  */
 export function nieuwProjectDocument(opties: {
   klantNaam: string;
@@ -62,7 +73,7 @@ export function nieuwProjectDocument(opties: {
     type: "differentieel",
     gevoeligheid_mA: 300,
     nominaal_A: 40,
-    polen: opties.stroomtype === "3N400V" ? 4 : 2,
+    polen: POLEN_PER_STROOMTYPE[opties.stroomtype],
     klasse: "A",
   });
   return voegToe(differentieel.doc, differentieel.id, { type: "verdeelbord" }).doc;
