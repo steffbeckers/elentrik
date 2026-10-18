@@ -173,6 +173,47 @@ function verwijderFoutTitel(fout: DocumentFout): string {
   return te(sleutel) ? t(sleutel) : t("editor.canvas.verwijderenMislukt.andere");
 }
 
+/** Shift+Delete op zoveel nodes of meer vraagt eerst een bevestiging. */
+const BEVESTIG_VANAF = 5;
+/** Het aantal nodes dat Shift+Delete zou verwijderen; gezet zolang de bevestiging openstaat. */
+const teVerwijderenAantal = ref<number | null>(null);
+const bevestigOpen = computed({
+  get: () => teVerwijderenAantal.value !== null,
+  set: (open) => {
+    if (!open) teVerwijderenAantal.value = null;
+  },
+});
+
+/** Het aantal verschillende nodes in de takken van `ids` (de nodes zelf meegeteld). */
+function aantalInTakken(ids: readonly string[]): number {
+  const doc = store.document;
+  if (!doc) return 0;
+  const gezien = new Set<string>();
+  const stapel = [...ids];
+  while (stapel.length > 0) {
+    const id = stapel.pop()!;
+    const node = Object.hasOwn(doc.nodes, id) ? doc.nodes[id] : undefined;
+    if (!node || gezien.has(id)) continue;
+    gezien.add(id);
+    stapel.push(...node.kinderen);
+  }
+  return gezien.size;
+}
+
+function verwijder(heleTak: boolean): void {
+  try {
+    store.verwijderSelectie(heleTak);
+  } catch (fout) {
+    if (!(fout instanceof DocumentFout)) throw fout;
+    toast.add({ title: verwijderFoutTitel(fout), color: "error" });
+  }
+}
+
+function bevestigTakVerwijderen(): void {
+  teVerwijderenAantal.value = null;
+  verwijder(true);
+}
+
 function toetsIngedrukt(event: KeyboardEvent): void {
   if (!store.document) return;
   const doel = event.target instanceof Element ? event.target : null;
@@ -212,12 +253,15 @@ function toetsIngedrukt(event: KeyboardEvent): void {
       store.voegToeBijSelectie();
       break;
     case "verwijder":
-      try {
-        store.verwijderSelectie(actie.heleTak);
-      } catch (fout) {
-        if (!(fout instanceof DocumentFout)) throw fout;
-        toast.add({ title: verwijderFoutTitel(fout), color: "error" });
+      if (actie.heleTak) {
+        // Vanaf 5 nodes eerst een bevestiging (spec §4.4).
+        const aantal = aantalInTakken(store.selectie);
+        if (aantal >= BEVESTIG_VANAF) {
+          teVerwijderenAantal.value = aantal;
+          break;
+        }
       }
+      verwijder(actie.heleTak);
       break;
     case "ongedaan":
       store.ongedaanMaken();
@@ -398,6 +442,23 @@ watchPostEffect(() => {
         @click="maakPassend"
       />
     </div>
+
+    <UModal v-model:open="bevestigOpen" :title="$t('editor.canvas.takVerwijderen.titel')">
+      <template #body>
+        <p>{{ $t("editor.canvas.takVerwijderen.beschrijving", { aantal: teVerwijderenAantal ?? 0 }) }}</p>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="outline" :label="$t('algemeen.annuleren')" @click="bevestigOpen = false" />
+          <UButton
+            color="error"
+            :label="$t('editor.canvas.takVerwijderen.bevestigen')"
+            data-testid="tak-verwijderen-bevestigen"
+            @click="bevestigTakVerwijderen"
+          />
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 

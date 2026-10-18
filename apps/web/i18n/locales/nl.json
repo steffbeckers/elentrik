@@ -14,6 +14,11 @@
         "ROOT_NIET_WIJZIGBAAR": "De aansluiting en de teller kunnen niet verwijderd worden.",
         "NIET_TOEGELATEN_KIND": "Dit onderdeel kan niet verwijderd worden zonder de tak erboven. Shift+Delete verwijdert de hele tak.",
         "andere": "Verwijderen is niet gelukt."
+      },
+      "takVerwijderen": {
+        "titel": "Hele tak verwijderen",
+        "beschrijving": "Dit verwijdert {aantal} onderdelen. Je kunt het ongedaan maken.",
+        "bevestigen": "Verwijderen"
       }
     },
     "onderdelen": {
@@ -25,6 +30,123 @@
       "differentieel": "Differentieel",
       "zekering": "Zekering",
       "onderbord": "Onderbord"
+    },
+    "types": {
+      "aansluiting": "Aansluiting",
+      "teller": "Teller",
+      "differentieel": "Differentieel",
+      "automaat": "Automaat",
+      "zekering": "Zekering",
+      "verdeelbord": "Verdeelbord",
+      "leiding": "Leiding",
+      "contactdoos": "Contactdoos",
+      "lichtpunt": "Lichtpunt",
+      "schakelaar": "Schakelaar",
+      "toestel": "Toestel"
+    },
+    "pagina": {
+      "laden": "Project laden…",
+      "nietGevonden": {
+        "titel": "Project niet gevonden",
+        "beschrijving": "Dit project bestaat niet of werd verwijderd.",
+        "terug": "Terug naar de projecten"
+      },
+      "ladenMislukt": {
+        "titel": "Project laden mislukt",
+        "beschrijving": "Het project kon niet geladen worden. Probeer het opnieuw.",
+        "opnieuw": "Opnieuw proberen"
+      }
+    },
+    "bovenbalk": {
+      "projecten": "Naar de projecten",
+      "projectgegevens": "Projectgegevens aanpassen",
+      "tabbladen": {
+        "eendraadschema": "Eendraadschema",
+        "situatieschema": "Situatieschema",
+        "kringenlijst": "Kringenlijst",
+        "binnenkort": "Binnenkort"
+      },
+      "bevindingen": "{fouten} fouten en {waarschuwingen} waarschuwingen",
+      "ongedaanMaken": "Ongedaan maken (Ctrl+Z)",
+      "opnieuw": "Opnieuw (Ctrl+Y)"
+    },
+    "status": {
+      "opgeslagen": "Opgeslagen",
+      "bezig": "Bezig met opslaan…",
+      "lokaal": "Niet opgeslagen: lokaal bewaard",
+      "onbewaard": "Niet opgeslagen",
+      "conflict": "Conflict",
+      "fout": "Opslaan mislukt",
+      "opnieuwProberen": "Opnieuw proberen"
+    },
+    "onderdelenPaneel": {
+      "titel": "Onderdelen",
+      "toestelsoort": "Soort toestel",
+      "sjablonen": "Sjablonen",
+      "geenSneltoets": "—"
+    },
+    "sjablonen": {
+      "kring-stopcontacten": "Kring stopcontacten",
+      "kring-verlichting": "Kring verlichting",
+      "kookplaat": "Kookplaat",
+      "wasmachine": "Wasmachine",
+      "badkamer": "Badkamer"
+    },
+    "eigenschappen": {
+      "titel": "Eigenschappen",
+      "leeg": "Selecteer een onderdeel op het schema.",
+      "gemengd": "{aantal} onderdelen geselecteerd",
+      "zelfdeType": "{aantal} × {type}",
+      "verschillend": "—",
+      "geen": "Geen",
+      "ongeldig": "Ongeldige waarde"
+    },
+    "bevindingen": {
+      "titel": "Bevindingen",
+      "leeg": "Geen bevindingen.",
+      "ernst": {
+        "fout": "Fouten",
+        "waarschuwing": "Waarschuwingen",
+        "info": "Info"
+      },
+      "afgeweken": "Afgeweken: {motivatie}",
+      "motiveren": "Afwijking motiveren",
+      "verwijderen": "Afwijking verwijderen"
+    },
+    "afwijking": {
+      "titel": "Afwijking motiveren",
+      "motivatie": "Motivatie",
+      "hulp": "Waarom is deze afwijking aanvaardbaar? Minstens 10 tekens.",
+      "bewaren": "Afwijking bewaren"
+    },
+    "projectgegevens": {
+      "titel": "Projectgegevens",
+      "naam": "Naam",
+      "naamVerplicht": "Geef het project een naam.",
+      "klant": "Klant",
+      "stroomtype": "Stroomtype",
+      "bewaren": "Bewaren"
+    },
+    "concept": {
+      "titel": "Lokaal concept gevonden",
+      "beschrijving": "Op dit toestel staat een concept van dit project dat nieuwer is dan de versie op de server ({tijd}).",
+      "laden": "Concept laden",
+      "verwerpen": "Verwerpen"
+    },
+    "conflict": {
+      "titel": "Conflict",
+      "beschrijving": "Het project is intussen gewijzigd, bijvoorbeeld in een ander venster. Je wijzigingen zijn niet op de server bewaard, maar staan nog lokaal.",
+      "serverversie": "Serverversie laden",
+      "serverversieUitleg": "Je lokale wijzigingen gaan verloren.",
+      "kopie": "Mijn versie als kopie bewaren",
+      "kopieUitleg": "Je versie komt in een nieuw project; het origineel blijft ongewijzigd."
+    },
+    "fouten": {
+      "NIET_TOEGELATEN_KIND": "Dat onderdeel kan hier niet komen.",
+      "ONGELDIG_SCHEMA": "Die waarde is niet geldig.",
+      "ONBEKENDE_NODE": "Dat onderdeel bestaat niet meer.",
+      "ROOT_NIET_WIJZIGBAAR": "De aansluiting en de teller kunnen niet gewijzigd worden.",
+      "andere": "Dat is niet gelukt."
     }
   },
   "projecten": {

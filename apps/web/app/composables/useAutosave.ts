@@ -8,7 +8,7 @@ import { ConflictFout, type BewaarInvoer, type Project } from "./useProjectenApi
 /**
  * - `opgeslagen`: de server heeft de laatste wijziging.
  * - `bezig`: er is een wijziging die nog naar de server moet (wacht op de vertraging) of ze is onderweg.
- * - `lokaal`: bewaren op de server lukt niet (netwerk of 5xx), maar het concept staat in IndexedDB.
+ * - `lokaal`: bewaren op de server lukt niet (netwerk, 5xx, 408 of 429), maar het concept staat in IndexedDB.
  *   Er volgt een nieuwe poging.
  * - `onbewaard`: idem, maar ook het concept kon niet bewaard worden: de wijziging bestaat alleen in het geheugen.
  * - `conflict`: de server heeft een nieuwere versie (409). Er wordt niets overschreven en niets meer verstuurd
@@ -60,6 +60,17 @@ export type Autosave = {
    */
   stop(): void;
 };
+
+/** 4xx-statussen die tijdelijk zijn (time-out, te veel verzoeken): die volgen het pad van een 5xx. */
+const TIJDELIJK = new Set([408, 429]);
+
+/**
+ * Voor `beforeunload`: zolang niet alles op de server staat, vraagt de browser of de gebruiker
+ * de pagina echt wil verlaten.
+ */
+export function waarschuwBijVerlaten(status: AutosaveStatus, event: { preventDefault(): void }): void {
+  if (status !== "opgeslagen") event.preventDefault();
+}
 
 /** De HTTP-status van een fout zoals `$fetch` hem geeft (`status` of `statusCode`). */
 function httpStatus(fout: unknown): number | undefined {
@@ -195,13 +206,13 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           conflict.value = { huidigeVersie: e.huidigeVersie };
           status.value = "conflict";
           wisTimer();
-        } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500) {
+        } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
           // De server weigert dit document; opnieuw proberen verandert daar niets aan.
           fout.value = { status: httpCode };
           status.value = "fout";
           wisTimer();
         } else {
-          // Netwerk of 5xx: later opnieuw.
+          // Netwerk, 5xx, 408 of 429: later opnieuw.
           status.value = offlineStatus();
           plan(herprobeerMs);
         }
@@ -255,11 +266,13 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     wisTimer();
     store.laad({ id: project.id, naam: project.naam, versie: project.versie, document: project.document });
     bewaardeTeller = store.gewijzigdSindsOpslaan;
-    await wisConceptVeilig(id);
+    // Eerst de status, dan pas wachten (zoals in `probeer`): een wijziging tijdens het wissen
+    // mag niet op een achtergebleven conflict botsen en daarna verloren gaan.
     conceptGelukt = true;
     conflict.value = null;
     fout.value = null;
     status.value = "opgeslagen";
+    await wisConceptVeilig(id);
   }
 
   async function bewaarAlsKopie(): Promise<void> {
@@ -296,9 +309,15 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     stopWatch();
     wisTimer();
     // In-app navigeren binnen de vertraging mag de serverbewaring niet overslaan.
-    if (!conflict.value && !fout.value && store.document !== null && onbewaard()) {
-      void nuOpslaan().catch(() => {});
-    }
+    if (conflict.value || fout.value || store.document === null || !onbewaard()) return;
+    // Het project van nu: is er na het wachten een ander project geladen (de volgende pagina),
+    // dan is die staat niet van ons en gaat er niets naar de server.
+    const id = store.projectId;
+    void (async () => {
+      while (lopend) await lopend;
+      if (store.projectId !== id) return;
+      await nuOpslaan();
+    })().catch(() => {});
   }
 
   if (getCurrentScope()) onScopeDispose(stop);

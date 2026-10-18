@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { bewaarConcept, haalConcept, nieuwerConcept, wisConcept } from "../app/composables/concepten";
-import { useAutosave, type AutosaveOpties } from "../app/composables/useAutosave";
+import { useAutosave, waarschuwBijVerlaten, type AutosaveOpties } from "../app/composables/useAutosave";
 import { ConflictFout, type Project } from "../app/composables/useProjectenApi";
 import { useEditorStore } from "../app/stores/editor";
 
@@ -342,6 +342,67 @@ describe("useAutosave", () => {
     expect(bewaar).toHaveBeenCalledTimes(1);
   });
 
+  test("stop bewaart nooit in een ander project dat intussen geladen werd", async () => {
+    let rond: (() => void) | undefined;
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockImplementationOnce(async (_id, versie) => {
+      await new Promise<void>((klaar) => {
+        rond = klaar;
+      });
+      return { versie: versie + 1 };
+    });
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    // Een wijziging tijdens het bewaar, dan weg van de pagina: stop wil die nog bewaren.
+    wijzig(store, "b");
+    await nextTick();
+    autosave.stop();
+    // Intussen opent de volgende pagina een ander project en wijzigt het.
+    store.laad({ id: "p2", naam: "Ander project", versie: 3, document: startDocument() });
+    wijzig(store, "c");
+    rond?.();
+    await leeg();
+    await vi.advanceTimersByTimeAsync(20_000);
+    await leeg();
+    expect(bewaar.mock.calls.map(([id]) => id)).toEqual(["p1"]);
+  });
+
+  test("laadServerversie: een wijziging tijdens het wissen van het concept wordt bewaard", async () => {
+    let wisKlaar: (() => void) | undefined;
+    const concepten = {
+      bewaarConcept: vi.fn(async () => {}),
+      wisConcept: vi.fn(
+        () =>
+          new Promise<void>((klaar) => {
+            wisKlaar = klaar;
+          }),
+      ),
+    };
+    const { store, bewaar, autosave } = opzet({ concepten });
+    bewaar.mockRejectedValueOnce(new ConflictFout(7));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("conflict");
+
+    const laden = autosave.laadServerversie();
+    await leeg();
+    expect(wisKlaar).toBeDefined();
+    // De status staat al goed terwijl het concept nog gewist wordt.
+    expect(autosave.status.value).toBe("opgeslagen");
+    expect(autosave.conflict.value).toBeNull();
+    wijzig(store, "b");
+    await nextTick();
+    wisKlaar?.();
+    await laden;
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(bewaar).toHaveBeenLastCalledWith("p1", 7, expect.objectContaining({ naam: "b" }));
+    expect(autosave.status.value).toBe("opgeslagen");
+  });
+
   test("een wijziging tijdens het wissen van het concept na een geslaagd bewaar wordt alsnog bewaard", async () => {
     const { store, bewaar, autosave } = opzet();
     let eerste = true;
@@ -436,6 +497,20 @@ describe("useAutosave: foutsoorten", () => {
     expect(autosave.status.value).toBe("opgeslagen");
   });
 
+  test.each([408, 429])("een %i volgt het pad van een 5xx: lokaal en een nieuwe poging na 10 s", async (code) => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(Object.assign(new Error("later"), { statusCode: code }));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("lokaal");
+    expect(autosave.fout.value).toBeNull();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(autosave.status.value).toBe("opgeslagen");
+  });
+
   test("een 500 blijft lokaal en volgt een nieuwe poging na 10 s", async () => {
     const { store, bewaar, autosave } = opzet();
     bewaar.mockRejectedValueOnce(Object.assign(new Error("server stuk"), { status: 500 }));
@@ -466,5 +541,22 @@ describe("useAutosave: foutsoorten", () => {
     expect(bewaar).toHaveBeenCalledTimes(2);
     expect(bewaar).toHaveBeenLastCalledWith("p1", 1, expect.objectContaining({ naam: "b" }));
     expect(autosave.status.value).toBe("opgeslagen");
+  });
+});
+
+describe("waarschuwBijVerlaten", () => {
+  test.each(["bezig", "lokaal", "onbewaard", "conflict", "fout"] as const)(
+    "status %s: de browser waarschuwt bij het verlaten",
+    (status) => {
+      const event = { preventDefault: vi.fn() };
+      waarschuwBijVerlaten(status, event);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  test("status opgeslagen: geen waarschuwing", () => {
+    const event = { preventDefault: vi.fn() };
+    waarschuwBijVerlaten("opgeslagen", event);
+    expect(event.preventDefault).not.toHaveBeenCalled();
   });
 });

@@ -48,7 +48,8 @@ export function moetNegeren(toets: NegeerToets): boolean {
   );
 }
 
-const ONDERDELEN: Record<string, Onderdeel> = {
+/** De sneltoets (kleine letter) per onderdeel; ook getoond in het paneel Onderdelen. */
+export const ONDERDEEL_PER_TOETS: Readonly<Record<string, Onderdeel>> = {
   c: "contactdoos",
   l: "lichtpunt",
   s: "schakelaar",
@@ -85,6 +86,6 @@ export function sneltoets(toets: Toets): Actie | null {
   const richting = RICHTINGEN[key];
   if (richting) return { soort: "navigeer", richting };
 
-  const onderdeel = ONDERDELEN[key];
+  const onderdeel = ONDERDEEL_PER_TOETS[key];
   return onderdeel ? { soort: "kies", onderdeel } : null;
 }
