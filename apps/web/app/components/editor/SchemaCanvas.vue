@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Ernst } from "@elentrik/arei";
-import { DocumentFout, magToevoegen, type NodeId } from "@elentrik/model";
-import { sneltoets } from "~/composables/sneltoetsen";
+import { DocumentFout, magToevoegen } from "@elentrik/model";
+import { moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
+import { markeringen as leidMarkeringenAf, type MarkeringSoort } from "~/editor/markeringen";
 import { useEditorStore } from "~/stores/editor";
 
 type Weergave = { x: number; y: number; b: number; h: number };
@@ -18,7 +18,7 @@ const MARKERING_STRAAL_MM = 1.5;
 const PLUS_STRAAL_MM = 2.5;
 
 const store = useEditorStore();
-const { t } = useI18n();
+const { t, te } = useI18n();
 const toast = useToast();
 
 const venster = useTemplateRef<HTMLElement>("venster");
@@ -74,7 +74,9 @@ function zoomOpWiel(event: WheelEvent): void {
   const fy = (event.clientY - rect.top) / rect.height;
   const huidig = weergave.value;
   // Wiel naar boven (negatieve deltaY) zoomt in.
-  const factor = Math.exp(-event.deltaY * 0.0015);
+  // deltaMode 1 = regels, 2 = pagina's; zonder omrekening zoomt een muis met regelstappen nauwelijks.
+  const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1);
+  const factor = Math.exp(-delta * 0.0015);
   const zoom = Math.min(Math.max((passend.b / huidig.b) * factor, MIN_ZOOM), MAX_ZOOM);
   const b = passend.b / zoom;
   const h = b * (grootte.hoogte / grootte.breedte);
@@ -165,8 +167,26 @@ function isInvoer(doel: EventTarget | null): boolean {
   return doel.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(doel.tagName);
 }
 
+/** De melding bij een mislukte verwijdering, per foutcode. */
+function verwijderFoutTitel(fout: DocumentFout): string {
+  const sleutel = `editor.canvas.verwijderenMislukt.${fout.code}`;
+  return te(sleutel) ? t(sleutel) : t("editor.canvas.verwijderenMislukt.andere");
+}
+
 function toetsIngedrukt(event: KeyboardEvent): void {
   if (!store.document) return;
+  const doel = event.target instanceof Element ? event.target : null;
+  if (
+    moetNegeren({
+      defaultPrevented: event.defaultPrevented,
+      isComposing: event.isComposing,
+      altKey: event.altKey,
+      doelInWidget: doel?.closest(WIDGET_SELECTOR) != null,
+      overlayOpen: window.document.querySelector("[role=dialog][data-state=open]") !== null,
+    })
+  ) {
+    return;
+  }
   const doelIsInvoer = isInvoer(event.target);
   if (event.key === " " && !doelIsInvoer) {
     ruimteIngedrukt.value = true;
@@ -179,6 +199,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     ctrlKey: event.ctrlKey,
     metaKey: event.metaKey,
     doelIsInvoer,
+    herhaald: event.repeat,
   });
   if (!actie) return;
   event.preventDefault();
@@ -195,7 +216,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
         store.verwijderSelectie(actie.heleTak);
       } catch (fout) {
         if (!(fout instanceof DocumentFout)) throw fout;
-        toast.add({ title: t("editor.canvas.verwijderenMislukt"), color: "error" });
+        toast.add({ title: verwijderFoutTitel(fout), color: "error" });
       }
       break;
     case "ongedaan":
@@ -233,25 +254,9 @@ const selectieKaders = computed(() =>
   }),
 );
 
-const ERNST_VOLGORDE: Record<Ernst, number> = { fout: 3, waarschuwing: 2, info: 1 };
-type MarkeringSoort = Ernst | "afgeweken";
-
-/** Per node de ergste actieve ernst; grijs ("afgeweken") als alle bevindingen voor de node afgeweken zijn. */
+/** Eén markering per node, rechtsboven het vak; de ernst-aggregatie zit in `editor/markeringen.ts`. */
 const markeringen = computed(() => {
-  const perNode = new Map<NodeId, MarkeringSoort>();
-  for (const bevinding of store.bevindingen) {
-    for (const id of bevinding.nodeIds) {
-      const huidig = perNode.get(id);
-      if (bevinding.afgeweken) {
-        if (huidig === undefined) perNode.set(id, "afgeweken");
-        continue;
-      }
-      if (huidig === undefined || huidig === "afgeweken" || ERNST_VOLGORDE[bevinding.ernst] > ERNST_VOLGORDE[huidig]) {
-        perNode.set(id, bevinding.ernst);
-      }
-    }
-  }
-  return [...perNode].flatMap(([id, soort]) => {
+  return [...leidMarkeringenAf(store.bevindingen)].flatMap(([id, soort]) => {
     const vak = vakken.value[id];
     return vak ? [{ id, soort, x: vak.x + vak.breedte, y: vak.y }] : [];
   });
@@ -389,7 +394,7 @@ watchPostEffect(() => {
         size="sm"
         icon="i-lucide-scan"
         :label="$t('editor.canvas.passendMaken')"
-        class="bg-white"
+        class="bg-white text-neutral-900 hover:bg-neutral-100"
         @click="maakPassend"
       />
     </div>

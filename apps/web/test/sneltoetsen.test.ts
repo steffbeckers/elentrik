@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { sneltoets, type Actie } from "../app/composables/sneltoetsen";
+import { moetNegeren, sneltoets, type Actie, type NegeerToets } from "../app/composables/sneltoetsen";
 
 type Toets = Parameters<typeof sneltoets>[0];
 
@@ -67,5 +67,44 @@ describe("sneltoets", () => {
         soort: "opnieuw",
       });
     });
+  });
+
+  describe("herhaalde toetsen", () => {
+    test.each<[string, Toets]>([
+      ["Enter", toets("Enter", { herhaald: true })],
+      ["Delete", toets("Delete", { herhaald: true })],
+      ["Shift+Backspace", toets("Backspace", { shiftKey: true, herhaald: true })],
+    ])("geeft %s null", (_naam, invoer) => {
+      expect(sneltoets(invoer)).toBeNull();
+    });
+
+    test("navigatie en ongedaan blijven herhalen", () => {
+      expect(sneltoets(toets("ArrowUp", { herhaald: true }))).toEqual({ soort: "navigeer", richting: "op" });
+      expect(sneltoets(toets("z", { ctrlKey: true, herhaald: true }))).toEqual({ soort: "ongedaan" });
+    });
+  });
+});
+
+describe("moetNegeren", () => {
+  const vrij: NegeerToets = {
+    defaultPrevented: false,
+    isComposing: false,
+    altKey: false,
+    doelInWidget: false,
+    overlayOpen: false,
+  };
+
+  test("een gewone toets wordt niet genegeerd", () => {
+    expect(moetNegeren(vrij)).toBe(false);
+  });
+
+  test.each<[string, Partial<NegeerToets>]>([
+    ["al afgehandeld (defaultPrevented)", { defaultPrevented: true }],
+    ["IME-samenstelling", { isComposing: true }],
+    ["Alt ingedrukt", { altKey: true }],
+    ["doel in een widget (menu, dialoog, lijst, tabbladen)", { doelInWidget: true }],
+    ["een overlay staat open", { overlayOpen: true }],
+  ])("negeert: %s", (_naam, afwijking) => {
+    expect(moetNegeren({ ...vrij, ...afwijking })).toBe(true);
   });
 });

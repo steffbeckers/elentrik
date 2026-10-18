@@ -20,7 +20,33 @@ export type Toets = {
   metaKey: boolean;
   /** Het doel van de toetsaanslag is een invoerveld (input, textarea, select, contenteditable). */
   doelIsInvoer: boolean;
+  /** De toets blijft ingedrukt (`event.repeat`): verwijderen en toevoegen gebeuren dan niet nog eens. */
+  herhaald?: boolean;
 };
+
+/** Elementen waarin toetsen voor de widget zelf zijn (menu's, dialogen, lijsten, tabbladen). */
+export const WIDGET_SELECTOR =
+  "[role=dialog],[role=alertdialog],[role=menu],[role=listbox],[role=tablist],[role=combobox]";
+
+export type NegeerToets = {
+  defaultPrevented: boolean;
+  isComposing: boolean;
+  altKey: boolean;
+  /** Het doel van de toetsaanslag ligt in (of is) een widget uit `WIDGET_SELECTOR`. */
+  doelInWidget: boolean;
+  /** Er staat een overlay open (bv. een Nuxt UI-dialoog: `[role=dialog][data-state=open]`). */
+  overlayOpen: boolean;
+};
+
+/**
+ * Of de editor de toetsaanslag helemaal moet laten liggen: al afgehandeld door iemand anders,
+ * tekstinvoer via een IME, Alt-combinaties, of een widget/overlay die zijn eigen toetsen gebruikt.
+ */
+export function moetNegeren(toets: NegeerToets): boolean {
+  return (
+    toets.defaultPrevented || toets.isComposing || toets.altKey || toets.doelInWidget || toets.overlayOpen
+  );
+}
 
 const ONDERDELEN: Record<string, Onderdeel> = {
   c: "contactdoos",
@@ -50,8 +76,10 @@ export function sneltoets(toets: Toets): Actie | null {
   }
   if (toets.doelIsInvoer) return null;
 
-  if (key === "Enter") return { soort: "toevoegen" };
-  if (key === "Delete" || key === "Backspace") return { soort: "verwijder", heleTak: toets.shiftKey };
+  if (key === "Enter") return toets.herhaald ? null : { soort: "toevoegen" };
+  if (key === "Delete" || key === "Backspace") {
+    return toets.herhaald ? null : { soort: "verwijder", heleTak: toets.shiftKey };
+  }
   if (key === "Escape") return { soort: "wisSelectie" };
 
   const richting = RICHTINGEN[key];

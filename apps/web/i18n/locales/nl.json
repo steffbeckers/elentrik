@@ -10,7 +10,11 @@
     "canvas": {
       "passendMaken": "Passend maken",
       "voegToe": "{onderdeel} toevoegen",
-      "verwijderenMislukt": "De aansluiting en de teller kunnen niet verwijderd worden."
+      "verwijderenMislukt": {
+        "ROOT_NIET_WIJZIGBAAR": "De aansluiting en de teller kunnen niet verwijderd worden.",
+        "NIET_TOEGELATEN_KIND": "Dit onderdeel kan niet verwijderd worden zonder de tak erboven. Shift+Delete verwijdert de hele tak.",
+        "andere": "Verwijderen is niet gelukt."
+      }
     },
     "onderdelen": {
       "contactdoos": "Contactdoos",
