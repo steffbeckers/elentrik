@@ -1,7 +1,7 @@
 import type { Node, NodeVan } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { KOLOM_BREEDTE_MM, tekenSymbool } from "../src/index";
-import { buitenVak, isGoedgevormd, raakt } from "./hulp";
+import { buitenVak, isGoedgevormd, nietRechtop, raakt } from "./hulp";
 
 const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
 
@@ -44,11 +44,11 @@ describe("symbolen voor voeding en beveiliging", () => {
       expect(maat.breedte).toBeLessThanOrEqual(KOLOM_BREEDTE_MM - 4);
     });
 
-    test("in en uit liggen op het midden, bovenaan en onderaan", () => {
+    test("in en uit liggen op het midden, in onderaan en uit bovenaan", () => {
       expect(maat.in.x).toBe(maat.breedte / 2);
       expect(maat.uit.x).toBe(maat.breedte / 2);
-      expect(maat.in.y).toBe(0);
-      expect(maat.uit.y).toBe(maat.hoogte);
+      expect(maat.in.y).toBe(maat.hoogte);
+      expect(maat.uit.y).toBe(0);
     });
 
     test("alle meetkunde ligt binnen het vak", () => {
@@ -62,6 +62,7 @@ describe("symbolen voor voeding en beveiliging", () => {
 
     test("is goedgevormde XML zonder NaN of undefined", () => {
       expect(isGoedgevormd(symbool)).toBe(true);
+      expect(nietRechtop(symbool)).toEqual([]);
       expect(symbool.svg).not.toMatch(/NaN|undefined|Infinity/);
     });
   });

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import type { Symbool } from "../src/index";
-import { buitenVak, raakt } from "./hulp";
+import { buitenVak, nietRechtop, raakt } from "./hulp";
 
 function symbool(svg: string, breedte = 10, hoogte = 10): Symbool {
-  return { maat: { breedte, hoogte, in: { x: breedte / 2, y: 0 }, uit: { x: breedte / 2, y: hoogte } }, svg };
+  return { maat: { breedte, hoogte, in: { x: breedte / 2, y: hoogte }, uit: { x: breedte / 2, y: 0 } }, svg };
 }
 
 describe("buitenVak", () => {
@@ -56,5 +56,19 @@ describe("raakt", () => {
     ["een leeg symbool", ""],
   ])("geeft false voor %s", (_naam, svg) => {
     expect(raakt(symbool(svg), punt)).toBe(false);
+  });
+});
+
+describe("nietRechtop", () => {
+  test("accepteert een fragment zonder transform", () => {
+    expect(nietRechtop(symbool('<text x="5" y="5">a</text>'))).toEqual([]);
+  });
+
+  test.each([
+    ["transform op een groep rond tekst", '<g transform="translate(0 1)"><text x="5" y="5">a</text></g>'],
+    ["transform op de tekst zelf", '<text x="5" y="5" transform="rotate(180)">a</text>'],
+    ["scale(", '<g style="scale(1,-1)"><text x="5" y="5">a</text></g>'],
+  ])("meldt: %s", (_naam, svg) => {
+    expect(nietRechtop(symbool(svg)).length).toBeGreaterThan(0);
   });
 });

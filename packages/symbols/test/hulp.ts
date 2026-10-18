@@ -115,6 +115,17 @@ export function buitenVak(symbool: Symbool): string[] {
   return fouten;
 }
 
+/**
+ * Geeft een lijst met overtredingen (leeg = in orde) van de regel dat tekst rechtop staat: geen
+ * `transform` of `scale(` ergens in het fragment, dus ook niet op of rond een `<text>`.
+ */
+export function nietRechtop(symbool: Symbool): string[] {
+  const fouten: string[] = [];
+  if (/transform/.test(symbool.svg)) fouten.push("transform in het fragment");
+  if (/scale\(/.test(symbool.svg)) fouten.push("scale( in het fragment");
+  return fouten;
+}
+
 const TOLERANTIE = 1e-9;
 
 /**
