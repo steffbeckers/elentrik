@@ -386,3 +386,101 @@ describe("afwijkingen en projectgegevens", () => {
     expect(store.naam).toBe("Nieuwe naam");
   });
 });
+
+describe("voegToeBijSelectie op de teller", () => {
+  test("in een nieuw project komt er een kring op de rail van het hoofdbord", () => {
+    const store = laadNieuw();
+    const bordId = eersteVan(store, "verdeelbord");
+    store.selectie = [eersteVan(store, "teller")];
+    store.voegToeBijSelectie();
+    expect(node(store, bordId).kinderen).toHaveLength(1);
+    expect(node(store, node(store, bordId).kinderen[0]!).type).toBe("automaat");
+    expect(store.terug).toHaveLength(1);
+  });
+});
+
+describe("navigeer", () => {
+  /** Drie kringen, elk met een leiding en één contactdoos erbovenop. */
+  function driekringen(store: Store): void {
+    for (let i = 0; i < 3; i++) {
+      nieuweKring(store);
+      stapel(store, 1);
+    }
+  }
+
+  /** De beveiligingen in de volgorde van `analyse.kringen`. */
+  function beveiligingen(store: Store): NodeId[] {
+    return store.analyse!.kringen.map((k) => k.beveiligingId);
+  }
+
+  test("op volgt het eerste kind, neer de ouder", () => {
+    const store = laadNieuw();
+    driekringen(store);
+    const beveiliging = beveiligingen(store)[0]!;
+    const leiding = node(store, beveiliging).kinderen[0]!;
+    const punt = node(store, leiding).kinderen[0]!;
+    store.selectie = [beveiliging];
+
+    store.navigeer("op");
+    expect(store.selectie).toEqual([leiding]);
+    store.navigeer("op");
+    expect(store.selectie).toEqual([punt]);
+    store.navigeer("op"); // geen kind meer
+    expect(store.selectie).toEqual([punt]);
+
+    store.navigeer("neer");
+    expect(store.selectie).toEqual([leiding]);
+    store.navigeer("neer");
+    expect(store.selectie).toEqual([beveiliging]);
+  });
+
+  test("neer stopt bij de wortel", () => {
+    const store = laadNieuw();
+    const wortel = doc(store).rootId;
+    store.selectie = [wortel];
+    store.navigeer("neer");
+    expect(store.selectie).toEqual([wortel]);
+  });
+
+  test("links en rechts springen naar de beveiliging van de vorige of volgende kring en klemmen aan de uiteinden", () => {
+    const store = laadNieuw();
+    driekringen(store);
+    const [eerste, midden, laatste] = beveiligingen(store) as [NodeId, NodeId, NodeId];
+    expect(new Set([eerste, midden, laatste]).size).toBe(3);
+
+    // Start vanaf een punt in de middelste kring.
+    store.selectie = [store.analyse!.kringen[1]!.puntIds[0]!];
+    store.navigeer("rechts");
+    expect(store.selectie).toEqual([laatste]);
+    store.navigeer("rechts");
+    expect(store.selectie).toEqual([laatste]);
+    store.navigeer("links");
+    expect(store.selectie).toEqual([midden]);
+    store.navigeer("links");
+    expect(store.selectie).toEqual([eerste]);
+    store.navigeer("links");
+    expect(store.selectie).toEqual([eerste]);
+  });
+
+  test("zonder selectie of zonder kring gebeurt er niets; navigatie raakt undo niet", () => {
+    const store = laadNieuw();
+    driekringen(store);
+    const stappen = store.terug;
+    const voor = doc(store);
+
+    store.selectie = [];
+    for (const r of ["op", "neer", "links", "rechts"] as const) store.navigeer(r);
+    expect(store.selectie).toEqual([]);
+
+    const teller = eersteVan(store, "teller");
+    store.selectie = [teller];
+    store.navigeer("links");
+    store.navigeer("rechts");
+    expect(store.selectie).toEqual([teller]);
+
+    store.navigeer("neer");
+    expect(store.terug).toBe(stappen);
+    expect(store.vooruit).toHaveLength(0);
+    expect(store.document).toBe(voor);
+  });
+});

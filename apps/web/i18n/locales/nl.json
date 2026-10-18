@@ -6,6 +6,23 @@
     "annuleren": "Annuleren",
     "fout": "Er ging iets mis. Probeer het opnieuw."
   },
+  "editor": {
+    "canvas": {
+      "passendMaken": "Passend maken",
+      "voegToe": "{onderdeel} toevoegen",
+      "verwijderenMislukt": "De aansluiting en de teller kunnen niet verwijderd worden."
+    },
+    "onderdelen": {
+      "contactdoos": "Contactdoos",
+      "lichtpunt": "Lichtpunt",
+      "schakelaar": "Schakelaar",
+      "toestel": "Toestel",
+      "leiding": "Leiding",
+      "differentieel": "Differentieel",
+      "zekering": "Zekering",
+      "onderbord": "Onderbord"
+    }
+  },
   "projecten": {
     "titel": "Projecten",
     "nieuw": "Nieuw project",

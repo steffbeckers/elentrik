@@ -27,6 +27,7 @@ import {
 import { schemaStripSvg } from "@elentrik/render";
 import { defineStore } from "pinia";
 import { computed, ref, shallowRef } from "vue";
+import type { Richting } from "../composables/sneltoetsen";
 
 /** Eén undo-stap. Stappen met dezelfde `groep` na elkaar worden samengevoegd. */
 export type Stap = { patches: Patch[]; inversePatches: Patch[]; groep?: string };
@@ -240,7 +241,11 @@ export const useEditorStore = defineStore("editor", () => {
       if (!kind) return undefined;
       node = kind;
     }
-    return zoek("kring-einde", node.id);
+    const einde = zoek("kring-einde", node.id);
+    if (einde) return einde;
+    // De keten loopt dood op een bord (bv. de teller in een nieuw project): dan op de rail.
+    if (node.type === "verdeelbord" || node.type === "differentieel") return zoek("rail-einde", node.id);
+    return undefined;
   }
 
   /** Enter: voegt `onderdeel` toe bij de selectie. Kan het niet, dan gebeurt er niets. */
@@ -250,6 +255,32 @@ export const useEditorStore = defineStore("editor", () => {
     const aanknoping = aanknopingBijSelectie(doc);
     if (!aanknoping || !magToevoegen(doc, aanknoping, onderdeel.value, toestelsoort.value)) return;
     voegToe(aanknoping);
+  }
+
+  /**
+   * Verplaatst de selectie naar één node (pijltjestoetsen). "op" is het eerste kind (omhoog in
+   * het schema), "neer" de ouder; beide stoppen bij het uiteinde. "links" en "rechts" gaan naar
+   * de beveiliging van de vorige of volgende kring in `analyse.kringen`. Raakt de undo-stapel niet.
+   */
+  function navigeer(richting: Richting): void {
+    const doc = document.value;
+    const huidig = selectie.value.at(-1);
+    if (!doc || huidig === undefined || !Object.hasOwn(doc.nodes, huidig)) return;
+
+    let doel: NodeId | undefined;
+    if (richting === "op") {
+      doel = doc.nodes[huidig]?.kinderen[0];
+    } else if (richting === "neer") {
+      doel = Object.values(doc.nodes).find((n) => n.kinderen.includes(huidig))?.id;
+    } else {
+      const kringen = analyse.value?.kringen ?? [];
+      const kringId = analyse.value?.kringVanNode[huidig];
+      const index = kringen.findIndex((k) => k.id === kringId);
+      if (index < 0) return;
+      const verschuiving = richting === "links" ? -1 : 1;
+      doel = kringen[Math.min(Math.max(index + verschuiving, 0), kringen.length - 1)]?.beveiligingId;
+    }
+    if (doel !== undefined) selectie.value = [doel];
   }
 
   /**
@@ -339,6 +370,7 @@ export const useEditorStore = defineStore("editor", () => {
     voegSjabloonToe,
     wijzigVeld,
     voegToeBijSelectie,
+    navigeer,
     verwijderSelectie,
     zetAfwijking,
     wisAfwijking,
