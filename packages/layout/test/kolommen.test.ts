@@ -1,9 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { installatie } from "@elentrik/arei/testing";
+import {
+  installatie,
+  referentieAppartement,
+  referentieMetOnderbord,
+  referentieRijwoning,
+  referentieWoning,
+} from "@elentrik/arei/testing";
 import { nieuwDocument, nieuwId, valideerStructuur, voegToe, type NodeId } from "@elentrik/model";
 import { KOLOM_BREEDTE_MM } from "@elentrik/symbols";
 import { RAIL_AFSTAND_MM, STROOK_MARGE_MM, VERTICALE_AFSTAND_MM, maakStrook, type SchemaElement } from "../src/index";
-import { kloon } from "./hulp";
+import { kloon, lijnBenadert } from "./hulp";
 
 type SymboolElement = Extract<SchemaElement, { soort: "symbool" }>;
 type LijnElement = Extract<SchemaElement, { soort: "lijn" }>;
@@ -23,18 +29,21 @@ describe("maakStrook: een keten", () => {
   const strook = maakStrook(doc);
   const syms = symbolen(strook.elementen);
 
-  test("staat in een kolom met oplopende y", () => {
+  test("staat in een kolom met aflopende y: de root onderaan, elk kind boven zijn ouder", () => {
     // aansluiting, teller, differentieel, bord, automaat, leiding, 3 contactdozen
     expect(syms).toHaveLength(9);
     const eerste = cx(syms[0]!);
     for (const s of syms) expect(cx(s)).toBeCloseTo(eerste, 10);
-    for (let i = 1; i < syms.length; i++) expect(syms[i]!.y).toBeGreaterThan(syms[i - 1]!.y);
+    for (let i = 1; i < syms.length; i++) expect(syms[i]!.y).toBeLessThan(syms[i - 1]!.y);
+    expect(syms[0]!.y).toBe(Math.max(...syms.map((s) => s.y)));
   });
 
-  test("y volgt hoogte en verticale afstand", () => {
-    expect(syms[0]!.y).toBe(STROOK_MARGE_MM);
+  test("y volgt hoogte en verticale afstand: de root staat onderaan binnen de marge", () => {
+    const root = syms[0]!;
+    expect(root.y + root.symbool.maat.hoogte).toBeCloseTo(strook.hoogte - STROOK_MARGE_MM, 10);
     for (let i = 1; i < syms.length; i++) {
-      expect(syms[i]!.y).toBeCloseTo(syms[i - 1]!.y + syms[i - 1]!.symbool.maat.hoogte + VERTICALE_AFSTAND_MM, 10);
+      // De onderkant van het kind ligt een verticale afstand boven de bovenkant van de ouder.
+      expect(syms[i]!.y + syms[i]!.symbool.maat.hoogte).toBeCloseTo(syms[i - 1]!.y - VERTICALE_AFSTAND_MM, 10);
     }
   });
 
@@ -46,19 +55,26 @@ describe("maakStrook: een keten", () => {
     expect(strook.kolomGrenzen).toEqual([STROOK_MARGE_MM, strook.breedte]);
   });
 
-  test("een rechte verbinding per ouder-kindpaar", () => {
+  test("een rechte verbinding per ouder-kindpaar, van uit van de ouder omhoog naar in van het kind", () => {
     const l = lijnen(strook.elementen);
     expect(l).toHaveLength(8);
-    for (const lijn of l) {
+    l.forEach((lijn, i) => {
+      const ouder = syms[i]!;
+      const kind = syms[i + 1]!;
       expect(lijn.rol).toBe("verbinding");
       expect(lijn.x1).toBe(lijn.x2);
-      expect(lijn.y2).toBeGreaterThan(lijn.y1);
-    }
+      expect(lijn.y2).toBeLessThan(lijn.y1);
+      expect(lijn.y1).toBeCloseTo(ouder.y + ouder.symbool.maat.uit.y, 10);
+      expect(lijn.y2).toBeCloseTo(kind.y + kind.symbool.maat.in.y, 10);
+    });
   });
 
-  test("hoogte is de grootste onderkant plus marge", () => {
+  test("hoogte is de bovenkant van het hoogste symbool plus marge, en de bovenste staat op de marge", () => {
     const laatste = syms[syms.length - 1]!;
-    expect(strook.hoogte).toBeCloseTo(laatste.y + laatste.symbool.maat.hoogte + STROOK_MARGE_MM, 10);
+    expect(laatste.y).toBeCloseTo(STROOK_MARGE_MM, 10);
+    const root = syms[0]!;
+    expect(strook.hoogte).toBeCloseTo(root.y + root.symbool.maat.hoogte + STROOK_MARGE_MM, 10);
+    for (const s of syms) expect(s.y).toBeGreaterThanOrEqual(STROOK_MARGE_MM - 1e-9);
   });
 });
 
@@ -90,20 +106,24 @@ describe("maakStrook: kringen naast elkaar", () => {
     const bord = symbolen(strook.elementen).find((s) => s.nodeId === ids["bord"]!)!;
     const k1 = symbolen(strook.elementen).find((s) => s.nodeId === ids["k1"]!)!;
     const k2 = symbolen(strook.elementen).find((s) => s.nodeId === ids["k2"]!)!;
-    const yRail = bord.y + bord.symbool.maat.hoogte + VERTICALE_AFSTAND_MM;
-    expect(k1.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
-    expect(k2.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
+    // De rail ligt boven het bord; de onderkant van de kringen ligt nog een rail-afstand hoger.
+    const yRail = bord.y - VERTICALE_AFSTAND_MM;
+    expect(k1.y + k1.symbool.maat.hoogte).toBeCloseTo(yRail - RAIL_AFSTAND_MM, 10);
+    expect(k2.y + k2.symbool.maat.hoogte).toBeCloseTo(yRail - RAIL_AFSTAND_MM, 10);
     // Rechterbudget van kolom 0 plus linkerbudget van kolom 1.
     expect(cx(k2) - cx(k1)).toBeCloseTo(17.6 + 12, 10);
     expect(cx(k2) - strook.kolomGrenzen[1]!).toBeCloseTo(12, 10);
 
+    // De rail ligt tussen de bovenkant van het bord en de onderkant van de kinderen.
+    expect(yRail).toBeLessThan(bord.y);
+    expect(yRail).toBeGreaterThan(k1.y + k1.symbool.maat.hoogte);
+
     const naBord = strook.elementen.slice(strook.elementen.indexOf(bord) + 1);
-    expect(lijnen(naBord).slice(0, 4)).toEqual([
-      { soort: "lijn", x1: cx(bord), y1: bord.y + bord.symbool.maat.uit.y, x2: cx(bord), y2: yRail, rol: "verbinding" },
-      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k2), y2: yRail, rol: "rail" },
-      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k1), y2: k1.y + k1.symbool.maat.in.y, rol: "verbinding" },
-      { soort: "lijn", x1: cx(k2), y1: yRail, x2: cx(k2), y2: k2.y + k2.symbool.maat.in.y, rol: "verbinding" },
-    ]);
+    const l = lijnen(naBord);
+    lijnBenadert(l[0], { soort: "lijn", x1: cx(bord), y1: bord.y + bord.symbool.maat.uit.y, x2: cx(bord), y2: yRail, rol: "verbinding" });
+    lijnBenadert(l[1], { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k2), y2: yRail, rol: "rail" });
+    lijnBenadert(l[2], { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k1), y2: k1.y + k1.symbool.maat.in.y, rol: "verbinding" });
+    lijnBenadert(l[3], { soort: "lijn", x1: cx(k2), y1: yRail, x2: cx(k2), y2: k2.y + k2.symbool.maat.in.y, rol: "verbinding" });
   });
 });
 
@@ -321,11 +341,11 @@ describe("maakStrook: splitsing onder een node die geen bord is", () => {
   const ouder = syms.find((s) => s.nodeId === cdId)!;
   const k1 = syms.find((s) => s.nodeId === kinderIds[0]!)!;
   const k2 = syms.find((s) => s.nodeId === kinderIds[1]!)!;
-  const yRail = ouder.y + ouder.symbool.maat.hoogte + VERTICALE_AFSTAND_MM;
+  const yRail = ouder.y - VERTICALE_AFSTAND_MM;
 
-  test("beide kinderen staan een rail lager, in aangrenzende kolommen", () => {
-    expect(k1.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
-    expect(k2.y).toBeCloseTo(yRail + RAIL_AFSTAND_MM, 10);
+  test("beide kinderen staan een rail hoger, in aangrenzende kolommen", () => {
+    expect(k1.y + k1.symbool.maat.hoogte).toBeCloseTo(yRail - RAIL_AFSTAND_MM, 10);
+    expect(k2.y + k2.symbool.maat.hoogte).toBeCloseTo(yRail - RAIL_AFSTAND_MM, 10);
     expect(cx(k1)).toBeCloseTo(cx(ouder), 10);
     // Rechterbudget van kolom 0 ("300 mA A") plus linkerbudget van kolom 1.
     expect(cx(k2) - cx(k1)).toBeCloseTo(17.6 + 12, 10);
@@ -334,13 +354,90 @@ describe("maakStrook: splitsing onder een node die geen bord is", () => {
 
   test("de horizontale lijn heeft rol verbinding en er komt geen rail bij", () => {
     const naOuder = strook.elementen.slice(strook.elementen.indexOf(ouder) + 1);
-    expect(lijnen(naOuder).slice(0, 4)).toEqual([
-      { soort: "lijn", x1: cx(ouder), y1: ouder.y + ouder.symbool.maat.uit.y, x2: cx(ouder), y2: yRail, rol: "verbinding" },
-      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k2), y2: yRail, rol: "verbinding" },
-      { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k1), y2: k1.y + k1.symbool.maat.in.y, rol: "verbinding" },
-      { soort: "lijn", x1: cx(k2), y1: yRail, x2: cx(k2), y2: k2.y + k2.symbool.maat.in.y, rol: "verbinding" },
-    ]);
+    const l = lijnen(naOuder);
+    lijnBenadert(l[0], { soort: "lijn", x1: cx(ouder), y1: ouder.y + ouder.symbool.maat.uit.y, x2: cx(ouder), y2: yRail, rol: "verbinding" });
+    lijnBenadert(l[1], { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k2), y2: yRail, rol: "verbinding" });
+    lijnBenadert(l[2], { soort: "lijn", x1: cx(k1), y1: yRail, x2: cx(k1), y2: k1.y + k1.symbool.maat.in.y, rol: "verbinding" });
+    lijnBenadert(l[3], { soort: "lijn", x1: cx(k2), y1: yRail, x2: cx(k2), y2: k2.y + k2.symbool.maat.in.y, rol: "verbinding" });
     expect(lijnen(strook.elementen).filter((l) => l.rol === "rail")).toEqual([]);
+  });
+});
+
+describe.each([
+  ["appartement", referentieAppartement],
+  ["rijwoning", referentieRijwoning],
+  ["woning", referentieWoning],
+  ["met onderbord", referentieMetOnderbord],
+])("maakStrook: referentie %s groeit naar boven", (_naam, bouw) => {
+  const doc = bouw();
+  const strook = maakStrook(doc);
+  const syms = symbolen(strook.elementen);
+  const symVan = (id: NodeId): SymboolElement => syms.find((s) => s.nodeId === id)!;
+  const l = lijnen(strook.elementen);
+  /** Absoluut aansluitpunt van een symbool, in strookcoordinaten. */
+  const punt = (s: SymboolElement, soort: "in" | "uit"): { x: number; y: number } => ({
+    x: s.x + s.symbool.maat[soort].x,
+    y: s.y + s.symbool.maat[soort].y,
+  });
+
+  test("alle coordinaten zijn eindig en liggen binnen de strook", () => {
+    for (const e of strook.elementen) {
+      const waarden = e.soort === "lijn" ? [e.x1, e.y1, e.x2, e.y2] : [e.x, e.y];
+      for (const w of waarden) expect(Number.isFinite(w)).toBe(true);
+    }
+    for (const s of syms) {
+      expect(s.y).toBeGreaterThanOrEqual(STROOK_MARGE_MM - 1e-9);
+      expect(s.y + s.symbool.maat.hoogte).toBeLessThanOrEqual(strook.hoogte - STROOK_MARGE_MM + 1e-9);
+    }
+  });
+
+  test("de root staat onderaan en elk kind staat boven zijn ouder", () => {
+    const root = symVan(doc.rootId);
+    expect(root.y + root.symbool.maat.hoogte).toBeCloseTo(strook.hoogte - STROOK_MARGE_MM, 10);
+    for (const s of syms) expect(s.y).toBeLessThanOrEqual(root.y + 1e-9);
+    for (const node of Object.values(doc.nodes)) {
+      const ouder = symVan(node.id);
+      for (const kindId of node.kinderen) {
+        const kind = symVan(kindId);
+        expect(kind.y + kind.symbool.maat.hoogte, `${kindId} boven ${node.id}`).toBeLessThan(ouder.y);
+      }
+    }
+  });
+
+  test("elke verbinding begint op uit van de ouder en eindigt op in van het kind", () => {
+    for (const node of Object.values(doc.nodes)) {
+      if (node.kinderen.length === 0) continue;
+      const uit = punt(symVan(node.id), "uit");
+      // Eén lijn begint op uit van de ouder (de stam of de enige verbinding).
+      expect(
+        l.some((lijn) => Math.abs(lijn.x1 - uit.x) < 1e-9 && Math.abs(lijn.y1 - uit.y) < 1e-9),
+        `uit van ${node.id}`,
+      ).toBe(true);
+      for (const kindId of node.kinderen) {
+        const kindIn = punt(symVan(kindId), "in");
+        const lijn = l.find((x) => Math.abs(x.x2 - kindIn.x) < 1e-9 && Math.abs(x.y2 - kindIn.y) < 1e-9);
+        expect(lijn, `in van ${kindId}`).toBeDefined();
+      }
+    }
+    // Geen verbinding loopt naar beneden.
+    for (const lijn of l) expect(lijn.y2).toBeLessThanOrEqual(lijn.y1 + 1e-9);
+  });
+
+  test("elke rail ligt tussen de bovenkant van het bord en de onderkant van de kinderen", () => {
+    for (const node of Object.values(doc.nodes)) {
+      if (node.kinderen.length < 2) continue;
+      const bord = symVan(node.id);
+      const onderkantKinderen = Math.max(...node.kinderen.map((k) => symVan(k).y + symVan(k).symbool.maat.hoogte));
+      const eerste = cx(symVan(node.kinderen[0]!));
+      const laatste = cx(symVan(node.kinderen[node.kinderen.length - 1]!));
+      const rail = l.find(
+        (lijn) =>
+          lijn.y1 === lijn.y2 && Math.abs(lijn.x1 - eerste) < 1e-9 && Math.abs(lijn.x2 - laatste) < 1e-9,
+      );
+      expect(rail, `rail van ${node.id}`).toBeDefined();
+      expect(rail!.y1).toBeLessThan(bord.y);
+      expect(rail!.y1).toBeGreaterThan(onderkantKinderen);
+    }
   });
 });
 

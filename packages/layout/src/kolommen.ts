@@ -15,12 +15,19 @@ type TekstElement = Extract<SchemaElement, { soort: "tekst" }>;
 /** Ruimte tussen het meest linkse element van een kolom en de kolom ernaast, in mm. */
 const KOLOM_TUSSENRUIMTE_MM = 1;
 
+/** Hoogte van een hoofdletter als fractie van de tekstgrootte; bepaalt hoe een tekst bij het omkeren zijn basislijn krijgt. */
+const TEKST_GLYPH_HOOGTE = 0.7;
+
 /**
  * Legt het document in één strook: elk blad krijgt een eigen kolom en een node met kinderen staat
  * in de kolom van zijn eerste kind. Per node volgen op elkaar: het symbool, de teksten (kring,
  * beveiliging, leiding, punt, onderbord) en de verbindingen naar de kinderen. Alle doorlopingen
  * zijn iteratief. De teksten blijven ruw; escapen gebeurt in render. Een meegegeven `analyse` moet
  * bij `doc` horen.
+ *
+ * Het schema groeit naar boven: de root staat onderaan (de grootste y), elk kind boven zijn ouder.
+ * Een verbinding loopt van `uit` van de ouder (bovenkant) omhoog naar `in` van het kind (onderkant),
+ * en een rail ligt boven de vertakkende node.
  *
  * Kolommen zijn minstens `KOLOM_BREEDTE_MM` breed en groeien met wat erin staat: links van de
  * kolomlijn het verste symbool of de verste tekst plus 1 mm, rechts het verste symbool of de
@@ -111,47 +118,73 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   kolomGrenzen.push(breedte);
 
   const cx = (id: NodeId): number => kolomLijn[kolomVan.get(id)!]!;
-  const yVan = new Map<NodeId, number>([[doc.rootId, STROOK_MARGE_MM]]);
-  const elementen: SchemaElement[] = [];
-  let onderkant = STROOK_MARGE_MM;
+
+  // Eerst wordt alles opgemaakt als afstand `d` vanaf de voeding: de root begint op `STROOK_MARGE_MM`
+  // en een kind staat verder weg dan zijn ouder. In deze fase staat `y` van de elementen voor `d`.
+  // Daarna wordt elke `d` omgezet naar een y die van onder naar boven loopt.
+  const dVan = new Map<NodeId, number>([[doc.rootId, STROOK_MARGE_MM]]);
+  const afstanden: SchemaElement[] = [];
+  let verste = STROOK_MARGE_MM;
+
+  // Afstand vanaf de voeding van een aansluitpunt van een symbool op afstand `d`. `maat` meet de y van
+  // boven naar beneden in het getekende symbool, dus `in` (onderaan) ligt op `d` en `uit` op `d + hoogte`.
+  const afstandVan = (d: number, symbool: Symbool, punt: "in" | "uit"): number =>
+    d + symbool.maat.hoogte - symbool.maat[punt].y;
 
   // In pre-order ligt de plaats van de ouder vast voordat de kinderen aan bod komen.
   for (const id of preOrder) {
     const node = doc.nodes[id]!;
     const symbool = symbolen.get(id)!;
-    const { breedte: symboolBreedte, hoogte, uit } = symbool.maat;
+    const { breedte: symboolBreedte, hoogte } = symbool.maat;
     const x = cx(id);
-    const y = yVan.get(id)!;
-    elementen.push({ soort: "symbool", nodeId: id, x: x - symboolBreedte / 2, y, symbool });
-    onderkant = Math.max(onderkant, y + hoogte);
-    for (const tekst of tekstenVanNode.get(id)!) elementen.push({ ...tekst, x: x + tekst.x, y: y + tekst.y });
+    const d = dVan.get(id)!;
+    afstanden.push({ soort: "symbool", nodeId: id, x: x - symboolBreedte / 2, y: d, symbool });
+    verste = Math.max(verste, d + hoogte);
+    for (const tekst of tekstenVanNode.get(id)!) afstanden.push({ ...tekst, x: x + tekst.x, y: d + tekst.y });
 
     const kinderen = kinderenVan(id);
     if (kinderen.length === 0) continue;
-    const yUit = y + uit.y;
-    const yRail = y + hoogte + VERTICALE_AFSTAND_MM;
-    const yKind = kinderen.length > 1 ? yRail + RAIL_AFSTAND_MM : yRail;
-    for (const kind of kinderen) yVan.set(kind, yKind);
-    const yIn = (kind: NodeId): number => yKind + symbolen.get(kind)!.maat.in.y;
+    const dUit = afstandVan(d, symbool, "uit");
+    const dRail = d + hoogte + VERTICALE_AFSTAND_MM;
+    const dKind = kinderen.length > 1 ? dRail + RAIL_AFSTAND_MM : dRail;
+    for (const kind of kinderen) dVan.set(kind, dKind);
+    const dIn = (kind: NodeId): number => afstandVan(dKind, symbolen.get(kind)!, "in");
 
     if (kinderen.length === 1) {
       const kind = kinderen[0]!;
-      elementen.push({ soort: "lijn", x1: x, y1: yUit, x2: cx(kind), y2: yIn(kind), rol: "verbinding" });
+      afstanden.push({ soort: "lijn", x1: x, y1: dUit, x2: cx(kind), y2: dIn(kind), rol: "verbinding" });
       continue;
     }
-    elementen.push({ soort: "lijn", x1: x, y1: yUit, x2: x, y2: yRail, rol: "verbinding" });
-    elementen.push({
+    afstanden.push({ soort: "lijn", x1: x, y1: dUit, x2: x, y2: dRail, rol: "verbinding" });
+    afstanden.push({
       soort: "lijn",
       x1: cx(kinderen[0]!),
-      y1: yRail,
+      y1: dRail,
       x2: cx(kinderen[kinderen.length - 1]!),
-      y2: yRail,
+      y2: dRail,
       rol: node.type === "verdeelbord" ? "rail" : "verbinding",
     });
     for (const kind of kinderen) {
-      elementen.push({ soort: "lijn", x1: cx(kind), y1: yRail, x2: cx(kind), y2: yIn(kind), rol: "verbinding" });
+      afstanden.push({ soort: "lijn", x1: cx(kind), y1: dRail, x2: cx(kind), y2: dIn(kind), rol: "verbinding" });
     }
   }
+
+  // Omzetten: de voeding staat onderaan, dus y = hoogte − d. De bovenkant van een symbool ligt op
+  // hoogte − (d + h). Een tekst houdt zijn glyph (ca. 0,7 × grootte hoog) op dezelfde plek, gespiegeld,
+  // zodat zijn basislijn op hoogte − d + 0,7 × grootte komt. Teksten blijven rechtop.
+  const hoogteStrook = verste + STROOK_MARGE_MM;
+  const elementen = afstanden.map((element): SchemaElement => {
+    switch (element.soort) {
+      case "symbool":
+        return { ...element, y: hoogteStrook - (element.y + element.symbool.maat.hoogte) };
+      case "lijn":
+        return { ...element, y1: hoogteStrook - element.y1, y2: hoogteStrook - element.y2 };
+      case "tekst":
+        return { ...element, y: hoogteStrook - element.y + TEKST_GLYPH_HOOGTE * element.grootte };
+      case "vervolg":
+        return element;
+    }
+  });
 
   const grenzen = new Set<number>();
   for (const kring of analyse.kringen) {
@@ -161,7 +194,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
 
   return {
     breedte,
-    hoogte: onderkant + STROOK_MARGE_MM,
+    hoogte: hoogteStrook,
     elementen,
     kolomVan: alsRecord(kolomVan),
     kringGrenzen: [...grenzen].sort((a, b) => a - b),
@@ -171,7 +204,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
 
 /**
  * De teksten van een node in volgorde (kring, beveiliging, leiding, punt, onderbord), met `x` ten
- * opzichte van de kolomlijn en `y` ten opzichte van de bovenkant van het symbool.
+ * opzichte van de kolomlijn en `y` als afstand vanaf de voedingskant van het symbool (zijn `in`-kant), nog niet omgezet naar een strook-y.
  */
 function teksten(node: Node, symbool: Symbool, kringLabel: string | undefined, puntLabel: string | undefined): TekstElement[] {
   const { breedte, hoogte } = symbool.maat;
@@ -179,7 +212,7 @@ function teksten(node: Node, symbool: Symbool, kringLabel: string | undefined, p
   const midden = hoogte / 2;
   const resultaat: TekstElement[] = [];
   if (kringLabel !== undefined) {
-    // Links van de lijn naar beneden, zodat de verbinding de letter niet doorsnijdt.
+    // Links van de lijn, tussen de rail en de beveiliging (aan de voedingskant), zodat de verbinding de letter niet doorsnijdt.
     resultaat.push({ soort: "tekst", x: -1, y: -1, tekst: kringLabel, grootte: 3, anker: "end", rol: "kring" });
   }
   if (node.type === "automaat" || node.type === "zekering" || node.type === "differentieel") {

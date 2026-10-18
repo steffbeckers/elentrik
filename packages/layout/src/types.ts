@@ -1,7 +1,7 @@
 import type { NodeId } from "@elentrik/model";
 import type { Symbool } from "@elentrik/symbols";
 
-/** Een element van het schema in strookcoördinaten (mm). */
+/** Een element van het schema in strookcoördinaten (mm). De y loopt naar beneden; de voeding staat onderaan en het schema groeit naar boven. */
 export type SchemaElement =
   | { soort: "symbool"; nodeId: NodeId; x: number; y: number; symbool: Symbool }
   | { soort: "lijn"; x1: number; y1: number; x2: number; y2: number; rol: "verbinding" | "rail" }
@@ -29,10 +29,10 @@ export type Strook = {
   kolomGrenzen: number[];
 };
 
-/** Verticale ruimte tussen de onderkant van een ouder en de bovenkant van een kind, in mm. */
+/** Verticale ruimte tussen de bovenkant van een ouder en de onderkant van een kind (erboven), in mm. */
 export const VERTICALE_AFSTAND_MM = 4;
 
-/** Extra verticale ruimte onder een ouder met meerdere kinderen, voor de rail, in mm. */
+/** Extra verticale ruimte boven een ouder met meerdere kinderen, voor de rail, in mm. */
 export const RAIL_AFSTAND_MM = 6;
 
 /** Marge rond de strook, in mm. */

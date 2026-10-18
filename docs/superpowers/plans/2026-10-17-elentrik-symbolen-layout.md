@@ -23,9 +23,11 @@
    - Een node met één kind staat in dezelfde kolom als dat kind. Zo ontstaan rechte verticale lijnen.
    - Een node met meerdere kinderen staat in de kolom van zijn eerste kind.
    - Een `verdeelbord` wordt getekend als horizontale rail van de eerste tot de laatste kindkolom. Andere nodes met meerdere kinderen krijgen een korte horizontale verbinding.
-3. **Verticale opbouw:** de root `aansluiting` staat bovenaan.
-   - `y(kind) = y(ouder) + hoogte(ouder) + VERTICALE_AFSTAND_MM`, met `VERTICALE_AFSTAND_MM = 4`.
-   - Onder een rail komt een extra `RAIL_AFSTAND_MM = 6`.
+3. **Verticale opbouw:** het schema groeit naar boven. De root `aansluiting` staat onderaan (de grootste y), elk kind staat boven zijn ouder.
+   - De opmaak wordt eerst berekend als afstand `d` vanaf de voeding en daarna omgezet naar `y = hoogte − d`. Er geldt `d(kind) = d(ouder) + hoogte(ouder) + VERTICALE_AFSTAND_MM`, met `VERTICALE_AFSTAND_MM = 4`.
+   - Boven een rail komt een extra `RAIL_AFSTAND_MM = 6`. De rail ligt boven de vertakkende node, de kinderen erboven.
+   - Een verbinding loopt van `uit` van de ouder (bovenkant) omhoog naar `in` van het kind (onderkant). Het kringlabel staat tussen de rail en de beveiliging.
+   - Tekst blijft rechtop. Bij het omzetten blijft de glyph (ca. 0,7 × grootte hoog) gespiegeld op dezelfde plek, dus de basislijn wordt `hoogte − d + 0,7 × grootte`.
 4. **Paginering:**
    - Eerst wordt de hele strook opgemaakt.
    - Als de strook hoger is dan de bruikbare hoogte, krijgen alle pagina's dezelfde `schaal = bruikbaar / strookhoogte`, met een minimum van `MIN_SCHAAL = 0.5`. Onder dat minimum volgt de waarschuwing `SCHEMA_TE_HOOG`, en blijft de schaal 0.5.
