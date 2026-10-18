@@ -421,3 +421,13 @@
 - [ ] **Step 3: Implementeer** de bouwers, het script en de tests.
 - [ ] **Step 4: Draai `pnpm test && pnpm typecheck && pnpm voorbeeld`.** Verwacht: PASS, met de bestanden in `out/`.
 - [ ] **Step 5: Commit:** `feat: referentie-installaties delen, voorbeeldscript en prestatietest schema`
+
+---
+
+## Open voor het PDF-plan
+
+- **Leesbaarheid bij verkleining:** alle pagina's krijgen dezelfde schaal, tot `MIN_SCHAAL = 0.5`. Labels van 2 mm worden dan afgedrukt op ongeveer 2,8 tot 4 pt, en dat is te klein om goed te lezen. Het PDF-plan moet kiezen tussen:
+  - een minimale afgedrukte tekstgrootte;
+  - verticale paginering, met vervolgmarkeringen boven en onder;
+  - lange ketens omvouwen.
+- **Te hoge schema's:** boven `SCHEMA_TE_HOOG` wordt de inhoud nu geclipt op de bruikbare ruimte. Op het blad zelf is niet te zien dat er iets ontbreekt; alleen de waarschuwing in `SchemaOpmaak.waarschuwingen` meldt het. Ook dit moet het PDF-plan oplossen.
