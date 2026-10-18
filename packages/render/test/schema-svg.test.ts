@@ -33,8 +33,19 @@ describe("schemaPaginaSvg", () => {
     const svg = schemaPaginaSvg(opmaak(kringen(2)), 0);
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg" class="elentrik-schema" width="297mm" height="210mm" viewBox="0 0 297 210">')).toBe(true);
     expect(svg.startsWith("<?xml")).toBe(false);
-    expect(svg).toContain('<clipPath id="schema-inhoud"><rect x="10" y="10" width="277" height="160"/></clipPath>');
-    expect(svg).toMatch(/<g clip-path="url\(#schema-inhoud\)"><g transform="translate\(10 10\) scale\(1\) translate\(0 0\)">/);
+    expect(svg).toContain('<clipPath id="schema-inhoud-0"><rect x="10" y="10" width="277" height="160"/></clipPath>');
+    expect(svg).toMatch(/<g clip-path="url\(#schema-inhoud-0\)"><g transform="translate\(10 10\) scale\(1\) translate\(0 0\)">/);
+  });
+
+  test("het clippad heeft per pagina een eigen id, zodat pagina's samen in één document kunnen", () => {
+    const o = opmaak(kringen(20));
+    expect(o.paginas.length).toBeGreaterThan(1);
+    o.paginas.forEach((pagina) => {
+      const svg = schemaPaginaSvg(o, pagina.index);
+      expect(svg).toContain(`<clipPath id="schema-inhoud-${pagina.index}">`);
+      expect(svg).toContain(`clip-path="url(#schema-inhoud-${pagina.index})"`);
+      expect(aantal(svg, "<clipPath ")).toBe(1);
+    });
   });
 
   test("A3 gebruikt de A3-maat", () => {

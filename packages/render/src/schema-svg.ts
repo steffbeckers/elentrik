@@ -1,8 +1,6 @@
 import { bruikbaar, papierMaat, type SchemaElement, type SchemaOpmaak } from "@elentrik/layout";
 import { LIJNDIKTE_MM, escapeXml, getal } from "@elentrik/symbols";
 
-/** Id van het clippad dat de inhoud tot de bruikbare ruimte beperkt. */
-const CLIP_ID = "schema-inhoud";
 
 /** Lengte en halve breedte van het vervolgpijltje in mm. */
 const PIJL_LENGTE_MM = 2;
@@ -85,14 +83,16 @@ export function schemaPaginaSvg(opmaak: SchemaOpmaak, paginaIndex: number): stri
   // Naar beneden afgerond op 2 decimalen: een afgeronde schaal mag de hoogte nooit overschrijden.
   const schaal = getal(Math.floor(pagina.schaal * 100 + 1e-9) / 100);
 
+  // Uniek per pagina, zodat meerdere pagina's samen in één HTML-document kunnen staan.
+  const clipId = `schema-inhoud-${paginaIndex}`;
   const clip =
-    `<clipPath id="${CLIP_ID}"><rect x="${marge}" y="${marge}" ` +
+    `<clipPath id="${clipId}"><rect x="${marge}" y="${marge}" ` +
     `width="${getal(ruimte.breedte)}" height="${getal(ruimte.hoogte)}"/></clipPath>`;
   const inhoud = pagina.elementen.map(elementSvg).join("");
   return root(
     maat.breedte,
     maat.hoogte,
-    `${clip}<g clip-path="url(#${CLIP_ID})"><g transform="translate(${marge} ${marge}) scale(${schaal}) ` +
+    `${clip}<g clip-path="url(#${clipId})"><g transform="translate(${marge} ${marge}) scale(${schaal}) ` +
       `translate(${getal(-pagina.xVan)} 0)">${inhoud}</g></g>`,
   );
 }

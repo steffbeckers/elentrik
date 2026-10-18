@@ -17,10 +17,11 @@ function doorsnedeTekst(mm2: number): string {
     .replace(".", ",");
 }
 
-/** Bijvoorbeeld "XVB 3G2,5". Een ontbrekend kabeltype of een doorsnede 0 wordt "?". */
+/** Bijvoorbeeld "XVB 3G2,5". Een ontbrekend kabeltype of een doorsnede die (afgerond) 0 is, wordt "?". */
 export function leidingLabel(node: NodeVan<"leiding">): string {
   const kabeltype = node.kabeltype.trim() === "" ? "?" : node.kabeltype;
-  const doorsnede = node.doorsnede_mm2 === 0 ? "?" : doorsnedeTekst(node.doorsnede_mm2);
+  const tekst = doorsnedeTekst(node.doorsnede_mm2);
+  const doorsnede = tekst === "0" ? "?" : tekst;
   return `${kabeltype} ${node.aantalGeleiders}G${doorsnede}`;
 }
 

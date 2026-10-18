@@ -4,7 +4,7 @@ import type { Symbool } from "@elentrik/symbols";
 /** Een element van het schema in strookcoördinaten (mm). */
 export type SchemaElement =
   | { soort: "symbool"; nodeId: NodeId; x: number; y: number; symbool: Symbool }
-  | { soort: "lijn"; x1: number; y1: number; x2: number; y2: number; rol: "verbinding" | "rail" | "leiding" }
+  | { soort: "lijn"; x1: number; y1: number; x2: number; y2: number; rol: "verbinding" | "rail" }
   | {
       soort: "tekst";
       x: number;

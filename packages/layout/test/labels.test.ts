@@ -57,6 +57,10 @@ describe("leidingLabel", () => {
   test("een doorsnede 0 geeft een vraagteken", () => {
     expect(leidingLabel(leiding({ doorsnede_mm2: 0 }))).toBe("XVB 3G?");
   });
+  test("een doorsnede die afgerond 0 wordt, geeft ook een vraagteken", () => {
+    expect(leidingLabel(leiding({ doorsnede_mm2: 0.004 }))).toBe("XVB 3G?");
+    expect(leidingLabel(leiding({ doorsnede_mm2: 0.005 }))).toBe("XVB 3G0,01");
+  });
   test("decimaalteken en afronding zijn deterministisch", () => {
     expect(leidingLabel(leiding({ doorsnede_mm2: 10 }))).toBe("XVB 3G10");
     expect(leidingLabel(leiding({ doorsnede_mm2: 1.5 }))).toBe("XVB 3G1,5");
