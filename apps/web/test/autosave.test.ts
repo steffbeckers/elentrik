@@ -8,6 +8,8 @@ import { useAutosave, type AutosaveOpties } from "../app/composables/useAutosave
 import { ConflictFout, type Project } from "../app/composables/useProjectenApi";
 import { useEditorStore } from "../app/stores/editor";
 
+const KOPIE_DOC_ID = "kopie-document-id";
+
 type Store = ReturnType<typeof useEditorStore>;
 type Bewaar = AutosaveOpties["bewaar"];
 
@@ -37,7 +39,8 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
     naam: "Van de server",
     klantnaam: "Janssens",
     gewijzigd: "2026-10-18T10:00:00.000Z",
-    document: startDocument(),
+    // Het dubbel op de server heeft zijn eigen document-id.
+    document: id === "kopie1" ? { ...startDocument(), id: KOPIE_DOC_ID } : startDocument(),
     versie: 7,
   }));
   const dupliceer = vi.fn(async (_id: string) => ({ id: "kopie1" }));
@@ -244,20 +247,224 @@ describe("useAutosave", () => {
 
     await autosave.bewaarAlsKopie();
     expect(dupliceer).toHaveBeenCalledWith("p1");
-    expect(bewaar).toHaveBeenLastCalledWith("kopie1", 1, { naam: "Lokaal (kopie)", document: lokaalDocument });
+    // De kopie krijgt het document-id van de kopie, niet dat van het origineel.
+    expect(bewaar).toHaveBeenLastCalledWith("kopie1", 1, {
+      naam: "Lokaal (kopie)",
+      document: { ...lokaalDocument, id: KOPIE_DOC_ID },
+    });
+    expect(lokaalDocument?.id).not.toBe(KOPIE_DOC_ID);
     expect(await haalConcept("p1")).toBeUndefined();
     expect(naarProject).toHaveBeenCalledWith("kopie1");
+  });
+
+  test("bewaarAlsKopie: een wijziging tijdens het kopiëren gaat ook naar de kopie en het concept wordt pas daarna gewist", async () => {
+    const { store, bewaar, naarProject, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(new ConflictFout(5));
+    wijzig(store, "Lokaal");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+
+    bewaar.mockImplementation(async (id, versie) => {
+      if (id === "kopie1" && versie === 1) wijzig(store, "Nog nieuwer");
+      return { versie: versie + 1 };
+    });
+    await autosave.bewaarAlsKopie();
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(3);
+    expect(bewaar).toHaveBeenLastCalledWith("kopie1", 2, expect.objectContaining({ naam: "Nog nieuwer (kopie)" }));
+    expect(await haalConcept("p1")).toBeUndefined();
+    expect(naarProject).toHaveBeenCalledWith("kopie1");
+  });
+
+  test("bewaarAlsKopie wacht op een lopend bewaar en herstelt bij een fout de debounce", async () => {
+    let rond: (() => void) | undefined;
+    const { store, bewaar, dupliceer, autosave } = opzet();
+    bewaar.mockImplementationOnce(async (_id, versie) => {
+      await new Promise<void>((klaar) => {
+        rond = klaar;
+      });
+      return { versie: versie + 1 };
+    });
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(bewaar).toHaveBeenCalledTimes(1);
+
+    dupliceer.mockRejectedValueOnce(new TypeError("netwerk"));
+    const kopie = autosave.bewaarAlsKopie();
+    kopie.catch(() => {});
+    await leeg();
+    expect(dupliceer).not.toHaveBeenCalled();
+    wijzig(store, "b");
+    rond?.();
+    await expect(kopie).rejects.toThrow("netwerk");
+    await leeg();
+    expect(dupliceer).toHaveBeenCalledTimes(1);
+    // De debounce staat weer aan, dus de wijziging "b" gaat alsnog naar de server.
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(bewaar).toHaveBeenLastCalledWith("p1", 2, expect.objectContaining({ naam: "b" }));
   });
 
   test("stop ruimt de watcher en de timers op", async () => {
     const { store, bewaar, autosave } = opzet();
     wijzig(store, "a");
-    await nextTick();
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
     autosave.stop();
-    await vi.advanceTimersByTimeAsync(20_000);
-    expect(bewaar).not.toHaveBeenCalled();
     wijzig(store, "b");
     await vi.advanceTimersByTimeAsync(20_000);
-    expect(bewaar).not.toHaveBeenCalled();
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+  });
+
+  test("stop bewaart onbewaarde wijzigingen nog meteen", async () => {
+    const { store, bewaar, autosave } = opzet();
+    wijzig(store, "a");
+    await nextTick();
+    autosave.stop();
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(bewaar).toHaveBeenCalledWith("p1", 1, expect.objectContaining({ naam: "a" }));
+  });
+
+  test("stop bewaart niet bij een conflict", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValue(new ConflictFout(5));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    wijzig(store, "b");
+    await nextTick();
+    autosave.stop();
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+  });
+
+  test("een wijziging tijdens het wissen van het concept na een geslaagd bewaar wordt alsnog bewaard", async () => {
+    const { store, bewaar, autosave } = opzet();
+    let eerste = true;
+    bewaar.mockImplementation(async (_id, versie) => {
+      if (eerste) {
+        eerste = false;
+        // Valt midden in het wissen van het concept, nadat het bewaar klaar is.
+        setImmediate(() => wijzig(store, "b"));
+      }
+      return { versie: versie + 1 };
+    });
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(autosave.status.value).toBe("bezig");
+
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(bewaar).toHaveBeenLastCalledWith("p1", 2, expect.objectContaining({ naam: "b" }));
+    expect(autosave.status.value).toBe("opgeslagen");
+    expect(await haalConcept("p1")).toBeUndefined();
+  });
+});
+
+describe("useAutosave: foutsoorten", () => {
+  test("netwerkfout met een kapot conceptarchief geeft status onbewaard", async () => {
+    const concepten = {
+      bewaarConcept: vi.fn(async () => {
+        throw new Error("IndexedDB kapot");
+      }),
+      wisConcept: vi.fn(async () => {}),
+    };
+    const { store, bewaar, autosave } = opzet({ concepten });
+    bewaar.mockRejectedValueOnce(new TypeError("netwerk"));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("onbewaard");
+
+    // Het herstel na 10 s lukt en zet alles weer op opgeslagen.
+    await vi.advanceTimersByTimeAsync(10_000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(autosave.status.value).toBe("opgeslagen");
+  });
+
+  test("een kapot conceptarchief bij een lopende offline-status zet lokaal om in onbewaard", async () => {
+    let kapot = false;
+    const concepten = {
+      bewaarConcept: vi.fn(async () => {
+        if (kapot) throw new Error("IndexedDB kapot");
+      }),
+      wisConcept: vi.fn(async () => {}),
+    };
+    const { store, bewaar, autosave } = opzet({ concepten });
+    bewaar.mockRejectedValue(new TypeError("netwerk"));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("lokaal");
+    kapot = true;
+    wijzig(store, "b");
+    await leeg();
+    expect(autosave.status.value).toBe("onbewaard");
+  });
+
+  test.each([422, 404])("een %i zet de status op fout, zonder nieuwe poging of autosave", async (code) => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValue(Object.assign(new Error("geweigerd"), { statusCode: code }));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("fout");
+    expect(autosave.fout.value).toEqual({ status: code });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    wijzig(store, "b");
+    await vi.advanceTimersByTimeAsync(60_000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(autosave.status.value).toBe("fout");
+    // Het concept blijft intussen bijgewerkt.
+    expect((await haalConcept("p1"))?.naam).toBe("b");
+
+    // Handmatig opnieuw proberen.
+    bewaar.mockImplementation(async (_id, versie) => ({ versie: versie + 1 }));
+    await autosave.nuOpslaan();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(autosave.fout.value).toBeNull();
+    expect(autosave.status.value).toBe("opgeslagen");
+  });
+
+  test("een 500 blijft lokaal en volgt een nieuwe poging na 10 s", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(Object.assign(new Error("server stuk"), { status: 500 }));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("lokaal");
+    expect(autosave.fout.value).toBeNull();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(autosave.status.value).toBe("opgeslagen");
+  });
+
+  test("een wijziging terwijl de status lokaal is, blijft lokaal en wordt na de vertraging bewaard", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(new TypeError("netwerk"));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("lokaal");
+
+    wijzig(store, "b");
+    await nextTick();
+    expect(autosave.status.value).toBe("lokaal");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(bewaar).toHaveBeenLastCalledWith("p1", 1, expect.objectContaining({ naam: "b" }));
+    expect(autosave.status.value).toBe("opgeslagen");
   });
 });
