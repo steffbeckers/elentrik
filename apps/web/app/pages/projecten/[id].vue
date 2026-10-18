@@ -6,7 +6,7 @@ import EditorBovenbalk from "~/components/editor/EditorBovenbalk.vue";
 import EigenschappenPaneel from "~/components/editor/EigenschappenPaneel.vue";
 import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
-import { nieuwerConcept, wisConcept, type Concept } from "~/composables/concepten";
+import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
 import { httpStatus } from "~/composables/useProjectenApi";
 import { useEditorStore } from "~/stores/editor";
@@ -36,7 +36,7 @@ const autosave = useAutosave({
 
 // --- Laden en het lokale concept -------------------------------------------
 
-const concept = ref<Concept | null>(null);
+const concept = ref<AangebodenConcept | null>(null);
 const conceptOpen = ref(false);
 
 async function laad(): Promise<void> {
@@ -50,24 +50,30 @@ async function laad(): Promise<void> {
   }
   store.laad({ id: project.id, naam: project.naam, versie: project.versie, document: project.document });
   // Een kapot conceptarchief mag het openen niet tegenhouden. Pas na de conceptcontrole is de pagina klaar.
-  concept.value = await nieuwerConcept(project).catch(() => null);
+  // Elk concept van het project telt, los van de klok: het bestaat alleen zolang er onbewaard werk is.
+  concept.value = await nieuwsteConcept(project.id).catch(() => null);
   conceptOpen.value = concept.value !== null;
   laadstatus.value = "klaar";
 }
 
-function laadConcept(): void {
-  const c = concept.value;
+async function laadConcept(): Promise<void> {
+  const aangeboden = concept.value;
   concept.value = null;
-  if (!c || store.projectId !== id) return;
+  if (!aangeboden || store.projectId !== id) return;
+  const c = aangeboden.concept;
   store.laad({ id, naam: c.naam, versie: c.versie, document: c.document });
   // Het concept staat nog niet op de server: als wijziging tellen, zodat de autosave het bewaart.
   // Is de server intussen verder dan `c.versie`, dan volgt een conflict.
   store.markeerGewijzigd();
+  // Eerst staat het werk in het concept van dit venster, pas dan gaat het aangeboden concept weg.
+  await autosave.wachtOpConcept();
+  await wisAangebodenConcept(aangeboden).catch(() => {});
 }
 
 async function verwerpConcept(): Promise<void> {
+  const aangeboden = concept.value;
   concept.value = null;
-  await wisConcept(id).catch(() => {});
+  if (aangeboden) await wisAangebodenConcept(aangeboden).catch(() => {});
 }
 
 // --- Conflict, fout en verlaten --------------------------------------------
@@ -101,8 +107,15 @@ function toonBevindingen(): void {
 }
 
 function bijVerlaten(event: BeforeUnloadEvent): void {
-  waarschuwBijVerlaten(autosave.status.value, event);
+  if (waarschuwBijVerlaten(autosave.status.value)) event.preventDefault();
 }
+
+// Navigeren in de app: dezelfde vraag als bij `beforeunload`. Annuleren houdt de gebruiker hier.
+// Bij een conflict of fout bewaart `stop()` niets, maar het concept blijft staan.
+onBeforeRouteLeave(() => {
+  if (!waarschuwBijVerlaten(autosave.status.value)) return true;
+  return window.confirm(t("editor.verlaten.bevestiging"));
+});
 
 onMounted(() => {
   window.addEventListener("beforeunload", bijVerlaten);
@@ -161,7 +174,7 @@ onBeforeUnmount(() => window.removeEventListener("beforeunload", bijVerlaten));
     <ConceptDialoog
       v-if="concept"
       v-model:open="conceptOpen"
-      :tijd="concept.tijd"
+      :tijd="concept.concept.tijd"
       @laden="laadConcept"
       @verwerpen="verwerpConcept"
     />

@@ -10,6 +10,7 @@ import {
   type Stroomtype,
 } from "@elentrik/model";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 import type { Db } from "../db";
 import { projecten } from "../db/schema";
 
@@ -27,17 +28,7 @@ export class ProjectFout extends Error {
   }
 }
 
-export type ProjectSamenvatting = {
-  id: string;
-  naam: string;
-  klantnaam: string;
-  gewijzigd: string;
-};
-
-export type Project = ProjectSamenvatting & {
-  document: InstallatieDocument;
-  versie: number;
-};
+export type { Project, ProjectSamenvatting };
 
 const leeft = isNull(projecten.verwijderd);
 

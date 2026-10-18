@@ -81,6 +81,11 @@ export const useEditorStore = defineStore("editor", () => {
   const vooruit = shallowRef<Stap[]>([]);
   /** Telt elke wijziging (document of naam); de autosave vergelijkt hem met de laatst bewaarde waarde. */
   const gewijzigdSindsOpslaan = ref(0);
+  /**
+   * Stijgt bij elke `laad`, ook van hetzelfde project. Een bewaar dat vóór een `laad` vertrok,
+   * hoort bij een vorige generatie en mag de staat van daarna niet meer aanraken.
+   */
+  const laadGeneratie = ref(0);
   /** Na `sluitGroep` (of undo/redo) begint de volgende `pasToe` altijd een nieuwe stap. */
   let groepGesloten = true;
 
@@ -129,6 +134,7 @@ export const useEditorStore = defineStore("editor", () => {
     terug.value = [];
     vooruit.value = [];
     gewijzigdSindsOpslaan.value = 0;
+    laadGeneratie.value++;
     groepGesloten = true;
   }
 
@@ -360,6 +366,7 @@ export const useEditorStore = defineStore("editor", () => {
     terug,
     vooruit,
     gewijzigdSindsOpslaan,
+    laadGeneratie,
     analyse,
     bevindingen,
     opmaak,

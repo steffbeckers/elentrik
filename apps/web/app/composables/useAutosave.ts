@@ -1,7 +1,7 @@
 // Expliciete imports, geen Nuxt-auto-imports (ruling E1). Alles wat van buiten komt
 // (store, API, navigatie) wordt als optie meegegeven, zodat dit zonder Nuxt te testen is.
 import type { InstallatieDocument } from "@elentrik/model";
-import { getCurrentScope, onScopeDispose, ref, watch, type Ref } from "vue";
+import { getCurrentScope, nextTick, onScopeDispose, ref, watch, type Ref } from "vue";
 import { bewaarConcept as bewaarConceptEcht, wisConcept as wisConceptEcht, type Concept } from "./concepten";
 import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./useProjectenApi";
 
@@ -25,6 +25,8 @@ export type AutosaveStore = {
   naam: string;
   versie: number;
   gewijzigdSindsOpslaan: number;
+  /** Stijgt bij elke `laad`; de store houdt hem bij (ruling E11). */
+  readonly laadGeneratie: number;
   laad(project: { id: string; naam: string; versie: number; document: InstallatieDocument }): void;
 };
 
@@ -41,9 +43,11 @@ export type AutosaveOpties = {
   herprobeerMs?: number;
   /** Het conceptarchief; standaard IndexedDB via `concepten.ts`. Injecteerbaar voor tests. */
   concepten?: {
-    bewaarConcept: (projectId: string, concept: Concept) => Promise<void>;
-    wisConcept: (projectId: string) => Promise<void>;
+    bewaarConcept: (projectId: string, instantieId: string, concept: Concept) => Promise<void>;
+    wisConcept: (projectId: string, instantieId: string) => Promise<void>;
   };
+  /** Het id van dit editorvenster, voor de sleutel van het concept; standaard een nieuwe UUID. */
+  instantieId?: string;
 };
 
 export type Autosave = {
@@ -59,17 +63,19 @@ export type Autosave = {
    * onbewaarde wijzigingen (en geen conflict of fout), dan volgt nog één poging om ze te bewaren.
    */
   stop(): void;
+  /** Wacht tot de conceptschrijfacties van de wijzigingen tot nu klaar zijn (gelukt of niet). */
+  wachtOpConcept(): Promise<void>;
 };
 
 /** 4xx-statussen die tijdelijk zijn (time-out, te veel verzoeken): die volgen het pad van een 5xx. */
 const TIJDELIJK = new Set([408, 429]);
 
 /**
- * Voor `beforeunload`: zolang niet alles op de server staat, vraagt de browser of de gebruiker
- * de pagina echt wil verlaten.
+ * Voor `beforeunload` en het navigeren in de app: zolang niet alles op de server staat, vragen we
+ * of de gebruiker de pagina echt wil verlaten.
  */
-export function waarschuwBijVerlaten(status: AutosaveStatus, event: { preventDefault(): void }): void {
-  if (status !== "opgeslagen") event.preventDefault();
+export function waarschuwBijVerlaten(status: AutosaveStatus): boolean {
+  return status !== "opgeslagen";
 }
 
 /**
@@ -85,6 +91,8 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const vertragingMs = opties.vertragingMs ?? 2000;
   const herprobeerMs = opties.herprobeerMs ?? 10_000;
   const concepten = opties.concepten ?? { bewaarConcept: bewaarConceptEcht, wisConcept: wisConceptEcht };
+  // Elk venster schrijft en wist alleen zijn eigen concept.
+  const instantieId = opties.instantieId ?? crypto.randomUUID();
 
   const status = ref<AutosaveStatus>("opgeslagen");
   const conflict = ref<{ huidigeVersie: number } | null>(null);
@@ -100,6 +108,12 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   let conceptGelukt = true;
   /** Conceptschrijfacties lopen na elkaar, zodat een wis nooit vóór een oudere schrijf valt. */
   let conceptKetting: Promise<unknown> = Promise.resolve();
+  /**
+   * De schrijfactie die achteraan de ketting wacht en nog niet begonnen is. Een nieuwe wijziging
+   * vervangt haar inhoud in plaats van er een schrijfactie bij te zetten. Een wis maakt dit leeg,
+   * zodat een latere wijziging altijd na de wis geschreven wordt.
+   */
+  let wachtendConcept: { id: string; concept: Concept } | null = null;
 
   function offlineStatus(): AutosaveStatus {
     return conceptGelukt ? "lokaal" : "onbewaard";
@@ -110,9 +124,18 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   }
 
   function schrijfConcept(id: string, concept: Concept): void {
+    if (wachtendConcept !== null) {
+      wachtendConcept.id = id;
+      wachtendConcept.concept = concept;
+      return;
+    }
+    const teSchrijven = { id, concept };
+    wachtendConcept = teSchrijven;
     conceptKetting = conceptKetting.then(async () => {
+      // Vanaf hier loopt ze: een volgende wijziging krijgt een eigen schrijfactie.
+      if (wachtendConcept === teSchrijven) wachtendConcept = null;
       try {
-        await concepten.bewaarConcept(id, concept);
+        await concepten.bewaarConcept(teSchrijven.id, instantieId, teSchrijven.concept);
         conceptGelukt = true;
       } catch {
         conceptGelukt = false;
@@ -121,9 +144,14 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     });
   }
 
-  /** Een mislukte wis is niet erg: `nieuwerConcept` negeert een concept dat ouder is dan de server. */
+  /**
+   * Een mislukte wis verliest niets: het achtergebleven concept wordt bij het volgende openen
+   * aangeboden en de gebruiker kan het verwerpen.
+   */
   function wisConceptVeilig(id: string): Promise<void> {
-    const volgende = conceptKetting.then(() => concepten.wisConcept(id)).catch(() => {});
+    // De wachtende schrijfactie gaat nog vóór de wis; wat erna komt, hoort achter de wis.
+    wachtendConcept = null;
+    const volgende = conceptKetting.then(() => concepten.wisConcept(id, instantieId)).catch(() => {});
     conceptKetting = volgende;
     return volgende;
   }
@@ -172,6 +200,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     const document = store.document;
     if (id === null || document === null) return;
     const teller = store.gewijzigdSindsOpslaan;
+    const generatie = store.laadGeneratie;
 
     wisTimer();
     // Na een mislukte poging blijft `lokaal` of `onbewaard` staan tot een bewaar slaagt.
@@ -179,20 +208,26 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     await startLopend(async () => {
       try {
         const resultaat = await bewaar(id, store.versie, { naam: store.naam, document });
-        // Intussen een ander project geladen: die staat is niet meer van ons.
-        if (store.projectId !== id) return;
+        // Intussen opnieuw geladen (een ander project, of hetzelfde in een nieuwe pagina):
+        // die staat is niet meer van ons.
+        if (store.laadGeneratie !== generatie) return;
         store.versie = resultaat.versie;
         bewaardeTeller = teller;
         if (store.gewijzigdSindsOpslaan === teller) {
           conceptGelukt = true;
           status.value = "opgeslagen";
           await wisConceptVeilig(id);
-        } else if (status.value !== "bezig") {
-          // Er kwam iets bij tijdens het bewaar: `herplan` bewaart opnieuw, het concept blijft.
-          status.value = "bezig";
+        } else {
+          // Er kwam iets bij tijdens het bewaar: `herplan` bewaart opnieuw en het concept blijft,
+          // nu op de nieuwe serverversie. Anders botst het na een crash op onze eigen bewaring.
+          const huidig = store.document;
+          if (huidig !== null) {
+            schrijfConcept(id, { document: huidig, versie: store.versie, naam: store.naam, tijd: Date.now() });
+          }
+          if (status.value !== "bezig") status.value = "bezig";
         }
       } catch (e) {
-        if (store.projectId !== id) return;
+        if (store.laadGeneratie !== generatie) return;
         const httpCode = httpStatus(e);
         if (e instanceof ConflictFout) {
           conflict.value = { huidigeVersie: e.huidigeVersie };
@@ -302,17 +337,27 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     wisTimer();
     // In-app navigeren binnen de vertraging mag de serverbewaring niet overslaan.
     if (conflict.value || fout.value || store.document === null || !onbewaard()) return;
-    // Het project van nu: is er na het wachten een ander project geladen (de volgende pagina),
-    // dan is die staat niet van ons en gaat er niets naar de server.
-    const id = store.projectId;
+    // De generatie van nu: is er na het wachten opnieuw geladen (de volgende pagina, ook van
+    // hetzelfde project), dan is die staat niet van ons en gaat er niets naar de server.
+    const generatie = store.laadGeneratie;
     void (async () => {
       while (lopend) await lopend;
-      if (store.projectId !== id) return;
+      if (store.laadGeneratie !== generatie) return;
       await nuOpslaan();
     })().catch(() => {});
   }
 
   if (getCurrentScope()) onScopeDispose(stop);
 
-  return { status, conflict, fout, nuOpslaan, laadServerversie, bewaarAlsKopie, stop };
+  async function wachtOpConcept(): Promise<void> {
+    // Een wijziging van net bereikt de watcher pas bij de volgende tick.
+    await nextTick();
+    let ketting: Promise<unknown>;
+    do {
+      ketting = conceptKetting;
+      await ketting;
+    } while (ketting !== conceptKetting);
+  }
+
+  return { status, conflict, fout, nuOpslaan, laadServerversie, bewaarAlsKopie, stop, wachtOpConcept };
 }

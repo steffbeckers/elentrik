@@ -131,9 +131,12 @@
     },
     "concept": {
       "titel": "Lokaal concept gevonden",
-      "beschrijving": "Op dit toestel staat een concept van dit project dat nieuwer is dan de versie op de server ({tijd}).",
+      "beschrijving": "Op dit toestel staat een concept van dit project met wijzigingen die nog niet op de server staan ({tijd}).",
       "laden": "Concept laden",
       "verwerpen": "Verwerpen"
+    },
+    "verlaten": {
+      "bevestiging": "Je wijzigingen staan nog niet op de server. Wil je de editor toch verlaten?"
     },
     "conflict": {
       "titel": "Conflict",

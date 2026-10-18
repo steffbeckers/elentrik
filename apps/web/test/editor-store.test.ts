@@ -72,6 +72,13 @@ describe("laad", () => {
     expect(store.onderdeel).toBe("contactdoos");
     expect(store.toestelsoort).toBe("wasmachine");
   });
+
+  test("elke laad verhoogt de laadgeneratie, ook voor hetzelfde project", () => {
+    const store = laadNieuw();
+    const eerste = store.laadGeneratie;
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
+    expect(store.laadGeneratie).toBe(eerste + 1);
+  });
 });
 
 describe("undo/redo", () => {

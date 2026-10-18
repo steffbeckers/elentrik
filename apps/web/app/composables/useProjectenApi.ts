@@ -2,18 +2,9 @@
 // rechtstreeks (ruling E1). `useProjectenApi` is de Nuxt-ingang; `maakProjectenApi`
 // krijgt de fetch-functie van buitenaf en is zo zonder Nuxt te testen.
 import type { InstallatieDocument, Stroomtype } from "@elentrik/model";
+import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 
-export type ProjectSamenvatting = {
-  id: string;
-  naam: string;
-  klantnaam: string;
-  gewijzigd: string;
-};
-
-export type Project = ProjectSamenvatting & {
-  document: InstallatieDocument;
-  versie: number;
-};
+export type { Project, ProjectSamenvatting };
 
 export type NieuwProject = { naam: string; klantnaam: string; stroomtype: Stroomtype };
 
