@@ -66,8 +66,8 @@ async function laadConcept(): Promise<void> {
   // Is de server intussen verder dan `c.versie`, dan volgt een conflict.
   store.markeerGewijzigd();
   // Eerst staat het werk in het concept van dit venster, pas dan gaat het aangeboden concept weg.
-  await autosave.wachtOpConcept();
-  await wisAangebodenConcept(aangeboden).catch(() => {});
+  // Lukte die eigen schrijfactie niet (bv. een vol archief), dan blijft het aangeboden concept staan.
+  if (await autosave.wachtOpConcept()) await wisAangebodenConcept(aangeboden).catch(() => {});
 }
 
 async function verwerpConcept(): Promise<void> {

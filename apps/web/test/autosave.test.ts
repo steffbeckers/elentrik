@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { clear, set } from "idb-keyval";
 import {
   bewaarConcept,
+  maakInstantieId,
   nieuwsteConcept,
   wisAangebodenConcept,
   wisConcept,
@@ -107,6 +108,15 @@ describe("concepten", () => {
     expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:B" });
   });
 
+  test("wisAangebodenConcept laat het concept staan als een ander venster het intussen herschreef", async () => {
+    // B krijgt S1 aangeboden; het venster A leeft nog en schrijft S2 onder dezelfde sleutel.
+    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "S1", tijd: 100 });
+    const aangeboden = await nieuwsteConcept("p1");
+    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "S2", tijd: 200 });
+    await wisAangebodenConcept(aangeboden!);
+    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:A", concept: { naam: "S2" } });
+  });
+
   test("een concept onder de oude sleutel per project is ook een kandidaat", async () => {
     await set("concept:p1", { document: startDocument(), versie: 1, naam: "Oud", tijd: 300 });
     await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "A", tijd: 200 });
@@ -114,6 +124,25 @@ describe("concepten", () => {
     expect(aangeboden).toMatchObject({ sleutel: "concept:p1", concept: { naam: "Oud" } });
     await wisAangebodenConcept(aangeboden!);
     expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:A" });
+  });
+
+  test("maakInstantieId gebruikt randomUUID als die er is", () => {
+    expect(maakInstantieId({ randomUUID: () => "a-b-c-d-e", getRandomValues: (a) => a })).toBe("a-b-c-d-e");
+  });
+
+  test("maakInstantieId zonder randomUUID (geen veilige context) valt terug op getRandomValues", () => {
+    const zonderUuid = { getRandomValues: (rij: Uint8Array<ArrayBuffer>) => crypto.getRandomValues(rij) };
+    const een = maakInstantieId(zonderUuid);
+    const twee = maakInstantieId(zonderUuid);
+    expect(een).toMatch(/^[0-9a-f]{32}$/);
+    expect(een).not.toBe(twee);
+  });
+
+  test("maakInstantieId zonder crypto valt terug op de tijd en Math.random", () => {
+    const een = maakInstantieId(null);
+    const twee = maakInstantieId(null);
+    expect(een).toMatch(/^[0-9a-z]+-[0-9a-z]+$/);
+    expect(een).not.toBe(twee);
   });
 
   test("de concepten van een ander project tellen niet mee", async () => {
@@ -659,6 +688,33 @@ describe("useAutosave: wachtOpConcept", () => {
     klaar?.();
     await wachten;
     expect(gewacht).toBe(true);
+  });
+
+  test("geeft true als de eigen schrijfactie lukte", async () => {
+    const { store, autosave } = opzet();
+    store.markeerGewijzigd();
+    expect(await autosave.wachtOpConcept()).toBe(true);
+  });
+
+  test("concept laden met een vol archief: false, en het aangeboden concept blijft staan", async () => {
+    // Het concept van een vorig venster, aangeboden bij het openen.
+    await bewaarConcept("p1", "oud", { document: startDocument(), versie: 1, naam: "Oud werk", tijd: 100 });
+    const aangeboden = (await nieuwsteConcept("p1"))!;
+    // In dit venster faalt elke schrijfactie (quota), maar wissen lukt wel.
+    const concepten = {
+      bewaarConcept: vi.fn(async () => {
+        throw new DOMException("vol", "QuotaExceededError");
+      }),
+      wisConcept: vi.fn(async () => {}),
+    };
+    const { store, autosave } = opzet({ concepten, instantieId: "nieuw" });
+    // Zoals de pagina: laden, als wijziging tellen, en pas na een geslaagde eigen schrijf wissen.
+    store.laad({ id: "p1", naam: aangeboden.concept.naam, versie: 1, document: aangeboden.concept.document });
+    store.markeerGewijzigd();
+    const gelukt = await autosave.wachtOpConcept();
+    expect(gelukt).toBe(false);
+    if (gelukt) await wisAangebodenConcept(aangeboden);
+    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:oud", concept: { naam: "Oud werk" } });
   });
 });
 

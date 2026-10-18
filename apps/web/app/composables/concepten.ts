@@ -3,7 +3,7 @@
 // Elk venster (elke autosave-instantie) heeft een eigen sleutel, zodat het ene venster
 // nooit het concept van een ander wist.
 import type { InstallatieDocument } from "@elentrik/model";
-import { del, getMany, keys, set } from "idb-keyval";
+import { createStore, del, getMany, keys, set, type UseStore } from "idb-keyval";
 
 export type Concept = {
   document: InstallatieDocument;
@@ -34,9 +34,53 @@ export function wisConcept(projectId: string, instantieId: string): Promise<void
   return del(sleutel(projectId, instantieId));
 }
 
-/** Wist enkel het aangeboden concept; de concepten van andere vensters blijven staan. */
-export function wisAangebodenConcept(aangeboden: Pick<AangebodenConcept, "sleutel">): Promise<void> {
-  return del(aangeboden.sleutel);
+/**
+ * Dezelfde database en objectstore als de standaardfuncties van idb-keyval. Pas bij het eerste
+ * gebruik geopend: `createStore` opent meteen IndexedDB, en dat bestaat niet bij server-rendering.
+ */
+let archiefWinkel: UseStore | undefined;
+function archief(): UseStore {
+  archiefWinkel ??= createStore("keyval-store", "keyval");
+  return archiefWinkel;
+}
+
+/**
+ * Wist enkel het aangeboden concept, en alleen als het nog ongewijzigd is (zelfde `tijd`). Heeft
+ * een ander venster dat nog leeft het intussen herschreven, dan blijft het staan. Lezen en wissen
+ * gebeuren in één transactie.
+ */
+export function wisAangebodenConcept(aangeboden: AangebodenConcept): Promise<void> {
+  return archief()(
+    "readwrite",
+    (winkel) =>
+      new Promise<void>((klaar, fout) => {
+        const verzoek = winkel.get(aangeboden.sleutel);
+        verzoek.onsuccess = () => {
+          const huidig = verzoek.result as Concept | undefined;
+          if (huidig?.tijd === aangeboden.concept.tijd) winkel.delete(aangeboden.sleutel);
+        };
+        winkel.transaction.oncomplete = () => klaar();
+        winkel.transaction.onabort = () => fout(winkel.transaction.error);
+      }),
+  );
+}
+
+type Willekeur = {
+  randomUUID?: () => string;
+  getRandomValues?: (rij: Uint8Array<ArrayBuffer>) => Uint8Array<ArrayBuffer>;
+};
+
+/**
+ * Een id voor een editorvenster. `crypto.randomUUID` bestaat alleen in een veilige context; daarbuiten
+ * volgt `getRandomValues`, en zonder `crypto` de tijd met `Math.random`.
+ */
+export function maakInstantieId(willekeur: Willekeur | null = globalThis.crypto ?? null): string {
+  if (willekeur?.randomUUID) return willekeur.randomUUID();
+  if (willekeur?.getRandomValues) {
+    const bytes = willekeur.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now().toString(36)}-${Math.floor(Math.random() * 2 ** 52).toString(36)}`;
 }
 
 /**

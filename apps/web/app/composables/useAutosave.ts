@@ -2,7 +2,12 @@
 // (store, API, navigatie) wordt als optie meegegeven, zodat dit zonder Nuxt te testen is.
 import type { InstallatieDocument } from "@elentrik/model";
 import { getCurrentScope, nextTick, onScopeDispose, ref, watch, type Ref } from "vue";
-import { bewaarConcept as bewaarConceptEcht, wisConcept as wisConceptEcht, type Concept } from "./concepten";
+import {
+  bewaarConcept as bewaarConceptEcht,
+  maakInstantieId,
+  wisConcept as wisConceptEcht,
+  type Concept,
+} from "./concepten";
 import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./useProjectenApi";
 
 /**
@@ -63,8 +68,11 @@ export type Autosave = {
    * onbewaarde wijzigingen (en geen conflict of fout), dan volgt nog één poging om ze te bewaren.
    */
   stop(): void;
-  /** Wacht tot de conceptschrijfacties van de wijzigingen tot nu klaar zijn (gelukt of niet). */
-  wachtOpConcept(): Promise<void>;
+  /**
+   * Wacht tot de conceptschrijfacties van de wijzigingen tot nu klaar zijn, en geeft of de laatste
+   * lukte (dan staat het werk van dit venster in zijn eigen concept).
+   */
+  wachtOpConcept(): Promise<boolean>;
 };
 
 /** 4xx-statussen die tijdelijk zijn (time-out, te veel verzoeken): die volgen het pad van een 5xx. */
@@ -92,7 +100,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const herprobeerMs = opties.herprobeerMs ?? 10_000;
   const concepten = opties.concepten ?? { bewaarConcept: bewaarConceptEcht, wisConcept: wisConceptEcht };
   // Elk venster schrijft en wist alleen zijn eigen concept.
-  const instantieId = opties.instantieId ?? crypto.randomUUID();
+  const instantieId = opties.instantieId ?? maakInstantieId();
 
   const status = ref<AutosaveStatus>("opgeslagen");
   const conflict = ref<{ huidigeVersie: number } | null>(null);
@@ -349,7 +357,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
 
   if (getCurrentScope()) onScopeDispose(stop);
 
-  async function wachtOpConcept(): Promise<void> {
+  async function wachtOpConcept(): Promise<boolean> {
     // Een wijziging van net bereikt de watcher pas bij de volgende tick.
     await nextTick();
     let ketting: Promise<unknown>;
@@ -357,6 +365,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       ketting = conceptKetting;
       await ketting;
     } while (ketting !== conceptKetting);
+    return conceptGelukt;
   }
 
   return { status, conflict, fout, nuOpslaan, laadServerversie, bewaarAlsKopie, stop, wachtOpConcept };
