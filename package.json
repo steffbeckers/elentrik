@@ -9,7 +9,9 @@
     "dev": "pnpm --filter @elentrik/web dev",
     "db:up": "docker compose -f infra/docker-compose.yml up -d",
     "db:migrate": "pnpm --filter @elentrik/web db:migrate",
-    "test": "vitest run",
+    "test": "pnpm test:parallel && pnpm test:prestatie",
+    "test:parallel": "vitest run --exclude \"**/*prestatie*.test.ts\"",
+    "test:prestatie": "vitest run prestatie --no-file-parallelism",
     "typecheck": "pnpm -r typecheck",
     "voorbeeld": "tsx scripts/voorbeeld-schema.ts"
   },
