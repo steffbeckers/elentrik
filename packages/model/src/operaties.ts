@@ -109,6 +109,18 @@ export function voegToe(
   );
 }
 
+/** Verwijdert de plaatsingen en afwijkingen van de gegeven nodes uit het concept. */
+function ruimBijhorendeOp(draft: Draft<InstallatieDocument>, weg: ReadonlySet<NodeId>): void {
+  for (const pagina of draft.situatie.paginas) {
+    if (pagina.plaatsingen.some((p) => weg.has(p.nodeId))) {
+      pagina.plaatsingen = pagina.plaatsingen.filter((p) => !weg.has(p.nodeId));
+    }
+  }
+  if (draft.afwijkingen.some((a) => weg.has(a.nodeId))) {
+    draft.afwijkingen = draft.afwijkingen.filter((a) => !weg.has(a.nodeId));
+  }
+}
+
 export function verwijder(doc: InstallatieDocument, nodeId: NodeId): OperatieResultaat {
   const node = vereis(doc, nodeId);
   if (nodeId === doc.rootId) throw new DocumentFout("ROOT_NIET_WIJZIGBAAR", { nodeId });
@@ -121,14 +133,42 @@ export function verwijder(doc: InstallatieDocument, nodeId: NodeId): OperatieRes
       if (positie !== -1) kinderen.splice(positie, 1);
     }
     for (const id of weg) delete draft.nodes[id];
-    for (const pagina of draft.situatie.paginas) {
-      if (pagina.plaatsingen.some((p) => weg.has(p.nodeId))) {
-        pagina.plaatsingen = pagina.plaatsingen.filter((p) => !weg.has(p.nodeId));
-      }
+    ruimBijhorendeOp(draft, weg);
+  });
+}
+
+/**
+ * Verwijdert alleen de node zelf. Zijn kinderen nemen, in dezelfde volgorde, zijn
+ * plek in de kinderlijst van de ouder in en krijgen de ouder als `parentId`.
+ * Elk kind moet onder de ouder toegelaten zijn, anders `NIET_TOEGELATEN_KIND`
+ * zonder wijziging. Plaatsingen en afwijkingen van de node zelf worden opgeruimd,
+ * die van zijn kinderen blijven staan.
+ */
+export function verwijderEnkel(doc: InstallatieDocument, nodeId: NodeId): OperatieResultaat {
+  const node = vereis(doc, nodeId);
+  if (nodeId === doc.rootId) throw new DocumentFout("ROOT_NIET_WIJZIGBAAR", { nodeId });
+  if (node.type === "teller") {
+    throw new DocumentFout("ROOT_NIET_WIJZIGBAAR", { nodeId, reden: "teller" });
+  }
+  const ouder = node.parentId === null ? undefined : haal(doc, node.parentId);
+  if (!ouder) throw new DocumentFout("ONBEKENDE_NODE", { nodeId: node.parentId });
+
+  const toegelaten: readonly string[] = TOEGELATEN_KINDEREN[ouder.type];
+  for (const kindId of node.kinderen) {
+    const kind = vereis(doc, kindId);
+    if (!toegelaten.includes(kind.type)) {
+      throw new DocumentFout("NIET_TOEGELATEN_KIND", { kindId, ouderType: ouder.type });
     }
-    if (draft.afwijkingen.some((a) => weg.has(a.nodeId))) {
-      draft.afwijkingen = draft.afwijkingen.filter((a) => !weg.has(a.nodeId));
-    }
+  }
+
+  return resultaat(doc, (draft) => {
+    const kinderen = draft.nodes[ouder.id]!.kinderen;
+    const positie = kinderen.indexOf(nodeId);
+    if (positie !== -1) kinderen.splice(positie, 1, ...node.kinderen);
+    else kinderen.push(...node.kinderen);
+    for (const kindId of node.kinderen) draft.nodes[kindId]!.parentId = ouder.id;
+    delete draft.nodes[nodeId];
+    ruimBijhorendeOp(draft, new Set([nodeId]));
   });
 }
 

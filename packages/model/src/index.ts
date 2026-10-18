@@ -7,12 +7,14 @@ export {
   pasPatchesToe,
   verplaats,
   verwijder,
+  verwijderEnkel,
   voegToe,
   wijzigEigenschappen,
   type NodeInvoer,
   type OperatieResultaat,
   type Patch,
 } from "./operaties";
+export { verwijderAfwijking, voegAfwijkingToe, wijzigProject } from "./project";
 export {
   PLAATSBARE_TYPES,
   plaats,

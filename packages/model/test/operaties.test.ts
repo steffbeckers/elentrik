@@ -5,6 +5,7 @@ import {
   valideerStructuur,
   verplaats,
   verwijder,
+  verwijderEnkel,
   voegToe,
   wijzigEigenschappen,
   type InstallatieDocument,
@@ -410,5 +411,133 @@ describe("patches", () => {
     const { doc0, teller } = start();
     const r = voegToe(doc0, teller, { type: "verdeelbord" });
     expect(pasPatchesToe(doc0, kloon(r.patches))).toEqual(r.doc);
+  });
+});
+
+const LEIDING = { type: "leiding", kabeltype: "", doorsnede_mm2: 0, aantalGeleiders: 3 } as const;
+const CONTACTDOOS = {
+  type: "contactdoos",
+  aantal: 1,
+  randaarde: true,
+  kinderbeveiliging: false,
+  waterdicht: false,
+} as const;
+const AUTOMAAT = { type: "automaat", nominaal_A: 16, polen: 2, curve: "B" } as const;
+
+/** teller > bord > automaat > leiding > cd1 > cd2 > cd3. */
+function keten(): {
+  doc: InstallatieDocument;
+  leiding: NodeId;
+  cd: [NodeId, NodeId, NodeId];
+} {
+  const { doc0, teller } = start();
+  const bord = voegToe(doc0, teller, { type: "verdeelbord" });
+  const automaat = voegToe(bord.doc, bord.id, AUTOMAAT);
+  const leiding = voegToe(automaat.doc, automaat.id, LEIDING);
+  const cd1 = voegToe(leiding.doc, leiding.id, CONTACTDOOS);
+  const cd2 = voegToe(cd1.doc, cd1.id, CONTACTDOOS);
+  const cd3 = voegToe(cd2.doc, cd2.id, CONTACTDOOS);
+  return { doc: cd3.doc, leiding: leiding.id, cd: [cd1.id, cd2.id, cd3.id] };
+}
+
+describe("verwijderEnkel", () => {
+  test("een middelste contactdoos in een keten laat de ketting sluiten", () => {
+    const { doc, leiding, cd } = keten();
+    const r = verwijderEnkel(doc, cd[1]);
+    expect(r.doc.nodes[cd[1]]).toBeUndefined();
+    expect(r.doc.nodes[leiding]!.kinderen).toEqual([cd[0]]);
+    expect(r.doc.nodes[cd[0]]!.kinderen).toEqual([cd[2]]);
+    expect(r.doc.nodes[cd[2]]!.parentId).toBe(cd[0]);
+    expect(valideerStructuur(r.doc)).toEqual([]);
+    expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+    expect(pasPatchesToe(doc, r.patches)).toEqual(r.doc);
+  });
+
+  test("de kinderen nemen de plek van de node in, in dezelfde volgorde", () => {
+    const { doc0, teller } = start();
+    const bord = voegToe(doc0, teller, { type: "verdeelbord" });
+    const a1 = voegToe(bord.doc, bord.id, AUTOMAAT);
+    const middelste = voegToe(a1.doc, bord.id, AUTOMAAT);
+    const a3 = voegToe(middelste.doc, bord.id, AUTOMAAT);
+    const l1 = voegToe(a3.doc, middelste.id, LEIDING);
+    const l2 = voegToe(l1.doc, middelste.id, LEIDING);
+
+    const r = verwijderEnkel(l2.doc, middelste.id);
+    expect(r.doc.nodes[bord.id]!.kinderen).toEqual([a1.id, l1.id, l2.id, a3.id]);
+    expect(r.doc.nodes[l1.id]!.parentId).toBe(bord.id);
+    expect(r.doc.nodes[l2.id]!.parentId).toBe(bord.id);
+    expect(valideerStructuur(r.doc)).toEqual([]);
+  });
+
+  test("een node zonder kinderen verdwijnt gewoon", () => {
+    const { doc, cd } = keten();
+    const r = verwijderEnkel(doc, cd[2]);
+    expect(r.doc.nodes[cd[1]]!.kinderen).toEqual([]);
+    expect(valideerStructuur(r.doc)).toEqual([]);
+  });
+
+  test("kinderen die niet onder de ouder mogen geven NIET_TOEGELATEN_KIND en wijzigen niets", () => {
+    const { doc0, teller } = start();
+    const bord = voegToe(doc0, teller, { type: "verdeelbord" });
+    const leiding = voegToe(bord.doc, bord.id, LEIDING);
+    const subbord = voegToe(leiding.doc, leiding.id, { type: "verdeelbord" });
+    const automaat = voegToe(subbord.doc, subbord.id, AUTOMAAT);
+    const voor = kloon(automaat.doc);
+
+    const fout = vangFout(() => verwijderEnkel(automaat.doc, subbord.id));
+    expect(fout.code).toBe("NIET_TOEGELATEN_KIND");
+    expect(fout.details).toEqual({ kindId: automaat.id, ouderType: "leiding" });
+    expect(automaat.doc).toEqual(voor);
+  });
+
+  test("een leiding onder een beveiliging mag onder het bord blijven hangen", () => {
+    const { doc0, teller } = start();
+    const bord = voegToe(doc0, teller, { type: "verdeelbord" });
+    const automaat = voegToe(bord.doc, bord.id, AUTOMAAT);
+    const leiding = voegToe(automaat.doc, automaat.id, LEIDING);
+
+    const r = verwijderEnkel(leiding.doc, automaat.id);
+    expect(r.doc.nodes[bord.id]!.kinderen).toEqual([leiding.id]);
+    expect(r.doc.nodes[leiding.id]!.parentId).toBe(bord.id);
+    expect(valideerStructuur(r.doc)).toEqual([]);
+  });
+
+  test("de root geeft ROOT_NIET_WIJZIGBAAR", () => {
+    const { doc0, root } = start();
+    expect(vangFout(() => verwijderEnkel(doc0, root)).code).toBe("ROOT_NIET_WIJZIGBAAR");
+  });
+
+  test("de teller geeft ROOT_NIET_WIJZIGBAAR met reden teller", () => {
+    const { doc0, teller } = start();
+    const fout = vangFout(() => verwijderEnkel(doc0, teller));
+    expect(fout.code).toBe("ROOT_NIET_WIJZIGBAAR");
+    expect(fout.details).toEqual({ nodeId: teller, reden: "teller" });
+  });
+
+  test("een onbekende node geeft ONBEKENDE_NODE", () => {
+    const { doc0 } = start();
+    expect(vangFout(() => verwijderEnkel(doc0, "bestaat-niet")).code).toBe("ONBEKENDE_NODE");
+  });
+
+  test("plaatsing en afwijkingen van de node verdwijnen, die van zijn kinderen blijven", () => {
+    const { doc: basis, cd } = keten();
+    const doc = kloon(basis);
+    doc.situatie.paginas.push({
+      id: "p1",
+      titel: "Gelijkvloers",
+      plaatsingen: [
+        { nodeId: cd[1], x: 1, y: 2, rotatie: 0 },
+        { nodeId: cd[2], x: 3, y: 4, rotatie: 0 },
+      ],
+    });
+    doc.afwijkingen.push(
+      { regelId: "r1", nodeId: cd[1], motivatie: "voldoende tekst", door: "d", datum: "2026-10-18" },
+      { regelId: "r1", nodeId: cd[2], motivatie: "voldoende tekst", door: "d", datum: "2026-10-18" },
+    );
+
+    const r = verwijderEnkel(doc, cd[1]);
+    expect(r.doc.situatie.paginas[0]!.plaatsingen.map((p) => p.nodeId)).toEqual([cd[2]]);
+    expect(r.doc.afwijkingen.map((a) => a.nodeId)).toEqual([cd[2]]);
+    expect(valideerStructuur(r.doc)).toEqual([]);
   });
 });
