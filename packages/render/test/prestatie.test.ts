@@ -3,17 +3,13 @@ import { opmaak } from "@elentrik/layout";
 import { nieuwId, valideerStructuur, type InstallatieDocument } from "@elentrik/model";
 import { expect, test } from "vitest";
 import { schemaStripSvg } from "../src/index";
+import { kloon } from "./hulp";
 
 // `performance` zit niet in lib ES2023 (geen DOM- of Node-types); Node en Vitest leveren het wel.
 declare const performance: { now(): number };
 
 const KRINGEN = 200;
 const CONTACTDOZEN_PER_KRING = 8;
-
-/** Diepe kopie via JSON (structuredClone is niet getypt met lib ES2023). */
-function kloon<T>(waarde: T): T {
-  return JSON.parse(JSON.stringify(waarde)) as T;
-}
 
 function mediaan(waarden: readonly number[]): number {
   const gesorteerd = [...waarden].sort((a, b) => a - b);

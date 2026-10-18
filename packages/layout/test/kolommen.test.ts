@@ -308,3 +308,72 @@ test("maakStrook is deterministisch", () => {
     .bouw();
   expect(maakStrook(doc)).toEqual(maakStrook(doc));
 });
+
+describe("maakStrook: structureel ongeldige documenten", () => {
+  const basis = () =>
+    installatie()
+      .differentieel(300, (d) =>
+        d.verdeelbord((b) =>
+          b
+            .als("bord")
+            .kring((k) => k.automaat(16).leiding(2.5).contactdozen(2).als("cd"))
+            .kring((k) => k.automaat(16).als("k2").leiding(1.5).lichtpunten(1)),
+        ),
+      )
+      .bouw();
+  /** Elke getekende node staat er precies één keer, en elke node van het document wordt getekend. */
+  const eenSymboolPerNode = (elementen: SchemaElement[], aantalNodes: number): void => {
+    const ids = symbolen(elementen).map((s) => s.nodeId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toHaveLength(aantalNodes);
+  };
+
+  test("een cyclus eindigt en elke node staat er één keer", () => {
+    const { doc, ids } = basis();
+    const fout = kloon(doc);
+    fout.nodes[ids["cd"]!]!.kinderen.push(fout.rootId);
+    const strook = maakStrook(fout);
+    eenSymboolPerNode(strook.elementen, Object.keys(fout.nodes).length);
+  });
+
+  test("een dubbel kind geeft één symbool per id", () => {
+    const { doc, ids } = basis();
+    const fout = kloon(doc);
+    fout.nodes[ids["bord"]!]!.kinderen.push(ids["k2"]!);
+    const strook = maakStrook(fout);
+    eenSymboolPerNode(strook.elementen, Object.keys(fout.nodes).length);
+    expect(Object.keys(strook.kolomVan)).toHaveLength(Object.keys(fout.nodes).length);
+    expect(lijnen(strook.elementen).filter((l) => l.rol === "rail")).toHaveLength(1);
+  });
+
+  test("een kind dat ook onder een andere ouder hangt, staat alleen onder de eerste in pre-order", () => {
+    const { doc, ids } = basis();
+    const fout = kloon(doc);
+    fout.nodes[ids["cd"]!]!.kinderen.push(ids["k2"]!);
+    const strook = maakStrook(fout);
+    eenSymboolPerNode(strook.elementen, Object.keys(fout.nodes).length);
+    expect(strook.kolomVan[ids["k2"]!]).toBe(strook.kolomVan[ids["cd"]!]);
+  });
+
+  test("een node met id __proto__ geeft geen fout", () => {
+    const { doc, ids } = basis();
+    const fout = kloon(doc);
+    const cd = fout.nodes[ids["cd"]!]!;
+    Object.defineProperty(fout.nodes, "__proto__", {
+      value: { ...cd, id: "__proto__", parentId: cd.id, kinderen: [] },
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+    cd.kinderen.push("__proto__" as NodeId);
+    const strook = maakStrook(fout);
+    eenSymboolPerNode(strook.elementen, Object.keys(fout.nodes).length);
+    expect(symbolen(strook.elementen).map((s) => s.nodeId)).toContain("__proto__");
+    expect(Object.hasOwn(strook.kolomVan, "__proto__")).toBe(true);
+    expect(strook.kolomVan["__proto__" as NodeId]).toBe(strook.kolomVan[cd.id]);
+    for (const e of strook.elementen) {
+      if (e.soort === "tekst") expect(typeof e.tekst).toBe("string");
+      if (e.soort === "symbool") expect(Number.isFinite(e.x)).toBe(true);
+    }
+  });
+});

@@ -1,9 +1,10 @@
 import { installatie, type BordBouwer } from "@elentrik/arei/testing";
 import { opmaak, papierMaat, bruikbaar, STANDAARD_PAPIER_A4 } from "@elentrik/layout";
+import type { InstallatieDocument, NodeId } from "@elentrik/model";
 import { XMLValidator } from "fast-xml-parser";
 import { describe, expect, test } from "vitest";
 import { schemaPaginaSvg, schemaStripSvg } from "../src/index";
-import { nummerNodeIds } from "./hulp";
+import { kloon, nummerNodeIds } from "./hulp";
 
 const kringen = (n: number) =>
   installatie()
@@ -139,6 +140,63 @@ describe("schaal", () => {
       getest++;
     }
     expect(getest).toBeGreaterThan(0);
+  });
+});
+
+describe("structureel ongeldige documenten", () => {
+  const basis = () =>
+    installatie()
+      .differentieel(300, (d) =>
+        d.verdeelbord((b) =>
+          b
+            .als("bord")
+            .kring((k) => k.automaat(16).leiding(2.5).contactdozen(2).als("cd"))
+            .kring((k) => k.automaat(16).als("k2").leiding(1.5).lichtpunten(1)),
+        ),
+      )
+      .bouw();
+
+  const cyclus = (): InstallatieDocument => {
+    const { doc, ids } = basis();
+    const fout = kloon(doc);
+    fout.nodes[ids["cd"]!]!.kinderen.push(fout.rootId);
+    return fout;
+  };
+  const dubbelKind = (): InstallatieDocument => {
+    const { doc, ids } = basis();
+    const fout = kloon(doc);
+    fout.nodes[ids["bord"]!]!.kinderen.push(ids["k2"]!);
+    return fout;
+  };
+  const protoId = (): InstallatieDocument => {
+    const { doc, ids } = basis();
+    const fout = kloon(doc);
+    const cd = fout.nodes[ids["cd"]!]!;
+    Object.defineProperty(fout.nodes, "__proto__", {
+      value: { ...cd, id: "__proto__", parentId: cd.id, kinderen: [] },
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+    cd.kinderen.push("__proto__" as NodeId);
+    return fout;
+  };
+
+  test.each([
+    ["een cyclus", cyclus],
+    ["een dubbel kind", dubbelKind],
+    ["een node met id __proto__", protoId],
+  ])("%s: goedgevormde SVG met elke data-node-id één keer", (_naam, bouw) => {
+    const doc = bouw();
+    const o = opmaak(doc);
+    const strook = schemaStripSvg(o);
+    expect(XMLValidator.validate(strook)).toBe(true);
+    const ids = [...strook.matchAll(/data-node-id="([^"]*)"/g)].map((m) => m[1]);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toHaveLength(Object.keys(doc.nodes).length);
+    for (const pagina of o.paginas) {
+      expect(XMLValidator.validate(schemaPaginaSvg(o, pagina.index))).toBe(true);
+    }
   });
 });
 

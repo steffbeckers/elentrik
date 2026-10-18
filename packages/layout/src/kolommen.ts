@@ -18,17 +18,24 @@ import {
  * bij `doc` horen.
  */
 export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analyseer(doc)): Strook {
-  // Verwijzingen naar ontbrekende nodes worden overgeslagen.
-  const kinderenVan = (id: NodeId): NodeId[] =>
-    doc.nodes[id]!.kinderen.filter((kind) => Object.hasOwn(doc.nodes, kind));
+  // Een structureel ongeldig document moet ook eindigen: elke node wordt hoogstens één keer
+  // bezocht, en een verwijzing naar een ontbrekende of al bezochte node wordt overgeslagen. Een
+  // kind dat meermaals voorkomt, hangt zo alleen onder de ouder die het eerst in pre-order bereikt.
+  const kinderenVanNode = new Map<NodeId, NodeId[]>();
+  const kinderenVan = (id: NodeId): NodeId[] => kinderenVanNode.get(id)!;
 
   const preOrder: NodeId[] = [];
-  const stapel: NodeId[] = [doc.rootId];
+  const bezocht = new Set<NodeId>();
+  const stapel: { id: NodeId; ouder: NodeId | null }[] = [{ id: doc.rootId, ouder: null }];
   while (stapel.length > 0) {
-    const id = stapel.pop()!;
+    const { id, ouder } = stapel.pop()!;
+    if (bezocht.has(id) || !Object.hasOwn(doc.nodes, id)) continue;
+    bezocht.add(id);
     preOrder.push(id);
-    const kinderen = kinderenVan(id);
-    for (let i = kinderen.length - 1; i >= 0; i--) stapel.push(kinderen[i]!);
+    kinderenVanNode.set(id, []);
+    if (ouder !== null) kinderenVanNode.get(ouder)!.push(id);
+    const kinderen = doc.nodes[id]!.kinderen;
+    for (let i = kinderen.length - 1; i >= 0; i--) stapel.push({ id: kinderen[i]!, ouder: id });
   }
 
   // Omgekeerde pre-order: elk kind komt voor zijn ouder.
@@ -47,9 +54,9 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   const kringLabelVan = new Map<NodeId, string>();
   for (const kring of analyse.kringen) kringLabelVan.set(kring.beveiligingId, kring.label);
 
-  const kolomVan: Record<NodeId, number> = { [doc.rootId]: 0 };
+  const kolomVan = new Map<NodeId, number>([[doc.rootId, 0]]);
   const yVan = new Map<NodeId, number>([[doc.rootId, STROOK_MARGE_MM]]);
-  const cx = (id: NodeId): number => STROOK_MARGE_MM + kolomVan[id]! * KOLOM_BREEDTE_MM + KOLOM_BREEDTE_MM / 2;
+  const cx = (id: NodeId): number => STROOK_MARGE_MM + kolomVan.get(id)! * KOLOM_BREEDTE_MM + KOLOM_BREEDTE_MM / 2;
 
   const elementen: SchemaElement[] = [];
   let onderkant = STROOK_MARGE_MM;
@@ -93,7 +100,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
         rol: "leiding",
       });
     }
-    const puntLabel = analyse.puntLabels[id];
+    const puntLabel = Object.hasOwn(analyse.puntLabels, id) ? analyse.puntLabels[id] : undefined;
     if (puntLabel !== undefined) {
       elementen.push({
         soort: "tekst",
@@ -122,9 +129,9 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     const yUit = y + uit.y;
     const yRail = y + hoogte + VERTICALE_AFSTAND_MM;
     const yKind = kinderen.length > 1 ? yRail + RAIL_AFSTAND_MM : yRail;
-    let kolom = kolomVan[id]!;
+    let kolom = kolomVan.get(id)!;
     for (const kind of kinderen) {
-      kolomVan[kind] = kolom;
+      kolomVan.set(kind, kolom);
       yVan.set(kind, yKind);
       kolom += bladen.get(kind)!;
     }
@@ -151,7 +158,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
 
   const grenzen = new Set<number>();
   for (const kring of analyse.kringen) {
-    const kolom = kolomVan[kring.beveiligingId];
+    const kolom = kolomVan.get(kring.beveiligingId);
     if (kolom !== undefined) grenzen.add(STROOK_MARGE_MM + kolom * KOLOM_BREEDTE_MM);
   }
 
@@ -159,7 +166,14 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     breedte: 2 * STROOK_MARGE_MM + bladen.get(doc.rootId)! * KOLOM_BREEDTE_MM,
     hoogte: onderkant + STROOK_MARGE_MM,
     elementen,
-    kolomVan,
+    kolomVan: alsRecord(kolomVan),
     kringGrenzen: [...grenzen].sort((a, b) => a - b),
   };
+}
+
+/** Een record zonder prototype, zodat ook een id als `__proto__` een gewone sleutel is. */
+function alsRecord(kaart: ReadonlyMap<NodeId, number>): Record<NodeId, number> {
+  const record: Record<NodeId, number> = Object.create(null);
+  for (const [id, waarde] of kaart) record[id] = waarde;
+  return record;
 }

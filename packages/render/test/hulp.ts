@@ -6,3 +6,8 @@ export function nummerNodeIds(svg: string): string {
     return `data-node-id="n${nummers.get(id)}"`;
   });
 }
+
+/** Diepe kopie via JSON (structuredClone is niet getypt met lib ES2023). */
+export function kloon<T>(waarde: T): T {
+  return JSON.parse(JSON.stringify(waarde)) as T;
+}
