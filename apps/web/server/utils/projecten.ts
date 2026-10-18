@@ -1,16 +1,22 @@
 // Gedeelde hulp voor de projecten-handlers: Zod-validatie van id, body en
 // If-Match, en de vertaling van ProjectFout naar HTTP-statussen. Nitro importeert
 // de exports van server/utils automatisch.
-import type { H3Event } from "h3";
+// Expliciete imports, geen Nitro-auto-imports: Vitest importeert deze module
+// rechtstreeks (ruling E10).
+import { StroomtypeSchema } from "@elentrik/model";
+import { createError, getHeader, getRouterParam, readBody, type H3Event } from "h3";
 import { z } from "zod";
 import { ProjectFout } from "../projecten/repo";
 
 const IdSchema = z.uuid();
 
+/** De `versie`-kolom is een Postgres int4: grotere waarden zijn nooit een geldige versie. */
+const MAX_VERSIE = 2147483647;
+
 export const NieuwProjectSchema = z.object({
   naam: z.string().trim().min(1),
   klantnaam: z.string().default(""),
-  stroomtype: z.enum(["2x230V", "3x230V", "3N400V"]),
+  stroomtype: StroomtypeSchema,
 });
 
 export const BewaarProjectSchema = z.object({
@@ -41,16 +47,17 @@ export async function leesBody<T extends z.ZodType>(
   return resultaat.data;
 }
 
-/** `If-Match` moet een geheel getal zijn (de documentversie); anders 428. */
+/** `If-Match` moet een geheel getal binnen int4 zijn (de documentversie); anders 428. */
 export function leesIfMatch(event: H3Event): number {
   const waarde = getHeader(event, "if-match")?.trim();
-  if (waarde === undefined || !/^\d+$/.test(waarde)) {
+  const versie = waarde !== undefined && /^\d+$/.test(waarde) ? Number(waarde) : Number.NaN;
+  if (!Number.isSafeInteger(versie) || versie > MAX_VERSIE) {
     throw createError({
       statusCode: 428,
       statusMessage: "If-Match met de documentversie is verplicht",
     });
   }
-  return Number(waarde);
+  return versie;
 }
 
 /** Voert een repo-aanroep uit en vertaalt ProjectFout naar 404, 409 of 422. */

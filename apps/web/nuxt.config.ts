@@ -9,7 +9,13 @@ export default defineNuxtConfig({
     // Tests en tool-configs draaien in gewone Node (Vitest, drizzle-kit).
     nodeTsConfig: {
       compilerOptions: { types: ["node"] },
-      include: ["../test/**/*", "../drizzle.config.ts", "../vitest.config.ts"],
+      include: [
+        "../test/**/*",
+        "../e2e/**/*",
+        "../drizzle.config.ts",
+        "../vitest.config.ts",
+        "../playwright.config.ts",
+      ],
     },
   },
   i18n: {

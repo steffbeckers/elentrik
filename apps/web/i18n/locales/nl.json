@@ -1,5 +1,42 @@
 {
   "app": {
     "naam": "Elentrik"
+  },
+  "algemeen": {
+    "annuleren": "Annuleren",
+    "fout": "Er ging iets mis. Probeer het opnieuw."
+  },
+  "projecten": {
+    "titel": "Projecten",
+    "nieuw": "Nieuw project",
+    "leeg": "Nog geen projecten. Maak je eerste project aan.",
+    "kolommen": {
+      "naam": "Naam",
+      "klant": "Klant",
+      "gewijzigd": "Gewijzigd",
+      "acties": "Acties"
+    },
+    "acties": {
+      "openen": "Openen",
+      "dupliceren": "Dupliceren",
+      "verwijderen": "Verwijderen"
+    },
+    "verwijderen": {
+      "titel": "Project verwijderen",
+      "bevestiging": "Ben je zeker dat je “{naam}” wilt verwijderen?"
+    },
+    "nieuwDialoog": {
+      "titel": "Nieuw project",
+      "naam": "Naam",
+      "naamVerplicht": "Geef het project een naam.",
+      "klant": "Klant",
+      "stroomtype": "Stroomtype",
+      "aanmaken": "Aanmaken"
+    },
+    "stroomtypes": {
+      "2x230V": "2 × 230 V (één fase)",
+      "3x230V": "3 × 230 V (drie fasen)",
+      "3N400V": "3N × 400 V (drie fasen en nul)"
+    }
   }
 }

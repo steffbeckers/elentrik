@@ -6,3 +6,5 @@ out/
 apps/web/.nuxt
 apps/web/.output
 .env
+apps/web/test-results
+apps/web/playwright-report
