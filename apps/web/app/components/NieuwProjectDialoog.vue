@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Stroomtype } from "@elentrik/model";
+import { StroomtypeSchema, type Stroomtype } from "@elentrik/model";
 
 const open = defineModel<boolean>("open", { default: false });
 const emit = defineEmits<{ aangemaakt: [id: string] }>();
@@ -8,9 +8,8 @@ const { t } = useI18n();
 const api = useProjectenApi();
 const toast = useToast();
 
-const STROOMTYPES: Stroomtype[] = ["2x230V", "3x230V", "3N400V"];
 const stroomtypes = computed(() =>
-  STROOMTYPES.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
+  StroomtypeSchema.options.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
 );
 
 const formulier = reactive<{ naam: string; klantnaam: string; stroomtype: Stroomtype }>({

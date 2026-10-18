@@ -10,6 +10,13 @@
     "titel": "Projecten",
     "nieuw": "Nieuw project",
     "leeg": "Nog geen projecten. Maak je eerste project aan.",
+    "laden": {
+      "fout": {
+        "titel": "Projecten laden mislukt",
+        "beschrijving": "De lijst kon niet geladen worden. Probeer het opnieuw.",
+        "opnieuw": "Opnieuw proberen"
+      }
+    },
     "kolommen": {
       "naam": "Naam",
       "klant": "Klant",

@@ -7,7 +7,7 @@ const api = useProjectenApi();
 const toast = useToast();
 
 // Enkel op de client geladen: de relatieve tijden hangen van het huidige moment af.
-const { data: projecten, status, refresh } = useAsyncData("projecten", () => api.lijst(), {
+const { data: projecten, status, error, refresh } = useAsyncData("projecten", () => api.lijst(), {
   server: false,
   default: () => [] as ProjectSamenvatting[],
 });
@@ -38,28 +38,45 @@ const verwijderOpen = computed({
   },
 });
 
-async function metFoutmelding(actie: () => Promise<unknown>) {
+// De toast meldt enkel het resultaat van de actie. Een mislukte herlaadbeurt
+// erna komt in `error` terecht en toont de laadfout in plaats van de tabel.
+async function voerActieUit(actie: () => Promise<unknown>): Promise<boolean> {
   try {
     await actie();
+    return true;
   } catch {
     toast.add({ title: t("algemeen.fout"), color: "error" });
+    return false;
   }
 }
 
-const dupliceer = (project: ProjectSamenvatting) =>
-  metFoutmelding(async () => {
-    await api.dupliceer(project.id);
-    await refresh();
-  });
+// Eén lopende actie tegelijk per soort, zodat een dubbelklik geen twee kopieën maakt.
+const dupliceerBezig = ref<string | null>(null);
+const verwijderBezig = ref(false);
 
-const bevestigVerwijderen = () =>
-  metFoutmelding(async () => {
-    const project = teVerwijderen.value;
-    if (!project) return;
-    await api.verwijder(project.id);
-    teVerwijderen.value = null;
-    await refresh();
-  });
+async function dupliceer(project: ProjectSamenvatting) {
+  if (dupliceerBezig.value !== null) return;
+  dupliceerBezig.value = project.id;
+  try {
+    if (await voerActieUit(() => api.dupliceer(project.id))) await refresh();
+  } finally {
+    dupliceerBezig.value = null;
+  }
+}
+
+async function bevestigVerwijderen() {
+  const project = teVerwijderen.value;
+  if (!project || verwijderBezig.value) return;
+  verwijderBezig.value = true;
+  try {
+    if (await voerActieUit(() => api.verwijder(project.id))) {
+      teVerwijderen.value = null;
+      await refresh();
+    }
+  } finally {
+    verwijderBezig.value = false;
+  }
+}
 </script>
 
 <template>
@@ -69,7 +86,17 @@ const bevestigVerwijderen = () =>
       <UButton icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
     </div>
 
+    <UAlert
+      v-if="error"
+      color="error"
+      variant="subtle"
+      icon="i-lucide-circle-alert"
+      :title="$t('projecten.laden.fout.titel')"
+      :description="$t('projecten.laden.fout.beschrijving')"
+      :actions="[{ label: $t('projecten.laden.fout.opnieuw'), color: 'error', onClick: () => refresh() }]"
+    />
     <UTable
+      v-else
       :data="projecten"
       :columns="kolommen"
       :loading="laadt"
@@ -97,6 +124,8 @@ const bevestigVerwijderen = () =>
             variant="ghost"
             :aria-label="$t('projecten.acties.dupliceren')"
             :title="$t('projecten.acties.dupliceren')"
+            :loading="dupliceerBezig === row.original.id"
+            :disabled="dupliceerBezig !== null"
             @click="dupliceer(row.original)"
           />
           <UButton
@@ -120,7 +149,13 @@ const bevestigVerwijderen = () =>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="outline" :label="$t('algemeen.annuleren')" @click="verwijderOpen = false" />
-          <UButton color="error" :label="$t('projecten.acties.verwijderen')" @click="bevestigVerwijderen" />
+          <UButton
+            color="error"
+            :label="$t('projecten.acties.verwijderen')"
+            :loading="verwijderBezig"
+            :disabled="verwijderBezig"
+            @click="bevestigVerwijderen"
+          />
         </div>
       </template>
     </UModal>

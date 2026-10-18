@@ -16,6 +16,24 @@ test.afterAll(async ({ request }) => {
   }
 });
 
+test("een mislukte lijst toont een foutmelding in plaats van de lege staat", async ({ page }) => {
+  await page.route("**/api/projecten", (route) =>
+    route.fulfill({ status: 500, contentType: "application/json", body: '{"statusCode":500}' }),
+  );
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByText("Projecten laden mislukt")).toBeVisible();
+  await expect(page.getByText("Nog geen projecten")).toHaveCount(0);
+  await expect(page.getByRole("table")).toHaveCount(0);
+
+  // Opnieuw proberen met een werkende API herstelt de lijst.
+  await page.unroute("**/api/projecten");
+  await page.getByRole("button", { name: "Opnieuw proberen" }).click();
+  await expect(page.getByText("Projecten laden mislukt")).toHaveCount(0);
+  await expect(page.getByRole("table")).toBeVisible();
+});
+
 test("maak, dupliceer en verwijder een project", async ({ page }) => {
   const dialogen: string[] = [];
   page.on("dialog", async (dialog) => {
