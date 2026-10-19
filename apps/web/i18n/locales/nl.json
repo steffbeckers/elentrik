@@ -152,6 +152,16 @@
       "ONBEKENDE_NODE": "Dat onderdeel bestaat niet meer.",
       "ROOT_NIET_WIJZIGBAAR": "De aansluiting en de teller kunnen niet gewijzigd worden.",
       "andere": "Dat is niet gelukt."
+    },
+    "situatie": {
+      "canvas": {
+        "planNietGevonden": "Plan niet gevonden",
+        "planOpnieuwKiezen": "Plan opnieuw kiezen",
+        "werkbalk": "Selectie op het plan",
+        "draaiLinks": "Draai linksom (Shift+R)",
+        "draaiRechts": "Draai rechtsom (R)",
+        "vanPlanHalen": "Van plan halen"
+      }
     }
   },
   "projecten": {
