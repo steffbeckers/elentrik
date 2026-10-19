@@ -1,6 +1,7 @@
 // Alleen in de browser: pdf.js en canvas. Geen Vitest-test; geen statische import van pdfjs-dist,
 // zodat het buiten SSR en buiten de eerste bundel blijft (laadt pas in `laadPdf`).
-import { rasterSchaal, verkleinMaat } from "./raster";
+import { MAX_RASTER_PX } from "../../shared/bestandsinhoud";
+import { moetHercoderen, rasterSchaal, verkleinMaat } from "./raster";
 
 export type PdfRaster = { blob: Blob; breedte: number; hoogte: number };
 
@@ -50,7 +51,14 @@ export async function laadPdf(data: ArrayBuffer): Promise<PdfDocument> {
   pdfjs.GlobalWorkerOptions.workerSrc = werker.default;
 
   // pdf.js geeft de buffer door aan de worker (detached); werk dus op een kopie.
-  const taak = pdfjs.getDocument({ data: new Uint8Array(data.slice(0)) });
+  // De binaire bronnen (JBIG2/JPX-wasm, standaardlettertypes, ICC-profielen) komen van onze
+  // eigen server: Nitro serveert ze uit pdfjs-dist (zie nuxt.config.ts), zonder CDN.
+  const taak = pdfjs.getDocument({
+    data: new Uint8Array(data.slice(0)),
+    wasmUrl: "/pdfjs/wasm/",
+    standardFontDataUrl: "/pdfjs/standard_fonts/",
+    iccUrl: "/pdfjs/iccs/",
+  });
   let document: Awaited<typeof taak.promise>;
   try {
     document = await taak.promise;
@@ -81,6 +89,8 @@ export async function laadPdf(data: ArrayBuffer): Promise<PdfDocument> {
     }
   }
 
+  let gesloten = false;
+
   return {
     aantalPaginas: document.numPages,
     async voorbeeld(nr, maxPx) {
@@ -89,6 +99,8 @@ export async function laadPdf(data: ArrayBuffer): Promise<PdfDocument> {
     },
     raster: (nr) => render(nr, rasterSchaal),
     async sluit() {
+      if (gesloten) return;
+      gesloten = true;
       await document.cleanup();
       // Vernietigt ook het document en de worker.
       await taak.destroy();
@@ -96,14 +108,29 @@ export async function laadPdf(data: ArrayBuffer): Promise<PdfDocument> {
   };
 }
 
-/** Brengt een PNG of JPEG terug tot een lange zijde van hoogstens `MAX_RASTER_PX`. */
+/**
+ * Brengt een PNG of JPEG terug tot een lange zijde van hoogstens `MAX_RASTER_PX` en haalt een
+ * EXIF-draaiing uit het bestand. De rastermaat van de pagina komt uit de blob die deze functie
+ * teruggeeft: `breedte` en `hoogte` kloppen altijd met wat de server in de bestandskop leest.
+ */
 export async function verkleinAfbeelding(bestand: Blob): Promise<PdfRaster> {
   const bitmap = await createImageBitmap(bestand);
   try {
-    const doel = verkleinMaat(bitmap.width, bitmap.height);
-    if (doel.breedte === bitmap.width && doel.hoogte === bitmap.height) {
+    // Zonder ori�ntatie-toepassing geeft dit de maat uit de kop, zoals de server die leest.
+    const ruw = await createImageBitmap(bestand, { imageOrientation: "none" });
+    const ruweMaat = { b: ruw.width, h: ruw.height };
+    ruw.close();
+
+    if (
+      !moetHercoderen(
+        { b: bitmap.width, h: bitmap.height },
+        ruweMaat,
+        MAX_RASTER_PX,
+      )
+    ) {
       return { blob: bestand, breedte: bitmap.width, hoogte: bitmap.height };
     }
+    const doel = verkleinMaat(bitmap.width, bitmap.height);
     const canvas = maakCanvas(doel.breedte, doel.hoogte);
     try {
       const context = canvas.getContext("2d");

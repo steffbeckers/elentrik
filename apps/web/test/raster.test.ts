@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  moetHercoderen,
   paginaTitel,
   rasterSchaal,
   verkleinMaat,
@@ -50,5 +51,31 @@ describe("paginaTitel", () => {
   test("een lege naam geeft Pagina <aantal + 1>", () => {
     expect(paginaTitel(".png", undefined, 2)).toBe("Pagina 3");
     expect(paginaTitel("", undefined, 0)).toBe("Pagina 1");
+  });
+});
+
+describe("moetHercoderen", () => {
+  const staand = { b: 3000, h: 4000 };
+  const liggend = { b: 4000, h: 3000 };
+
+  test("laat een afbeelding binnen de limiet en zonder EXIF-draaiing ongemoeid", () => {
+    expect(moetHercoderen(liggend, liggend, 8000)).toBe(false);
+  });
+
+  test("hercodeert een afbeelding met een lange zijde boven de limiet", () => {
+    expect(
+      moetHercoderen({ b: 10000, h: 5000 }, { b: 10000, h: 5000 }, 8000),
+    ).toBe(true);
+  });
+
+  test("hercodeert als de EXIF-ori�ntatie breedte en hoogte omwisselt", () => {
+    // Standaard decode past ori�ntatie 6 toe (staand); de ruwe kop is liggend.
+    expect(moetHercoderen(staand, liggend, 8000)).toBe(true);
+  });
+
+  test("een vierkante afbeelding heeft geen herkodering nodig voor de ori�ntatie", () => {
+    expect(moetHercoderen({ b: 500, h: 500 }, { b: 500, h: 500 }, 8000)).toBe(
+      false,
+    );
   });
 });

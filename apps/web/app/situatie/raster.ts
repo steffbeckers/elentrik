@@ -31,3 +31,22 @@ export function paginaTitel(
   if (naam === "") return `Pagina ${aantalPaginas + 1}`;
   return pdfPagina === undefined ? naam : `${naam} p${pdfPagina}`;
 }
+
+type Maat = { b: number; h: number };
+
+/**
+ * Moet een afbeelding via een canvas opnieuw worden gecodeerd? Ja als de lange zijde boven
+ * `maxPx` ligt, of als de oriëntatie-bewuste maat (`standaard`) afwijkt van de ruwe maat uit
+ * de bestandskop (`ruw`): de server leest de kop, dus een EXIF-draaiing moet uit het bestand zijn.
+ */
+export function moetHercoderen(
+  standaard: Maat,
+  ruw: Maat,
+  maxPx: number,
+): boolean {
+  return (
+    Math.max(standaard.b, standaard.h) > maxPx ||
+    standaard.b !== ruw.b ||
+    standaard.h !== ruw.h
+  );
+}
