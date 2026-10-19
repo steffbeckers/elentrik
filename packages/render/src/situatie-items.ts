@@ -9,6 +9,14 @@ export type LabelTerugval = (type: NodeType) => string;
 
 const GEEN_TERUGVAL: LabelTerugval = () => "";
 
+/** Een symbool op het plan is de lange zijde van het raster gedeeld door dit getal. */
+export const SYMBOOL_DELER = 60;
+
+/** Symboolgrootte in rasterpixels: de lange zijde van het raster / 60. Gedeeld door de editor en de pdf. */
+export function symboolGrootte(achtergrond: { breedte_px: number; hoogte_px: number }): number {
+  return Math.max(achtergrond.breedte_px, achtergrond.hoogte_px) / SYMBOOL_DELER;
+}
+
 /**
  * Het label van een node op het plan, in "Te plaatsen" en in meldingen: het puntlabel uit de
  * analyse, voor een verdeelbord zijn naam, anders `terugval(type)`. Een onbekende node geeft "".

@@ -14,7 +14,8 @@
     "test:parallel": "vitest run --exclude \"**/*prestatie*.test.ts\"",
     "test:prestatie": "vitest run prestatie --no-file-parallelism",
     "typecheck": "pnpm -r typecheck",
-    "voorbeeld": "tsx scripts/voorbeeld-schema.ts"
+    "voorbeeld": "tsx scripts/voorbeeld-schema.ts",
+    "voorbeeld:print": "tsx scripts/voorbeeld-print.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

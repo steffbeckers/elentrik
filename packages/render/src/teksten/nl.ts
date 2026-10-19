@@ -27,7 +27,19 @@ export type Teksten = {
   /** Kleine letters: de soort staat tussen haakjes achter "Toestel". */
   toestelsoorten: Record<Toestelsoort, string>;
   ruimtes: Record<Ruimte, string>;
-  bijlage: { fouten: string; waarschuwingen: string; info: string; afwijkingen: string; overgeslagenPaginas: string };
+  bijlage: {
+    fouten: string;
+    waarschuwingen: string;
+    info: string;
+    afwijkingen: string;
+    overgeslagenPaginas: string;
+    /** Achter een bevinding waarvoor een afwijking geldt, tussen haakjes. */
+    afgeweken: string;
+    regel: string;
+    motivatie: string;
+    door: string;
+    geenBevindingen: string;
+  };
   geenKringen: string;
 };
 
@@ -102,6 +114,11 @@ export const NL: Teksten = {
     info: "Info",
     afwijkingen: "Afwijkingen",
     overgeslagenPaginas: "Overgeslagen pagina's",
+    afgeweken: "afgeweken",
+    regel: "Regel",
+    motivatie: "Motivatie",
+    door: "Door",
+    geenBevindingen: "Geen bevindingen",
   },
   geenKringen: "Geen kringen",
 };
