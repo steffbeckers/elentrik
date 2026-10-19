@@ -1,18 +1,12 @@
 <script setup lang="ts">
 import { DocumentFout, magToevoegen } from "@elentrik/model";
-import { doelSoort, moetNegeren, spatieSchuift, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
-import { markeringen as leidMarkeringenAf, type MarkeringSoort } from "~/editor/markeringen";
+import { doelSoort, moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
+import { useCanvasWeergave } from "~/composables/useCanvasWeergave";
+import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
 import { useEditorStore } from "~/stores/editor";
-
-type Weergave = { x: number; y: number; b: number; h: number };
 
 /** Ruimte (mm) rond de strook bij "Passend maken". */
 const MARGE_MM = 5;
-/** Zoom is begrensd tot 25 % – 400 % van de passende weergave. */
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 4;
-/** Aantal pixels dat de muis moet bewegen voordat een klik een sleepbeweging wordt. */
-const SLEEP_DREMPEL_PX = 3;
 const SELECTIE_MARGE_MM = 1;
 const MARKERING_STRAAL_MM = 1.5;
 const PLUS_STRAAL_MM = 2.5;
@@ -24,126 +18,25 @@ const toast = useToast();
 const venster = useTemplateRef<HTMLElement>("venster");
 const basis = useTemplateRef<HTMLElement>("basis");
 
-const grootte = reactive({ breedte: 0, hoogte: 0 });
-const weergave = ref<Weergave>({ x: 0, y: 0, b: 1, h: 1 });
-const viewBox = computed(() => {
-  const { x, y, b, h } = weergave.value;
-  return `${x} ${y} ${b} ${h}`;
+// --- Zoom, pan en pinch (gedeeld met het plan) ------------------------------
+
+const canvas = useCanvasWeergave({
+  venster,
+  inhoud: () => store.opmaak?.strook ?? null,
+  marge: () => MARGE_MM,
 });
-let heeftPassendeWeergave = false;
-
-const ruimteIngedrukt = ref(false);
-const sleept = ref(false);
-
-// --- Zoom en pan -----------------------------------------------------------
-
-/** De weergave waarop de hele strook (plus marge) in het venster past, gecentreerd. */
-function passendeWeergave(): Weergave | null {
-  const strook = store.opmaak?.strook;
-  if (!strook || grootte.breedte === 0 || grootte.hoogte === 0) return null;
-  const breedte = strook.breedte + 2 * MARGE_MM;
-  const hoogte = strook.hoogte + 2 * MARGE_MM;
-  const schaal = Math.min(grootte.breedte / breedte, grootte.hoogte / hoogte);
-  const b = grootte.breedte / schaal;
-  const h = grootte.hoogte / schaal;
-  return { x: (strook.breedte - b) / 2, y: (strook.hoogte - h) / 2, b, h };
-}
-
-function maakPassend(): void {
-  const passend = passendeWeergave();
-  if (!passend) return;
-  weergave.value = passend;
-  heeftPassendeWeergave = true;
-}
-
-/** Houdt het midden van de weergave binnen de strook, zodat die niet uit beeld kan raken. */
-function begrens(w: Weergave): Weergave {
-  const strook = store.opmaak?.strook;
-  if (!strook) return w;
-  const midX = Math.min(Math.max(w.x + w.b / 2, 0), strook.breedte);
-  const midY = Math.min(Math.max(w.y + w.h / 2, 0), strook.hoogte);
-  return { ...w, x: midX - w.b / 2, y: midY - w.h / 2 };
-}
-
-function zoomOpWiel(event: WheelEvent): void {
-  const passend = passendeWeergave();
-  const vensterEl = venster.value;
-  if (!passend || !vensterEl) return;
-  const rect = vensterEl.getBoundingClientRect();
-  const fx = (event.clientX - rect.left) / rect.width;
-  const fy = (event.clientY - rect.top) / rect.height;
-  const huidig = weergave.value;
-  // Wiel naar boven (negatieve deltaY) zoomt in.
-  // deltaMode 1 = regels, 2 = pagina's; zonder omrekening zoomt een muis met regelstappen nauwelijks.
-  const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1);
-  const factor = Math.exp(-delta * 0.0015);
-  const zoom = Math.min(Math.max((passend.b / huidig.b) * factor, MIN_ZOOM), MAX_ZOOM);
-  const b = passend.b / zoom;
-  const h = b * (grootte.hoogte / grootte.breedte);
-  // Het punt onder de cursor blijft op dezelfde plaats.
-  const ankerX = huidig.x + fx * huidig.b;
-  const ankerY = huidig.y + fy * huidig.h;
-  weergave.value = begrens({ x: ankerX - fx * b, y: ankerY - fy * h, b, h });
-}
-
-type Sleep = { startX: number; startY: number; begin: Weergave; pointerId: number; actief: boolean };
-let sleep: Sleep | null = null;
-let onderdrukKlik = false;
+const { viewBox, ruimteIngedrukt, sleept, maakPassend, zoomOpWiel } = canvas;
 
 function pointerDown(event: PointerEvent): void {
-  if (event.button !== 0) return;
   const doel = event.target as Element;
   // Pannen: op lege ruimte, of overal met de spatie ingedrukt.
-  if (!ruimteIngedrukt.value && doel.closest("[data-node-id], [data-plus]")) return;
-  sleep = {
-    startX: event.clientX,
-    startY: event.clientY,
-    begin: weergave.value,
-    pointerId: event.pointerId,
-    actief: false,
-  };
-}
-
-function pointerMove(event: PointerEvent): void {
-  const s = sleep;
-  const vensterEl = venster.value;
-  if (!s || !vensterEl || event.pointerId !== s.pointerId) return;
-  const dx = event.clientX - s.startX;
-  const dy = event.clientY - s.startY;
-  if (!s.actief) {
-    if (Math.hypot(dx, dy) < SLEEP_DREMPEL_PX) return;
-    s.actief = true;
-    sleept.value = true;
-    // Pas bij het slepen vastleggen: anders zou een gewone klik op het venster zelf landen.
-    vensterEl.setPointerCapture(event.pointerId);
-  }
-  const rect = vensterEl.getBoundingClientRect();
-  weergave.value = begrens({
-    ...s.begin,
-    x: s.begin.x - (dx / rect.width) * s.begin.b,
-    y: s.begin.y - (dy / rect.height) * s.begin.h,
-  });
-}
-
-function pointerUp(event: PointerEvent): void {
-  const s = sleep;
-  if (!s || event.pointerId !== s.pointerId) return;
-  sleep = null;
-  sleept.value = false;
-  if (s.actief) {
-    venster.value?.releasePointerCapture(event.pointerId);
-  }
-  if (s.actief || ruimteIngedrukt.value) {
-    // De klik die op deze pointerup volgt, is geen selectie.
-    onderdrukKlik = true;
-    setTimeout(() => (onderdrukKlik = false), 0);
-  }
+  canvas.pointerDown(event, ruimteIngedrukt.value || !doel.closest("[data-node-id], [data-plus]"));
 }
 
 // --- Selectie --------------------------------------------------------------
 
 function klikOpBasis(event: MouseEvent): void {
-  if (onderdrukKlik) return;
+  if (canvas.klikOnderdrukt()) return;
   const symbool = (event.target as Element).closest("[data-node-id]");
   const id = symbool?.getAttribute("data-node-id") ?? null;
   if (id === null) {
@@ -224,7 +117,7 @@ function bevestigTakVerwijderen(): void {
 }
 
 function toetsIngedrukt(event: KeyboardEvent): void {
-  if (!store.document) return;
+  if (!store.document || store.tabblad !== "eendraadschema") return;
   const doel = event.target instanceof Element ? event.target : null;
   if (
     moetNegeren({
@@ -238,11 +131,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     return;
   }
   const soort = soortVan(event.target);
-  if (spatieSchuift(event.key, soort)) {
-    ruimteIngedrukt.value = true;
-    event.preventDefault();
-    return;
-  }
+  if (canvas.spatieOmlaag(event, soort)) return;
   const actie = sneltoets({
     key: event.key,
     shiftKey: event.shiftKey,
@@ -289,15 +178,6 @@ function toetsIngedrukt(event: KeyboardEvent): void {
   }
 }
 
-function toetsLosgelaten(event: KeyboardEvent): void {
-  if (event.key === " ") ruimteIngedrukt.value = false;
-}
-
-/** Een keyup buiten het venster komt niet aan: laat de spatie los als het venster de focus verliest. */
-function spatieLoslaten(): void {
-  ruimteIngedrukt.value = false;
-}
-
 // --- Overlay ---------------------------------------------------------------
 
 const vakken = computed(() => store.opmaak?.strook.vakken ?? {});
@@ -317,13 +197,6 @@ const markeringen = computed(() => {
   });
 });
 
-const MARKERING_KLASSE: Record<MarkeringSoort, string> = {
-  fout: "fill-red-600",
-  waarschuwing: "fill-amber-500",
-  info: "fill-blue-600",
-  afgeweken: "fill-neutral-400",
-};
-
 const plusknoppen = computed(() => {
   const doc = store.document;
   const opmaak = store.opmaak;
@@ -335,47 +208,13 @@ const plusknoppen = computed(() => {
 
 // --- Levenscyclus ----------------------------------------------------------
 
-let observer: ResizeObserver | undefined;
-
-function metingBijgewerkt(breedte: number, hoogte: number): void {
-  if (breedte === 0 || hoogte === 0) return;
-  const vorige = { ...grootte };
-  grootte.breedte = breedte;
-  grootte.hoogte = hoogte;
-  if (!heeftPassendeWeergave) {
-    maakPassend();
-  } else if (vorige.breedte > 0) {
-    // Zelfde schaal, ander venster: de breedte blijft, de hoogte volgt de beeldverhouding.
-    const w = weergave.value;
-    weergave.value = { ...w, h: w.b * (hoogte / breedte) };
-  }
-}
-
-onMounted(() => {
-  const el = venster.value;
-  if (el) {
-    metingBijgewerkt(el.clientWidth, el.clientHeight);
-    observer = new ResizeObserver(() => metingBijgewerkt(el.clientWidth, el.clientHeight));
-    observer.observe(el);
-  }
-  window.addEventListener("keydown", toetsIngedrukt);
-  window.addEventListener("keyup", toetsLosgelaten);
-  window.addEventListener("blur", spatieLoslaten);
-});
-
-onBeforeUnmount(() => {
-  observer?.disconnect();
-  window.removeEventListener("keydown", toetsIngedrukt);
-  window.removeEventListener("keyup", toetsLosgelaten);
-  window.removeEventListener("blur", spatieLoslaten);
-});
+onMounted(() => window.addEventListener("keydown", toetsIngedrukt));
+onBeforeUnmount(() => window.removeEventListener("keydown", toetsIngedrukt));
 
 // De strook kan pas na het mounten bestaan (document nog niet geladen): dan alsnog passend maken.
 watch(
   () => store.opmaak?.strook,
-  () => {
-    if (!heeftPassendeWeergave) maakPassend();
-  },
+  () => canvas.passendAlsNodig(),
 );
 
 // `v-html` vervangt de SVG bij elke wijziging; de viewBox van de basislaag volgt die van de overlay.
@@ -394,11 +233,12 @@ watchPostEffect(() => {
       :class="sleept ? 'cursor-grabbing' : ruimteIngedrukt ? 'cursor-grab' : ''"
       @wheel.prevent="zoomOpWiel"
       @pointerdown="pointerDown"
-      @pointermove="pointerMove"
-      @pointerup="pointerUp"
-      @pointercancel="pointerUp"
+      @pointermove="canvas.pointerMove"
+      @pointerup="canvas.pointerUp"
+      @pointercancel="canvas.pointerAfgebroken"
+      @lostpointercapture.self="canvas.pointerAfgebroken"
     >
-      <!-- Basislaag. v-html is hier veilig: `render` escapet alle documenttekst. Dit is de enige v-html in de app. -->
+      <!-- Basislaag. v-html is hier veilig: `render` escapet alle documenttekst. -->
       <div ref="basis" class="basis absolute inset-0" @click="klikOpBasis" v-html="store.svg" />
 
       <svg class="pointer-events-none absolute inset-0 size-full" :viewBox="viewBox">

@@ -29,3 +29,11 @@ export function markeringen(bevindingen: readonly Bevinding[]): Map<NodeId, Mark
   }
   return perNode;
 }
+
+/** De Tailwind-vulkleur per markering, gedeeld door het eendraadschema en het plan. */
+export const MARKERING_KLASSE: Readonly<Record<MarkeringSoort, string>> = {
+  fout: "fill-red-600",
+  waarschuwing: "fill-amber-500",
+  info: "fill-blue-600",
+  afgeweken: "fill-neutral-400",
+};

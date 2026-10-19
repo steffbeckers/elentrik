@@ -1,7 +1,31 @@
+import { createRequire } from "node:module";
+import { dirname } from "node:path";
+
+// pdf.js haalt zijn binaire bronnen op via URL's; Nitro serveert ze rechtstreeks uit het pakket,
+// zodat er niets in de repo wordt gekopieerd en niets van een CDN komt.
+// Een publicAssets-map kan in Nitro geen afzonderlijke bestanden uitsluiten (alleen dir, baseURL,
+// maxAge en fallthrough; de devserver serveert de hele map). `wasm/` gaat dus volledig mee, ook
+// `quickjs-eval`; dat laadt alleen de scripting-sandbox van de pdf.js-viewer, die wij niet gebruiken.
+const pdfjsMap = dirname(
+  createRequire(import.meta.url).resolve("pdfjs-dist/package.json"),
+);
+const pdfjsBron = (naam: string) => ({
+  dir: `${pdfjsMap}/${naam}`,
+  baseURL: `/pdfjs/${naam}`,
+  maxAge: 60 * 60 * 24 * 365,
+});
+
 export default defineNuxtConfig({
   compatibilityDate: "2026-10-18",
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
   css: ["~/assets/css/main.css"],
+  nitro: {
+    publicAssets: [
+      pdfjsBron("wasm"),
+      pdfjsBron("standard_fonts"),
+      pdfjsBron("iccs"),
+    ],
+  },
   devServer: {
     host: "127.0.0.1",
   },

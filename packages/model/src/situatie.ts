@@ -94,3 +94,67 @@ export function verwijderPlaatsing(doc: InstallatieDocument, nodeId: NodeId): Op
     }
   });
 }
+
+export function hernoemPagina(
+  doc: InstallatieDocument,
+  paginaId: string,
+  titel: string,
+): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const getrimd = titel.trim();
+  if (getrimd === "") {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "de titel mag niet leeg zijn" });
+  }
+  return resultaat(doc, (draft) => {
+    draft.situatie.paginas.find((p) => p.id === paginaId)!.titel = getrimd;
+  });
+}
+
+/** Verwijdert de pagina met haar plaatsingen; de nodes blijven in het document. */
+export function verwijderPagina(doc: InstallatieDocument, paginaId: string): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  return resultaat(doc, (draft) => {
+    draft.situatie.paginas = draft.situatie.paginas.filter((p) => p.id !== paginaId);
+  });
+}
+
+/** Zet de schaal (mm per rasterpixel) van de achtergrond; `undefined` verwijdert de schaal. */
+export function zetSchaal(
+  doc: InstallatieDocument,
+  paginaId: string,
+  mmPerPx: number | undefined,
+): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  if (!doc.situatie.paginas.find((p) => p.id === paginaId)!.achtergrond) {
+    throw new DocumentFout("GEEN_ACHTERGROND", { paginaId });
+  }
+  if (mmPerPx !== undefined && !(Number.isFinite(mmPerPx) && mmPerPx > 0)) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", {
+      reden: "mmPerPx moet een eindig getal groter dan 0 zijn",
+    });
+  }
+  return resultaat(doc, (draft) => {
+    const achtergrond = draft.situatie.paginas.find((p) => p.id === paginaId)!.achtergrond!;
+    if (mmPerPx === undefined) delete achtergrond.schaal;
+    else achtergrond.schaal = { mmPerPx };
+  });
+}
+
+/** Zet de pagina op `nieuweIndex` (0 tot en met aantal - 1) in de paginavolgorde. */
+export function verplaatsPagina(
+  doc: InstallatieDocument,
+  paginaId: string,
+  nieuweIndex: number,
+): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const paginas = doc.situatie.paginas;
+  if (!Number.isInteger(nieuweIndex) || nieuweIndex < 0 || nieuweIndex >= paginas.length) {
+    throw new DocumentFout("ONGELDIGE_INDEX", { index: nieuweIndex, lengte: paginas.length });
+  }
+  const huidig = paginas.findIndex((p) => p.id === paginaId);
+  if (huidig === nieuweIndex) return { doc, patches: [], inversePatches: [] };
+  return resultaat(doc, (draft) => {
+    const [pagina] = draft.situatie.paginas.splice(huidig, 1);
+    draft.situatie.paginas.splice(nieuweIndex, 0, pagina!);
+  });
+}

@@ -12,13 +12,15 @@
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "e2e:fixtures": "node e2e/fixtures/maak-fixtures.mjs"
   },
   "dependencies": {
     "@elentrik/arei": "workspace:*",
     "@elentrik/layout": "workspace:*",
     "@elentrik/model": "workspace:*",
     "@elentrik/render": "workspace:*",
+    "@elentrik/symbols": "workspace:*",
     "@nuxt/ui": "^4.12.0",
     "@nuxtjs/i18n": "^10.6.0",
     "@pinia/nuxt": "^1.0.3",
@@ -26,6 +28,7 @@
     "h3": "^1.15.11",
     "idb-keyval": "^6.3.0",
     "nuxt": "^4.6.2",
+    "pdfjs-dist": "6.4.299",
     "pinia": "^4.1.0",
     "postgres": "^3.4.9",
     "tailwindcss": "^4.3.3",

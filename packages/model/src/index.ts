@@ -17,10 +17,14 @@ export {
 export { verwijderAfwijking, voegAfwijkingToe, wijzigProject } from "./project";
 export {
   PLAATSBARE_TYPES,
+  hernoemPagina,
   plaats,
+  verplaatsPagina,
+  verwijderPagina,
   verwijderPlaatsing,
   voegPaginaToe,
   zetAchtergrond,
+  zetSchaal,
 } from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
 export {

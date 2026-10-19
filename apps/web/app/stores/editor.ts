@@ -28,12 +28,16 @@ import { schemaStripSvg } from "@elentrik/render";
 import { defineStore } from "pinia";
 import { computed, ref, shallowRef } from "vue";
 import type { Richting } from "../composables/sneltoetsen";
+import { samengevoegd } from "../editor/resultaten";
 
 /** Eén undo-stap. Stappen met dezelfde `groep` na elkaar worden samengevoegd. */
 export type Stap = { patches: Patch[]; inversePatches: Patch[]; groep?: string };
 
 /** Maximaal aantal undo-stappen; daarboven valt de oudste weg. */
 export const MAX_STAPPEN = 200;
+
+/** De twee tabbladen van de editor. */
+export type Tabblad = "eendraadschema" | "situatieschema";
 
 export type TeLadenProject = { id: string; naam: string; versie: number; document: InstallatieDocument };
 
@@ -43,15 +47,6 @@ function vandaag(): string {
   const maand = String(nu.getMonth() + 1).padStart(2, "0");
   const dag = String(nu.getDate()).padStart(2, "0");
   return `${nu.getFullYear()}-${maand}-${dag}`;
-}
-
-/** Voegt operaties die na elkaar op hetzelfde document liepen samen tot één resultaat. */
-function samengevoegd(doc: InstallatieDocument, resultaten: OperatieResultaat[]): OperatieResultaat {
-  return {
-    doc: resultaten.at(-1)?.doc ?? doc,
-    patches: resultaten.flatMap((r) => r.patches),
-    inversePatches: resultaten.toReversed().flatMap((r) => r.inversePatches),
-  };
 }
 
 /** Het eerste verdeelbord in pre-order. */
@@ -76,6 +71,7 @@ export const useEditorStore = defineStore("editor", () => {
   const selectie = ref<NodeId[]>([]);
   const onderdeel = ref<Onderdeel>("contactdoos");
   const toestelsoort = ref<Toestelsoort>("wasmachine");
+  const tabblad = ref<Tabblad>("eendraadschema");
   // Elke wijziging vervangt de array, zodat een shallowRef volstaat.
   const terug = shallowRef<Stap[]>([]);
   const vooruit = shallowRef<Stap[]>([]);
@@ -131,6 +127,7 @@ export const useEditorStore = defineStore("editor", () => {
     naam.value = project.naam;
     versie.value = project.versie;
     selectie.value = [];
+    tabblad.value = "eendraadschema";
     terug.value = [];
     vooruit.value = [];
     gewijzigdSindsOpslaan.value = 0;
@@ -363,6 +360,7 @@ export const useEditorStore = defineStore("editor", () => {
     selectie,
     onderdeel,
     toestelsoort,
+    tabblad,
     terug,
     vooruit,
     gewijzigdSindsOpslaan,
