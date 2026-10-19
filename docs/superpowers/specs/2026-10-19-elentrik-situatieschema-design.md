@@ -72,11 +72,11 @@ Vandaag tekent hij dat vaak opnieuw in een ander programma, of met de hand op ee
 Deze operaties bestaan al: `voegPaginaToe`, `zetAchtergrond`, `plaats` en `verwijderPlaatsing`.
 
 Erbij komen deze pure operaties. Elk geeft patches en `DocumentFout`-codes, net als de bestaande:
-- `hernoemPagina(doc, paginaId, titel)`. Een lege titel na trimmen geeft `ONGELDIGE_WAARDE`.
+- `hernoemPagina(doc, paginaId, titel)`. Een lege titel na trimmen geeft `ONGELDIG_SCHEMA`, de bestaande code voor een ongeldige waarde.
 - `verwijderPagina(doc, paginaId)`. Hij verwijdert de pagina met haar plaatsingen; de punten zelf blijven bestaan.
 - `zetSchaal(doc, paginaId, mmPerPx | undefined)`.
-  - De waarde moet eindig en groter dan 0 zijn.
-  - Een pagina zonder achtergrond geeft `GEEN_ACHTERGROND`.
+  - De waarde moet eindig en groter dan 0 zijn; anders volgt `ONGELDIG_SCHEMA`.
+  - Een pagina zonder achtergrond geeft de nieuwe code `GEEN_ACHTERGROND`.
   - `undefined` wist de schaal.
 - `verplaatsPagina(doc, paginaId, nieuweIndex)`. Hiermee ordent de gebruiker de verdiepingen.
 
@@ -130,7 +130,7 @@ Dezelfde indeling als het eendraadschema:
 
 - **Links: "Te plaatsen".**
   - De niet-geplaatste punten uit de analyse, gegroepeerd per kring (A, B, …), met symbool en label.
-  - Het verdeelbord staat er ook in, want het is plaatsbaar.
+  - Het verdeelbord staat er ook in, want het is plaatsbaar. De analyse geeft alleen punten in `nietGeplaatst`; de niet-geplaatste verdeelborden leidt de client zelf af.
   - Is alles geplaatst, dan staat er "Alle punten staan op een plan".
 - **Midden: het plan.**
   - Bovenaan staan de paginatabs, met "Pagina toevoegen" en een menu per pagina: hernoemen, schaal instellen, naar links of rechts, verwijderen.
@@ -149,6 +149,7 @@ Dezelfde indeling als het eendraadschema:
   - `x` en `y` van een plaatsing zijn het middelpunt van het symbool, in rasterpixels.
 - **Label:** het label staat rechts naast het symbool en draait **niet** mee, zodat het leesbaar blijft. Het komt live uit de analyse.
 - **Markeringen:** een bevinding op een geplaatste node geeft dezelfde markering als in het eendraadschema.
+- **Waar het getekend wordt:** de SVG-laag met symbolen en labels is een pure functie in `packages/render` (`situatieLaagSvg`). Zo kan de PDF-export ze later hergebruiken. Alle tekst gaat door `escapeXml`.
 
 ### 4.6 Bediening op het plan
 
