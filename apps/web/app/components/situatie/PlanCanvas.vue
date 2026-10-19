@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { NodeId } from "@elentrik/model";
-import { situatieLaagSvg } from "@elentrik/render";
+import { situatieItems, situatieLaagSvg } from "@elentrik/render";
 import { doelSoort, moetNegeren, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useBestandenApi } from "~/composables/useBestandenApi";
 import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeergave";
@@ -9,7 +9,6 @@ import { useNodeTekst } from "~/composables/useNodeTekst";
 import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
 import { inhoudNaarScherm, maxPlanZoom, schermNaarInhoud } from "~/editor/weergave";
 import { schuif, symboolGrootte } from "~/situatie/geometrie";
-import { situatieItems } from "~/situatie/items";
 import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
 import { situatieSneltoets } from "~/situatie/sneltoetsen";
 import { useEditorStore } from "~/stores/editor";
