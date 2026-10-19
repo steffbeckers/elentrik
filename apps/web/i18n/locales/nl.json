@@ -161,6 +161,29 @@
         "draaiLinks": "Draai linksom (Shift+R)",
         "draaiRechts": "Draai rechtsom (R)",
         "vanPlanHalen": "Van plan halen"
+      },
+      "toevoegen": {
+        "titel": "Plan toevoegen",
+        "titelVervangen": "Plan opnieuw kiezen",
+        "beschrijving": "Kies een PDF, PNG of JPG van het plan (maximaal 50 MB).",
+        "kiezen": "Kies een bestand",
+        "slepen": "of sleep het hierheen",
+        "ander": "Ander bestand kiezen",
+        "paginaKiezen": "Kies de pagina van het plan",
+        "pagina": "Pagina {nr}",
+        "voorbeeldLaadt": "Voorbeeld laden…",
+        "pdfLaadt": "PDF openen…",
+        "bezigRenderen": "Plan voorbereiden…",
+        "bezigOpladen": "Plan opladen…",
+        "toevoegen": "Toevoegen",
+        "vervangen": "Vervangen",
+        "fout": {
+          "onbekendType": "Dit bestandstype wordt niet aanvaard.",
+          "teGroot": "Dit bestand is groter dan 50 MB.",
+          "tePixels": "Dit plan is te groot (meer dan 8.000 pixels).",
+          "mislukt": "Het plan kon niet worden opgeladen. Probeer het opnieuw.",
+          "onleesbaar": "Dit bestand kon niet gelezen worden."
+        }
       }
     }
   },
