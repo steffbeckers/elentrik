@@ -98,3 +98,54 @@ describe("bestandHeaders met download", () => {
     );
   });
 });
+
+describe("bestandHeaders: geen parameterinjectie via unicode-normalisatie", () => {
+  /** De waarde tussen de aanhalingstekens van `filename="…"`. */
+  function filenameWaarde(header: string): string {
+    const begin = header.indexOf('filename="') + 'filename="'.length;
+    const einde = header.indexOf('"; filename*=');
+    return header.slice(begin, einde);
+  }
+
+  function controleer(download: string): string {
+    const header = bestandHeaders("application/pdf", { download })["Content-Disposition"]!;
+    expect(header.match(/filename=/g)).toHaveLength(1);
+    expect(header.match(/filename\*=/g)).toHaveLength(1);
+    expect(filenameWaarde(header)).not.toMatch(/["\\]/);
+    expect(header).toMatch(/^attachment; filename="[^"\\]*"; filename\*=UTF-8''[A-Za-z0-9!#$&+\-.^_`|~%]+$/);
+    return header;
+  }
+
+  test.each([
+    ["volbreed aanhalingsteken", "Huis \uff02Peeters\uff02.pdf"],
+    ["volbrede backslash", "Huis \uff3c Peeters.pdf"],
+    ["volbrede schuine streep, dubbelpunt en kleiner-dan", "a\uff0fb\uff1ac\uff1cd.pdf"],
+    ["volledige injectie", "Huis \uff02; filename*=UTF-8''evil.exe; x=\uff02"],
+  ])("%s", (_naam, download) => {
+    controleer(download);
+  });
+
+  test("de injectie levert geen evil.exe-parameter op", () => {
+    const header = controleer("Huis \uff02; filename*=UTF-8''evil.exe; x=\uff02");
+    expect(header).not.toContain("filename*=UTF-8''evil.exe");
+    expect(filenameWaarde(header)).toBe("Huis _ filename_UTF-8''evil.exe_ x_");
+  });
+
+  test("een naam van enkel volbrede verboden tekens wordt export.pdf in filename", () => {
+    const header = controleer("\uff02\uff3c\uff0f");
+    expect(filenameWaarde(header)).toBe("export.pdf");
+  });
+});
+
+describe("bestandHeaders: lengte van de downloadnaam", () => {
+  test("een lange naam wordt afgekapt op 150 tekens vóór de extensie, .pdf blijft", () => {
+    const header = bestandHeaders("application/pdf", { download: `${"a".repeat(300)} - V1.pdf` })["Content-Disposition"]!;
+    expect(header).toBe(`attachment; filename="${"a".repeat(150)}.pdf"; filename*=UTF-8''${"a".repeat(150)}.pdf`);
+  });
+
+  test("afkappen telt codepunten en breekt geen surrogaatpaar", () => {
+    const header = bestandHeaders("application/pdf", { download: `${"😀".repeat(200)}.pdf` })["Content-Disposition"]!;
+    expect(header).toContain(`filename="${"_".repeat(150)}.pdf"`);
+    expect(header).toContain(`filename*=UTF-8''${"%F0%9F%98%80".repeat(150)}.pdf`);
+  });
+});

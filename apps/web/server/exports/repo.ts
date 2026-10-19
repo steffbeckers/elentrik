@@ -5,16 +5,17 @@ import { analyseer, controleer, haalRegelset, type Bevinding } from "@elentrik/a
 import type { InstallatieDocument } from "@elentrik/model";
 import { overgeslagenPaginas, printHtml, type PrintOpties } from "@elentrik/render";
 import { desc, eq } from "drizzle-orm";
-import { z } from "zod";
 import { herkenSoort } from "../../shared/bestandsinhoud";
 import type { ExportInfo, ExportInvoer } from "../../shared/exports";
 import { haalBedrijf } from "../bedrijf/repo";
+import { STANDAARD_DOWNLOADNAAM } from "../bestanden/headers";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { haalBestand, schrijfBestandMetRij } from "../bestanden/repo";
 import type { Db } from "../db";
 import { exports, projecten, snapshots } from "../db/schema";
 import { PdfFout, type PdfInvoer } from "../pdf/gotenberg";
 import { haalProject, ProjectFout } from "../projecten/repo";
+import { IdSchema } from "../utils/projecten";
 
 export type { ExportInfo, ExportInvoer };
 
@@ -25,13 +26,8 @@ export type ExportDeps = {
 
 type MeeTeGeven = PdfInvoer["bestanden"][number];
 
-const IdSchema = z.uuid();
-
 /** De extensie per toegelaten afbeeldingstype; andere types gaan niet mee. */
 const EXTENSIE: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg" };
-
-/** Valt de naam van het project of het versielabel weg, dan krijgt de download deze naam. */
-const STANDAARD_DOWNLOADNAAM = "export.pdf";
 
 /** `JJJJ-MM-DD` in lokale tijd. */
 function lokaleDatum(datum: Date): string {

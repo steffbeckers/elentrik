@@ -6,8 +6,7 @@ import { createError, getHeader, getRouterParam, readMultipartFormData, type H3E
 import { z } from "zod";
 import { MAX_LOGO_BYTES, MAX_UPLOAD_BYTES } from "../../shared/bestandsinhoud";
 import { BestandFout, type PlanSoort } from "../bestanden/repo";
-
-const IdSchema = z.uuid();
+import { IdSchema } from "./projecten";
 const SoortSchema = z.enum(["plan-origineel", "plan-raster"]);
 
 /** Ruimte voor de multipart-grenzen en veldkoppen bovenop het bestand zelf. */

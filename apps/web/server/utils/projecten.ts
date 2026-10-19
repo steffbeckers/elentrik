@@ -8,7 +8,8 @@ import { createError, getHeader, getRouterParam, readBody, type H3Event } from "
 import { z } from "zod";
 import { ProjectFout } from "../projecten/repo";
 
-const IdSchema = z.uuid();
+/** Een id in de database: een uuid. Ook gebruikt door de bestanden-hulp en de exports-repo. */
+export const IdSchema = z.uuid();
 
 /** De `versie`-kolom is een Postgres int4: grotere waarden zijn nooit een geldige versie. */
 const MAX_VERSIE = 2147483647;
