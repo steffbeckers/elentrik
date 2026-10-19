@@ -128,9 +128,10 @@ describe("bewaarLogo", () => {
 
   test("een JPEG is toegelaten", async () => {
     const db = await maakTestDb();
-    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x02, 0xff, 0xd9]);
+    // SOI + SOF0 met hoogte 16 en breedte 32.
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x08, 0x08, 0x00, 0x10, 0x00, 0x20]);
     const info = await bewaarLogo(db, maakLokaleOpslag(map), jpeg);
-    expect(info.mime).toBe("image/jpeg");
+    expect(info).toMatchObject({ mime: "image/jpeg", breedte_px: 32, hoogte_px: 16 });
   });
 
   test("het logo overleeft een nieuwe bewaarBedrijf, ook als die logoBestandId meestuurt", async () => {
@@ -146,6 +147,18 @@ describe("bewaarLogo", () => {
     await bewaarBedrijf(db, VOLLEDIG);
     const info = await bewaarLogo(db, maakLokaleOpslag(map), png(10, 10));
     expect(await haalBedrijf(db)).toEqual({ ...VOLLEDIG, logoBestandId: info.id });
+  });
+
+  test("een logo met onleesbare of nulafmetingen geeft ONGELDIG_TYPE en bewaart niets", async () => {
+    const db = await maakTestDb();
+    const opslag = maakLokaleOpslag(map);
+    const afgekapteJpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x02, 0xff, 0xd9]);
+    for (const data of [png(10, 10).slice(0, 12), png(0, 10), png(10, 0), afgekapteJpeg]) {
+      const fout = await vangFout(bewaarLogo(db, opslag, data), BestandFout);
+      expect(fout.code).toBe("ONGELDIG_TYPE");
+    }
+    expect(await db.select().from(bestanden)).toHaveLength(0);
+    expect(await haalBedrijf(db)).toEqual({ naam: "" });
   });
 
   test("een SVG geeft ONGELDIG_TYPE en bewaart niets", async () => {

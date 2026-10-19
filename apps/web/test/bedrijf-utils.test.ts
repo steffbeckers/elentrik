@@ -1,12 +1,17 @@
 // De hulpfuncties van de bedrijfsgegevens-API als pure functies, zonder Nitro-server.
+import { mkdtemp, rm } from "node:fs/promises";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createEvent, type H3Event } from "h3";
 import { describe, expect, test } from "vitest";
 import { MAX_LOGO_BYTES } from "../shared/bestandsinhoud";
-import { BedrijfFout } from "../server/bedrijf/repo";
-import { BewaarBedrijfSchema, metBedrijfFouten } from "../server/utils/bedrijf";
+import { bewaarBedrijf, bewaarLogo, haalBedrijf } from "../server/bedrijf/repo";
+import { maakLokaleOpslag } from "../server/bestanden/opslag";
+import { leesBedrijfBody } from "../server/utils/bedrijf";
 import { leesLogoUpload, leesPlanUpload } from "../server/utils/bestanden";
+import { maakTestDb } from "./db";
 
 const GRENS = "----elentrik";
 
@@ -91,30 +96,39 @@ describe("de planupload blijft beperkt tot plannen", () => {
   });
 });
 
-describe("BewaarBedrijfSchema", () => {
-  test("aanvaardt een Partij zonder logoBestandId", () => {
-    expect(BewaarBedrijfSchema.safeParse({ naam: "Peeters" }).success).toBe(true);
+describe("leesBedrijfBody", () => {
+  function jsonEvent(waarde: unknown) {
+    const body = Buffer.from(JSON.stringify(waarde));
+    return maakEvent({
+      body,
+      headers: { "content-type": "application/json", "content-length": String(body.length) },
+    });
+  }
+
+  test("een Partij zonder logoBestandId wordt gelezen", async () => {
+    expect(await leesBedrijfBody(jsonEvent({ naam: "Peeters" }))).toEqual({ naam: "Peeters" });
   });
 
-  test("weigert logoBestandId en onbekende velden", () => {
-    expect(BewaarBedrijfSchema.safeParse({ naam: "P", logoBestandId: "x" }).success).toBe(false);
-    expect(BewaarBedrijfSchema.safeParse({ naam: "P", website: "x" }).success).toBe(false);
-  });
-});
-
-describe("metBedrijfFouten", () => {
-  test("BedrijfFout wordt 422, een andere fout blijft ongewijzigd", async () => {
+  test("een ongeldig adres of onbekend veld geeft 400", async () => {
     expect(
-      await statusVan(() =>
-        metBedrijfFouten(async () => {
-          throw new BedrijfFout("ONGELDIG", []);
-        }),
-      ),
-    ).toBe(422);
-    await expect(
-      metBedrijfFouten(async () => {
-        throw new Error("kapot");
-      }),
-    ).rejects.toThrow("kapot");
+      await statusVan(() => leesBedrijfBody(jsonEvent({ naam: "P", adres: { straat: "x" } }))),
+    ).toBe(400);
+    expect(await statusVan(() => leesBedrijfBody(jsonEvent({ naam: "P", website: "x" })))).toBe(400);
+  });
+
+  test("een body met logoBestandId wordt aanvaard en het bewaarde logo blijft staan", async () => {
+    const db = await maakTestDb();
+    const map = await mkdtemp(join(tmpdir(), "elentrik-bedrijf-utils-"));
+    try {
+      const png = new Uint8Array(33);
+      png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1]);
+      const logo = await bewaarLogo(db, maakLokaleOpslag(map), png);
+      const partij = await leesBedrijfBody(jsonEvent({ naam: "Nieuw", logoBestandId: "ander-id" }));
+      expect(partij.logoBestandId).toBe("ander-id");
+      expect(await bewaarBedrijf(db, partij)).toEqual({ naam: "Nieuw", logoBestandId: logo.id });
+      expect(await haalBedrijf(db)).toEqual({ naam: "Nieuw", logoBestandId: logo.id });
+    } finally {
+      await rm(map, { recursive: true, force: true });
+    }
   });
 });

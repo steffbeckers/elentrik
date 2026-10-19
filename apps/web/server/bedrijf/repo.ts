@@ -2,7 +2,7 @@
 // rechtstreeks (ruling E1).
 import { PartijSchema, type Partij } from "@elentrik/model";
 import { eq } from "drizzle-orm";
-import { herkenSoort, MAX_LOGO_BYTES, type BestandInfo } from "../../shared/bestandsinhoud";
+import { afmetingen, herkenSoort, MAX_LOGO_BYTES, type BestandInfo } from "../../shared/bestandsinhoud";
 import { BestandFout, schrijfBestandMetRij } from "../bestanden/repo";
 import type { BestandOpslag } from "../bestanden/opslag";
 import type { Db } from "../db";
@@ -43,8 +43,8 @@ async function schrijfBedrijf(db: Db, installateur: Partij): Promise<void> {
 }
 
 /**
- * Bewaart de bedrijfsgegevens (upsert van rij 1). `logoBestandId` komt nooit van de aanroeper:
- * alleen `bewaarLogo` zet het, en een bestaand logo blijft staan.
+ * Bewaart de bedrijfsgegevens (upsert van rij 1). Een meegestuurde `logoBestandId` wordt
+ * genegeerd: alleen `bewaarLogo` zet het, en een bestaand logo blijft staan.
  */
 export async function bewaarBedrijf(db: Db, partij: Partij): Promise<Partij> {
   const resultaat = PartijSchema.safeParse(partij);
@@ -69,6 +69,9 @@ export async function bewaarLogo(
   if (data.length > MAX_LOGO_BYTES) throw new BestandFout("TE_GROOT");
   const type = herkenSoort(data);
   if (type !== "png" && type !== "jpeg") throw new BestandFout("ONGELDIG_TYPE");
+  // Een logo met onleesbare of nulafmetingen mag nooit in de PDF-keten terechtkomen.
+  const maten = afmetingen(data, type);
+  if (!maten || maten.breedte === 0 || maten.hoogte === 0) throw new BestandFout("ONGELDIG_TYPE");
 
   return schrijfBestandMetRij(
     db,
