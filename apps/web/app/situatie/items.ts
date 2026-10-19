@@ -12,6 +12,16 @@ export const GROEP_ZONDER_KRING = "—";
 export type TePlaatsenGroep = { kringLabel: string; nodeIds: NodeId[] };
 
 /**
+ * Het label van een node op het plan en in "Te plaatsen": het puntlabel uit de analyse, voor een
+ * verdeelbord zijn naam. Een punt zonder kring, een naamloos bord of een onbekende node geeft "".
+ */
+export function nodeLabel(doc: InstallatieDocument, analyse: Analyse, nodeId: NodeId): string {
+  const node = doc.nodes[nodeId];
+  if (!node) return "";
+  return analyse.puntLabels[nodeId] ?? (node.type === "verdeelbord" ? (node.naam ?? "") : "");
+}
+
+/**
  * De geplaatste symbolen van één pagina. Het label volgt het eendraadschema (`puntLabels`),
  * dus het hernummert mee als er een punt wegvalt. Een onbekende pagina geeft een lege lijst.
  */
@@ -28,7 +38,7 @@ export function situatieItems(doc: InstallatieDocument, analyse: Analyse, pagina
       x: plaatsing.x,
       y: plaatsing.y,
       rotatie: plaatsing.rotatie,
-      label: analyse.puntLabels[plaatsing.nodeId] ?? (node.type === "verdeelbord" ? (node.naam ?? "") : ""),
+      label: nodeLabel(doc, analyse, plaatsing.nodeId),
     });
   }
   return items;

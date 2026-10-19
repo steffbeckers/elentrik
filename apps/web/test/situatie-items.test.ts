@@ -10,7 +10,7 @@ import {
   type NodeId,
 } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { situatieItems, tePlaatsen } from "../app/situatie/items";
+import { nodeLabel, situatieItems, tePlaatsen } from "../app/situatie/items";
 
 const ACHTERGROND = {
   origineelBestandId: "o1",
@@ -172,5 +172,26 @@ describe("tePlaatsen", () => {
     const { doc: metP, paginaId } = metPagina(start);
     const doc = plaats(metP, paginaId, ids["bord"]!, { x: 1, y: 1, rotatie: 0 }).doc;
     expect(tePlaatsen(doc, analyseer(doc)).some((g) => g.kringLabel === "Verdeelborden")).toBe(false);
+  });
+});
+
+describe("nodeLabel", () => {
+  test("geeft het puntlabel uit de analyse", () => {
+    const { doc } = bouw();
+    const [cd1] = puntIds(doc, "contactdoos");
+    expect(nodeLabel(doc, analyseer(doc), cd1!)).toBe("A1");
+  });
+
+  test("een verdeelbord krijgt zijn naam, zonder naam een lege tekst", () => {
+    const { doc, ids } = bouw();
+    expect(nodeLabel(doc, analyseer(doc), ids["bord"]!)).toBe("Hoofdbord");
+    const zonderNaam = installatie().verdeelbord((b) => b.als("bord").kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))).bouw();
+    expect(nodeLabel(zonderNaam.doc, analyseer(zonderNaam.doc), zonderNaam.ids["bord"]!)).toBe("");
+  });
+
+  test("een punt zonder kring of een onbekende node geeft een lege tekst", () => {
+    const { doc, cd } = losPunt();
+    expect(nodeLabel(doc, analyseer(doc), cd)).toBe("");
+    expect(nodeLabel(doc, analyseer(doc), "bestaat-niet")).toBe("");
   });
 });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.vue";
 import type { AutosaveStatus } from "~/composables/useAutosave";
-import { useEditorStore } from "~/stores/editor";
+import { useEditorStore, type Tabblad } from "~/stores/editor";
 
 defineProps<{ status: AutosaveStatus }>();
 const emit = defineEmits<{ opnieuwProberen: []; toonConflict: []; toonBevindingen: [] }>();
@@ -22,7 +22,8 @@ const bevindingenTekst = computed(() =>
   }),
 );
 
-const UITGESCHAKELDE_TABBLADEN = ["situatieschema", "kringenlijst"] as const;
+const TABBLADEN = ["eendraadschema", "situatieschema"] as const satisfies readonly Tabblad[];
+const UITGESCHAKELDE_TABBLADEN = ["kringenlijst"] as const;
 
 const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = {
   opgeslagen: { icoon: "i-lucide-cloud-check", klasse: "text-muted" },
@@ -57,12 +58,16 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
 
     <nav class="flex items-center gap-1" role="tablist">
       <UButton
+        v-for="tabblad in TABBLADEN"
+        :key="tabblad"
         role="tab"
-        aria-selected="true"
-        color="primary"
-        variant="soft"
+        :aria-selected="store.tabblad === tabblad"
+        :data-testid="`tab-${tabblad}`"
+        :color="store.tabblad === tabblad ? 'primary' : 'neutral'"
+        :variant="store.tabblad === tabblad ? 'soft' : 'ghost'"
         size="sm"
-        :label="$t('editor.bovenbalk.tabbladen.eendraadschema')"
+        :label="$t(`editor.bovenbalk.tabbladen.${tabblad}`)"
+        @click="store.tabblad = tabblad"
       />
       <UTooltip
         v-for="tabblad in UITGESCHAKELDE_TABBLADEN"

@@ -154,6 +154,55 @@
       "andere": "Dat is niet gelukt."
     },
     "situatie": {
+      "tePlaatsen": {
+        "titel": "Te plaatsen",
+        "uitleg": "Sleep een punt naar het plan, of kies het en klik op het plan.",
+        "allesGeplaatst": "Alle punten staan op een plan",
+        "kring": "Kring {label}",
+        "zonderKring": "Zonder kring",
+        "verdeelborden": "Verdeelborden"
+      },
+      "paginas": {
+        "titel": "Pagina's",
+        "toevoegen": "Pagina toevoegen",
+        "menu": "Menu van {titel}",
+        "hernoemen": "Hernoemen",
+        "schaalInstellen": "Schaal instellen",
+        "naarLinks": "Naar links",
+        "naarRechts": "Naar rechts",
+        "verwijderen": "Verwijderen"
+      },
+      "leeg": {
+        "titel": "Nog geen plan",
+        "beschrijving": "Voeg een plan toe om de punten op te plaatsen.",
+        "planToevoegen": "Plan toevoegen"
+      },
+      "hernoemen": {
+        "titel": "Pagina hernoemen",
+        "veld": "Titel",
+        "verplicht": "Vul een titel in.",
+        "bewaren": "Hernoemen"
+      },
+      "schaal": {
+        "tekst": "Schaal: 1 px = {waarde} mm",
+        "wissen": "Schaal wissen",
+        "titel": "Schaal instellen",
+        "beschrijving": "De gemeten lijn is {px} pixels lang. Vul de echte afstand in.",
+        "veld": "Echte afstand (mm)",
+        "ongeldig": "Vul een afstand groter dan 0 in.",
+        "bevestigen": "Schaal instellen"
+      },
+      "verwijderen": {
+        "titel": "Pagina verwijderen",
+        "beschrijving": "Op \"{titel}\" staat {aantal} geplaatst punt. Het komt terug in Te plaatsen. Je kunt het ongedaan maken. | Op \"{titel}\" staan {aantal} geplaatste punten. Ze komen terug in Te plaatsen. Je kunt het ongedaan maken.",
+        "bevestigen": "Verwijderen"
+      },
+      "hint": {
+        "plaatsen": "Klik op het plan om {label} te plaatsen.",
+        "meten": "Klik twee punten op het plan aan.",
+        "annuleren": "Annuleren"
+      },
+      "verplaatst": "{label} verplaatst van {van} naar {naar}",
       "canvas": {
         "planNietGevonden": "Plan niet gevonden",
         "planOpnieuwKiezen": "Plan opnieuw kiezen",
