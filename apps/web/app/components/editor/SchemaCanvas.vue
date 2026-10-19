@@ -2,15 +2,21 @@
 import { DocumentFout, magToevoegen } from "@elentrik/model";
 import { doelSoort, moetNegeren, spatieSchuift, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { markeringen as leidMarkeringenAf, type MarkeringSoort } from "~/editor/markeringen";
+import {
+  begrens as begrensWeergave,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  pan,
+  passendeWeergave as berekenPassend,
+  wielFactor,
+  zoomRond,
+  type Weergave,
+} from "~/editor/weergave";
 import { useEditorStore } from "~/stores/editor";
-
-type Weergave = { x: number; y: number; b: number; h: number };
 
 /** Ruimte (mm) rond de strook bij "Passend maken". */
 const MARGE_MM = 5;
-/** Zoom is begrensd tot 25 % – 400 % van de passende weergave. */
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 4;
+const ZOOM_GRENZEN = { min: MIN_ZOOM, max: MAX_ZOOM };
 /** Aantal pixels dat de muis moet bewegen voordat een klik een sleepbeweging wordt. */
 const SLEEP_DREMPEL_PX = 3;
 const SELECTIE_MARGE_MM = 1;
@@ -40,13 +46,8 @@ const sleept = ref(false);
 /** De weergave waarop de hele strook (plus marge) in het venster past, gecentreerd. */
 function passendeWeergave(): Weergave | null {
   const strook = store.opmaak?.strook;
-  if (!strook || grootte.breedte === 0 || grootte.hoogte === 0) return null;
-  const breedte = strook.breedte + 2 * MARGE_MM;
-  const hoogte = strook.hoogte + 2 * MARGE_MM;
-  const schaal = Math.min(grootte.breedte / breedte, grootte.hoogte / hoogte);
-  const b = grootte.breedte / schaal;
-  const h = grootte.hoogte / schaal;
-  return { x: (strook.breedte - b) / 2, y: (strook.hoogte - h) / 2, b, h };
+  if (!strook) return null;
+  return berekenPassend(strook, grootte, MARGE_MM);
 }
 
 function maakPassend(): void {
@@ -59,10 +60,7 @@ function maakPassend(): void {
 /** Houdt het midden van de weergave binnen de strook, zodat die niet uit beeld kan raken. */
 function begrens(w: Weergave): Weergave {
   const strook = store.opmaak?.strook;
-  if (!strook) return w;
-  const midX = Math.min(Math.max(w.x + w.b / 2, 0), strook.breedte);
-  const midY = Math.min(Math.max(w.y + w.h / 2, 0), strook.hoogte);
-  return { ...w, x: midX - w.b / 2, y: midY - w.h / 2 };
+  return strook ? begrensWeergave(w, strook) : w;
 }
 
 function zoomOpWiel(event: WheelEvent): void {
@@ -70,20 +68,12 @@ function zoomOpWiel(event: WheelEvent): void {
   const vensterEl = venster.value;
   if (!passend || !vensterEl) return;
   const rect = vensterEl.getBoundingClientRect();
-  const fx = (event.clientX - rect.left) / rect.width;
-  const fy = (event.clientY - rect.top) / rect.height;
-  const huidig = weergave.value;
-  // Wiel naar boven (negatieve deltaY) zoomt in.
-  // deltaMode 1 = regels, 2 = pagina's; zonder omrekening zoomt een muis met regelstappen nauwelijks.
-  const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1);
-  const factor = Math.exp(-delta * 0.0015);
-  const zoom = Math.min(Math.max((passend.b / huidig.b) * factor, MIN_ZOOM), MAX_ZOOM);
-  const b = passend.b / zoom;
-  const h = b * (grootte.hoogte / grootte.breedte);
-  // Het punt onder de cursor blijft op dezelfde plaats.
-  const ankerX = huidig.x + fx * huidig.b;
-  const ankerY = huidig.y + fy * huidig.h;
-  weergave.value = begrens({ x: ankerX - fx * b, y: ankerY - fy * h, b, h });
+  const anker = {
+    fx: (event.clientX - rect.left) / rect.width,
+    fy: (event.clientY - rect.top) / rect.height,
+  };
+  const factor = wielFactor(event.deltaY, event.deltaMode, window.innerHeight);
+  weergave.value = begrens(zoomRond(weergave.value, passend, anker, factor, grootte, ZOOM_GRENZEN));
 }
 
 type Sleep = { startX: number; startY: number; begin: Weergave; pointerId: number; actief: boolean };
@@ -118,11 +108,7 @@ function pointerMove(event: PointerEvent): void {
     vensterEl.setPointerCapture(event.pointerId);
   }
   const rect = vensterEl.getBoundingClientRect();
-  weergave.value = begrens({
-    ...s.begin,
-    x: s.begin.x - (dx / rect.width) * s.begin.b,
-    y: s.begin.y - (dy / rect.height) * s.begin.h,
-  });
+  weergave.value = begrens(pan(s.begin, dx, dy, { breedte: rect.width, hoogte: rect.height }));
 }
 
 function pointerUp(event: PointerEvent): void {
