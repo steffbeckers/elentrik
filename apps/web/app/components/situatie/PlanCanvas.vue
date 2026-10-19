@@ -1,23 +1,15 @@
 <script setup lang="ts">
 import type { NodeId } from "@elentrik/model";
 import { situatieLaagSvg } from "@elentrik/render";
-import { doelSoort, moetNegeren, spatieSchuift, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
+import { doelSoort, moetNegeren, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useBestandenApi } from "~/composables/useBestandenApi";
+import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeergave";
 import { useDocumentFoutMelding } from "~/composables/useDocumentFoutMelding";
-import { markeringen as leidMarkeringenAf, type MarkeringSoort } from "~/editor/markeringen";
-import {
-  begrens as begrensWeergave,
-  MAX_ZOOM,
-  MIN_ZOOM,
-  pan,
-  passendeWeergave as berekenPassend,
-  schermNaarInhoud,
-  wielFactor,
-  zoomRond,
-  type Weergave,
-} from "~/editor/weergave";
+import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
+import { schermNaarInhoud } from "~/editor/weergave";
 import { schuif, symboolGrootte } from "~/situatie/geometrie";
 import { situatieItems } from "~/situatie/items";
+import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
 import { situatieSneltoets } from "~/situatie/sneltoetsen";
 import { useEditorStore } from "~/stores/editor";
 import { useSituatieStore } from "~/stores/situatie";
@@ -38,13 +30,8 @@ const emit = defineEmits<{
   vervangPlan: [paginaId: string];
 }>();
 
-/** Het dataTransfer-type van een punt dat uit "Te plaatsen" gesleept wordt; de waarde is de nodeId. */
-const NODE_TYPE = "application/x-elentrik-node";
 /** Ruimte rond het plan bij "Passend maken", als fractie van de lange zijde van het raster. */
 const MARGE_FRACTIE = 0.02;
-const ZOOM_GRENZEN = { min: MIN_ZOOM, max: MAX_ZOOM };
-/** Aantal pixels dat de muis moet bewegen voordat een klik een sleepbeweging wordt. */
-const SLEEP_DREMPEL_PX = 3;
 /** Selectiekader en markering, als fractie van de symboolgrootte. */
 const KADER_HALF = 0.75;
 const MARKERING_STRAAL = 0.15;
@@ -59,17 +46,6 @@ const bestanden = useBestandenApi();
 const voerUit = useDocumentFoutMelding();
 
 const venster = useTemplateRef<HTMLElement>("venster");
-
-const grootte = reactive({ breedte: 0, hoogte: 0 });
-const weergave = ref<Weergave>({ x: 0, y: 0, b: 1, h: 1 });
-const viewBox = computed(() => {
-  const { x, y, b, h } = weergave.value;
-  return `${x} ${y} ${b} ${h}`;
-});
-let heeftPassendeWeergave = false;
-
-const ruimteIngedrukt = ref(false);
-const sleept = ref(false);
 
 const modus = computed<"normaal" | "plaats" | "meet">(() =>
   props.meetSchaal ? "meet" : props.teplaatsen !== null ? "plaats" : "normaal",
@@ -95,6 +71,9 @@ watch(
   },
 );
 
+/** Een pagina zonder plan, of met een plan dat niet laadt. */
+const planOntbreekt = computed(() => pagina.value !== undefined && (!achtergrond.value || planFout.value));
+
 const items = computed(() => {
   const doc = editor.document;
   const analyse = editor.analyse;
@@ -117,51 +96,40 @@ function planPunt(event: MouseEvent): { x: number; y: number } {
   return schermNaarInhoud(event.clientX, event.clientY, rect, weergave.value);
 }
 
-// --- Zoom en pan -----------------------------------------------------------
+// --- Zoom, pan en pinch (gedeeld met het eendraadschema) --------------------
 
-/** De weergave waarop het hele plan (plus marge) in het venster past, gecentreerd. */
-function passendeWeergave(): Weergave | null {
-  const i = inhoud.value;
-  if (!i) return null;
-  return berekenPassend(i, grootte, Math.max(i.breedte, i.hoogte) * MARGE_FRACTIE);
-}
+const canvas = useCanvasWeergave({
+  venster,
+  inhoud: () => inhoud.value,
+  marge: () => (inhoud.value ? Math.max(inhoud.value.breedte, inhoud.value.hoogte) * MARGE_FRACTIE : 0),
+  onderbreek: breekVerschuivingAf,
+});
+const { grootte, weergave, viewBox, ruimteIngedrukt, sleept, maakPassend, zoomOpWiel } = canvas;
 
-function maakPassend(): void {
-  const passend = passendeWeergave();
-  if (!passend) return;
-  weergave.value = passend;
-  heeftPassendeWeergave = true;
-}
+// Een andere pagina of een ander plan: opnieuw passend maken.
+watch(
+  () => {
+    const i = inhoud.value;
+    return `${pagina.value?.id ?? ""}|${achtergrond.value?.rasterBestandId ?? ""}|${i?.breedte}x${i?.hoogte}`;
+  },
+  () => canvas.passendOpnieuw(),
+);
 
-/** Houdt het midden van de weergave binnen het plan, zodat dat niet uit beeld kan raken. */
-function begrens(w: Weergave): Weergave {
-  const i = inhoud.value;
-  return i ? begrensWeergave(w, i) : w;
-}
-
-function zoomOpWiel(event: WheelEvent): void {
-  const passend = passendeWeergave();
-  const vensterEl = venster.value;
-  if (!passend || !vensterEl) return;
-  const rect = vensterEl.getBoundingClientRect();
-  const anker = {
-    fx: (event.clientX - rect.left) / rect.width,
-    fy: (event.clientY - rect.top) / rect.height,
-  };
-  const factor = wielFactor(event.deltaY, event.deltaMode, window.innerHeight);
-  weergave.value = begrens(zoomRond(weergave.value, passend, anker, factor, grootte, ZOOM_GRENZEN));
-}
-
-// --- Slepen: pannen of een symbool verschuiven -----------------------------
+// --- Een symbool verschuiven -----------------------------------------------
 
 type Positie = { x: number; y: number };
-type Begin = { startX: number; startY: number; pointerId: number; actief: boolean };
-type Sleep =
-  | (Begin & { soort: "pan"; begin: Weergave })
-  | (Begin & { soort: "symbool"; nodeId: NodeId; element: SVGGElement; verschil: Positie });
+type Verschuiving = {
+  startX: number;
+  startY: number;
+  pointerId: number;
+  actief: boolean;
+  nodeId: NodeId;
+  element: SVGGElement;
+  verschil: Positie;
+};
 
-let sleep: Sleep | null = null;
-let onderdrukKlik = false;
+let verschuiving: Verschuiving | null = null;
+const verschuift = ref(false);
 
 /** De lokale positie van het symbool dat verschoven wordt; geen documentoperatie tijdens het slepen. */
 const voorbeeld = ref<(Positie & { nodeId: NodeId }) | null>(null);
@@ -173,81 +141,89 @@ function positieVan(nodeId: NodeId): Positie | undefined {
   return v && v.nodeId === nodeId ? v : posities.value.get(nodeId);
 }
 
+/** Stopt het verschuiven en haalt de preview altijd weg; geeft de gestopte verschuiving terug. */
+function stopVerschuiving(): Verschuiving | null {
+  const v = verschuiving;
+  if (!v) return null;
+  verschuiving = null;
+  verschuift.value = false;
+  voorbeeld.value = null;
+  v.element.style.removeProperty("transform");
+  const el = venster.value;
+  if (el?.hasPointerCapture(v.pointerId)) el.releasePointerCapture(v.pointerId);
+  return v;
+}
+
+/** Breekt het verschuiven af zonder te plaatsen; de klik bij het latere loslaten telt niet. */
+function breekVerschuivingAf(): void {
+  const v = stopVerschuiving();
+  if (v) canvas.negeerTotLoslaten(v.pointerId);
+}
+
 function pointerDown(event: PointerEvent): void {
   if (event.button !== 0 || !venster.value) return;
+  // Een verschuiving waarvan de pointerup gemist werd, stopt hier zonder te plaatsen.
+  stopVerschuiving();
   const element = (event.target as Element).closest<SVGGElement>("[data-node-id]");
   const nodeId = element?.getAttribute("data-node-id") ?? null;
-  const begin = { startX: event.clientX, startY: event.clientY, pointerId: event.pointerId, actief: false };
-  if (element && nodeId !== null && !ruimteIngedrukt.value && modus.value === "normaal") {
-    const positie = posities.value.get(nodeId);
-    if (!positie) return;
-    const onderMuis = planPunt(event);
-    sleep = {
-      ...begin,
-      soort: "symbool",
-      nodeId,
-      element,
-      verschil: { x: positie.x - onderMuis.x, y: positie.y - onderMuis.y },
-    };
-    return;
-  }
-  // Pannen: op lege ruimte, met de spatie ingedrukt, of tijdens plaatsen en meten.
-  sleep = { ...begin, soort: "pan", begin: weergave.value };
+  const opSymbool = !ruimteIngedrukt.value && modus.value === "normaal" && event.isPrimary;
+  // Pannen: op lege ruimte, met de spatie ingedrukt, of tijdens plaatsen en meten. Twee vingers pinchen.
+  canvas.pointerDown(event, !(opSymbool && element !== null));
+  if (!opSymbool || !element || nodeId === null || canvas.pincht()) return;
+  const positie = posities.value.get(nodeId);
+  if (!positie) return;
+  const onderMuis = planPunt(event);
+  verschuiving = {
+    startX: event.clientX,
+    startY: event.clientY,
+    pointerId: event.pointerId,
+    actief: false,
+    nodeId,
+    element,
+    verschil: { x: positie.x - onderMuis.x, y: positie.y - onderMuis.y },
+  };
 }
 
 function pointerMove(event: PointerEvent): void {
-  const s = sleep;
+  canvas.pointerMove(event);
+  const v = verschuiving;
   const vensterEl = venster.value;
-  if (!s || !vensterEl || event.pointerId !== s.pointerId) return;
-  const dx = event.clientX - s.startX;
-  const dy = event.clientY - s.startY;
-  if (!s.actief) {
-    if (Math.hypot(dx, dy) < SLEEP_DREMPEL_PX) return;
-    s.actief = true;
-    sleept.value = true;
-    // Pas bij het slepen vastleggen: anders zou een gewone klik op het venster zelf landen.
-    vensterEl.setPointerCapture(event.pointerId);
-  }
-  if (s.soort === "pan") {
-    const rect = vensterEl.getBoundingClientRect();
-    weergave.value = begrens(pan(s.begin, dx, dy, { breedte: rect.width, hoogte: rect.height }));
+  if (!v || !vensterEl || event.pointerId !== v.pointerId) return;
+  // Geen knop meer ingedrukt: de pointerup is ons ontgaan.
+  if (event.buttons === 0) {
+    stopVerschuiving();
     return;
   }
+  if (!v.actief) {
+    if (Math.hypot(event.clientX - v.startX, event.clientY - v.startY) < SLEEP_DREMPEL_PX) return;
+    v.actief = true;
+    verschuift.value = true;
+    vensterEl.setPointerCapture(event.pointerId);
+  }
   const onderMuis = planPunt(event);
-  const p = binnenRaster({ x: onderMuis.x + s.verschil.x, y: onderMuis.y + s.verschil.y });
-  voorbeeld.value = { nodeId: s.nodeId, ...p };
+  const p = binnenRaster({ x: onderMuis.x + v.verschil.x, y: onderMuis.y + v.verschil.y });
+  voorbeeld.value = { nodeId: v.nodeId, ...p };
   // Een CSS-transform overschrijft het transform-attribuut zolang het slepen duurt.
-  s.element.style.transform = `translate(${p.x}px, ${p.y}px)`;
-}
-
-/** Stopt het slepen; geeft de beëindigde sleep terug. */
-function stopSlepen(pointerId: number): Sleep | null {
-  const s = sleep;
-  if (!s || pointerId !== s.pointerId) return null;
-  sleep = null;
-  sleept.value = false;
-  if (venster.value?.hasPointerCapture(pointerId)) venster.value.releasePointerCapture(pointerId);
-  if (s.soort === "symbool") s.element.style.removeProperty("transform");
-  return s;
+  v.element.style.transform = `translate(${p.x}px, ${p.y}px)`;
 }
 
 function pointerUp(event: PointerEvent): void {
-  const s = stopSlepen(event.pointerId);
-  if (!s) return;
-  const v = voorbeeld.value;
-  voorbeeld.value = null;
-  // Eén `plaats` bij het loslaten: één undo-stap.
-  if (s.soort === "symbool" && s.actief && v) plaatsOp(s.nodeId, v);
-  if (s.actief || ruimteIngedrukt.value) {
-    // De klik die op deze pointerup volgt, is geen selectie.
-    onderdrukKlik = true;
-    setTimeout(() => (onderdrukKlik = false), 0);
+  if (verschuiving?.pointerId === event.pointerId) {
+    const eind = voorbeeld.value;
+    const v = stopVerschuiving()!;
+    // Eén `plaats` bij het loslaten: één undo-stap. Een klik zonder beweging selecteert alleen.
+    if (v.actief && eind) {
+      plaatsOp(v.nodeId, eind);
+      canvas.onderdrukKlik();
+    }
   }
+  canvas.pointerUp(event);
 }
 
-/** Een afgebroken pointer verschuift niets. */
-function pointerCancel(event: PointerEvent): void {
-  if (stopSlepen(event.pointerId)) voorbeeld.value = null;
+/** `pointercancel` of `lostpointercapture`: niets verschuift. */
+function pointerAfgebroken(event: PointerEvent): void {
+  if (verschuiving?.pointerId === event.pointerId) stopVerschuiving();
+  canvas.pointerAfgebroken(event);
 }
 
 // --- Plaatsen --------------------------------------------------------------
@@ -263,12 +239,12 @@ function plaatsOp(nodeId: NodeId, punt: Positie): void {
 }
 
 function slepenBoven(event: DragEvent): void {
-  if (!achtergrond.value || !event.dataTransfer?.types.includes(NODE_TYPE)) return;
+  if (!achtergrond.value || !event.dataTransfer?.types.includes(NODE_SLEEP_TYPE)) return;
   event.preventDefault();
 }
 
 function neerzetten(event: DragEvent): void {
-  const nodeId = event.dataTransfer?.getData(NODE_TYPE);
+  const nodeId = event.dataTransfer?.getData(NODE_SLEEP_TYPE);
   if (!nodeId) return;
   event.preventDefault();
   plaatsOp(nodeId, planPunt(event));
@@ -278,12 +254,9 @@ function neerzetten(event: DragEvent): void {
 
 const meetpunten = ref<Positie[]>([]);
 
-watch(
-  () => [props.meetSchaal, pagina.value?.id],
-  () => {
-    meetpunten.value = [];
-  },
-);
+watch([() => props.meetSchaal, () => pagina.value?.id], () => {
+  meetpunten.value = [];
+});
 
 function meetKlik(punt: Positie): void {
   const p = binnenRaster(punt);
@@ -301,7 +274,7 @@ function meetKlik(punt: Positie): void {
 // --- Klikken: selecteren, plaatsen of meten --------------------------------
 
 function klik(event: MouseEvent): void {
-  if (onderdrukKlik || !achtergrond.value) return;
+  if (canvas.klikOnderdrukt() || !achtergrond.value) return;
   if (modus.value === "meet") {
     meetKlik(planPunt(event));
     return;
@@ -332,12 +305,10 @@ function soortVan(doel: EventTarget | null): ReturnType<typeof doelSoort> {
   return doel instanceof HTMLElement ? doelSoort(doel) : "overig";
 }
 
-/** Escape: eerst een lopende sleep, dan plaatsen of meten, anders de selectie. */
+/** Escape: eerst een lopende verschuiving, dan plaatsen of meten, anders de selectie. */
 function annuleer(): void {
-  const s = sleep;
-  if (s?.soort === "symbool") {
-    stopSlepen(s.pointerId);
-    voorbeeld.value = null;
+  if (verschuiving) {
+    breekVerschuivingAf();
     return;
   }
   if (modus.value !== "normaal") {
@@ -363,11 +334,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     return;
   }
   const soort = soortVan(event.target);
-  if (spatieSchuift(event.key, soort)) {
-    ruimteIngedrukt.value = true;
-    event.preventDefault();
-    return;
-  }
+  if (canvas.spatieOmlaag(event, soort)) return;
   const actie = situatieSneltoets({
     key: event.key,
     shiftKey: event.shiftKey,
@@ -377,6 +344,10 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     doelIsKnop: soort === "knop",
   });
   if (!actie) return;
+  // Zonder zichtbaar plan wijzigt niets de plaatsingen; ongedaan maken en opnieuw blijven werken.
+  if (planOntbreekt.value && (actie.soort === "draai" || actie.soort === "schuif" || actie.soort === "haalVanPlan")) {
+    return;
+  }
   event.preventDefault();
 
   switch (actie.soort) {
@@ -402,14 +373,8 @@ function toetsIngedrukt(event: KeyboardEvent): void {
   }
 }
 
-function toetsLosgelaten(event: KeyboardEvent): void {
-  if (event.key === " ") ruimteIngedrukt.value = false;
-}
-
-/** Een keyup buiten het venster komt niet aan: laat de spatie los als het venster de focus verliest. */
-function spatieLoslaten(): void {
-  ruimteIngedrukt.value = false;
-}
+onMounted(() => window.addEventListener("keydown", toetsIngedrukt));
+onBeforeUnmount(() => window.removeEventListener("keydown", toetsIngedrukt));
 
 // --- Overlay ---------------------------------------------------------------
 
@@ -430,13 +395,6 @@ const markeringen = computed(() => {
   });
 });
 
-const MARKERING_KLASSE: Record<MarkeringSoort, string> = {
-  fout: "fill-red-600",
-  waarschuwing: "fill-amber-500",
-  info: "fill-blue-600",
-  afgeweken: "fill-neutral-400",
-};
-
 /** De werkbalk boven het eerste geselecteerde symbool op deze pagina, binnen het venster gehouden. */
 const werkbalk = computed(() => {
   const w = weergave.value;
@@ -450,58 +408,6 @@ const werkbalk = computed(() => {
     top: `${begrensd(boven, WERKBALK_HOOGTE_PX, grootte.hoogte)}px`,
   };
 });
-
-/** Een pagina zonder plan, of met een plan dat niet laadt. */
-const planOntbreekt = computed(() => pagina.value !== undefined && (!achtergrond.value || planFout.value));
-
-// --- Levenscyclus ----------------------------------------------------------
-
-let observer: ResizeObserver | undefined;
-
-function metingBijgewerkt(breedte: number, hoogte: number): void {
-  if (breedte === 0 || hoogte === 0) return;
-  const vorige = { ...grootte };
-  grootte.breedte = breedte;
-  grootte.hoogte = hoogte;
-  if (!heeftPassendeWeergave) {
-    maakPassend();
-  } else if (vorige.breedte > 0) {
-    // Zelfde schaal, ander venster: de breedte blijft, de hoogte volgt de beeldverhouding.
-    const w = weergave.value;
-    weergave.value = { ...w, h: w.b * (hoogte / breedte) };
-  }
-}
-
-onMounted(() => {
-  const el = venster.value;
-  if (el) {
-    metingBijgewerkt(el.clientWidth, el.clientHeight);
-    observer = new ResizeObserver(() => metingBijgewerkt(el.clientWidth, el.clientHeight));
-    observer.observe(el);
-  }
-  window.addEventListener("keydown", toetsIngedrukt);
-  window.addEventListener("keyup", toetsLosgelaten);
-  window.addEventListener("blur", spatieLoslaten);
-});
-
-onBeforeUnmount(() => {
-  observer?.disconnect();
-  window.removeEventListener("keydown", toetsIngedrukt);
-  window.removeEventListener("keyup", toetsLosgelaten);
-  window.removeEventListener("blur", spatieLoslaten);
-});
-
-// Een andere pagina of een ander plan: opnieuw passend maken.
-watch(
-  () => {
-    const i = inhoud.value;
-    return `${pagina.value?.id ?? ""}|${achtergrond.value?.rasterBestandId ?? ""}|${i?.breedte}x${i?.hoogte}`;
-  },
-  () => {
-    heeftPassendeWeergave = false;
-    maakPassend();
-  },
-);
 </script>
 
 <template>
@@ -511,13 +417,14 @@ watch(
       data-testid="plan-canvas"
       class="relative size-full touch-none select-none overflow-hidden bg-neutral-100 text-neutral-900"
       :class="
-        sleept ? 'cursor-grabbing' : ruimteIngedrukt ? 'cursor-grab' : modus !== 'normaal' ? 'cursor-crosshair' : ''
+        sleept || verschuift ? 'cursor-grabbing' : ruimteIngedrukt ? 'cursor-grab' : modus !== 'normaal' ? 'cursor-crosshair' : ''
       "
       @wheel.prevent="zoomOpWiel"
       @pointerdown="pointerDown"
       @pointermove="pointerMove"
       @pointerup="pointerUp"
-      @pointercancel="pointerCancel"
+      @pointercancel="pointerAfgebroken"
+      @lostpointercapture="pointerAfgebroken"
       @click="klik"
       @dragover="slepenBoven"
       @drop="neerzetten"
@@ -603,24 +510,28 @@ watch(
       class="absolute flex -translate-x-1/2 -translate-y-full gap-1 rounded-md border border-default bg-white p-1 text-neutral-900 shadow-sm"
       :style="werkbalk"
     >
-      <UButton
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        class="text-neutral-900 hover:bg-neutral-100"
-        icon="i-lucide-rotate-ccw"
-        :aria-label="$t('editor.situatie.canvas.draaiLinks')"
-        @click="voerUit(() => situatie.draaiSelectie(-1))"
-      />
-      <UButton
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        class="text-neutral-900 hover:bg-neutral-100"
-        icon="i-lucide-rotate-cw"
-        :aria-label="$t('editor.situatie.canvas.draaiRechts')"
-        @click="voerUit(() => situatie.draaiSelectie(1))"
-      />
+      <UTooltip :text="$t('editor.situatie.canvas.draaiLinks')">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          class="text-neutral-900 hover:bg-neutral-100"
+          icon="i-lucide-rotate-ccw"
+          :aria-label="$t('editor.situatie.canvas.draaiLinks')"
+          @click="voerUit(() => situatie.draaiSelectie(-1))"
+        />
+      </UTooltip>
+      <UTooltip :text="$t('editor.situatie.canvas.draaiRechts')">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          class="text-neutral-900 hover:bg-neutral-100"
+          icon="i-lucide-rotate-cw"
+          :aria-label="$t('editor.situatie.canvas.draaiRechts')"
+          @click="voerUit(() => situatie.draaiSelectie(1))"
+        />
+      </UTooltip>
       <UButton
         color="neutral"
         variant="ghost"

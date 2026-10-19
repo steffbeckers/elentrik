@@ -5,6 +5,7 @@ import {
   MIN_ZOOM,
   pan,
   passendeWeergave,
+  pinch,
   schermNaarInhoud,
   wielFactor,
   zoomRond,
@@ -141,5 +142,57 @@ describe("schermNaarInhoud", () => {
 
   test("de linkerbovenhoek van het venster is de oorsprong van de weergave", () => {
     expect(schermNaarInhoud(20, 10, rect, w)).toEqual({ x: -2000, y: 0 });
+  });
+});
+
+describe("pinch", () => {
+  const RECT = { left: 100, top: 50, width: 1000, height: 500 };
+  const PASSEND: Weergave = { x: -2000, y: 0, b: 12000, h: 6000 };
+
+  test("zonder beweging blijft de weergave gelijk", () => {
+    const start = { a: { x: 300, y: 200 }, b: { x: 700, y: 400 } };
+    const w = pinch(PASSEND, PASSEND, start, start, RECT, GRENZEN);
+    expect(w.x).toBeCloseTo(PASSEND.x, 9);
+    expect(w.y).toBeCloseTo(PASSEND.y, 9);
+    expect(w.b).toBeCloseTo(PASSEND.b, 9);
+    expect(w.h).toBeCloseTo(PASSEND.h, 9);
+  });
+
+  test("vingers twee keer zo ver uit elkaar zoomt 2x in rond het midden", () => {
+    // Midden (600, 300) op het scherm = fractie (0.5, 0.5) = inhoud (4000, 3000).
+    const start = { a: { x: 500, y: 300 }, b: { x: 700, y: 300 } };
+    const nu = { a: { x: 400, y: 300 }, b: { x: 800, y: 300 } };
+    const w = pinch(PASSEND, PASSEND, start, nu, RECT, GRENZEN);
+    expect(w.b).toBeCloseTo(6000, 9);
+    expect(w.h).toBeCloseTo(3000, 9);
+    expect(w.x + 0.5 * w.b).toBeCloseTo(4000, 9);
+    expect(w.y + 0.5 * w.h).toBeCloseTo(3000, 9);
+  });
+
+  test("het midden pant mee: het inhoudspunt onder het startmidden volgt de vingers", () => {
+    const start = { a: { x: 200, y: 150 }, b: { x: 400, y: 150 } };
+    // Zelfde afstand, midden 100 px naar rechts en 50 px naar beneden.
+    const nu = { a: { x: 300, y: 200 }, b: { x: 500, y: 200 } };
+    const w = pinch(PASSEND, PASSEND, start, nu, RECT, GRENZEN);
+    const onder = schermNaarInhoud(300, 150, RECT, PASSEND);
+    const nuOnder = schermNaarInhoud(400, 200, RECT, w);
+    expect(w.b).toBeCloseTo(PASSEND.b, 9);
+    expect(nuOnder.x).toBeCloseTo(onder.x, 9);
+    expect(nuOnder.y).toBeCloseTo(onder.y, 9);
+  });
+
+  test("de zoom blijft binnen de grenzen", () => {
+    const start = { a: { x: 590, y: 300 }, b: { x: 610, y: 300 } };
+    const ver = { a: { x: 100, y: 300 }, b: { x: 1100, y: 300 } };
+    expect(pinch(PASSEND, PASSEND, start, ver, RECT, GRENZEN).b).toBeCloseTo(PASSEND.b / MAX_ZOOM, 9);
+    expect(pinch(PASSEND, PASSEND, ver, start, RECT, GRENZEN).b).toBeCloseTo(PASSEND.b / MIN_ZOOM, 9);
+  });
+
+  test("twee vingers op hetzelfde punt bij de start zoomen niet", () => {
+    const start = { a: { x: 600, y: 300 }, b: { x: 600, y: 300 } };
+    const nu = { a: { x: 500, y: 300 }, b: { x: 700, y: 300 } };
+    const w = pinch(PASSEND, PASSEND, start, nu, RECT, GRENZEN);
+    expect(Number.isFinite(w.b)).toBe(true);
+    expect(w.b).toBeCloseTo(PASSEND.b, 9);
   });
 });

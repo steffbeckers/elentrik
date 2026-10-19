@@ -61,6 +61,35 @@ export function pan(begin: Weergave, dx_px: number, dy_px: number, venster: Afme
   };
 }
 
+export type Punt = { x: number; y: number };
+export type Vingers = { a: Punt; b: Punt };
+type Rechthoek = { left: number; top: number; width: number; height: number };
+
+/**
+ * Twee-vingerzoom: zoomt met de verhouding van de vingerafstanden (nu / start) en pant met het
+ * midden mee, zodat het inhoudspunt dat bij de start onder het midden lag, onder het huidige
+ * midden blijft. Punten zijn schermcoördinaten (clientX/clientY); de zoom is relatief aan de
+ * passende weergave en blijft binnen `grenzen`. Begrenzen op de inhoud doet de aanroeper.
+ */
+export function pinch(
+  begin: Weergave,
+  passend: Weergave,
+  start: Vingers,
+  nu: Vingers,
+  rect: Rechthoek,
+  grenzen: { min: number; max: number },
+): Weergave {
+  const startAfstand = Math.hypot(start.b.x - start.a.x, start.b.y - start.a.y);
+  const factor = startAfstand > 0 ? Math.hypot(nu.b.x - nu.a.x, nu.b.y - nu.a.y) / startAfstand : 1;
+  const zoom = Math.min(Math.max((passend.b / begin.b) * factor, grenzen.min), grenzen.max);
+  const b = passend.b / zoom;
+  const h = b * (rect.height / rect.width);
+  const anker = schermNaarInhoud((start.a.x + start.b.x) / 2, (start.a.y + start.b.y) / 2, rect, begin);
+  const fx = ((nu.a.x + nu.b.x) / 2 - rect.left) / rect.width;
+  const fy = ((nu.a.y + nu.b.y) / 2 - rect.top) / rect.height;
+  return { x: anker.x - fx * b, y: anker.y - fy * h, b, h };
+}
+
 /**
  * De zoomfactor van één wielpuls. Wiel naar boven (negatieve deltaY) zoomt in.
  * deltaMode 1 = regels, 2 = pagina's; zonder omrekening zoomt een muis met regelstappen nauwelijks.
