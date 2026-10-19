@@ -1,0 +1,369 @@
+{
+  "id": "6b075a96-1213-4600-94c4-3fb9ec28e497",
+  "prevId": "21a1931f-9302-4e30-b175-3bb5d43c26b9",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.bedrijfsinstellingen": {
+      "name": "bedrijfsinstellingen",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "installateur": {
+          "name": "installateur",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"naam\":\"\"}'::jsonb"
+        },
+        "gewijzigd": {
+          "name": "gewijzigd",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bestanden": {
+      "name": "bestanden",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "soort": {
+          "name": "soort",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime": {
+          "name": "mime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grootte": {
+          "name": "grootte",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sleutel": {
+          "name": "sleutel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aangemaakt": {
+          "name": "aangemaakt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bestanden_project_id_projecten_id_fk": {
+          "name": "bestanden_project_id_projecten_id_fk",
+          "tableFrom": "bestanden",
+          "tableTo": "projecten",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.exports": {
+      "name": "exports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "snapshot_id": {
+          "name": "snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bestand_id": {
+          "name": "bestand_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "versie_label": {
+          "name": "versie_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "papier": {
+          "name": "papier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "onderdelen": {
+          "name": "onderdelen",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aantal_fouten": {
+          "name": "aantal_fouten",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aantal_waarschuwingen": {
+          "name": "aantal_waarschuwingen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aangemaakt": {
+          "name": "aangemaakt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "exports_project_id_projecten_id_fk": {
+          "name": "exports_project_id_projecten_id_fk",
+          "tableFrom": "exports",
+          "tableTo": "projecten",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "exports_snapshot_id_snapshots_id_fk": {
+          "name": "exports_snapshot_id_snapshots_id_fk",
+          "tableFrom": "exports",
+          "tableTo": "snapshots",
+          "columnsFrom": [
+            "snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "exports_bestand_id_bestanden_id_fk": {
+          "name": "exports_bestand_id_bestanden_id_fk",
+          "tableFrom": "exports",
+          "tableTo": "bestanden",
+          "columnsFrom": [
+            "bestand_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.projecten": {
+      "name": "projecten",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "naam": {
+          "name": "naam",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "klantnaam": {
+          "name": "klantnaam",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "document": {
+          "name": "document",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "versie": {
+          "name": "versie",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "aangemaakt": {
+          "name": "aangemaakt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "gewijzigd": {
+          "name": "gewijzigd",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "verwijderd": {
+          "name": "verwijderd",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.snapshots": {
+      "name": "snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "versie": {
+          "name": "versie",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document": {
+          "name": "document",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reden": {
+          "name": "reden",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aangemaakt": {
+          "name": "aangemaakt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "snapshots_project_id_projecten_id_fk": {
+          "name": "snapshots_project_id_projecten_id_fk",
+          "tableFrom": "snapshots",
+          "tableTo": "projecten",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

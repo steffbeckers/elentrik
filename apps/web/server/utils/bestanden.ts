@@ -4,7 +4,7 @@
 // rechtstreeks (ruling E1).
 import { createError, getHeader, getRouterParam, readMultipartFormData, type H3Event } from "h3";
 import { z } from "zod";
-import { MAX_UPLOAD_BYTES } from "../../shared/bestandsinhoud";
+import { MAX_LOGO_BYTES, MAX_UPLOAD_BYTES } from "../../shared/bestandsinhoud";
 import { BestandFout, type PlanSoort } from "../bestanden/repo";
 
 const IdSchema = z.uuid();
@@ -21,10 +21,10 @@ export function bestandId(event: H3Event): string {
 }
 
 /** Weigert een te grote upload (413) op basis van `content-length`, vóór de body gelezen wordt. */
-export function controleerUploadGrootte(event: H3Event): void {
+export function controleerUploadGrootte(event: H3Event, maxBytes: number = MAX_UPLOAD_BYTES): void {
   const waarde = getHeader(event, "content-length")?.trim();
   if (waarde === undefined || !/^\d+$/.test(waarde)) return;
-  if (Number(waarde) > MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES) {
+  if (Number(waarde) > maxBytes + MULTIPART_OVERHEAD_BYTES) {
     throw createError({ statusCode: 413, statusMessage: "Bestand te groot" });
   }
 }
@@ -45,6 +45,15 @@ export async function leesPlanUpload(
     soort: soort.data,
     data: new Uint8Array(bestand.data.buffer, bestand.data.byteOffset, bestand.data.byteLength),
   };
+}
+
+/** Leest het multipart-veld `bestand` van een logo-upload; een ontbrekend veld geeft 400. */
+export async function leesLogoUpload(event: H3Event): Promise<Uint8Array> {
+  controleerUploadGrootte(event, MAX_LOGO_BYTES);
+  const delen = await readMultipartFormData(event);
+  const bestand = delen?.find((deel) => deel.name === "bestand");
+  if (!bestand) throw createError({ statusCode: 400, statusMessage: "Ongeldige invoer" });
+  return new Uint8Array(bestand.data.buffer, bestand.data.byteOffset, bestand.data.byteLength);
 }
 
 /** Voert een repo-aanroep uit en vertaalt BestandFout naar 404, 413, 415 of 422. */
