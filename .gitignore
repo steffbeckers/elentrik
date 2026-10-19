@@ -8,3 +8,4 @@ apps/web/.output
 .env
 apps/web/test-results
 apps/web/playwright-report
+apps/web/.data/

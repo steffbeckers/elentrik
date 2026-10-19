@@ -10,3 +10,15 @@ export const projecten = pgTable("projecten", {
   gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
   verwijderd: timestamp("verwijderd", { withTimezone: true }),
 });
+
+export const bestanden = pgTable("bestanden", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projecten.id),
+  soort: text("soort", { enum: ["plan-origineel", "plan-raster"] }).notNull(),
+  mime: text("mime").notNull(),
+  grootte: integer("grootte").notNull(),
+  sleutel: text("sleutel").notNull(),
+  aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
+});
