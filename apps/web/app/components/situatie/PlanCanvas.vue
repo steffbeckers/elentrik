@@ -162,8 +162,9 @@ function breekVerschuivingAf(): void {
 
 function pointerDown(event: PointerEvent): void {
   if (event.button !== 0 || !venster.value) return;
-  // Een verschuiving waarvan de pointerup gemist werd, stopt hier zonder te plaatsen.
-  stopVerschuiving();
+  // Een verschuiving waarvan de pointerup gemist werd of die een tweede vinger onderbreekt, stopt
+  // hier zonder te plaatsen; de klik bij het loslaten van die eerste pointer telt niet.
+  breekVerschuivingAf();
   const element = (event.target as Element).closest<SVGGElement>("[data-node-id]");
   const nodeId = element?.getAttribute("data-node-id") ?? null;
   const opSymbool = !ruimteIngedrukt.value && modus.value === "normaal" && event.isPrimary;
@@ -220,7 +221,7 @@ function pointerUp(event: PointerEvent): void {
   canvas.pointerUp(event);
 }
 
-/** `pointercancel` of `lostpointercapture`: niets verschuift. */
+/** `pointercancel`, of `lostpointercapture` van het venster zelf (`.self`): niets verschuift. */
 function pointerAfgebroken(event: PointerEvent): void {
   if (verschuiving?.pointerId === event.pointerId) stopVerschuiving();
   canvas.pointerAfgebroken(event);
@@ -424,7 +425,7 @@ const werkbalk = computed(() => {
       @pointermove="pointerMove"
       @pointerup="pointerUp"
       @pointercancel="pointerAfgebroken"
-      @lostpointercapture="pointerAfgebroken"
+      @lostpointercapture.self="pointerAfgebroken"
       @click="klik"
       @dragover="slepenBoven"
       @drop="neerzetten"

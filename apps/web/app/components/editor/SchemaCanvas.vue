@@ -236,7 +236,7 @@ watchPostEffect(() => {
       @pointermove="canvas.pointerMove"
       @pointerup="canvas.pointerUp"
       @pointercancel="canvas.pointerAfgebroken"
-      @lostpointercapture="canvas.pointerAfgebroken"
+      @lostpointercapture.self="canvas.pointerAfgebroken"
     >
       <!-- Basislaag. v-html is hier veilig: `render` escapet alle documenttekst. -->
       <div ref="basis" class="basis absolute inset-0" @click="klikOpBasis" v-html="store.svg" />

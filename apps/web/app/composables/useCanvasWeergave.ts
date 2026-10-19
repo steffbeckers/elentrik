@@ -135,8 +135,8 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
   function startPinch(): void {
     const [eerste, tweede] = [...aanraking];
     if (!eerste || !tweede) return;
-    const pan = stopPan();
-    if (pan) negeerTotLoslaten(pan.pointerId);
+    const gestopt = stopPan();
+    if (gestopt) negeerTotLoslaten(gestopt.pointerId);
     opties.onderbreek?.();
     pinchSleep = { a: eerste[0], b: tweede[0], start: { a: eerste[1], b: tweede[1] }, begin: weergave.value };
     sleept.value = true;
@@ -223,7 +223,11 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
     if (s && (s.actief || ruimteIngedrukt.value)) onderdrukKlik();
   }
 
-  /** `pointercancel` of `lostpointercapture`: de beweging stopt zonder klik. */
+  /**
+   * `pointercancel`, of `lostpointercapture` van het venster zelf (bind met `.self`: bij touch en pen
+   * verliest het kindelement onder de vinger zijn impliciete capture zodra het venster ze overneemt,
+   * en dat mag de sleep niet stoppen). De beweging stopt zonder klik.
+   */
   function pointerAfgebroken(event: PointerEvent): void {
     stopPan(event.pointerId);
     // Een vrijgegeven capture (bv. bij de start van een pinch) laat de vinger zelf op het venster.
