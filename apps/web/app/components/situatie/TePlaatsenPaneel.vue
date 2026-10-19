@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { NodeId } from "@elentrik/model";
 import { tekenSymbool } from "@elentrik/symbols";
+import { useNodeTekst } from "~/composables/useNodeTekst";
 import { GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, nodeLabel, tePlaatsen } from "~/situatie/items";
 import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
 import { useEditorStore } from "~/stores/editor";
@@ -10,6 +11,7 @@ const gekozen = defineModel<NodeId | null>("gekozen", { default: null });
 
 const editor = useEditorStore();
 const { t } = useI18n();
+const { nodeTekst } = useNodeTekst();
 
 function groepTitel(kringLabel: string): string {
   if (kringLabel === GROEP_VERDEELBORDEN) return t("editor.situatie.tePlaatsen.verdeelborden");
@@ -27,13 +29,13 @@ const groepen = computed(() => {
     items: groep.nodeIds.flatMap((nodeId) => {
       const node = doc.nodes[nodeId];
       if (!node) return [];
-      const label = nodeLabel(doc, analyse, nodeId);
+      // Puntlabels zijn uniek ("A1"); bordnamen niet, en een bord of een punt zonder kring kan zonder label zijn.
+      const puntLabel = node.type === "verdeelbord" ? "" : nodeLabel(doc, analyse, nodeId);
       return [
         {
           nodeId,
-          label,
-          // Een punt zonder kring of een naamloos bord heeft geen label: dan het type.
-          tekst: label || t(`editor.types.${node.type}`),
+          testId: `te-plaatsen-${puntLabel || nodeId}`,
+          tekst: nodeTekst(nodeId),
           symbool: tekenSymbool(node),
         },
       ];
@@ -79,7 +81,7 @@ function sleepStart(event: DragEvent, nodeId: NodeId): void {
           <button
             type="button"
             draggable="true"
-            :data-testid="`te-plaatsen-${item.label || item.nodeId}`"
+            :data-testid="item.testId"
             :aria-pressed="gekozen === item.nodeId"
             class="flex w-full cursor-grab items-center gap-2 rounded-md px-2 py-1 text-left text-sm active:cursor-grabbing"
             :class="gekozen === item.nodeId ? 'bg-primary/10 text-primary ring-1 ring-primary' : 'hover:bg-elevated'"

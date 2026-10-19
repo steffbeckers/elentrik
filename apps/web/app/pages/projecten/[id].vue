@@ -15,7 +15,7 @@ import TePlaatsenPaneel from "~/components/situatie/TePlaatsenPaneel.vue";
 import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
 import { httpStatus } from "~/composables/useProjectenApi";
-import { nodeLabel } from "~/situatie/items";
+import { useNodeTekst } from "~/composables/useNodeTekst";
 import { useEditorStore } from "~/stores/editor";
 import { useSituatieStore } from "~/stores/situatie";
 
@@ -25,6 +25,7 @@ const id = String(route.params.id);
 const api = useProjectenApi();
 const store = useEditorStore();
 const situatie = useSituatieStore();
+const { nodeTekst } = useNodeTekst();
 const { t } = useI18n();
 const toast = useToast();
 
@@ -162,18 +163,9 @@ watch(schaalOpen, (open) => {
   if (!open) meetPaginaId.value = null;
 });
 
-/** Het label van een node, of zijn type als hij geen label heeft (een punt zonder kring, een naamloos bord). */
-function labelVan(nodeId: NodeId): string {
-  const doc = store.document;
-  const analyse = store.analyse;
-  const node = doc?.nodes[nodeId];
-  if (!doc || !analyse || !node) return "";
-  return nodeLabel(doc, analyse, nodeId) || t(`editor.types.${node.type}`);
-}
-
 const hint = computed(() => {
   if (meetSchaal.value) return t("editor.situatie.hint.meten");
-  if (teplaatsen.value !== null) return t("editor.situatie.hint.plaatsen", { label: labelVan(teplaatsen.value) });
+  if (teplaatsen.value !== null) return t("editor.situatie.hint.plaatsen", { label: nodeTekst(teplaatsen.value) });
   return null;
 });
 
@@ -181,7 +173,7 @@ function geplaatst(nodeId: NodeId, vanPagina: string | null): void {
   stopPlaatsenEnMeten();
   const naar = situatie.actievePagina?.titel;
   if (vanPagina === null || naar === undefined) return;
-  toast.add({ title: t("editor.situatie.verplaatst", { label: labelVan(nodeId), van: vanPagina, naar }) });
+  toast.add({ title: t("editor.situatie.verplaatst", { label: nodeTekst(nodeId), van: vanPagina, naar }) });
 }
 
 function schaalInstellen(paginaId: string): void {

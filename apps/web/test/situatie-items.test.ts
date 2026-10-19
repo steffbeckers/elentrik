@@ -88,6 +88,24 @@ describe("situatieItems", () => {
     expect(situatieItems(d2, analyseer(d2), m.paginaId)[0]!.label).toBe("");
   });
 
+  test("een naamloos verdeelbord krijgt de meegegeven terugvaltekst als label", () => {
+    const zonderNaam = installatie().verdeelbord((b) => b.als("bord").kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))).bouw();
+    const m = metPagina(zonderNaam.doc);
+    const doc = plaats(m.doc, m.paginaId, zonderNaam.ids["bord"]!, { x: 5, y: 6, rotatie: 0 }).doc;
+    const items = situatieItems(doc, analyseer(doc), m.paginaId, (type) => `type:${type}`);
+    expect(items[0]!.label).toBe("type:verdeelbord");
+  });
+
+  test("de terugvaltekst raakt een bestaand label niet", () => {
+    const { doc: start, ids } = bouw();
+    const { doc: metP, paginaId } = metPagina(start);
+    const [cd1] = puntIds(metP, "contactdoos");
+    let doc = plaats(metP, paginaId, ids["bord"]!, { x: 5, y: 6, rotatie: 0 }).doc;
+    doc = plaats(doc, paginaId, cd1!, { x: 7, y: 8, rotatie: 0 }).doc;
+    const labels = situatieItems(doc, analyseer(doc), paginaId, () => "terugval").map((i) => i.label);
+    expect(labels).toEqual(["Hoofdbord", "A1"]);
+  });
+
   test("onbekende pagina geeft een lege lijst", () => {
     const { doc } = bouw();
     expect(situatieItems(doc, analyseer(doc), "bestaat-niet")).toEqual([]);
@@ -187,6 +205,20 @@ describe("nodeLabel", () => {
     expect(nodeLabel(doc, analyseer(doc), ids["bord"]!)).toBe("Hoofdbord");
     const zonderNaam = installatie().verdeelbord((b) => b.als("bord").kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))).bouw();
     expect(nodeLabel(zonderNaam.doc, analyseer(zonderNaam.doc), zonderNaam.ids["bord"]!)).toBe("");
+  });
+
+  test("een punt zonder kring of een naamloos bord krijgt de terugvaltekst van zijn type", () => {
+    const { doc, cd } = losPunt();
+    expect(nodeLabel(doc, analyseer(doc), cd, (type) => `type:${type}`)).toBe("type:contactdoos");
+    const zonderNaam = installatie().verdeelbord((b) => b.als("bord").kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))).bouw();
+    expect(nodeLabel(zonderNaam.doc, analyseer(zonderNaam.doc), zonderNaam.ids["bord"]!, (type) => `type:${type}`)).toBe(
+      "type:verdeelbord",
+    );
+  });
+
+  test("een onbekende node geeft ook met terugval een lege tekst", () => {
+    const { doc } = bouw();
+    expect(nodeLabel(doc, analyseer(doc), "bestaat-niet", () => "terugval")).toBe("");
   });
 
   test("een punt zonder kring of een onbekende node geeft een lege tekst", () => {

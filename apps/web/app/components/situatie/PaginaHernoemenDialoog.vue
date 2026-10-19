@@ -24,7 +24,7 @@ function valideer(waarden: typeof formulier) {
 function bewaar(): void {
   const paginaId = props.paginaId;
   if (paginaId === null) return;
-  if (voerUit(() => situatie.hernoem(paginaId, formulier.titel))) open.value = false;
+  if (voerUit(() => situatie.hernoem(paginaId, formulier.titel.trim()))) open.value = false;
 }
 </script>
 

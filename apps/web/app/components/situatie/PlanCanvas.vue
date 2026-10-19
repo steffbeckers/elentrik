@@ -5,6 +5,7 @@ import { doelSoort, moetNegeren, WIDGET_SELECTOR } from "~/composables/sneltoets
 import { useBestandenApi } from "~/composables/useBestandenApi";
 import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeergave";
 import { useDocumentFoutMelding } from "~/composables/useDocumentFoutMelding";
+import { useNodeTekst } from "~/composables/useNodeTekst";
 import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
 import { schermNaarInhoud } from "~/editor/weergave";
 import { schuif, symboolGrootte } from "~/situatie/geometrie";
@@ -44,6 +45,7 @@ const editor = useEditorStore();
 const situatie = useSituatieStore();
 const bestanden = useBestandenApi();
 const voerUit = useDocumentFoutMelding();
+const { terugval } = useNodeTekst();
 
 const venster = useTemplateRef<HTMLElement>("venster");
 
@@ -78,7 +80,7 @@ const items = computed(() => {
   const doc = editor.document;
   const analyse = editor.analyse;
   const p = pagina.value;
-  return doc && analyse && p ? situatieItems(doc, analyse, p.id) : [];
+  return doc && analyse && p ? situatieItems(doc, analyse, p.id, terugval) : [];
 });
 
 /** De enige v-html-bron: `render` escapet alle documenttekst. */
