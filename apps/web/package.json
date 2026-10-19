@@ -12,7 +12,8 @@
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "e2e:fixtures": "node e2e/fixtures/maak-fixtures.mjs"
   },
   "dependencies": {
     "@elentrik/arei": "workspace:*",
