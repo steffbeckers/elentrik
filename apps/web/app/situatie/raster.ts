@@ -21,14 +21,17 @@ export function verkleinMaat(
     : { breedte: Math.floor(breedte * factor), hoogte: MAX_RASTER_PX };
 }
 
-/** Paginatitel uit de bestandsnaam (zonder extensie), met `p<n>` voor een PDF-pagina. */
+/**
+ * Paginatitel uit de bestandsnaam (zonder extensie), met `p<n>` voor een PDF-pagina. Zonder
+ * bruikbare naam wordt het `standaardTitel`: de vertaalde tekst die de aanroeper meegeeft.
+ */
 export function paginaTitel(
   bestandsnaam: string,
   pdfPagina: number | undefined,
-  aantalPaginas: number,
+  standaardTitel: string,
 ): string {
   const naam = bestandsnaam.replace(/\.[^.]*$/, "").trim();
-  if (naam === "") return `Pagina ${aantalPaginas + 1}`;
+  if (naam === "") return standaardTitel;
   return pdfPagina === undefined ? naam : `${naam} p${pdfPagina}`;
 }
 
@@ -36,17 +39,13 @@ type Maat = { b: number; h: number };
 
 /**
  * Moet een afbeelding via een canvas opnieuw worden gecodeerd? Ja als de lange zijde boven
- * `maxPx` ligt, of als de oriëntatie-bewuste maat (`standaard`) afwijkt van de ruwe maat uit
- * de bestandskop (`ruw`): de server leest de kop, dus een EXIF-draaiing moet uit het bestand zijn.
+ * `maxPx` ligt, of als de EXIF-oriëntatie uit de originele bytes niet 1 is: de server leest de
+ * ruwe kop, dus de draaiing of spiegeling moet uit het bestand zijn, ook als de maat gelijk blijft.
  */
 export function moetHercoderen(
-  standaard: Maat,
-  ruw: Maat,
+  maat: Maat,
+  orientatie: number,
   maxPx: number,
 ): boolean {
-  return (
-    Math.max(standaard.b, standaard.h) > maxPx ||
-    standaard.b !== ruw.b ||
-    standaard.h !== ruw.h
-  );
+  return Math.max(maat.b, maat.h) > maxPx || orientatie !== 1;
 }

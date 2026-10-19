@@ -7,7 +7,7 @@ import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeer
 import { useDocumentFoutMelding } from "~/composables/useDocumentFoutMelding";
 import { useNodeTekst } from "~/composables/useNodeTekst";
 import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
-import { schermNaarInhoud } from "~/editor/weergave";
+import { inhoudNaarScherm, maxPlanZoom, schermNaarInhoud } from "~/editor/weergave";
 import { schuif, symboolGrootte } from "~/situatie/geometrie";
 import { situatieItems } from "~/situatie/items";
 import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
@@ -104,6 +104,7 @@ const canvas = useCanvasWeergave({
   venster,
   inhoud: () => inhoud.value,
   marge: () => (inhoud.value ? Math.max(inhoud.value.breedte, inhoud.value.hoogte) * MARGE_FRACTIE : 0),
+  maxZoom: maxPlanZoom,
   onderbreek: breekVerschuivingAf,
 });
 const { grootte, weergave, viewBox, ruimteIngedrukt, sleept, maakPassend, zoomOpWiel } = canvas;
@@ -403,8 +404,9 @@ const werkbalk = computed(() => {
   const w = weergave.value;
   const p = editor.selectie.map(positieVan).find((q) => q !== undefined);
   if (!p || grootte.breedte === 0) return null;
-  const links = ((p.x - w.x) / w.b) * grootte.breedte;
-  const boven = ((p.y - symbool.value * KADER_HALF - w.y) / w.h) * grootte.hoogte;
+  // Relatief aan het venster zelf: de werkbalk staat absoluut in dezelfde container.
+  const vlak = { left: 0, top: 0, width: grootte.breedte, height: grootte.hoogte };
+  const { x: links, y: boven } = inhoudNaarScherm(p.x, p.y - symbool.value * KADER_HALF, vlak, w);
   const begrensd = (v: number, min: number, max: number) => Math.min(Math.max(v, min), Math.max(min, max));
   return {
     left: `${begrensd(links, WERKBALK_HALVE_BREEDTE_PX, grootte.breedte - WERKBALK_HALVE_BREEDTE_PX)}px`,

@@ -17,7 +17,6 @@ import {
 } from "../editor/weergave";
 import { spatieSchuift, type DoelSoort } from "./sneltoetsen";
 
-const ZOOM_GRENZEN = { min: MIN_ZOOM, max: MAX_ZOOM };
 /** Aantal pixels dat de muis moet bewegen voordat een klik een sleepbeweging wordt. */
 export const SLEEP_DREMPEL_PX = 3;
 
@@ -27,6 +26,8 @@ export type CanvasWeergaveOpties = {
   inhoud: () => Afmeting | null;
   /** Ruimte rond de inhoud bij "Passend maken", in inhoudseenheden. */
   marge: () => number;
+  /** De maximale zoom (relatief aan de passende weergave); zonder deze optie `MAX_ZOOM`. */
+  maxZoom?: (passend: Weergave, venster: Afmeting) => number;
   /** Een eigen sleepbeweging van de component moet stoppen: een tweede vinger, of het venster verliest de focus. */
   onderbreek?: () => void;
 };
@@ -52,6 +53,11 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
   function passend(): Weergave | null {
     const inhoud = opties.inhoud();
     return inhoud ? passendeWeergave(inhoud, grootte, opties.marge()) : null;
+  }
+
+  /** De zoomgrenzen bij deze passende weergave. */
+  function zoomGrenzen(p: Weergave): { min: number; max: number } {
+    return { min: MIN_ZOOM, max: opties.maxZoom ? opties.maxZoom(p, grootte) : MAX_ZOOM };
   }
 
   function maakPassend(): void {
@@ -88,7 +94,7 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
       fy: (event.clientY - rect.top) / rect.height,
     };
     const factor = wielFactor(event.deltaY, event.deltaMode, window.innerHeight);
-    weergave.value = binnenInhoud(zoomRond(weergave.value, p, anker, factor, grootte, ZOOM_GRENZEN));
+    weergave.value = binnenInhoud(zoomRond(weergave.value, p, anker, factor, grootte, zoomGrenzen(p)));
   }
 
   // --- Klikken onderdrukken ------------------------------------------------
@@ -185,7 +191,7 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
       const b = aanraking.get(p.b);
       const pas = passend();
       if (!a || !b || !pas || !vensterEl) return;
-      weergave.value = binnenInhoud(pinch(p.begin, pas, p.start, { a, b }, vensterEl.getBoundingClientRect(), ZOOM_GRENZEN));
+      weergave.value = binnenInhoud(pinch(p.begin, pas, p.start, { a, b }, vensterEl.getBoundingClientRect(), zoomGrenzen(pas)));
       return;
     }
 

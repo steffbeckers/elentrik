@@ -39,43 +39,37 @@ describe("verkleinMaat", () => {
 
 describe("paginaTitel", () => {
   test("haalt de extensie weg en voegt het PDF-paginanummer toe", () => {
-    expect(paginaTitel("plan-gelijkvloers.pdf", 2, 0)).toBe(
+    expect(paginaTitel("plan-gelijkvloers.pdf", 2, "Pagina 1")).toBe(
       "plan-gelijkvloers p2",
     );
   });
 
   test("zonder PDF-pagina blijft alleen de naam over", () => {
-    expect(paginaTitel("verdieping.png", undefined, 1)).toBe("verdieping");
+    expect(paginaTitel("verdieping.png", undefined, "Pagina 2")).toBe("verdieping");
   });
 
-  test("een lege naam geeft Pagina <aantal + 1>", () => {
-    expect(paginaTitel(".png", undefined, 2)).toBe("Pagina 3");
-    expect(paginaTitel("", undefined, 0)).toBe("Pagina 1");
+  test("een lege naam geeft de meegegeven standaardtitel", () => {
+    expect(paginaTitel(".png", undefined, "Pagina 3")).toBe("Pagina 3");
+    expect(paginaTitel("", undefined, "Blad 1")).toBe("Blad 1");
   });
 });
 
 describe("moetHercoderen", () => {
-  const staand = { b: 3000, h: 4000 };
   const liggend = { b: 4000, h: 3000 };
 
-  test("laat een afbeelding binnen de limiet en zonder EXIF-draaiing ongemoeid", () => {
-    expect(moetHercoderen(liggend, liggend, 8000)).toBe(false);
+  test("laat een afbeelding binnen de limiet en zonder EXIF-oriëntatie ongemoeid", () => {
+    expect(moetHercoderen(liggend, 1, 8000)).toBe(false);
   });
 
   test("hercodeert een afbeelding met een lange zijde boven de limiet", () => {
-    expect(
-      moetHercoderen({ b: 10000, h: 5000 }, { b: 10000, h: 5000 }, 8000),
-    ).toBe(true);
+    expect(moetHercoderen({ b: 10000, h: 5000 }, 1, 8000)).toBe(true);
   });
 
-  test("hercodeert als de EXIF-ori�ntatie breedte en hoogte omwisselt", () => {
-    // Standaard decode past ori�ntatie 6 toe (staand); de ruwe kop is liggend.
-    expect(moetHercoderen(staand, liggend, 8000)).toBe(true);
-  });
-
-  test("een vierkante afbeelding heeft geen herkodering nodig voor de ori�ntatie", () => {
-    expect(moetHercoderen({ b: 500, h: 500 }, { b: 500, h: 500 }, 8000)).toBe(
-      false,
-    );
-  });
+  test.each([2, 3, 4, 5, 6, 7, 8])(
+    "hercodeert altijd bij EXIF-oriëntatie %i, ook als de maat gelijk blijft",
+    (orientatie) => {
+      expect(moetHercoderen(liggend, orientatie, 8000)).toBe(true);
+      expect(moetHercoderen({ b: 500, h: 500 }, orientatie, 8000)).toBe(true);
+    },
+  );
 });

@@ -1,16 +1,22 @@
 // De hulpfuncties van de bestanden-API als pure functies, zonder Nitro-server.
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createEvent, type H3Event } from "h3";
 import { describe, expect, test } from "vitest";
 import { MAX_UPLOAD_BYTES } from "../shared/bestandsinhoud";
-import { BestandFout, type BestandFoutCode } from "../server/bestanden/repo";
+import { maakLokaleOpslag } from "../server/bestanden/opslag";
+import { BestandFout, bewaarBestand, haalBestand, type BestandFoutCode } from "../server/bestanden/repo";
+import { maakProject } from "../server/projecten/repo";
 import {
   bestandId,
   controleerUploadGrootte,
   leesPlanUpload,
   metBestandFouten,
 } from "../server/utils/bestanden";
+import { maakTestDb } from "./db";
 
 const GRENS = "----elentrik";
 
@@ -27,12 +33,14 @@ function maakEvent(opties: { headers?: Record<string, string>; id?: string; body
   return event;
 }
 
-function multipart(velden: { naam: string; inhoud: string | Uint8Array; bestand?: boolean }[]) {
+function multipart(velden: { naam: string; inhoud: string | Uint8Array; bestand?: boolean; bestandsnaam?: string }[]) {
   const delen: Buffer[] = [];
   for (const veld of velden) {
     const kop =
       `--${GRENS}\r\nContent-Disposition: form-data; name="${veld.naam}"` +
-      (veld.bestand ? `; filename="plan.bin"\r\nContent-Type: application/octet-stream` : "") +
+      (veld.bestand
+        ? `; filename="${veld.bestandsnaam ?? "plan.bin"}"\r\nContent-Type: application/octet-stream`
+        : "") +
       `\r\n\r\n`;
     delen.push(Buffer.from(kop), Buffer.from(veld.inhoud), Buffer.from("\r\n"));
   }
@@ -118,6 +126,34 @@ describe("leesPlanUpload", () => {
         leesPlanUpload(maakEvent({ body: zonderSoort.body, headers: zonderSoort.headers })),
       ),
     ).toBe(400);
+  });
+
+  test("een bestandsnaam met ../ bepaalt de opslagsleutel niet en schrijft niets buiten de map", async () => {
+    const ouder = await mkdtemp(join(tmpdir(), "elentrik-pad-"));
+    try {
+      const map = join(ouder, "a", "b");
+      const db = await maakTestDb();
+      const { id: projectId } = await maakProject(db, { naam: "Woning", klantnaam: "Peeters", stroomtype: "3N400V" });
+      const png = new Uint8Array(33);
+      png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1]);
+      const { body, headers } = multipart([
+        { naam: "soort", inhoud: "plan-raster" },
+        { naam: "bestand", inhoud: png, bestand: true, bestandsnaam: "../../evil.png" },
+      ]);
+
+      const upload = await leesPlanUpload(maakEvent({ body, headers }));
+      const info = await bewaarBestand(db, maakLokaleOpslag(map), { projectId, ...upload });
+
+      expect(info.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect((await haalBestand(db, info.id))?.sleutel).toBe(`${projectId}/${info.id}`);
+      // Alleen de projectmap staat in de opslagmap, en buiten de opslagmap is niets bijgekomen.
+      expect(await readdir(map)).toEqual([projectId]);
+      expect(await readdir(join(map, projectId))).toEqual([info.id]);
+      expect(await readdir(ouder)).toEqual(["a"]);
+      expect(await readdir(join(ouder, "a"))).toEqual(["b"]);
+    } finally {
+      await rm(ouder, { recursive: true, force: true });
+    }
   });
 
   test("een te grote content-length geeft 413 zonder de body te lezen", async () => {

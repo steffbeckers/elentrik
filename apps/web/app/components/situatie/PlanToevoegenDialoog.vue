@@ -185,8 +185,9 @@ async function bevestig() {
       paginaId = props.vervangPaginaId;
       situatie.vervangAchtergrond(paginaId, achtergrond);
     } else {
-      const aantalPaginas = editor.document?.situatie.paginas.length ?? 0;
-      paginaId = situatie.voegPlanPaginaToe(paginaTitel(gekozen.name, pdfPagina, aantalPaginas), achtergrond);
+      const nummer = (editor.document?.situatie.paginas.length ?? 0) + 1;
+      const standaardTitel = t("editor.situatie.toevoegen.standaardTitel", { nummer });
+      paginaId = situatie.voegPlanPaginaToe(paginaTitel(gekozen.name, pdfPagina, standaardTitel), achtergrond);
     }
     open.value = false;
     emit("klaar", paginaId);

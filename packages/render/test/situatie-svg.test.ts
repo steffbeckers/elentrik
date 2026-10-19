@@ -60,6 +60,18 @@ describe("situatieLaagSvg", () => {
     expect(ty).toBeCloseTo(-s.hoogte / 2, 2);
   });
 
+  test("elk item heeft een onzichtbaar raakvlak van grootte_px in het kwadraat, gecentreerd en binnen de groep", () => {
+    const svg = situatieLaagSvg([drie[1]!], 60);
+    const groep = `<g data-node-id="${ids["lp"]}" transform="translate(350.5 40.25)">`;
+    expect(svg.startsWith(`${groep}<rect x="-30" y="-30" width="60" height="60" fill="none" pointer-events="all"/>`)).toBe(
+      true,
+    );
+    expect(situatieLaagSvg(drie, 60).match(/<rect [^>]*pointer-events="all"\/>/g)).toHaveLength(3);
+    expect(situatieLaagSvg([drie[0]!], 25)).toContain(
+      '<rect x="-12.5" y="-12.5" width="25" height="25" fill="none" pointer-events="all"/>',
+    );
+  });
+
   test("het gedraaide item krijgt rotate(90)", () => {
     expect(situatieLaagSvg([drie[1]!], 60)).toContain('<g transform="rotate(90) scale(');
   });

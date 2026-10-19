@@ -1,7 +1,7 @@
 // Gedeelde hulp voor de bestanden-handlers: de upload uitlezen en BestandFout naar HTTP
 // vertalen. Nitro importeert de exports van server/utils automatisch.
 // Expliciete imports, geen Nitro-auto-imports: Vitest importeert deze module
-// rechtstreeks (ruling E10).
+// rechtstreeks (ruling E1).
 import { createError, getHeader, getRouterParam, readMultipartFormData, type H3Event } from "h3";
 import { z } from "zod";
 import { MAX_UPLOAD_BYTES } from "../../shared/bestandsinhoud";

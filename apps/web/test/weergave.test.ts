@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
   begrens,
+  inhoudNaarScherm,
   MAX_ZOOM,
+  maxPlanZoom,
   MIN_ZOOM,
   pan,
   passendeWeergave,
@@ -142,6 +144,60 @@ describe("schermNaarInhoud", () => {
 
   test("de linkerbovenhoek van het venster is de oorsprong van de weergave", () => {
     expect(schermNaarInhoud(20, 10, rect, w)).toEqual({ x: -2000, y: 0 });
+  });
+});
+
+describe("inhoudNaarScherm", () => {
+  const rect = { left: 20, top: 10, width: 1000, height: 500 };
+  const w: Weergave = { x: -2000, y: 0, b: 12000, h: 6000 };
+
+  test("de oorsprong van de weergave is de linkerbovenhoek van het venster", () => {
+    expect(inhoudNaarScherm(-2000, 0, rect, w)).toEqual({ x: 20, y: 10 });
+  });
+
+  test("heen en terug met schermNaarInhoud geeft hetzelfde punt", () => {
+    for (const punt of [{ x: 1500, y: 3200 }, { x: 8000, y: 6000 }, { x: -2000, y: 0 }]) {
+      const scherm = inhoudNaarScherm(punt.x, punt.y, rect, w);
+      const terug = schermNaarInhoud(scherm.x, scherm.y, rect, w);
+      expect(terug.x).toBeCloseTo(punt.x, 9);
+      expect(terug.y).toBeCloseTo(punt.y, 9);
+    }
+    const inhoud = schermNaarInhoud(700, 333, rect, w);
+    const scherm = inhoudNaarScherm(inhoud.x, inhoud.y, rect, w);
+    expect(scherm.x).toBeCloseTo(700, 9);
+    expect(scherm.y).toBeCloseTo(333, 9);
+  });
+});
+
+describe("maxPlanZoom", () => {
+  test("een raster van 8000 x 6000 in 1000 x 500 zoomt tot 1 rasterpixel = 2 schermpixels", () => {
+    const venster = { breedte: 1000, hoogte: 500 };
+    const passend = passendeWeergave(PLAN, venster, 0)!;
+    const max = maxPlanZoom(passend, venster);
+    // Passend: 12000 rasterpixels over 1000 schermpixels; 2 schermpixels per rasterpixel is zoom 24.
+    expect(max).toBeCloseTo(24, 9);
+    expect(venster.breedte / (passend.b / max)).toBeCloseTo(2, 9);
+  });
+
+  test("hangt af van het venster: een breder venster heeft minder zoom nodig", () => {
+    const smal = { breedte: 1000, hoogte: 750 };
+    const breed = { breedte: 2000, hoogte: 1500 };
+    expect(maxPlanZoom(passendeWeergave(PLAN, smal, 0)!, smal)).toBeCloseTo(16, 9);
+    expect(maxPlanZoom(passendeWeergave(PLAN, breed, 0)!, breed)).toBeCloseTo(8, 9);
+  });
+
+  test("is minstens MAX_ZOOM voor een klein raster", () => {
+    const venster = { breedte: 1000, hoogte: 500 };
+    const passend = passendeWeergave({ breedte: 400, hoogte: 300 }, venster, 0)!;
+    expect(maxPlanZoom(passend, venster)).toBe(MAX_ZOOM);
+  });
+
+  test("zoomRond met deze grens komt tot 2 schermpixels per rasterpixel en niet verder", () => {
+    const venster = { breedte: 1000, hoogte: 500 };
+    const passend = passendeWeergave(PLAN, venster, 0)!;
+    const grenzen = { min: MIN_ZOOM, max: maxPlanZoom(passend, venster) };
+    const w = zoomRond(passend, passend, { fx: 0.5, fy: 0.5 }, 1000, venster, grenzen);
+    expect(venster.breedte / w.b).toBeCloseTo(2, 9);
   });
 });
 

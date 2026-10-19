@@ -54,11 +54,12 @@ describe("lokale opslag", () => {
 });
 
 describe("bestandHeaders", () => {
-  test("geeft de vier veiligheids- en cacheheaders", () => {
+  test("geeft de veiligheids- en cacheheaders, met een sandbox-CSP", () => {
     expect(bestandHeaders("image/png")).toEqual({
       "Content-Type": "image/png",
       "X-Content-Type-Options": "nosniff",
       "Content-Disposition": "inline",
+      "Content-Security-Policy": "sandbox; default-src 'none'",
       "Cache-Control": "private, max-age=31536000, immutable",
     });
   });

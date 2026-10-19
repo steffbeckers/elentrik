@@ -6,9 +6,21 @@ export type Weergave = { x: number; y: number; b: number; h: number };
 
 export type Afmeting = { breedte: number; hoogte: number };
 
-/** Zoom is begrensd tot 25 % – 400 % van de passende weergave. */
+/** Zoom is begrensd tot 25 % – 400 % van de passende weergave; een plan mag verder (`maxPlanZoom`). */
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 4;
+
+/** Op een plan mag je inzoomen tot één rasterpixel zoveel schermpixels beslaat. */
+const PLAN_SCHERMPIXELS_PER_RASTERPIXEL = 2;
+
+/**
+ * De maximale zoom voor een plan, relatief aan de passende weergave: tot één rasterpixel
+ * `PLAN_SCHERMPIXELS_PER_RASTERPIXEL` schermpixels beslaat. Hangt dus af van het raster en het
+ * venster, en is nooit kleiner dan `MAX_ZOOM`.
+ */
+export function maxPlanZoom(passend: Weergave, venster: Afmeting): number {
+  return Math.max(MAX_ZOOM, (PLAN_SCHERMPIXELS_PER_RASTERPIXEL * passend.b) / venster.breedte);
+}
 
 /** Zoomfactor per wielpuls: `exp(-delta * WIEL_GEVOELIGHEID)`. */
 const WIEL_GEVOELIGHEID = 0.0015;
@@ -109,5 +121,18 @@ export function schermNaarInhoud(
   return {
     x: w.x + ((clientX - rect.left) / rect.width) * w.b,
     y: w.y + ((clientY - rect.top) / rect.height) * w.h,
+  };
+}
+
+/** De schermpositie van een punt in de inhoud; de inverse van `schermNaarInhoud`. */
+export function inhoudNaarScherm(
+  x: number,
+  y: number,
+  rect: { left: number; top: number; width: number; height: number },
+  w: Weergave,
+): { x: number; y: number } {
+  return {
+    x: rect.left + ((x - w.x) / w.b) * rect.width,
+    y: rect.top + ((y - w.y) / w.h) * rect.height,
   };
 }

@@ -1,6 +1,6 @@
 // Alleen in de browser: pdf.js en canvas. Geen Vitest-test; geen statische import van pdfjs-dist,
 // zodat het buiten SSR en buiten de eerste bundel blijft (laadt pas in `laadPdf`).
-import { MAX_RASTER_PX } from "../../shared/bestandsinhoud";
+import { exifOrientatie, MAX_RASTER_PX } from "../../shared/bestandsinhoud";
 import { moetHercoderen, rasterSchaal, verkleinMaat } from "./raster";
 
 export type PdfRaster = { blob: Blob; breedte: number; hoogte: number };
@@ -110,21 +110,20 @@ export async function laadPdf(data: ArrayBuffer): Promise<PdfDocument> {
 
 /**
  * Brengt een PNG of JPEG terug tot een lange zijde van hoogstens `MAX_RASTER_PX` en haalt een
- * EXIF-draaiing uit het bestand. De rastermaat van de pagina komt uit de blob die deze functie
+ * EXIF-oriëntatie uit het bestand. De rastermaat van de pagina komt uit de blob die deze functie
  * teruggeeft: `breedte` en `hoogte` kloppen altijd met wat de server in de bestandskop leest.
  */
 export async function verkleinAfbeelding(bestand: Blob): Promise<PdfRaster> {
+  // De beslissing volgt uit de originele bytes: `createImageBitmap` past de oriëntatie in
+  // Chromium altijd toe (ook met `imageOrientation: "none"`), dus een maatvergelijking ziet niets.
+  const orientatie = exifOrientatie(new Uint8Array(await bestand.arrayBuffer()));
+  // De browser decodeert met de oriëntatie toegepast; zo tekenen we het ook op het canvas.
   const bitmap = await createImageBitmap(bestand);
   try {
-    // Zonder ori�ntatie-toepassing geeft dit de maat uit de kop, zoals de server die leest.
-    const ruw = await createImageBitmap(bestand, { imageOrientation: "none" });
-    const ruweMaat = { b: ruw.width, h: ruw.height };
-    ruw.close();
-
     if (
       !moetHercoderen(
         { b: bitmap.width, h: bitmap.height },
-        ruweMaat,
+        orientatie,
         MAX_RASTER_PX,
       )
     ) {
@@ -136,14 +135,15 @@ export async function verkleinAfbeelding(bestand: Blob): Promise<PdfRaster> {
       const context = canvas.getContext("2d");
       if (!context) throw new Error("Canvas niet beschikbaar");
       context.drawImage(bitmap, 0, 0, doel.breedte, doel.hoogte);
-      // JPEG blijft JPEG, zodat een foto niet als (veel grotere) PNG terugkomt.
+      // JPEG blijft JPEG, zodat een foto niet als (veel grotere) PNG terugkomt. Een canvas schrijft
+      // geen EXIF: de maat van de nieuwe blob is de canvasmaat.
       const jpeg = bestand.type === "image/jpeg";
       const blob = await canvasNaarBlob(
         canvas,
         jpeg ? "image/jpeg" : "image/png",
         jpeg ? 0.92 : undefined,
       );
-      return { blob, breedte: doel.breedte, hoogte: doel.hoogte };
+      return { blob, breedte: canvas.width, hoogte: canvas.height };
     } finally {
       leegCanvas(canvas);
     }

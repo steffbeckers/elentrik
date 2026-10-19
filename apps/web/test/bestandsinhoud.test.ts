@@ -5,6 +5,7 @@ import {
   RASTER_DPI,
   afmetingen,
   controleerPlanbestand,
+  exifOrientatie,
   herkenSoort,
 } from "../shared/bestandsinhoud";
 
@@ -32,6 +33,24 @@ function jpeg(breedte: number, hoogte: number, sof = 0xc0): Uint8Array {
   const app0 = [0xff, 0xe0, ...u16(16), ...tekst("JFIF"), 0, 1, 1, 0, ...u16(1), ...u16(1), 0, 0];
   const sofSegment = [0xff, sof, ...u16(17), 8, ...u16(hoogte), ...u16(breedte), 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1];
   return Uint8Array.from([0xff, 0xd8, ...app0, ...sofSegment]);
+}
+
+type Volgorde = "II" | "MM";
+
+/** Een TIFF-blok met IFD0: eerst een breedtetag, dan de oriëntatietag (SHORT), in de gekozen bytevolgorde. */
+function tiff(orientatie: number, volgorde: Volgorde): number[] {
+  const klein = volgorde === "II";
+  const t16 = (n: number) => (klein ? u16(n).reverse() : u16(n));
+  const t32 = (n: number) => (klein ? u32(n).reverse() : u32(n));
+  const tag = (code: number, waarde: number) => [...t16(code), ...t16(3), ...t32(1), ...t16(waarde), 0, 0];
+  return [...tekst(volgorde), ...t16(42), ...t32(8), ...t16(2), ...tag(0x0100, 640), ...tag(0x0112, orientatie), ...t32(0)];
+}
+
+/** SOI + APP1 (Exif) + SOF0: een jpeg met EXIF-oriëntatie. */
+function jpegMetExif(orientatie: number, volgorde: Volgorde): Uint8Array {
+  const exif = [...tekst("Exif"), 0, 0, ...tiff(orientatie, volgorde)];
+  const app1 = [0xff, 0xe1, ...u16(exif.length + 2), ...exif];
+  return Uint8Array.from([0xff, 0xd8, ...app1, ...jpeg(640, 480).slice(2)]);
 }
 
 describe("limieten", () => {
@@ -154,5 +173,55 @@ describe("controleerPlanbestand", () => {
   test("geeft de soort uit de bytes terug", () => {
     expect(controleerPlanbestand(100, Uint8Array.from(tekst("%PDF-1.4")))).toEqual({ ok: true, soort: "pdf" });
     expect(controleerPlanbestand(100, jpeg(10, 10))).toEqual({ ok: true, soort: "jpeg" });
+  });
+});
+
+describe("exifOrientatie", () => {
+  test.each<[number, Volgorde]>([
+    [1, "II"],
+    [3, "II"],
+    [6, "II"],
+    [8, "II"],
+    [1, "MM"],
+    [3, "MM"],
+    [6, "MM"],
+    [8, "MM"],
+  ])("leest oriëntatie %i in bytevolgorde %s", (orientatie, volgorde) => {
+    expect(exifOrientatie(jpegMetExif(orientatie, volgorde))).toBe(orientatie);
+  });
+
+  test("een jpeg zonder APP1-segment geeft 1", () => {
+    expect(exifOrientatie(jpeg(640, 480))).toBe(1);
+  });
+
+  test("een afgekapt Exif-segment geeft 1", () => {
+    const volledig = jpegMetExif(6, "MM");
+    // Afgekapt in de TIFF-kop, in de IFD en net voor de waarde van de oriëntatietag.
+    for (const lengte of [14, 22, 40, 43]) {
+      expect(exifOrientatie(volledig.slice(0, lengte))).toBe(1);
+    }
+  });
+
+  test("een ongeldige bytevolgorde of een onbekende waarde geeft 1", () => {
+    const kapot = jpegMetExif(6, "II");
+    kapot.set(tekst("XX"), 12);
+    expect(exifOrientatie(kapot)).toBe(1);
+    expect(exifOrientatie(jpegMetExif(9, "II"))).toBe(1);
+    expect(exifOrientatie(jpegMetExif(0, "MM"))).toBe(1);
+  });
+
+  test("een IFD-offset buiten het segment geeft 1", () => {
+    const kapot = jpegMetExif(6, "MM");
+    kapot.set(u32(0xfffffff0), 16);
+    expect(exifOrientatie(kapot)).toBe(1);
+  });
+
+  test("een png of een leeg bestand geeft 1", () => {
+    expect(exifOrientatie(png(10, 10))).toBe(1);
+    expect(exifOrientatie(new Uint8Array())).toBe(1);
+  });
+
+  test("afmetingen leest een jpeg met Exif-segment nog steeds", () => {
+    expect(afmetingen(jpegMetExif(6, "II"), "jpeg")).toEqual({ breedte: 640, hoogte: 480 });
   });
 });

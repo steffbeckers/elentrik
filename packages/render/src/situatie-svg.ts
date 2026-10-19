@@ -27,9 +27,15 @@ function itemSvg(item: SituatieItem, grootte_px: number): string {
     `<text x="${getal(grootte_px * LABEL_X)}" y="${getal(grootte_px * LABEL_Y)}" ` +
     `font-size="${getal(grootte_px * LABEL_GROOTTE)}" text-anchor="start" font-family="sans-serif" ` +
     `fill="currentColor">${escapeXml(item.label)}</text>`;
+  // Onzichtbaar raakvlak: ook de lege ruimte binnen het symbool is aanwijsbaar. Het staat in de
+  // groep, zodat `closest("[data-node-id]")` het vindt, en tekent niets (ook niet in een export).
+  const hoek = getal(-grootte_px / 2);
+  const raakvlak =
+    `<rect x="${hoek}" y="${hoek}" width="${getal(grootte_px)}" height="${getal(grootte_px)}" ` +
+    `fill="none" pointer-events="all"/>`;
   return (
     `<g data-node-id="${escapeXml(item.nodeId)}" transform="translate(${getal(item.x)} ${getal(item.y)})">` +
-    `${symbool}${label}</g>`
+    `${raakvlak}${symbool}${label}</g>`
   );
 }
 

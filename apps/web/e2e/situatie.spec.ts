@@ -268,9 +268,11 @@ test.describe("touch", () => {
     const voor = (await wachtOpPlaatsingen(request, projectId, 1)).document.situatie.paginas[0]!.plaatsingen[0]!;
     await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
 
+    // Het midden van de groep ligt niet noodzakelijk op een lijn van het symbool: alleen het raakvlak
+    // maakt dat punt aanwijsbaar.
     const symbool = planSymbolen(page).first();
-    const start = await symboolPunt(page);
     const symboolVoor = (await symbool.boundingBox())!;
+    const start = { x: symboolVoor.x + symboolVoor.width / 2, y: symboolVoor.y + symboolVoor.height / 2 };
     const planVoor = (await page.getByTestId("plan-afbeelding").boundingBox())!;
 
     const cdp = await page.context().newCDPSession(page);
