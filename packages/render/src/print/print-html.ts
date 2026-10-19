@@ -1,8 +1,8 @@
 // Eén gepagineerd HTML-document voor de pdf (Gotenberg/Chromium). Elentrik pagineert zelf: elke
 // pagina is een <section> met een vaste maat in mm, met een cartouche onderaan.
-import { formatteerBericht, type Analyse, type Bevinding, type Ernst } from "@elentrik/arei";
+import { formatteerBericht, REGELSETS, type Analyse, type Bevinding, type Ernst } from "@elentrik/arei";
 import { bruikbaar, opmaak, papierMaat, STANDAARD_PAPIER_A4, type Papier } from "@elentrik/layout";
-import type { InstallatieDocument, NodeType, Partij, SituatiePagina } from "@elentrik/model";
+import type { InstallatieDocument, NodeId, NodeType, Partij, SituatiePagina } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import { kringenlijst, type KringenlijstRij } from "../kringenlijst";
 import { schemaPaginaSvg } from "../schema-svg";
@@ -10,7 +10,7 @@ import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
 import { NL, type Teksten } from "../teksten/nl";
 import { cartouche } from "./cartouche";
-import { INSPRINGING_MM, KOP_MARGE_MM, KRINGENLIJST_RIJ_MM, RAND_MM, REGELHOOGTE, stijl } from "./stijl";
+import { CEL_MARGE_MM, INSPRINGING_MM, KOP_MARGE_MM, KRINGENLIJST_RIJ_MM, RAND_MM, REGELHOOGTE, stijl } from "./stijl";
 import { breekRegels, tekstRegel, vloer } from "./tekst";
 
 export { KRINGENLIJST_RIJ_MM } from "./stijl";
@@ -41,8 +41,6 @@ export const KRINGENLIJST_KOP_MM = KRINGENLIJST_RIJ_MM;
 const TABEL_TEKST_MM = 3;
 const BIJLAGE_TEKST_MM = 3;
 const BIJLAGE_KOP_TEKST_MM = 4;
-/** De horizontale binnenmarge van een tabelcel in mm (zie `stijl`). */
-const CEL_MARGE_MM = 1;
 /** Speling onderaan de bijlage, voor afrondingen van de regelhoogte in de browser. */
 const BIJLAGE_SPELING_MM = 1;
 
@@ -97,34 +95,70 @@ function situatieInhoud(c: Context, pagina: SituatiePagina, bestand: string): st
   );
 }
 
+/**
+ * Rijen per kringenlijstpagina: wat onder de kop past in de bruikbare hoogte. De tabel heeft een
+ * bovenrand van `RAND_MM`; elke rij (ook de kop) is exact `KRINGENLIJST_RIJ_MM` hoog, rand inbegrepen.
+ */
+export function kringenlijstRijenPerPagina(papier: Papier): number {
+  const perPagina = Math.floor((bruikbaar(papier).hoogte - KRINGENLIJST_KOP_MM - RAND_MM) / KRINGENLIJST_RIJ_MM);
+  if (perPagina <= 0) throw new RangeError(`Geen ruimte voor kringenlijstrijen op ${papier.formaat}`);
+  return perPagina;
+}
+
 function kringenlijstPaginas(c: Context): Pagina[] {
   const rijen = kringenlijst(c.doc, c.analyse, c.teksten);
-  const perPagina = Math.floor((c.ruimte.hoogte - KRINGENLIJST_KOP_MM) / KRINGENLIJST_RIJ_MM);
-  const breedtes = KOLOMMEN.map((k) => c.ruimte.breedte * k.aandeel);
-  const celBreedte = (i: number) => (breedtes[i] ?? 0) - 2 * CEL_MARGE_MM - RAND_MM;
-  const kop =
-    `<colgroup>${breedtes.map((b) => `<col style="width:${mm(b)}">`).join("")}</colgroup>` +
-    `<thead><tr>${KOLOMMEN.map((k, i) => `<th>${tekstRegel(c.teksten.kolommen[k.sleutel], celBreedte(i), TABEL_TEKST_MM, "kolomkop")}</th>`).join("")}</tr></thead>`;
+  const perPagina = kringenlijstRijenPerPagina(c.papier);
+  // De tabel is even breed als de bruikbare ruimte, linkerrand inbegrepen: de laatste kolom geeft die op.
+  const breedtes = KOLOMMEN.map((k, i) => c.ruimte.breedte * k.aandeel - (i === KOLOMMEN.length - 1 ? RAND_MM : 0));
+  const celBreedte = (breedte: number) => breedte - 2 * CEL_MARGE_MM - RAND_MM;
+  const cel = (tekst: string, breedte: number, klasse: string) =>
+    `<div class="tabelcel" style="width:${mm(breedte)}">${tekstRegel(tekst, celBreedte(breedte), TABEL_TEKST_MM, klasse)}</div>`;
+  const rij = (klasse: string, teksten: readonly string[], tekstKlasse: string) =>
+    `<div class="${klasse}">${teksten.map((tekst, i) => cel(tekst, breedtes[i] ?? 0, tekstKlasse)).join("")}</div>`;
+  const kop = rij("kopregel", KOLOMMEN.map((k) => c.teksten.kolommen[k.sleutel]), "kolomkop");
   const tabel = (body: string) =>
-    `<table class="kringen" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};width:${mm(c.ruimte.breedte)}">` +
-    `${kop}<tbody>${body}</tbody></table>`;
+    `<div class="kringen" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};width:${mm(c.ruimte.breedte)}">` +
+    `${kop}${body}</div>`;
 
   if (rijen.length === 0) {
-    const leeg = `<tr><td colspan="${KOLOMMEN.length}">${tekstRegel(c.teksten.geenKringen, c.ruimte.breedte - 2 * CEL_MARGE_MM - RAND_MM, TABEL_TEKST_MM, "leeg")}</td></tr>`;
+    const leeg = `<div class="rij leeg">${cel(c.teksten.geenKringen, c.ruimte.breedte - RAND_MM, "leeg")}</div>`;
     return [{ titel: c.teksten.paginatitels.kringenlijst, inhoud: tabel(leeg) }];
   }
   const paginas: Pagina[] = [];
   for (let start = 0; start < rijen.length; start += perPagina) {
     const body = rijen
       .slice(start, start + perPagina)
-      .map(
-        (rij) =>
-          `<tr class="rij">${KOLOMMEN.map((k, i) => `<td>${tekstRegel(rij[k.sleutel], celBreedte(i), TABEL_TEKST_MM, "cel")}</td>`).join("")}</tr>`,
-      )
+      .map((r) => rij("rij", KOLOMMEN.map((k) => r[k.sleutel]), "cel"))
       .join("");
     paginas.push({ titel: c.teksten.paginatitels.kringenlijst, inhoud: tabel(body) });
   }
   return paginas;
+}
+
+/** Het AREI-artikel van een regel in de regelset van het document, of "" als het niet gekend is. */
+function artikelVan(doc: InstallatieDocument, regelId: string): string {
+  const regelset = Object.hasOwn(REGELSETS, doc.regelset) ? REGELSETS[doc.regelset] : undefined;
+  return regelset?.regels.find((r) => r.id === regelId)?.artikel.trim() ?? "";
+}
+
+/** Het label van het onderwerp van een bevinding: het puntlabel, "Kring A" voor een kringbeveiliging, anders `nodeLabel`. */
+function onderwerpLabel(c: Context, nodeId: NodeId): string {
+  const punt = c.analyse.puntLabels[nodeId];
+  if (punt) return punt;
+  const kring = c.analyse.kringen.find((k) => k.beveiligingId === nodeId);
+  if (kring) return `${c.teksten.kolommen.kring} ${kring.label}`;
+  return nodeLabel(c.doc, c.analyse, nodeId, c.terugval);
+}
+
+/**
+ * Een bevinding zoals een keurder ze leest: de labels van haar nodes, " — ", het bericht en het
+ * AREI-artikel als dat gekend is. Interne regel-id's komen nooit in de pdf.
+ */
+function bevindingTekst(c: Context, b: Bevinding): string {
+  const labels = [...new Set(b.nodeIds.map((id) => onderwerpLabel(c, id)).filter((l) => l !== ""))].join(", ");
+  const artikel = artikelVan(c.doc, b.regelId);
+  const bericht = formatteerBericht(b, "nl") + (artikel === "" ? "" : ` (${c.teksten.bijlage.artikel} ${artikel})`);
+  return labels === "" ? bericht : `${labels} — ${bericht}`;
 }
 
 /** Eén blok van de bijlage: een kop of een tekstregel, met zijn hoogte in mm. */
@@ -154,14 +188,16 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
     kop(`${titels[ernst]} (${lijst.length})`);
     for (const b of lijst) {
       const afgeweken = b.afgeweken ? ` (${t.bijlage.afgeweken})` : "";
-      tekst(`${b.regelId}: ${formatteerBericht(b, "nl")}${afgeweken}`, "bericht", volleBreedte);
+      tekst(`${bevindingTekst(c, b)}${afgeweken}`, "bericht", volleBreedte);
     }
   }
   if (c.doc.afwijkingen.length > 0) {
     kop(`${t.bijlage.afwijkingen} (${c.doc.afwijkingen.length})`);
     for (const a of c.doc.afwijkingen) {
-      const punt = nodeLabel(c.doc, c.analyse, a.nodeId, c.terugval) || "—";
-      tekst(`${t.bijlage.regel} ${a.regelId} — ${t.kolommen.punt} ${punt}`, "afwijking", volleBreedte);
+      // De afwijking toont de bevinding waarvoor ze geldt; zonder zo'n bevinding enkel het punt.
+      const bevinding = bevindingen.find((b) => b.regelId === a.regelId && b.nodeIds[0] === a.nodeId);
+      const onderwerp = bevinding ? bevindingTekst(c, bevinding) : onderwerpLabel(c, a.nodeId) || "—";
+      tekst(onderwerp, "afwijking", volleBreedte);
       tekst(`${t.bijlage.motivatie}: ${a.motivatie}`, "motivatie", ingesprongen);
       tekst(`${t.bijlage.door}: ${a.door} — ${t.cartouche.datum}: ${a.datum}`, "door", ingesprongen);
     }
@@ -199,6 +235,20 @@ function bijlagePaginas(c: Context, bevindingen: readonly Bevinding[], overgesla
   }));
 }
 
+/** De bestandsnaam van het plan van een situatiepagina, of `undefined` zonder achtergrond of bestand. */
+function bestandVan(pagina: SituatiePagina, afbeeldingen: Readonly<Record<string, string>>): string | undefined {
+  const id = pagina.achtergrond?.rasterBestandId;
+  return id !== undefined && Object.hasOwn(afbeeldingen, id) ? afbeeldingen[id] : undefined;
+}
+
+/**
+ * De titels van de situatiepagina's die `printHtml` overslaat: zonder achtergrond, of zonder
+ * bestand in `afbeeldingen`. De server gebruikt dit om de bijlage dan verplicht te maken.
+ */
+export function overgeslagenPaginas(doc: InstallatieDocument, afbeeldingen: Readonly<Record<string, string>>): string[] {
+  return doc.situatie.paginas.filter((p) => bestandVan(p, afbeeldingen) === undefined).map((p) => p.titel);
+}
+
 /**
  * Het printdocument: de gekozen onderdelen in vaste volgorde (eendraadschema, situatieschema,
  * kringenlijst, bijlage), elk op pagina's met een cartouche. Situatiepagina's zonder achtergrond of
@@ -230,13 +280,10 @@ export function printHtml(
   const overgeslagen: string[] = [];
   if (onderdelen.eendraadschema) paginas.push(...eendraadschemaPaginas(c));
   if (onderdelen.situatieschema) {
+    overgeslagen.push(...overgeslagenPaginas(doc, opties.afbeeldingen));
     for (const pagina of doc.situatie.paginas) {
-      const id = pagina.achtergrond?.rasterBestandId;
-      const bestand = id !== undefined && Object.hasOwn(opties.afbeeldingen, id) ? opties.afbeeldingen[id] : undefined;
-      if (bestand === undefined) {
-        overgeslagen.push(pagina.titel);
-        continue;
-      }
+      const bestand = bestandVan(pagina, opties.afbeeldingen);
+      if (bestand === undefined) continue;
       paginas.push({
         titel: `${teksten.paginatitels.situatieschema} — ${pagina.titel}`,
         inhoud: situatieInhoud(c, pagina, bestand),

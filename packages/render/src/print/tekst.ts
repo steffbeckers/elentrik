@@ -64,14 +64,16 @@ export function vloer(mm: number): number {
 }
 
 /**
- * Eén tekstregel als `<div class="t …">` met een vaste breedte en tekstgrootte in mm. De tekst wordt
- * afgekort tot hij past en daarna geëscaped.
+ * Eén tekstregel als `<div class="t …">` met een vaste breedte en tekstgrootte in mm. Witruimte
+ * (ook regeleinden en tabs) wordt één spatie, zodat de regel nooit hoger wordt; daarna wordt de
+ * tekst afgekort tot hij past en geëscaped.
  */
 export function tekstRegel(tekst: string, breedte_mm: number, grootte_mm: number, klasse = ""): string {
   const breedte = vloer(breedte_mm);
+  const eenRegel = tekst.replace(/\s+/g, " ").trim();
   const klassen = klasse === "" ? "t" : `t ${klasse}`;
   return (
     `<div class="${klassen}" style="width:${getal(breedte)}mm;font-size:${getal(grootte_mm)}mm">` +
-    `${escapeXml(afkorten(tekst, breedte, grootte_mm))}</div>`
+    `${escapeXml(afkorten(eenRegel, breedte, grootte_mm))}</div>`
   );
 }

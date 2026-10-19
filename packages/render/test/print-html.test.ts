@@ -3,8 +3,9 @@ import { installatie, referentieAppartement, referentieWoning } from "@elentrik/
 import { bruikbaar, papierMaat, STANDAARD_PAPIER_A4, tekstBreedte } from "@elentrik/layout";
 import type { InstallatieDocument, Partij } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { NL, printHtml, type PrintOpties } from "../src/index";
-import { KRINGENLIJST_KOP_MM, KRINGENLIJST_RIJ_MM } from "../src/print/print-html";
+import { NL, overgeslagenPaginas, printHtml, type PrintOpties } from "../src/index";
+import { cartouche } from "../src/print/cartouche";
+import { KRINGENLIJST_KOP_MM, KRINGENLIJST_RIJ_MM, kringenlijstRijenPerPagina } from "../src/print/print-html";
 import { afkorten, breekRegels } from "../src/print/tekst";
 import { kloon, nummerNodeIds } from "./hulp";
 
@@ -265,16 +266,17 @@ describe("printHtml", () => {
       .bouw();
     const analyse = analyseer(doc);
     expect(analyse.kringen.flatMap((k) => k.puntIds)).toHaveLength(120);
-    const rijenPerPagina = Math.floor(
-      (bruikbaar(STANDAARD_PAPIER_A4).hoogte - KRINGENLIJST_KOP_MM) / KRINGENLIJST_RIJ_MM,
+    const rijenPerPagina = kringenlijstRijenPerPagina(STANDAARD_PAPIER_A4);
+    expect(rijenPerPagina).toBe(
+      Math.floor((bruikbaar(STANDAARD_PAPIER_A4).hoogte - KRINGENLIJST_KOP_MM) / KRINGENLIJST_RIJ_MM),
     );
     expect(rijenPerPagina).toBe(25);
     const uit = printHtml(doc, analyse, [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
     expect(uit.paginas).toBe(Math.ceil(120 / rijenPerPagina));
     const secties = paginas(uit.html);
     for (const [i, sectie] of secties.entries()) {
-      expect(sectie.match(/<thead>/g)).toHaveLength(1);
-      const rijen = sectie.match(/<tr class="rij">/g) ?? [];
+      expect(sectie.match(/<div class="kopregel">/g)).toHaveLength(1);
+      const rijen = sectie.match(/<div class="rij">/g) ?? [];
       expect(rijen).toHaveLength(i < secties.length - 1 ? rijenPerPagina : 120 - rijenPerPagina * (secties.length - 1));
     }
     expect(regels(secties[0]!).find((r) => r.klasse === "cel")?.tekst).toBe("A");
@@ -386,7 +388,10 @@ describe("printHtml", () => {
     expect(teksten).toContain(`${NL.bijlage.fouten} (${aantal("fout")})`);
     expect(teksten).toContain(`${NL.bijlage.info} (${aantal("info")})`);
     expect(teksten).not.toContain(expect.stringMatching(new RegExp(`^${NL.bijlage.waarschuwingen}`)));
-    expect(teksten.join("\n")).toContain(`${fout.regelId}: ${formatteerBericht(fout, "nl")}`);
+    expect(teksten).toContain(`${NL.kolommen.kring} A — ${formatteerBericht(fout, "nl")}`);
+    expect(teksten).toContain(`A1 — ${formatteerBericht(bevindingen.find((b) => b.parameters["label"] === "A1")!, "nl")}`);
+    // Interne regel-id's horen niet in de pdf.
+    expect(uit.html).not.toContain("arei.");
     expect(teksten.indexOf(`${NL.bijlage.fouten} (${aantal("fout")})`)).toBeLessThan(
       teksten.indexOf(`${NL.bijlage.info} (${aantal("info")})`),
     );
@@ -407,15 +412,52 @@ describe("printHtml", () => {
     expect(bevindingen.some((b) => b.afgeweken)).toBe(true);
     const { html } = printHtml(doc, analyse, bevindingen, opties({ onderdelen: alleenOnderdeel("bijlage") }));
     const teksten = regels(html).map((r) => r.tekst);
-    expect(teksten.some((t) => t.endsWith(`(${NL.bijlage.afgeweken})`))).toBe(true);
+    const afgeweken = bevindingen.find((b) => b.afgeweken)!;
+    const bericht = `A1 — ${formatteerBericht(afgeweken, "nl")}`;
+    expect(teksten).toContain(`${bericht} (${NL.bijlage.afgeweken})`);
+    expect(html).not.toContain("arei.");
     expect(teksten).toEqual(
       expect.arrayContaining([
         `${NL.bijlage.afwijkingen} (1)`,
-        `${NL.bijlage.regel} arei.situatie.niet-geplaatst — ${NL.kolommen.punt} A1`,
+        bericht,
         `${NL.bijlage.motivatie}: Wordt later geplaatst door de klant.`,
         `${NL.bijlage.door}: Jan Peeters — ${NL.cartouche.datum}: 2026-10-02`,
       ]),
     );
+  });
+
+  test("bijlage: een afwijking zonder bevinding toont enkel het punt", () => {
+    const doc = metGegevens(referentieAppartement());
+    const analyse = analyseer(doc);
+    doc.afwijkingen.push({
+      regelId: "arei.kring.max-contactdozen",
+      nodeId: analyse.kringen[0]!.puntIds[1]!,
+      motivatie: "Geen bevinding meer voor deze afwijking.",
+      door: "Jan",
+      datum: "2026-10-02",
+    });
+    const { html } = printHtml(doc, analyse, [], opties({ onderdelen: alleenOnderdeel("bijlage") }));
+    expect(regels(html).filter((r) => r.klasse === "afwijking").map((r) => r.tekst)).toEqual(["A2"]);
+    expect(html).not.toContain("arei.");
+  });
+
+  test("bijlage: het AREI-artikel staat erbij als de regel er een heeft", () => {
+    const { doc } = installatie()
+      .differentieel(300, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(12))))
+      .bouw();
+    const bevindingen = bevindingenVan(doc);
+    const fout = bevindingen.find((b) => b.ernst === "fout")!;
+    const regel = haalRegelset(doc.regelset).regels.find((r) => r.id === fout.regelId)!;
+    const vorig = regel.artikel;
+    (regel as { artikel: string }).artikel = "4.2.3";
+    try {
+      const { html } = printHtml(doc, analyseer(doc), bevindingen, opties({ onderdelen: alleenOnderdeel("bijlage") }));
+      const teksten = regels(html).map((r) => r.tekst);
+      expect(teksten).toContain(`${NL.kolommen.kring} A — ${formatteerBericht(fout, "nl")} (${NL.bijlage.artikel} 4.2.3)`);
+      expect(teksten.filter((t) => t.includes(NL.bijlage.artikel))).toHaveLength(1);
+    } finally {
+      (regel as { artikel: string }).artikel = vorig;
+    }
   });
 
   test("bijlage: een volle pagina loopt door op een nieuwe pagina", () => {
@@ -479,6 +521,147 @@ describe("printHtml", () => {
     expect(uit.paginas).toBe(1);
     expect(uit.overgeslagen).toEqual(["Verdieping"]);
     expect(regels(uit.html).map((r) => r.tekst)).toContain("Verdieping");
+  });
+});
+
+describe("printHtml: witruimte", () => {
+  test("een regeleinde of tab in een cartouchevak of een tabelcel wordt één spatie", () => {
+    const { doc: gebouwd } = installatie()
+      .differentieel(300, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))))
+      .bouw();
+    const doc = metGegevens(gebouwd);
+    doc.meta.klant.naam = "Familie\nJanssens\t\tPeeters";
+    const leiding = Object.values(doc.nodes).find((n) => n.type === "leiding")!;
+    if (leiding.type === "leiding") leiding.kabeltype = "XVB\nXVB\tXVB";
+    const { html } = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
+    const teksten = regels(html).map((r) => r.tekst);
+    expect(teksten).toContain("Familie Janssens Peeters");
+    expect(teksten).toContain("XVB XVB XVB 3G2,5");
+    for (const tekst of teksten) expect(tekst).not.toMatch(/[\n\t\r]/);
+  });
+
+  test("de tekstregels breken nooit af en lopen niet uit hun vak", () => {
+    const doc = metGegevens(referentieAppartement());
+    const { html } = printHtml(doc, analyseer(doc), [], opties());
+    expect(html).toMatch(/\.t \{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis;/);
+  });
+});
+
+/** Een getal in mm uit de CSS van het document, via een regex met één groep. */
+function cssMm(html: string, patroon: RegExp): number {
+  const m = patroon.exec(html);
+  expect(m, String(patroon)).not.toBeNull();
+  return Number(m![1]);
+}
+
+describe("printHtml: geometrie uit de gegenereerde HTML en CSS", () => {
+  const grootDoc = () =>
+    installatie()
+      .differentieel(300, (d) =>
+        d.verdeelbord((b) => {
+          for (let i = 0; i < 15; i++) b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(8));
+        }),
+      )
+      .bouw().doc;
+
+  for (const formaat of ["A4", "A3"] as const) {
+    test(`${formaat}: een volle kringenlijstpagina eindigt boven de cartouche`, () => {
+      const doc = metGegevens(grootDoc());
+      const { html } = printHtml(doc, analyseer(doc), [], opties({ papier: formaat, onderdelen: alleenOnderdeel("kringenlijst") }));
+      const rijHoogte = cssMm(html, /\.kringen \.rij, \.kringen \.kopregel \{ display: flex; height: ([\d.]+)mm; \}/);
+      const celHoogte = cssMm(html, /\.kringen \.tabelcel \{ box-sizing: border-box; flex: none; height: ([\d.]+)mm;/);
+      expect(celHoogte).toBe(rijHoogte);
+      const bovenrand = cssMm(html, /\.kringen \{ position: absolute; box-sizing: border-box; border-top: ([\d.]+)mm/);
+      const maat = papierMaat(formaat);
+      const ruimte = bruikbaar({ ...STANDAARD_PAPIER_A4, formaat });
+      for (const sectie of paginas(html)) {
+        const tabelBoven = cssMm(sectie, /<div class="kringen" style="left:[\d.]+mm;top:([\d.]+)mm/);
+        const cartoucheBoven = cssMm(sectie, /<div class="vak installateur" style="left:[\d.]+mm;top:([\d.]+)mm/);
+        expect(cartoucheBoven).toBe(maat.hoogte - STANDAARD_PAPIER_A4.marge_mm - STANDAARD_PAPIER_A4.cartoucheHoogte_mm);
+        const kop = (sectie.match(/<div class="kopregel">/g) ?? []).length;
+        const rijen = (sectie.match(/<div class="rij">/g) ?? []).length;
+        expect(kop).toBe(1);
+        // Rijen × rijafstand past in de bruikbare hoogte min de kop.
+        expect(rijen * rijHoogte).toBeLessThanOrEqual(ruimte.hoogte - kop * rijHoogte - bovenrand);
+        expect(tabelBoven + bovenrand + (kop + rijen) * rijHoogte).toBeLessThanOrEqual(cartoucheBoven);
+      }
+    });
+
+    test(`${formaat}: de tekstregels van elk cartouchevak passen in de hoogte van het vak`, () => {
+      const doc = metGegevens(referentieAppartement());
+      const { html } = printHtml(doc, analyseer(doc), [], opties({ papier: formaat, logo: "logo.png" }));
+      const regelhoogte = cssMm(html, /\.t \{[^}]*line-height: ([\d.]+);/);
+      const rand = cssMm(html, /\.cartouche \.vak \{[^}]*border: ([\d.]+)mm solid/);
+      const sectie = paginas(html)[0]!;
+      const vakken = sectie.split('<div class="vak ').slice(1);
+      expect(vakken).toHaveLength(6);
+      for (const vak of vakken) {
+        const hoogte = cssMm(vak, /height:([\d.]+)mm;padding/);
+        const marge = cssMm(vak, /padding:([\d.]+)mm/);
+        const binnen = hoogte - 2 * marge - 2 * rand;
+        const tekst = regels(vak).reduce((som, r) => som + r.grootte * regelhoogte, 0);
+        expect(tekst).toBeGreaterThan(0);
+        expect(tekst).toBeLessThanOrEqual(binnen);
+        const logo = /<img class="logo"[^>]*top:([\d.]+)mm;[^>]*height:([\d.]+)mm/.exec(vak);
+        if (logo) expect(Number(logo[1]) + Number(logo[2])).toBeLessThanOrEqual(hoogte - marge - rand);
+      }
+    });
+
+    test(`${formaat}: de regels van elke bijlagepagina passen in de bruikbare hoogte`, () => {
+      const doc = metGegevens(referentieAppartement());
+      const analyse = analyseer(doc);
+      const nodeId = analyse.kringen[0]!.puntIds[0]!;
+      for (let i = 0; i < 40; i++) {
+        doc.afwijkingen.push({ regelId: `r${i}`, nodeId, motivatie: "woord ".repeat(120), door: "Jan", datum: "2026-10-02" });
+      }
+      const { html } = printHtml(doc, analyse, bevindingenVan(doc), opties({ papier: formaat, onderdelen: alleenOnderdeel("bijlage") }));
+      const regelhoogte = cssMm(html, /\.t \{[^}]*line-height: ([\d.]+);/);
+      const kopMarge = cssMm(html, /\.bijlage \.kop \{ margin-top: ([\d.]+)mm; \}/);
+      const secties = paginas(html);
+      expect(secties.length).toBeGreaterThan(1);
+      for (const sectie of secties) {
+        const hoogte = cssMm(sectie, /<div class="bijlage" style="[^"]*height:([\d.]+)mm"/);
+        const inhoud = sectie.slice(0, sectie.indexOf('<div class="cartouche">'));
+        const som = regels(inhoud).reduce((s, r) => s + r.grootte * regelhoogte + (r.klasse === "kop" ? kopMarge : 0), 0);
+        expect(som).toBeLessThanOrEqual(hoogte);
+      }
+    });
+  }
+});
+
+describe("overgeslagenPaginas", () => {
+  test("geeft de titels van pagina's zonder achtergrond of zonder bestand", () => {
+    const doc = metSituatie(referentieAppartement());
+    doc.situatie.paginas.push({ id: "p2", titel: "Verdieping", plaatsingen: [] });
+    expect(overgeslagenPaginas(doc, { "raster-1": "plan.png" })).toEqual(["Verdieping"]);
+    expect(overgeslagenPaginas(doc, {})).toEqual(["Gelijkvloers", "Verdieping"]);
+    expect(overgeslagenPaginas(doc, { constructor: "x" } as Record<string, string>)).toEqual(["Gelijkvloers", "Verdieping"]);
+  });
+});
+
+describe("cartouche", () => {
+  test("een handtekeninglabel van meer dan twee regels wordt op de tweede regel afgekort", () => {
+    const doc = metGegevens(referentieAppartement());
+    const teksten = {
+      ...NL,
+      cartouche: { ...NL.cartouche, handtekeningKeurder: "Handtekening van de erkende keurder van het organisme" },
+    };
+    const html = cartouche({
+      papier: STANDAARD_PAPIER_A4,
+      teksten,
+      meta: doc.meta,
+      installateur: INSTALLATEUR,
+      logo: undefined,
+      titel: "Bijlage",
+      datum: "2026-10-19",
+      versieLabel: "v1",
+      nummer: 1,
+      totaal: 1,
+    });
+    const keurder = regels(html.split('class="vak handtekening"')[2]!);
+    expect(keurder).toHaveLength(2);
+    expect(keurder[1]!.tekst.endsWith("…")).toBe(true);
+    for (const r of keurder) expect(tekstBreedte(r.tekst, r.grootte)).toBeLessThanOrEqual(r.breedte);
   });
 });
 

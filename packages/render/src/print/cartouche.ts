@@ -4,7 +4,7 @@ import type { Adres, InstallatieDocument, Partij } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import type { Teksten } from "../teksten/nl";
 import { RAND_MM } from "./stijl";
-import { breekRegels, tekstRegel, vloer } from "./tekst";
+import { afkorten, breekRegels, tekstRegel, vloer } from "./tekst";
 
 /** De binnenmarge van een vak in mm. */
 const VAK_MARGE_MM = 1.5;
@@ -43,10 +43,10 @@ function adresRegels(adres: Adres | undefined): [string, string] {
 
 /** Het label van een handtekeningvak loopt over hoogstens twee regels: het vak is smal. */
 function handtekening(label: string, breedte: number): string {
-  return breekRegels(label, vloer(breedte), TEKST_MM)
-    .slice(0, 2)
-    .map((r) => tekstRegel(r, breedte, TEKST_MM, "label"))
-    .join("");
+  const regels = breekRegels(label, vloer(breedte), TEKST_MM);
+  // Wat niet op twee regels past, wordt op de tweede regel afgekort met "…".
+  const getoond = regels.length > 2 ? [regels[0]!, afkorten(regels.slice(1).join(" "), vloer(breedte), TEKST_MM)] : regels;
+  return getoond.map((r) => tekstRegel(r, breedte, TEKST_MM, "label")).join("");
 }
 
 type Vak = { links: number; boven: number; breedte: number; hoogte: number };

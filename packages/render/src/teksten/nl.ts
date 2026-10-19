@@ -35,7 +35,8 @@ export type Teksten = {
     overgeslagenPaginas: string;
     /** Achter een bevinding waarvoor een afwijking geldt, tussen haakjes. */
     afgeweken: string;
-    regel: string;
+    /** Voor het artikelnummer van een regel, tussen haakjes achter het bericht. */
+    artikel: string;
     motivatie: string;
     door: string;
     geenBevindingen: string;
@@ -115,7 +116,7 @@ export const NL: Teksten = {
     afwijkingen: "Afwijkingen",
     overgeslagenPaginas: "Overgeslagen pagina's",
     afgeweken: "afgeweken",
-    regel: "Regel",
+    artikel: "AREI art.",
     motivatie: "Motivatie",
     door: "Door",
     geenBevindingen: "Geen bevindingen",
