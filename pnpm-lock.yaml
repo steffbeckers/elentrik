@@ -35,6 +35,9 @@ importers:
       '@elentrik/render':
         specifier: workspace:*
         version: link:../../packages/render
+      '@elentrik/symbols':
+        specifier: workspace:*
+        version: link:../../packages/symbols
       '@nuxt/ui':
         specifier: ^4.12.0
         version: 4.12.0(5784fe7eb2edf17aeefded3f881d0df7)
