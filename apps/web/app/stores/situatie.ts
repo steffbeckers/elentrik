@@ -92,6 +92,10 @@ export const useSituatieStore = defineStore("situatie", () => {
     const doel = actievePagina.value;
     if (!doel) throw new Error("Er is geen actieve pagina");
     const bestaand = plaatsingVan(nodeId);
+    // Een klik zonder verschuiving verandert niets en hoeft dus geen undo-stap of autosave.
+    if (bestaand && bestaand.pagina.id === doel.id && bestaand.plaatsing.x === x && bestaand.plaatsing.y === y) {
+      return null;
+    }
     editor.pasToe(plaats(vereisDocument(), doel.id, nodeId, { x, y, rotatie: bestaand?.plaatsing.rotatie ?? 0 }));
     return bestaand && bestaand.pagina.id !== doel.id ? bestaand.pagina.titel : null;
   }
@@ -100,19 +104,40 @@ export const useSituatieStore = defineStore("situatie", () => {
     editor.pasToe(verwijderPlaatsing(vereisDocument(), nodeId));
   }
 
-  /** Past een wijziging toe op elke geselecteerde, geplaatste node; alles samen is één undo-stap. */
+  /**
+   * Past een wijziging toe op elke geselecteerde node die op de actieve pagina staat; plaatsingen
+   * op andere pagina's blijven ongemoeid. Alles samen is één undo-stap, of geen als niets verandert.
+   */
   function wijzigGeselecteerde(
     nieuw: (huidig: { x: number; y: number; rotatie: number }, pagina: SituatiePagina) => { x: number; y: number; rotatie: number } | undefined,
   ): void {
     const doc = vereisDocument();
+    const pagina = actievePagina.value;
+    if (!pagina) return;
     const resultaten: OperatieResultaat[] = [];
     let huidig = doc;
     for (const nodeId of editor.selectie) {
-      const gevonden = plaatsingVan(nodeId);
-      if (!gevonden) continue;
-      const positie = nieuw(gevonden.plaatsing, gevonden.pagina);
+      const plaatsing = pagina.plaatsingen.find((p) => p.nodeId === nodeId);
+      if (!plaatsing) continue;
+      const positie = nieuw(plaatsing, pagina);
       if (!positie) continue;
-      const r = plaats(huidig, gevonden.pagina.id, nodeId, positie);
+      const r = plaats(huidig, pagina.id, nodeId, positie);
+      resultaten.push(r);
+      huidig = r.doc;
+    }
+    if (resultaten.length > 0) editor.pasToe(samengevoegd(doc, resultaten));
+  }
+
+  /** Haalt de geselecteerde nodes van de actieve pagina, in één undo-stap (geen stap als niets past). */
+  function haalSelectieVanPlan(): void {
+    const doc = vereisDocument();
+    const pagina = actievePagina.value;
+    if (!pagina) return;
+    const resultaten: OperatieResultaat[] = [];
+    let huidig = doc;
+    for (const nodeId of editor.selectie) {
+      if (!pagina.plaatsingen.some((p) => p.nodeId === nodeId)) continue;
+      const r = verwijderPlaatsing(huidig, nodeId);
       resultaten.push(r);
       huidig = r.doc;
     }
@@ -144,6 +169,7 @@ export const useSituatieStore = defineStore("situatie", () => {
     zetSchaal,
     plaatsNode,
     haalVanPlan,
+    haalSelectieVanPlan,
     draaiSelectie,
     schuifSelectie,
   };

@@ -213,6 +213,61 @@ describe("plaatsingen", () => {
     expect(plaatsingen(editor, paginaId).map((p) => [p.x, p.y])).toEqual([[10, 10], [20, 20]]);
   });
 
+  test("draaiSelectie en schuifSelectie laten plaatsingen op een andere pagina ongemoeid, zonder undo-stap", () => {
+    const { editor, situatie } = opzet();
+    const eerste = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [a3] = punten(editor);
+    situatie.plaatsNode(a3!, 100, 200);
+    const tweede = situatie.voegPlanPaginaToe("Verdieping", ACHTERGROND);
+    expect(situatie.actievePaginaId).toBe(tweede);
+    editor.selectie = [a3!];
+    const voor = editor.terug.length;
+    situatie.draaiSelectie(1);
+    situatie.schuifSelectie(10, 0);
+    expect(editor.terug.length).toBe(voor);
+    expect(plaatsingen(editor, eerste)).toEqual([{ nodeId: a3, x: 100, y: 200, rotatie: 0 }]);
+  });
+
+  test("haalSelectieVanPlan verwijdert alleen geselecteerde plaatsingen op de actieve pagina, in één undo-stap", () => {
+    const { editor, situatie } = opzet();
+    const eerste = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [a, b, c] = punten(editor);
+    situatie.plaatsNode(c!, 7, 7);
+    const tweede = situatie.voegPlanPaginaToe("Verdieping", ACHTERGROND);
+    situatie.plaatsNode(a!, 1, 1);
+    situatie.plaatsNode(b!, 2, 2);
+    editor.selectie = [a!, b!, c!];
+    const voor = editor.terug.length;
+    situatie.haalSelectieVanPlan();
+    expect(editor.terug.length - voor).toBe(1);
+    expect(plaatsingen(editor, tweede)).toEqual([]);
+    expect(plaatsingen(editor, eerste)).toHaveLength(1);
+    editor.ongedaanMaken();
+    expect(plaatsingen(editor, tweede)).toHaveLength(2);
+  });
+
+  test("haalSelectieVanPlan zonder toepasselijke plaatsing is een no-op zonder undo-stap", () => {
+    const { editor, situatie } = opzet();
+    situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [a] = punten(editor);
+    editor.selectie = [a!];
+    const voor = editor.terug.length;
+    situatie.haalSelectieVanPlan();
+    expect(editor.terug.length).toBe(voor);
+  });
+
+  test("plaatsNode op dezelfde plek op dezelfde pagina maakt geen undo-stap en wijzigt niets", () => {
+    const { editor, situatie } = opzet();
+    situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [a] = punten(editor);
+    situatie.plaatsNode(a!, 100, 200);
+    const voor = editor.terug.length;
+    const teller = editor.gewijzigdSindsOpslaan;
+    expect(situatie.plaatsNode(a!, 100, 200)).toBeNull();
+    expect(editor.terug.length).toBe(voor);
+    expect(editor.gewijzigdSindsOpslaan).toBe(teller);
+  });
+
   test("een geplaatst punt verwijderen in het eendraadschema verwijdert de plaatsing; undo herstelt beide", () => {
     const { editor, situatie } = opzet();
     const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);

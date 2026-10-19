@@ -141,6 +141,25 @@ describe("tePlaatsen", () => {
     expect(groepen.at(-1)).toEqual({ kringLabel: "—", nodeIds: [cd] });
   });
 
+  test("volgorde van de groepen: kringen, dan '—', dan 'Verdeelborden'", () => {
+    const { doc: basis, ids } = bouw();
+    const teller = Object.values(basis.nodes).find((n) => n.type === "teller")!;
+    const leiding = voegToe(basis, teller.id, { type: "leiding", kabeltype: "XVB", doorsnede_mm2: 2.5, aantalGeleiders: 3 });
+    const los = voegToe(leiding.doc, leiding.id, {
+      type: "lichtpunt",
+      aantal: 1,
+    });
+    const analyse = analyseer(los.doc);
+    expect(analyse.zonderKring).toEqual([los.id]);
+    const groepen = tePlaatsen(los.doc, analyse);
+    expect(groepen).toEqual([
+      { kringLabel: analyse.kringen[0]!.label, nodeIds: analyse.kringen[0]!.puntIds },
+      { kringLabel: analyse.kringen[1]!.label, nodeIds: analyse.kringen[1]!.puntIds },
+      { kringLabel: "—", nodeIds: [los.id] },
+      { kringLabel: "Verdeelborden", nodeIds: [ids["bord"]] },
+    ]);
+  });
+
   test("neemt een niet-geplaatst verdeelbord op in de groep 'Verdeelborden'", () => {
     const { doc, ids } = bouw();
     const groepen = tePlaatsen(doc, analyseer(doc));
