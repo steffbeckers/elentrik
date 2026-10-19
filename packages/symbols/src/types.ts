@@ -2,8 +2,9 @@
 export type Punt = { x: number; y: number };
 
 /**
- * Afmetingen van een symbool in mm. `in` is het aansluitpunt bovenaan en `uit` het aansluitpunt
- * onderaan; beide liggen op `x = breedte / 2`.
+ * Afmetingen van een symbool in mm. Het schema groeit naar boven: `in` is het aansluitpunt onderaan
+ * (naar de voeding toe, `y = hoogte`) en `uit` het aansluitpunt bovenaan (naar de volgende node,
+ * `y = 0`); beide liggen op `x = breedte / 2`.
  */
 export type SymboolMaat = { breedte: number; hoogte: number; in: Punt; uit: Punt };
 

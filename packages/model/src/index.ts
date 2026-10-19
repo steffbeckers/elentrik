@@ -7,12 +7,14 @@ export {
   pasPatchesToe,
   verplaats,
   verwijder,
+  verwijderEnkel,
   voegToe,
   wijzigEigenschappen,
   type NodeInvoer,
   type OperatieResultaat,
   type Patch,
 } from "./operaties";
+export { verwijderAfwijking, voegAfwijkingToe, wijzigProject } from "./project";
 export {
   PLAATSBARE_TYPES,
   plaats,
@@ -21,6 +23,20 @@ export {
   zetAchtergrond,
 } from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
+export {
+  NIEUWE_KRING_AUTOMAAT,
+  SJABLONEN,
+  STANDAARD,
+  nieuwProjectDocument,
+  sjabloonVoor,
+  type Onderdeel,
+} from "./standaarden";
+export {
+  magToevoegen,
+  voegOnderdeelToe,
+  voegSjabloonToe,
+  type Aanknoping,
+} from "./toevoegen";
 export {
   BEVEILIGING_TYPES,
   PUNT_TYPES,

@@ -9,6 +9,7 @@ import {
   tekstBreedte,
   type SchemaElement,
 } from "../src/index";
+import { lijnBenadert } from "./hulp";
 
 type SymboolElement = Extract<SchemaElement, { soort: "symbool" }>;
 type LijnElement = Extract<SchemaElement, { soort: "lijn" }>;
@@ -100,25 +101,28 @@ describe("maakStrook: rail en labels", () => {
   const syms = symbolen(strook.elementen);
   const symVan = (id: string) => syms.find((s) => s.nodeId === ids[id]!)!;
 
-  test("precies een rail, van de eerste tot de laatste kring", () => {
+  test("precies een rail, boven het bord, van de eerste tot de laatste kring", () => {
     const rails = lijnen(strook.elementen).filter((l) => l.rol === "rail");
     const bord = symVan("bord");
-    const yRail = bord.y + bord.symbool.maat.hoogte + 4;
-    expect(rails).toEqual([
-      { soort: "lijn", x1: cx(symVan("a")), y1: yRail, x2: cx(symVan("c")), y2: yRail, rol: "rail" },
-    ]);
+    const yRail = bord.y - 4;
+    expect(rails).toHaveLength(1);
+    lijnBenadert(rails[0], { soort: "lijn", x1: cx(symVan("a")), y1: yRail, x2: cx(symVan("c")), y2: yRail, rol: "rail" });
   });
 
-  test("kringteksten in volgorde A, B, C, links van de lijn, boven de beveiliging", () => {
+  test("kringteksten in volgorde A, B, C, links van de lijn, tussen de rail en de beveiliging", () => {
     const kringen = teksten(strook.elementen, "kring");
     expect(kringen.map((t) => t.tekst)).toEqual(["A", "B", "C"]);
+    const yRail = lijnen(strook.elementen).find((l) => l.rol === "rail")!.y1;
     for (const [t, naam] of [
       [kringen[0]!, "a"],
       [kringen[1]!, "b"],
       [kringen[2]!, "c"],
     ] as const) {
       const s = symVan(naam);
-      expect(t).toMatchObject({ x: cx(s) - 1, y: s.y - 1, grootte: 3, anker: "end" });
+      expect(t).toMatchObject({ x: cx(s) - 1, grootte: 3, anker: "end" });
+      // Onder het symbool van de beveiliging (aan de kant van de voeding), boven de rail.
+      expect(t.y).toBeGreaterThan(s.y + s.symbool.maat.hoogte);
+      expect(t.y).toBeLessThan(yRail);
     }
   });
 
@@ -131,7 +135,8 @@ describe("maakStrook: rail en labels", () => {
     const contactdozen = syms.filter((s) => doc.nodes[s.nodeId]!.type === "contactdoos");
     const symbool = contactdozen[2]!;
     expect(a3.x).toBeCloseTo(symbool.x - 1, 10);
-    expect(a3.y).toBeCloseTo(symbool.y + symbool.symbool.maat.hoogte / 2 + 0.9, 10);
+    // De glyph (hoogte 0,7 × grootte) staat rond de middellijn, met de basislijn 0,35 × grootte eronder.
+    expect(a3.y).toBeCloseTo(symbool.y + symbool.symbool.maat.hoogte / 2 + 0.85, 10);
   });
 
   test("leiding- en beveiligingsteksten staan rechts van het symbool", () => {
@@ -143,17 +148,13 @@ describe("maakStrook: rail en labels", () => {
     expect(beveiliging.map((t) => t.tekst)).toEqual(["300 mA A", "16 A B", "10 A B", "16 A C"]);
     expect(beveiliging[1]).toMatchObject({
       x: cx(a) + a.symbool.maat.breedte / 2 + 1,
-      y: a.y + a.symbool.maat.hoogte / 2 + 0.7,
       grootte: 2,
       anker: "start",
     });
+    expect(beveiliging[1]!.y).toBeCloseTo(a.y + a.symbool.maat.hoogte / 2 + 0.7, 10);
     const leidingA = syms.find((s) => doc.nodes[s.nodeId]!.type === "leiding")!;
-    expect(leidingen[0]).toMatchObject({
-      x: cx(leidingA) + 2,
-      y: leidingA.y + leidingA.symbool.maat.hoogte / 2 + 0.7,
-      grootte: 2,
-      anker: "start",
-    });
+    expect(leidingen[0]).toMatchObject({ x: cx(leidingA) + 2, grootte: 2, anker: "start" });
+    expect(leidingen[0]!.y).toBeCloseTo(leidingA.y + leidingA.symbool.maat.hoogte / 2 + 0.7, 10);
   });
 
   test("een bord zonder naam geeft geen onderbordtekst", () => {
@@ -171,17 +172,16 @@ describe("maakStrook: onderbord en punten zonder kring", () => {
     const strook = maakStrook(gewijzigd);
     const symbool = symbolen(strook.elementen).find((s) => s.nodeId === bord.id)!;
     const onderbord = teksten(strook.elementen, "onderbord");
-    expect(onderbord).toEqual([
-      {
-        soort: "tekst",
-        x: cx(symbool) + symbool.symbool.maat.breedte / 2 + 1,
-        y: symbool.y + symbool.symbool.maat.hoogte / 2 + 0.7,
-        tekst: "<x>",
-        grootte: 2.5,
-        anker: "start",
-        rol: "onderbord",
-      },
-    ]);
+    expect(onderbord).toHaveLength(1);
+    expect(onderbord[0]).toMatchObject({
+      soort: "tekst",
+      x: cx(symbool) + symbool.symbool.maat.breedte / 2 + 1,
+      tekst: "<x>",
+      grootte: 2.5,
+      anker: "start",
+      rol: "onderbord",
+    });
+    expect(onderbord[0]!.y).toBeCloseTo(symbool.y + symbool.symbool.maat.hoogte / 2 + 1.05, 10);
   });
 
   test("een punt zonder kring heeft geen punttekst", () => {

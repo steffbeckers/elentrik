@@ -2,7 +2,7 @@ import type { Node, NodeVan } from "@elentrik/model";
 import { ToestelsoortSchema } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { KOLOM_BREEDTE_MM, tekenSymbool } from "../src/index";
-import { buitenVak, isGoedgevormd, raakt } from "./hulp";
+import { buitenVak, isGoedgevormd, nietRechtop, raakt } from "./hulp";
 
 const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
 
@@ -90,9 +90,9 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(maat.breedte).toBeLessThanOrEqual(KOLOM_BREEDTE_MM - 4);
     });
 
-    test("in en uit liggen op het midden, bovenaan en onderaan", () => {
-      expect(maat.in).toEqual({ x: maat.breedte / 2, y: 0 });
-      expect(maat.uit).toEqual({ x: maat.breedte / 2, y: maat.hoogte });
+    test("in en uit liggen op het midden, in onderaan en uit bovenaan", () => {
+      expect(maat.in).toEqual({ x: maat.breedte / 2, y: maat.hoogte });
+      expect(maat.uit).toEqual({ x: maat.breedte / 2, y: 0 });
     });
 
     test("alle meetkunde ligt binnen het vak", () => {
@@ -106,6 +106,7 @@ describe("symbolen voor punten, leiding en onderbord", () => {
 
     test("is goedgevormde XML zonder NaN of undefined", () => {
       expect(isGoedgevormd(symbool)).toBe(true);
+      expect(nietRechtop(symbool)).toEqual([]);
       expect(symbool.svg).not.toMatch(/NaN|undefined|Infinity/);
     });
   });
@@ -129,9 +130,9 @@ describe("symbolen voor punten, leiding en onderbord", () => {
 
     test("heeft een halve cirkel als boog en een verticale lijn naar het aansluitpunt", () => {
       const svg = svgVan({});
-      expect(svg).toMatch(/<path d="M4 5 A3 3 0 0 0 10 5"/);
-      expect(svg).toContain('<line x1="7" y1="0" x2="7" y2="8"');
-      expect(svg).toContain('<line x1="7" y1="8" x2="7" y2="10"');
+      expect(svg).toMatch(/<path d="M4 5 A3 3 0 0 1 10 5"/);
+      expect(svg).toContain('<line x1="7" y1="10" x2="7" y2="2"');
+      expect(svg).toContain('<line x1="7" y1="2" x2="7" y2="0"');
     });
 
     test("randaarde, kinderbeveiliging en waterdicht verschijnen alleen als ze aan staan", () => {
@@ -164,8 +165,8 @@ describe("symbolen voor punten, leiding en onderbord", () => {
     });
 
     test("de geleider loopt rechtdoor van cirkel naar uit, en de versiering ligt rechts ervan", () => {
-      expect(svgVan()).toContain('<line x1="7" y1="8" x2="7" y2="10"');
-      expect(svgVan("tl")).toMatch(/<rect x="8\.2" y="8\.6" width="3\.8" height="0\.8"/);
+      expect(svgVan()).toContain('<line x1="7" y1="2" x2="7" y2="0"');
+      expect(svgVan("tl")).toMatch(/<rect x="8\.2" y="0\.6" width="3\.8" height="0\.8"/);
       const padGetallen = [...(svgVan("spot").match(/<path d="([^"]+)"/)?.[1] ?? "").matchAll(/-?[\d.]+/g)].map((m) =>
         Number(m[0]),
       );
@@ -173,7 +174,7 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(padX).toHaveLength(3);
       expect(Math.min(...padX)).toBeGreaterThanOrEqual(9.5);
       expect(Math.max(...padX)).toBeLessThanOrEqual(12);
-      expect(svgVan("led")).toMatch(/<text x="8" y="9\.8" font-size="1\.8" text-anchor="start"/);
+      expect(svgVan("led")).toMatch(/<text x="8" y="1\.46" font-size="1\.8" text-anchor="start"/);
     });
 
     test("standaard en zonder soort zijn gelijk", () => {
@@ -207,7 +208,7 @@ describe("symbolen voor punten, leiding en onderbord", () => {
 
     test("is een cirkel met r = 2 en een geleider naar uit", () => {
       expect(svgVan("enkel")).toContain('r="2"');
-      expect(svgVan("enkel")).toContain('<line x1="6" y1="8" x2="6" y2="10"');
+      expect(svgVan("enkel")).toContain('<line x1="6" y1="2" x2="6" y2="0"');
     });
 
     test.each([
@@ -249,12 +250,12 @@ describe("symbolen voor punten, leiding en onderbord", () => {
   });
 
   test("leiding is alleen een verticale lijn over de volle hoogte", () => {
-    expect(tekenSymbool(leiding).svg).toMatch(/^<line x1="1" y1="0" x2="1" y2="12"[^>]*\/>$/);
+    expect(tekenSymbool(leiding).svg).toMatch(/^<line x1="1" y1="12" x2="1" y2="0"[^>]*\/>$/);
   });
 
-  test("verdeelbord is een rechthoek van 12 × 6 met een horizontale lijn onderaan", () => {
+  test("verdeelbord is een rechthoek van 12 × 6 met een horizontale lijn bovenaan", () => {
     const svg = tekenSymbool(verdeelbord).svg;
     expect(svg).toContain('<rect x="0" y="0" width="12" height="6"');
-    expect(svg).toMatch(/<line x1="0" y1="4.5" x2="12" y2="4.5"/);
+    expect(svg).toMatch(/<line x1="0" y1="1.5" x2="12" y2="1.5"/);
   });
 });

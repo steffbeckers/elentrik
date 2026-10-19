@@ -8,13 +8,13 @@ export function tekenLeiding(_node: NodeVan<"leiding">): Symbool {
   const hoogte = 12;
   const x = breedte / 2;
   return {
-    maat: { breedte, hoogte, in: { x, y: 0 }, uit: { x, y: hoogte } },
-    svg: lijn(x, 0, x, hoogte),
+    maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } },
+    svg: lijn(x, hoogte, x, 0),
   };
 }
 
 /**
- * Verdeelbord: een rechthoek met een horizontale lijn in het onderste deel, 12 × 6 mm. De rail
+ * Verdeelbord: een rechthoek met een horizontale lijn in het bovenste deel, 12 × 6 mm. De rail
  * waaraan de beveiligingen hangen tekent de layout.
  */
 export function tekenVerdeelbord(_node: NodeVan<"verdeelbord">): Symbool {
@@ -22,7 +22,7 @@ export function tekenVerdeelbord(_node: NodeVan<"verdeelbord">): Symbool {
   const hoogte = 6;
   const x = breedte / 2;
   return {
-    maat: { breedte, hoogte, in: { x, y: 0 }, uit: { x, y: hoogte } },
-    svg: rechthoek(0, 0, breedte, hoogte) + lijn(0, 4.5, breedte, 4.5),
+    maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } },
+    svg: rechthoek(0, 0, breedte, hoogte) + lijn(0, 1.5, breedte, 1.5),
   };
 }

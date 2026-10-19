@@ -2,3 +2,9 @@ node_modules/
 coverage/
 .claude/worktrees/
 out/
+.superpowers/
+apps/web/.nuxt
+apps/web/.output
+.env
+apps/web/test-results
+apps/web/playwright-report

@@ -23,9 +23,11 @@
    - Een node met één kind staat in dezelfde kolom als dat kind. Zo ontstaan rechte verticale lijnen.
    - Een node met meerdere kinderen staat in de kolom van zijn eerste kind.
    - Een `verdeelbord` wordt getekend als horizontale rail van de eerste tot de laatste kindkolom. Andere nodes met meerdere kinderen krijgen een korte horizontale verbinding.
-3. **Verticale opbouw:** de root `aansluiting` staat bovenaan.
-   - `y(kind) = y(ouder) + hoogte(ouder) + VERTICALE_AFSTAND_MM`, met `VERTICALE_AFSTAND_MM = 4`.
-   - Onder een rail komt een extra `RAIL_AFSTAND_MM = 6`.
+3. **Verticale opbouw:** het schema groeit naar boven. De root `aansluiting` staat onderaan (de grootste y), elk kind staat boven zijn ouder.
+   - De opmaak wordt eerst berekend als afstand `d` vanaf de voeding en daarna omgezet naar `y = hoogte − d`. Er geldt `d(kind) = d(ouder) + hoogte(ouder) + VERTICALE_AFSTAND_MM`, met `VERTICALE_AFSTAND_MM = 4`.
+   - Boven een rail komt een extra `RAIL_AFSTAND_MM = 6`. De rail ligt boven de vertakkende node, de kinderen erboven.
+   - Een verbinding loopt van `uit` van de ouder (bovenkant) omhoog naar `in` van het kind (onderkant). Het kringlabel staat tussen de rail en de beveiliging.
+   - Tekst blijft rechtop. Bij het omzetten blijft de glyph (ca. 0,7 × grootte hoog) gespiegeld op dezelfde plek, dus de basislijn wordt `hoogte − d + 0,7 × grootte`.
 4. **Paginering:**
    - Eerst wordt de hele strook opgemaakt.
    - Als de strook hoger is dan de bruikbare hoogte, krijgen alle pagina's dezelfde `schaal = bruikbaar / strookhoogte`, met een minimum van `MIN_SCHAAL = 0.5`. Onder dat minimum volgt de waarschuwing `SCHEMA_TE_HOOG`, en blijft de schaal 0.5.
@@ -113,7 +115,7 @@
 **Interfaces:**
 - Produces:
   - `type Punt = { x: number; y: number }`
-  - `type SymboolMaat = { breedte: number; hoogte: number; in: Punt; uit: Punt }`, in mm. `in` is het aansluitpunt bovenaan en `uit` het aansluitpunt onderaan. Beide liggen op `x = breedte / 2`.
+  - `type SymboolMaat = { breedte: number; hoogte: number; in: Punt; uit: Punt }`, in mm. `in` is het aansluitpunt onderaan en `uit` het aansluitpunt bovenaan. Beide liggen op `x = breedte / 2`.
   - `type Symbool = { maat: SymboolMaat; svg: string }`: `svg` is de inhoud van een `<g>` in lokale coördinaten, met (0,0) linksboven.
   - `LIJNDIKTE_MM = 0.35`, `TEKSTGROOTTE_MM = 2.5`, `KOLOM_BREEDTE_MM = 24`. `KOLOM_BREEDTE_MM` staat hier, omdat symbols moet garanderen dat `breedte <= KOLOM_BREEDTE_MM - 4`.
   - `getal(n: number): string`: maximaal 2 decimalen, zonder afsluitende nullen, `-0` wordt `"0"`, en `NaN` of `Infinity` gooit een `RangeError`.
@@ -294,9 +296,9 @@
     - differentieel: `${gevoeligheid_mA} mA ${klasse}`.
 
 **Regels:**
-- **Rail onder een bord:** onder een `verdeelbord` met minstens één kind komt een `rail`-lijn op `y(bord) + hoogte + VERTICALE_AFSTAND_MM`, van `cx(eerste kind)` tot `cx(laatste kind)`. Bij één kind is die lijn 0 lang en wordt hij weggelaten. Daarvandaan lopen verticale verbindingen naar elk kind. Andere nodes met meerdere kinderen krijgen dezelfde vorm met rol `verbinding`.
+- **Rail boven een bord:** boven een `verdeelbord` met minstens één kind komt een `rail`-lijn op `y(bord) - VERTICALE_AFSTAND_MM`, van `cx(eerste kind)` tot `cx(laatste kind)`. Bij één kind is die lijn 0 lang en wordt hij weggelaten. Daarvandaan lopen verticale verbindingen naar elk kind. Andere nodes met meerdere kinderen krijgen dezelfde vorm met rol `verbinding`.
 - **Leidinglabel:** een tekst met rol `leiding` op `x = cx + 2`, verticaal gecentreerd op de leiding, met grootte 2 en anker `start`.
-- **Kringlabel:** een tekst met rol `kring` met het kringlabel uit de analyse, gecentreerd boven het symbool van de kringbeveiliging (`y = y(beveiliging) - 1`), met grootte 3.
+- **Kringlabel:** een tekst met rol `kring` met het kringlabel uit de analyse, links van de lijn, tussen de rail en de beveiliging, met grootte 3.
 - **Beveiligingslabel:** een tekst met rol `beveiliging` rechts van de beveiliging.
 - **Puntlabel:** een tekst met rol `punt` met het puntlabel (bv. "A3"), links van het symbool (`x = x - 1`), met anker `end` en grootte 2,5. Punten zonder label (zonder kring) krijgen geen puntlabel.
 - **Onderbordlabel:** een tekst met rol `onderbord` met `verdeelbord.naam`, als die niet leeg is, rechts van het bordsymbool.
