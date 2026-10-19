@@ -5,6 +5,7 @@ import {
   verwijderAfwijking,
   voegAfwijkingToe,
   wijzigProject,
+  type Adres,
   type Afwijking,
 } from "../src/index";
 import { kloon, vangFout } from "./hulp";
@@ -145,5 +146,95 @@ describe("wijzigProject", () => {
     expect(r.doc).toBe(doc);
     expect(r.patches).toEqual([]);
     expect(r.inversePatches).toEqual([]);
+  });
+
+  describe("projectgegevens", () => {
+    const adres: Adres = {
+      straat: "Dorpsstraat",
+      nummer: "12",
+      bus: "A",
+      postcode: "9000",
+      gemeente: "Gent",
+      land: "BE",
+    };
+
+    test("klantAdres zetten en ongedaan maken", () => {
+      const doc = nieuwDocument();
+      const r = wijzigProject(doc, { klantAdres: adres });
+      expect(r.doc.meta.klant.adres).toEqual(adres);
+      expect(r.doc).toEqual({
+        ...doc,
+        meta: { ...doc.meta, klant: { ...doc.meta.klant, adres } },
+      });
+      expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+    });
+
+    test("klantAdres null wist het adres en is omkeerbaar", () => {
+      const met = wijzigProject(nieuwDocument(), { klantAdres: adres }).doc;
+      const r = wijzigProject(met, { klantAdres: null });
+      expect("adres" in r.doc.meta.klant).toBe(false);
+      expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(met);
+    });
+
+    test("werfadres zetten en ongedaan maken", () => {
+      const doc = nieuwDocument();
+      const r = wijzigProject(doc, { werfadres: adres });
+      expect(r.doc.meta.werfadres).toEqual(adres);
+      expect(r.doc).toEqual({ ...doc, meta: { ...doc.meta, werfadres: adres } });
+      expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+    });
+
+    test("ean zetten en ongedaan maken", () => {
+      const doc = nieuwDocument();
+      const r = wijzigProject(doc, { ean: "541448900000000001" });
+      expect(r.doc.meta.ean).toBe("541448900000000001");
+      expect(r.doc).toEqual({ ...doc, meta: { ...doc.meta, ean: "541448900000000001" } });
+      expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+    });
+
+    test("datum zetten en ongedaan maken", () => {
+      const doc = nieuwDocument();
+      const r = wijzigProject(doc, { datum: "2026-12-31" });
+      expect(r.doc.meta.datum).toBe("2026-12-31");
+      expect(r.doc).toEqual({ ...doc, meta: { ...doc.meta, datum: "2026-12-31" } });
+      expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+    });
+
+    test("alle velden in een aanroep zijn een omkeerbaar resultaat", () => {
+      const doc = nieuwDocument();
+      const r = wijzigProject(doc, {
+        klantNaam: "Jan",
+        stroomtype: "3N400V",
+        klantAdres: adres,
+        werfadres: adres,
+        ean: "541448900000000001",
+        datum: "2026-12-31",
+      });
+      expect(r.doc.meta.klant).toEqual({ naam: "Jan", adres });
+      expect(r.doc.meta.werfadres).toEqual(adres);
+      expect(r.doc.voeding.stroomtype).toBe("3N400V");
+      expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+    });
+
+    test("een ongeldig adres (zonder gemeente) geeft ONGELDIG_SCHEMA", () => {
+      const doc = nieuwDocument();
+      const voor = kloon(doc);
+      const { gemeente: _weg, ...zonderGemeente } = adres;
+      expect(
+        vangFout(() => wijzigProject(doc, { klantAdres: zonderGemeente as never })).code,
+      ).toBe("ONGELDIG_SCHEMA");
+      expect(
+        vangFout(() => wijzigProject(doc, { werfadres: zonderGemeente as never })).code,
+      ).toBe("ONGELDIG_SCHEMA");
+      expect(doc).toEqual(voor);
+    });
+
+    test("een ean of datum die geen tekst is geeft ONGELDIG_SCHEMA", () => {
+      const doc = nieuwDocument();
+      expect(vangFout(() => wijzigProject(doc, { ean: 5 as never })).code).toBe("ONGELDIG_SCHEMA");
+      expect(vangFout(() => wijzigProject(doc, { datum: 5 as never })).code).toBe(
+        "ONGELDIG_SCHEMA",
+      );
+    });
   });
 });
