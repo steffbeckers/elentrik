@@ -26,6 +26,7 @@
     "h3": "^1.15.11",
     "idb-keyval": "^6.3.0",
     "nuxt": "^4.6.2",
+    "pdfjs-dist": "6.4.299",
     "pinia": "^4.1.0",
     "postgres": "^3.4.9",
     "tailwindcss": "^4.3.3",
