@@ -114,9 +114,9 @@ export async function bewaarBestand(
 export async function haalBestand(
   db: Db,
   id: string,
-): Promise<{ id: string; mime: string; sleutel: string } | null> {
+): Promise<{ id: string; soort: (typeof bestanden.$inferSelect)["soort"]; mime: string; sleutel: string } | null> {
   const [rij] = await db
-    .select({ id: bestanden.id, mime: bestanden.mime, sleutel: bestanden.sleutel })
+    .select({ id: bestanden.id, soort: bestanden.soort, mime: bestanden.mime, sleutel: bestanden.sleutel })
     .from(bestanden)
     .where(eq(bestanden.id, id));
   return rij ?? null;

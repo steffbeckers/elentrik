@@ -64,3 +64,37 @@ describe("bestandHeaders", () => {
     });
   });
 });
+
+describe("bestandHeaders met download", () => {
+  test("geeft attachment met een gesaneerde filename en een correcte filename*", () => {
+    const headers = bestandHeaders("application/pdf", { download: 'Huis "Peeters" / V1.pdf' });
+    expect(headers["Content-Disposition"]).toBe(
+      `attachment; filename="Huis Peeters V1.pdf"; filename*=UTF-8''Huis%20Peeters%20V1.pdf`,
+    );
+    expect(headers["Content-Type"]).toBe("application/pdf");
+    expect(headers["Content-Security-Policy"]).toBe("sandbox; default-src 'none'");
+    expect(headers["X-Content-Type-Options"]).toBe("nosniff");
+  });
+
+  test("niet-ASCII blijft in filename*, filename krijgt een ASCII-vorm", () => {
+    const headers = bestandHeaders("application/pdf", { download: "Café Brûlé - V1 (def)*.pdf" });
+    expect(headers["Content-Disposition"]).toBe(
+      `attachment; filename="Cafe Brule - V1 (def).pdf"; ` +
+        `filename*=UTF-8''Caf%C3%A9%20Br%C3%BBl%C3%A9%20-%20V1%20%28def%29.pdf`,
+    );
+  });
+
+  test("stuurtekens en verboden tekens verdwijnen; niets over geeft export.pdf", () => {
+    const stuur = bestandHeaders("application/pdf", { download: "a\r\nb\u0000c\u007fd\\:?<>|.pdf" });
+    expect(stuur["Content-Disposition"]).toBe(`attachment; filename="a b c d.pdf"; filename*=UTF-8''a%20b%20c%20d.pdf`);
+    const leeg = bestandHeaders("application/pdf", { download: '"/\\' });
+    expect(leeg["Content-Disposition"]).toBe(`attachment; filename="export.pdf"; filename*=UTF-8''export.pdf`);
+  });
+
+  test("tekens zonder ASCII-vorm worden _ in filename", () => {
+    const headers = bestandHeaders("application/pdf", { download: "Huis 😀 €.pdf" });
+    expect(headers["Content-Disposition"]).toBe(
+      `attachment; filename="Huis _ _.pdf"; filename*=UTF-8''Huis%20%F0%9F%98%80%20%E2%82%AC.pdf`,
+    );
+  });
+});

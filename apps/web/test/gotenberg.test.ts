@@ -100,4 +100,28 @@ describe("maakPdf", () => {
     expect(fout).toBeInstanceOf(PdfFout);
     expect(fout.code).toBe("MISLUKT");
   });
+  test("de foutbody van een 5xx komt afgekapt (hoogstens 500 tekens) in de details", async () => {
+    const lang = "x".repeat(1200);
+    const fetchMock = vi.fn(async () => new Response(lang, { status: 503 }));
+    const fout = await maakPdf(invoer, { fetch: fetchMock as unknown as typeof fetch, url: "http://g.test" }).catch((e) => e);
+    expect(fout).toBeInstanceOf(PdfFout);
+    expect(fout.details).toEqual({ status: 503, body: "x".repeat(500) });
+  });
+
+  test("de foutbody van een 4xx staat in de details", async () => {
+    const fetchMock = vi.fn(async () => new Response("slecht formulier", { status: 400 }));
+    const fout = await maakPdf(invoer, { fetch: fetchMock as unknown as typeof fetch, url: "http://g.test" }).catch((e) => e);
+    expect(fout.details).toEqual({ status: 400, body: "slecht formulier" });
+  });
+
+  test("een lege ELENTRIK_GOTENBERG_URL valt terug op de standaard", async () => {
+    vi.stubEnv("ELENTRIK_GOTENBERG_URL", "");
+    try {
+      const fetchMock = vi.fn(async (_u: string | URL | Request, _i?: RequestInit) => pdfAntwoord());
+      await maakPdf(invoer, { fetch: fetchMock as unknown as typeof fetch });
+      expect(fetchMock.mock.calls[0]![0]).toBe("http://127.0.0.1:3001/forms/chromium/convert/html");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
