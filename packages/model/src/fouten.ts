@@ -7,6 +7,7 @@ export type FoutCode =
   | "ONGELDIGE_INDEX"
   | "ONBEKENDE_PAGINA"
   | "NIET_PLAATSBAAR"
+  | "GEEN_ACHTERGROND"
   | "ONBEKENDE_SCHEMAVERSIE";
 
 export class DocumentFout extends Error {

@@ -1,14 +1,18 @@
 import { describe, expect, test } from "vitest";
 import {
   PLAATSBARE_TYPES,
+  hernoemPagina,
   nieuwDocument,
   pasPatchesToe,
   plaats,
   valideerStructuur,
+  verplaatsPagina,
+  verwijderPagina,
   verwijderPlaatsing,
   voegPaginaToe,
   voegToe,
   zetAchtergrond,
+  zetSchaal,
   type InstallatieDocument,
   type NodeId,
 } from "../src/index";
@@ -257,5 +261,124 @@ describe("verwijderPlaatsing", () => {
     expect(r.doc.situatie.paginas[0]!.plaatsingen).toEqual([
       { nodeId: bord, x: 3, y: 4, rotatie: 0 },
     ]);
+  });
+});
+
+describe("hernoemPagina", () => {
+  test("trimt de titel", () => {
+    const { doc, p1 } = opstelling();
+    const r = hernoemPagina(doc, p1, "  Gelijkvloers ");
+    expect(r.doc.situatie.paginas[0]!.titel).toBe("Gelijkvloers");
+    expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(kloon(doc));
+  });
+
+  test("een lege titel geeft ONGELDIG_SCHEMA", () => {
+    const { doc, p1 } = opstelling();
+    expect(vangFout(() => hernoemPagina(doc, p1, "   ")).code).toBe("ONGELDIG_SCHEMA");
+    expect(vangFout(() => hernoemPagina(doc, p1, "")).code).toBe("ONGELDIG_SCHEMA");
+  });
+
+  test("een onbekende pagina geeft ONBEKENDE_PAGINA", () => {
+    const { doc } = opstelling();
+    expect(vangFout(() => hernoemPagina(doc, "weg", "Kelder")).code).toBe("ONBEKENDE_PAGINA");
+  });
+});
+
+describe("verwijderPagina", () => {
+  test("verwijdert de pagina en haar plaatsingen, de nodes blijven", () => {
+    const { doc, p1, p2, doos, bord } = opstelling();
+    const a = plaats(doc, p1, doos, { x: 1, y: 2, rotatie: 0 });
+    const b = plaats(a.doc, p1, bord, { x: 3, y: 4, rotatie: 0 });
+    const r = verwijderPagina(b.doc, p1);
+    expect(r.doc.situatie.paginas.map((p) => p.id)).toEqual([p2]);
+    expect(Object.keys(r.doc.nodes)).toEqual(Object.keys(b.doc.nodes));
+    expect(r.doc.nodes[doos]).toBeDefined();
+    expect(r.doc.nodes[bord]).toBeDefined();
+    expect(valideerStructuur(r.doc)).toEqual([]);
+    expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(kloon(b.doc));
+  });
+
+  test("een onbekende pagina geeft ONBEKENDE_PAGINA", () => {
+    const { doc } = opstelling();
+    expect(vangFout(() => verwijderPagina(doc, "weg")).code).toBe("ONBEKENDE_PAGINA");
+  });
+});
+
+describe("zetSchaal", () => {
+  test("zet de schaal op de achtergrond", () => {
+    const { doc, p1 } = opstelling();
+    const met = zetAchtergrond(doc, p1, { ...ACHTERGROND, schaal: { mmPerPx: 4.5 } });
+    const r = zetSchaal(met.doc, p1, 0.5);
+    expect(r.doc.situatie.paginas[0]!.achtergrond!.schaal).toEqual({ mmPerPx: 0.5 });
+    expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(kloon(met.doc));
+  });
+
+  test("undefined verwijdert de schaal", () => {
+    const { doc, p1 } = opstelling();
+    const met = zetAchtergrond(doc, p1, ACHTERGROND);
+    const r = zetSchaal(met.doc, p1, undefined);
+    expect(Object.hasOwn(r.doc.situatie.paginas[0]!.achtergrond!, "schaal")).toBe(false);
+    expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(kloon(met.doc));
+  });
+
+  test("een niet-positieve of niet-eindige schaal geeft ONGELDIG_SCHEMA", () => {
+    const { doc, p1 } = opstelling();
+    const met = zetAchtergrond(doc, p1, ACHTERGROND).doc;
+    for (const waarde of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(vangFout(() => zetSchaal(met, p1, waarde)).code).toBe("ONGELDIG_SCHEMA");
+    }
+  });
+
+  test("een pagina zonder achtergrond geeft GEEN_ACHTERGROND", () => {
+    const { doc, p1 } = opstelling();
+    expect(vangFout(() => zetSchaal(doc, p1, 0.5)).code).toBe("GEEN_ACHTERGROND");
+    expect(vangFout(() => zetSchaal(doc, p1, undefined)).code).toBe("GEEN_ACHTERGROND");
+  });
+
+  test("een onbekende pagina geeft ONBEKENDE_PAGINA", () => {
+    const { doc } = opstelling();
+    expect(vangFout(() => zetSchaal(doc, "weg", 0.5)).code).toBe("ONBEKENDE_PAGINA");
+  });
+});
+
+describe("verplaatsPagina", () => {
+  function metDrie(): { doc: InstallatieDocument; a: string; b: string; c: string } {
+    const { doc, p1, p2 } = opstelling();
+    const derde = voegPaginaToe(doc, "Zolder");
+    return { doc: derde.doc, a: p1, b: p2, c: derde.id };
+  }
+
+  test("verplaatst c naar voren", () => {
+    const { doc, a, b, c } = metDrie();
+    const r = verplaatsPagina(doc, c, 0);
+    expect(r.doc.situatie.paginas.map((p) => p.id)).toEqual([c, a, b]);
+    expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(kloon(doc));
+  });
+
+  test("verplaatst a naar achteren", () => {
+    const { doc, a, b, c } = metDrie();
+    const r = verplaatsPagina(doc, a, 2);
+    expect(r.doc.situatie.paginas.map((p) => p.id)).toEqual([b, c, a]);
+    expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(kloon(doc));
+  });
+
+  test("een ongeldige index geeft ONGELDIGE_INDEX", () => {
+    const { doc, a } = metDrie();
+    expect(vangFout(() => verplaatsPagina(doc, a, 3)).code).toBe("ONGELDIGE_INDEX");
+    expect(vangFout(() => verplaatsPagina(doc, a, -1)).code).toBe("ONGELDIGE_INDEX");
+    expect(vangFout(() => verplaatsPagina(doc, a, 1.5)).code).toBe("ONGELDIGE_INDEX");
+  });
+
+  test("naar de eigen index: zelfde doc en lege patches", () => {
+    const { doc, b } = metDrie();
+    const r = verplaatsPagina(doc, b, 1);
+    expect(r.doc).toBe(doc);
+    expect(r.patches).toEqual([]);
+    expect(r.inversePatches).toEqual([]);
+  });
+
+  test("een onbekende pagina geeft ONBEKENDE_PAGINA", () => {
+    const { doc } = metDrie();
+    expect(vangFout(() => verplaatsPagina(doc, "weg", 0)).code).toBe("ONBEKENDE_PAGINA");
   });
 });

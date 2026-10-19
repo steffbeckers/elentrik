@@ -5,12 +5,15 @@ import {
   nieuwDocument,
   parseDocument,
   pasPatchesToe,
+  hernoemPagina,
   PLAATSBARE_TYPES,
   plaats,
   TOEGELATEN_KINDEREN,
   valideerStructuur,
   verplaats,
+  verplaatsPagina,
   verwijder,
+  verwijderPagina,
   voegPaginaToe,
   voegToe,
   type InstallatieDocument,
@@ -111,6 +114,9 @@ type Operatie =
       positie: Positie;
     }
   | { soort: "voegPaginaToe"; titel: string }
+  | { soort: "hernoemPagina"; pagina: number; titel: string }
+  | { soort: "verwijderPagina"; pagina: number }
+  | { soort: "verplaatsPagina"; pagina: number; index: number }
   | {
       soort: "plaats";
       pagina: number;
@@ -164,10 +170,31 @@ const operatieArb: fc.Arbitrary<Operatie> = fc.oneof(
     }),
   },
   {
-    weight: 1,
+    weight: 2,
     arbitrary: fc.record({
       soort: fc.constant("voegPaginaToe" as const),
       titel: fc.string(),
+    }),
+  },
+  {
+    weight: 1,
+    arbitrary: fc.record({
+      soort: fc.constant("hernoemPagina" as const),
+      pagina: index,
+      titel: fc.string(),
+    }),
+  },
+  {
+    weight: 1,
+    arbitrary: fc.record({ soort: fc.constant("verwijderPagina" as const), pagina: index }),
+  },
+  {
+    weight: 2,
+    arbitrary: fc.record({
+      soort: fc.constant("verplaatsPagina" as const),
+      pagina: index,
+      // Ook negatieve en te grote indexen: een geldige weigering.
+      index: fc.integer({ min: -2, max: 12 }),
     }),
   },
   {
@@ -198,6 +225,12 @@ function startDocument(): InstallatieDocument {
 function naarIndex(positie: Positie, lengte: number): number | undefined {
   if (positie === null) return undefined;
   return positie.ruw ? positie.n : positie.n % (lengte + 1);
+}
+
+/** Een bestaande pagina; zonder pagina's wordt de weigering ONBEKENDE_PAGINA getest. */
+function kiesPaginaId(doc: InstallatieDocument, i: number): string {
+  const paginas = doc.situatie.paginas;
+  return paginas.length > 0 ? paginas[i % paginas.length]!.id : "geen-pagina";
 }
 
 function voerUit(doc: InstallatieDocument, op: Operatie): OperatieResultaat {
@@ -233,10 +266,14 @@ function voerUit(doc: InstallatieDocument, op: Operatie): OperatieResultaat {
     }
     case "voegPaginaToe":
       return voegPaginaToe(doc, op.titel);
+    case "hernoemPagina":
+      return hernoemPagina(doc, kiesPaginaId(doc, op.pagina), op.titel);
+    case "verwijderPagina":
+      return verwijderPagina(doc, kiesPaginaId(doc, op.pagina));
+    case "verplaatsPagina":
+      return verplaatsPagina(doc, kiesPaginaId(doc, op.pagina), op.index);
     case "plaats": {
-      const paginas = doc.situatie.paginas;
-      // Zonder pagina's wordt de weigering ONBEKENDE_PAGINA getest.
-      const paginaId = paginas.length > 0 ? paginas[op.pagina % paginas.length]!.id : "geen-pagina";
+      const paginaId = kiesPaginaId(doc, op.pagina);
       const plaatsbaar = ids.filter((id) =>
         (PLAATSBARE_TYPES as readonly string[]).includes(doc.nodes[id]!.type),
       );
