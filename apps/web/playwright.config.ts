@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import {
   E2E_AUTH_SECRET,
   E2E_BESTANDEN_DIR,
+  E2E_BUILD_DIR,
   E2E_DATABASE_URL,
   E2E_POORT,
   E2E_URL,
@@ -33,6 +34,8 @@ export default defineConfig({
     env: {
       DATABASE_URL: E2E_DATABASE_URL,
       ELENTRIK_BESTANDEN_DIR: E2E_BESTANDEN_DIR,
+      // Eigen builddir, zodat de ontwikkelserver op 3000 en deze server .nuxt niet delen.
+      ELENTRIK_BUILD_DIR: E2E_BUILD_DIR,
       ELENTRIK_GOTENBERG_URL: "http://127.0.0.1:3001",
       BETTER_AUTH_URL: E2E_URL,
       BETTER_AUTH_SECRET: E2E_AUTH_SECRET,

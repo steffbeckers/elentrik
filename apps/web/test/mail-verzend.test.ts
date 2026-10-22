@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { gebruikVerzender, maakVerzender, zetVerzender } from "../server/mail/verzend";
+import { gebruikVerzender, maakVerzender, smtpPoort, zetVerzender } from "../server/mail/verzend";
 
 const mail = { aan: "jan@voorbeeld.be", onderwerp: "Hallo", tekst: "platte tekst", html: "<p>html</p>" };
 
@@ -39,5 +39,29 @@ describe("mailverzender", () => {
     zetVerzender({ verstuur });
     await gebruikVerzender().verstuur(mail);
     expect(verstuur).toHaveBeenCalledWith(mail);
+  });
+
+  test("een mail zonder ontvanger wordt geweigerd en niet doorgegeven", async () => {
+    const sendMail = vi.fn().mockResolvedValue({});
+    await expect(maakVerzender({ sendMail }).verstuur({ ...mail, aan: "" })).rejects.toThrow(
+      "zonder ontvanger",
+    );
+    await expect(maakVerzender({ sendMail }).verstuur({ ...mail, aan: "  " })).rejects.toThrow(
+      "zonder ontvanger",
+    );
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+});
+
+describe("smtpPoort", () => {
+  test("een geldige poort wordt gebruikt", () => {
+    expect(smtpPoort("2525")).toBe(2525);
+    expect(smtpPoort("65535")).toBe(65535);
+  });
+
+  test("een ontbrekende of ongeldige poort valt terug op 1025", () => {
+    for (const waarde of [undefined, "", "abc", "12x", "0", "-5", "70000", "25.5", "NaN"]) {
+      expect(smtpPoort(waarde)).toBe(1025);
+    }
   });
 });

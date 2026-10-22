@@ -19,9 +19,9 @@ function verbind() {
   return postgres(eisE2eDatabase(process.env.DATABASE_URL ?? E2E_DATABASE_URL), { max: 1 });
 }
 
-/** Dezelfde map als de e2e-server (relatief aan apps/web), nooit `.data/bestanden`. */
+/** Dezelfde map als de e2e-server (absoluut, vast aan apps/web), nooit `.data/bestanden`. */
 function bestandenMap(): string {
-  return resolve(E2E_BESTANDEN_DIR);
+  return E2E_BESTANDEN_DIR;
 }
 
 export async function bewaarBedrijfSnapshot(): Promise<BedrijfSnapshot> {

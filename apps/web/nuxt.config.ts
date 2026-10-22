@@ -17,6 +17,8 @@ const pdfjsBron = (naam: string) => ({
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-10-18",
+  // De e2e-server (Playwright) bouwt in een eigen map, naast de ontwikkelserver.
+  buildDir: process.env.ELENTRIK_BUILD_DIR || ".nuxt",
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
   css: ["~/assets/css/main.css"],
   nitro: {

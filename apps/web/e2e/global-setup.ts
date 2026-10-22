@@ -1,7 +1,6 @@
 // Draait één keer vóór alle e2e-specs: zorgt voor een lege, gemigreerde e2e-database,
 // een lege bestandenmap en een lege Mailpit.
 import { mkdir, rm } from "node:fs/promises";
-import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
@@ -43,11 +42,12 @@ export default async function globalSetup(): Promise<void> {
   }
 
   // 5. De bestandenmap van de e2e-server leegmaken.
-  const map = resolve(E2E_BESTANDEN_DIR);
+  const map = E2E_BESTANDEN_DIR;
   await rm(map, { recursive: true, force: true });
   await mkdir(map, { recursive: true });
 
-  // 6. Alle berichten in Mailpit verwijderen.
+  // 6. Alle berichten in Mailpit verwijderen. Let op: dit leegt de gedeelde Mailpit-inbox, dus
+  // ook mail van de ontwikkelserver op poort 3000.
   const antwoord = await fetch(`${MAILPIT_URL}/api/v1/messages`, { method: "DELETE" });
   if (!antwoord.ok) {
     throw new Error(`Mailpit leegmaken mislukt (${antwoord.status}); draait ze? Start met pnpm db:up.`);

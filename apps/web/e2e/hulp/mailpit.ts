@@ -1,5 +1,6 @@
 // Leest de mail die de e2e-server naar Mailpit stuurt (API op 127.0.0.1:8025).
 import { E2E_URL, MAILPIT_URL } from "../omgeving";
+import { linkUitTekst } from "./link";
 
 export type OntvangenMail = { onderwerp: string; tekst: string; html: string };
 
@@ -40,7 +41,5 @@ export async function laatsteMailAan(
 
 /** De eerste link naar de e2e-server (`http://127.0.0.1:3100/...`) in de platte tekst van de mail. */
 export function linkUit(mail: { tekst: string }): string {
-  const treffer = mail.tekst.match(new RegExp(`${E2E_URL.replace(/[.]/g, "\.")}/[^\s<>"]+`));
-  if (!treffer) throw new Error("Geen link naar de e2e-server in de mail");
-  return treffer[0];
+  return linkUitTekst(mail.tekst, E2E_URL);
 }
