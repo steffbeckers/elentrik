@@ -19,6 +19,7 @@ import { type Db, gebruikDb } from "../db";
 import * as schema from "../db/schema";
 import { bevestigMail, herstelMail, magicLinkMail, uitnodigingMail } from "../mail/sjablonen";
 import { gebruikVerzender, type Mail } from "../mail/verzend";
+import { richtEersteOrganisatieIn } from "../organisaties/registratie";
 
 const PLAATSHOUDER = "<vervang";
 export const MINIMALE_GEHEIMLENGTE = 32;
@@ -114,6 +115,17 @@ export function maakAuth(db: Db = gebruikDb()) {
     // Hersteltokens (en elke andere identifier) alleen gehasht opslaan.
     verification: { storeIdentifier: "hashed" },
     hooks: { before: alleenBijRegistratie },
+    databaseHooks: {
+      session: {
+        create: {
+          // Na elke nieuwe sessie (dus elke aanmelding), nadat ze vastgelegd is: bij de eerste
+          // bevestigde aanmelding wordt de wachtende bedrijfsnaam een organisatie (Task 3).
+          after: async (sessie) => {
+            await richtEersteOrganisatieIn(db, { id: sessie.userId }, { sessieId: sessie.id });
+          },
+        },
+      },
+    },
     user: {
       additionalFields: {
         // De bedrijfsnaam uit de registratie, tot de eerste bevestigde aanmelding (Task 3).

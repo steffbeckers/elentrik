@@ -1,6 +1,6 @@
 // Better Auth tegen PGlite, via de server-API (`auth.api.*`), zonder HTTP-server.
 // Mails gaan naar een verzamelende verzender; er wordt niets echt verstuurd.
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, type MockInstance, test, vi } from "vitest";
 import { type Auth, leesGeheim, maakAuth } from "../server/auth";
 import type { Db } from "../server/db";
@@ -260,7 +260,9 @@ describe("registreren en bevestigen", () => {
     await auth.api.updateUser({ body: { name: "Jan P." }, headers: h });
     const [rij] = await db.select().from(user).where(eq(user.email, email));
     expect(rij!.name).toBe("Jan P.");
-    expect(rij!.wachtendeBedrijfsnaam).toBe("Peeters Elektro");
+    // De eerste aanmelding maakte er een organisatie van en wiste de naam; de geweigerde
+    // pogingen zetten niets.
+    expect(rij!.wachtendeBedrijfsnaam).toBeNull();
   });
 });
 
@@ -462,7 +464,12 @@ describe("organisaties", () => {
         body: { userId: lidRij!.id, role: "admin" as "member", organizationId: org!.id },
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
-    expect(await db.select().from(member).where(eq(member.userId, lidRij!.id))).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(member)
+        .where(and(eq(member.userId, lidRij!.id), eq(member.organizationId, org!.id))),
+    ).toHaveLength(0);
 
     const lid = await auth.api.addMember({
       body: { userId: lidRij!.id, role: "member", organizationId: org!.id },

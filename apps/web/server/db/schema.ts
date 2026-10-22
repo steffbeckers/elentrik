@@ -11,21 +11,31 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const projecten = pgTable("projecten", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  naam: text("naam").notNull(),
-  klantnaam: text("klantnaam").notNull().default(""),
-  document: jsonb("document").notNull(),
-  versie: integer("versie").notNull().default(1),
-  aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
-  gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
-  verwijderd: timestamp("verwijderd", { withTimezone: true }),
-});
+export const projecten = pgTable(
+  "projecten",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Nullable: projecten van vóór het inloggen hebben nog geen organisatie, tot de overname
+    // (spec 5b.3). Nieuwe projecten krijgen altijd de actieve organisatie.
+    organisatieId: text("organisatie_id").references(() => organization.id),
+    naam: text("naam").notNull(),
+    klantnaam: text("klantnaam").notNull().default(""),
+    document: jsonb("document").notNull(),
+    versie: integer("versie").notNull().default(1),
+    aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
+    gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
+    verwijderd: timestamp("verwijderd", { withTimezone: true }),
+  },
+  (table) => [index("projecten_organisatie_id_idx").on(table.organisatieId)],
+);
 
 export const bestanden = pgTable("bestanden", {
   id: uuid("id").primaryKey().defaultRandom(),
   // Null voor een bestand dat bij geen project hoort, zoals het logo van de installateur.
   projectId: uuid("project_id").references(() => projecten.id),
+  // Alleen voor een logo: de organisatie waartoe het hoort. Plan- en exportbestanden horen via
+  // hun project bij een organisatie en laten dit leeg.
+  organisatieId: text("organisatie_id").references(() => organization.id),
   soort: text("soort", { enum: ["plan-origineel", "plan-raster", "logo", "export"] }).notNull(),
   mime: text("mime").notNull(),
   grootte: integer("grootte").notNull(),
@@ -33,12 +43,24 @@ export const bestanden = pgTable("bestanden", {
   aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Eén rij met `id = 1`: de gegevens van de installateur, voor de cartouche van elke export. */
-export const bedrijfsinstellingen = pgTable("bedrijfsinstellingen", {
-  id: integer("id").primaryKey(),
-  installateur: jsonb("installateur").$type<Partij>().notNull().default({ naam: "" }),
-  gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
-});
+/**
+ * De gegevens van de installateur per organisatie, voor de cartouche van elke export.
+ *
+ * Sleutel: `organisatie_id` (uniek, nullable). `id` blijft de technische primaire sleutel, nu
+ * met een identity die bij 2 begint, zodat de bestaande rij `id = 1` ongemoeid blijft. Die rij
+ * heeft `organisatie_id` null (legacy) tot de overname haar aan de eerste organisatie koppelt.
+ * Nieuwe organisaties krijgen een eigen rij met een gegenereerd `id`.
+ */
+export const bedrijfsinstellingen = pgTable(
+  "bedrijfsinstellingen",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity({ startWith: 2 }),
+    organisatieId: text("organisatie_id").references(() => organization.id),
+    installateur: jsonb("installateur").$type<Partij>().notNull().default({ naam: "" }),
+    gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("bedrijfsinstellingen_organisatie_id_uidx").on(table.organisatieId)],
+);
 
 /** Een onveranderlijke kopie van het opgeslagen document op het moment van een export. */
 export const snapshots = pgTable("snapshots", {
