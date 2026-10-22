@@ -2,6 +2,8 @@
 // (uploadroute) en de client (controle vóór het versturen). Puur en zonder I/O; geen auto-imports (ruling E1).
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+/** Maximale grootte van het logo van de installateur. */
+export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 export const RASTER_DPI = 300;
 /** Maximale lange zijde van een raster, in pixels. */
 export const MAX_RASTER_PX = 8000;

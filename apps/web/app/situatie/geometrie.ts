@@ -1,16 +1,12 @@
 // Pure plangeometrie, zonder DOM; expliciete imports (ruling E1).
 
-/** Een symbool is de lange zijde van het raster gedeeld door dit getal. */
-const SYMBOOL_DELER = 60;
+// De symboolgrootte is gedeeld met de pdf-export en staat daarom in render.
+export { symboolGrootte } from "@elentrik/render";
+
 /** Een draaistap in graden. */
 const DRAAISTAP = 15;
 
 type Raster = { breedte_px: number; hoogte_px: number };
-
-/** Symboolgrootte in rasterpixels: de lange zijde van het raster / 60. */
-export function symboolGrootte(achtergrond: Raster): number {
-  return Math.max(achtergrond.breedte_px, achtergrond.hoogte_px) / SYMBOOL_DELER;
-}
 
 /** Draait één stap van 15 graden; het resultaat ligt in [0, 360). */
 export function draai(rotatie: number, richting: 1 | -1): number {

@@ -9,5 +9,9 @@ export default defineConfig({
     // de prestatietests uit de parallelle run houdt.
     include: ["test/**/*.test.ts"],
     environment: "node",
+    // Elke DB-test bouwt een eigen PGlite met de migraties: onder parallelle last duurt dat
+    // 1,4 tot 2,9 s. De standaard van 5 s is dan te krap.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });

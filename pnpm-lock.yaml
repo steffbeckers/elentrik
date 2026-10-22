@@ -139,6 +139,9 @@ importers:
 
   packages/render:
     dependencies:
+      '@elentrik/arei':
+        specifier: workspace:*
+        version: link:../arei
       '@elentrik/layout':
         specifier: workspace:*
         version: link:../layout
@@ -146,9 +149,6 @@ importers:
         specifier: workspace:*
         version: link:../symbols
     devDependencies:
-      '@elentrik/arei':
-        specifier: workspace:*
-        version: link:../arei
       '@elentrik/model':
         specifier: workspace:*
         version: link:../model

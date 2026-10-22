@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { NodeId } from "@elentrik/model";
+import { nodeLabel } from "@elentrik/render";
 import { tekenSymbool } from "@elentrik/symbols";
 import { useNodeTekst } from "~/composables/useNodeTekst";
-import { GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, nodeLabel, tePlaatsen } from "~/situatie/items";
+import { GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, tePlaatsen } from "~/situatie/items";
 import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
 import { useEditorStore } from "~/stores/editor";
 

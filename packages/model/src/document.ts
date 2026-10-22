@@ -39,7 +39,7 @@ export function nieuwDocument(
     meta: {
       klant: { naam: opties.klantNaam ?? "" },
       installateur: { naam: "" },
-      werfadres: { straat: "", nummer: "", postcode: "", gemeente: "", land: "BE" },
+      werfadres: { straat: "", nummer: "", postcode: "", gemeente: "", land: "België" },
       datum: opties.datum ?? vandaag(),
     },
     voeding: { stroomtype: opties.stroomtype ?? "2x230V" },

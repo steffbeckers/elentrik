@@ -28,6 +28,9 @@ export class BestandFout extends Error {
 
 export type PlanSoort = "plan-origineel" | "plan-raster";
 
+/** Wat `bewaarBestand` aanvaardt; `export` (een PDF) is alleen voor intern gebruik, niet voor de upload-route. */
+export type BewaarSoort = PlanSoort | "export";
+
 const MIME: Record<BestandSoort, string> = {
   pdf: "application/pdf",
   png: "image/png",
@@ -35,23 +38,64 @@ const MIME: Record<BestandSoort, string> = {
 };
 
 /**
- * Valideert en bewaart een planbestand. Het type volgt uit de bytes. Het bestand wordt
- * geschreven vóór de rij, zodat een mislukte schrijfactie geen rij achterlaat die naar
- * niets wijst; fouten worden niet ingeslikt.
+ * De gedeelde schrijfstap: eerst het bestand, dan de rij, zodat een mislukte schrijfactie
+ * geen rij achterlaat die naar niets wijst; fouten worden niet ingeslikt. `metRij` laat de
+ * aanroeper in dezelfde transactie nog iets bijwerken, zodat een mislukking ook de rij terugdraait.
+ */
+export async function schrijfBestandMetRij(
+  db: Db,
+  opslag: BestandOpslag,
+  invoer: {
+    projectId: string | null;
+    soort: (typeof bestanden.$inferInsert)["soort"];
+    map: string;
+    type: BestandSoort;
+    data: Uint8Array;
+  },
+  metRij?: (tx: Db, info: BestandInfo) => Promise<void>,
+): Promise<BestandInfo> {
+  const { projectId, soort, map, type, data } = invoer;
+  const maten = type === "pdf" ? null : afmetingen(data, type);
+  const id = randomUUID();
+  const sleutel = `${map}/${id}`;
+  const mime = MIME[type];
+  const info: BestandInfo = {
+    id,
+    mime,
+    grootte: data.length,
+    ...(maten ? { breedte_px: maten.breedte, hoogte_px: maten.hoogte } : {}),
+  };
+  await opslag.schrijf(sleutel, data);
+  if (metRij) {
+    await db.transaction(async (tx) => {
+      await tx.insert(bestanden).values({ id, projectId, soort, mime, grootte: data.length, sleutel });
+      await metRij(tx, info);
+    });
+  } else {
+    await db.insert(bestanden).values({ id, projectId, soort, mime, grootte: data.length, sleutel });
+  }
+  return info;
+}
+
+/**
+ * Valideert en bewaart een planbestand of een export-PDF. Het type volgt uit de bytes.
  */
 export async function bewaarBestand(
   db: Db,
   opslag: BestandOpslag,
-  invoer: { projectId: string; soort: PlanSoort; data: Uint8Array },
+  invoer: { projectId: string; soort: BewaarSoort; data: Uint8Array },
 ): Promise<BestandInfo> {
   const { projectId, soort, data } = invoer;
   if (data.length > MAX_UPLOAD_BYTES) throw new BestandFout("TE_GROOT");
 
   const type = herkenSoort(data);
-  if (!type || (soort === "plan-raster" && type === "pdf")) throw new BestandFout("ONGELDIG_TYPE");
+  if (!type) throw new BestandFout("ONGELDIG_TYPE");
+  // Een export is altijd een PDF; een raster is juist nooit een PDF.
+  if (soort === "export" && type !== "pdf") throw new BestandFout("ONGELDIG_TYPE");
+  if (soort === "plan-raster" && type === "pdf") throw new BestandFout("ONGELDIG_TYPE");
 
-  const maten = type === "pdf" ? null : afmetingen(data, type);
   if (soort === "plan-raster") {
+    const maten = afmetingen(data, type as "png" | "jpeg");
     if (!maten || maten.breedte === 0 || maten.hoogte === 0) throw new BestandFout("ONGELDIG_TYPE");
     if (Math.max(maten.breedte, maten.hoogte) > MAX_RASTER_PX) {
       throw new BestandFout("RASTER_TE_GROOT");
@@ -64,26 +108,28 @@ export async function bewaarBestand(
     .where(and(eq(projecten.id, projectId), isNull(projecten.verwijderd)));
   if (!project) throw new BestandFout("NIET_GEVONDEN");
 
-  const id = randomUUID();
-  const sleutel = `${projectId}/${id}`;
-  const mime = MIME[type];
-  await opslag.schrijf(sleutel, data);
-  await db.insert(bestanden).values({ id, projectId, soort, mime, grootte: data.length, sleutel });
-
-  return {
-    id,
-    mime,
-    grootte: data.length,
-    ...(maten ? { breedte_px: maten.breedte, hoogte_px: maten.hoogte } : {}),
-  };
+  return schrijfBestandMetRij(db, opslag, { projectId, soort, map: projectId, type, data });
 }
 
 export async function haalBestand(
   db: Db,
   id: string,
-): Promise<{ id: string; mime: string; sleutel: string } | null> {
+): Promise<{
+  id: string;
+  soort: (typeof bestanden.$inferSelect)["soort"];
+  mime: string;
+  sleutel: string;
+  /** `null` voor bestanden zonder project, zoals het logo. */
+  projectId: string | null;
+} | null> {
   const [rij] = await db
-    .select({ id: bestanden.id, mime: bestanden.mime, sleutel: bestanden.sleutel })
+    .select({
+      id: bestanden.id,
+      soort: bestanden.soort,
+      mime: bestanden.mime,
+      sleutel: bestanden.sleutel,
+      projectId: bestanden.projectId,
+    })
     .from(bestanden)
     .where(eq(bestanden.id, id));
   return rij ?? null;

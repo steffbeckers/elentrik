@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { StroomtypeSchema, type Stroomtype } from "@elentrik/model";
+import { StroomtypeSchema } from "@elentrik/model";
+import AdresVelden from "~/components/editor/AdresVelden.vue";
+import { leegAdresFormulier } from "~/editor/adres";
+import {
+  formulierUitProject,
+  gegevensUitFormulier,
+  valideerProjectFormulier,
+  type ProjectFormulier,
+} from "~/editor/projectformulier";
 import { useEditorStore } from "~/stores/editor";
 
 const open = defineModel<boolean>("open", { default: false });
@@ -12,33 +20,30 @@ const stroomtypes = computed(() =>
   StroomtypeSchema.options.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
 );
 
-const formulier = reactive<{ naam: string; klantNaam: string; stroomtype: Stroomtype }>({
+const formulier = reactive<ProjectFormulier>({
   naam: "",
   klantNaam: "",
   stroomtype: "2x230V",
+  klant: leegAdresFormulier(),
+  werf: leegAdresFormulier(),
+  ean: "",
+  datum: "",
 });
 
 watch(open, (nuOpen) => {
-  if (!nuOpen) return;
-  formulier.naam = store.naam;
-  formulier.klantNaam = store.document?.meta.klant.naam ?? "";
-  formulier.stroomtype = store.document?.voeding.stroomtype ?? "2x230V";
+  if (!nuOpen || !store.document) return;
+  Object.assign(formulier, formulierUitProject(store.naam, store.document));
 });
 
-function valideer(waarden: typeof formulier) {
-  return waarden.naam.trim() === ""
-    ? [{ name: "naam", message: t("editor.projectgegevens.naamVerplicht") }]
-    : [];
+function valideer(waarden: ProjectFormulier) {
+  return valideerProjectFormulier(waarden).map(({ name, fout }) => ({
+    name,
+    message: t(`editor.projectgegevens.fouten.${fout}`),
+  }));
 }
 
 function bewaar(): void {
-  const gelukt = voerUit(() =>
-    store.wijzigProjectgegevens({
-      naam: formulier.naam.trim(),
-      klantNaam: formulier.klantNaam,
-      stroomtype: formulier.stroomtype,
-    }),
-  );
+  const gelukt = voerUit(() => store.wijzigProjectgegevens(gegevensUitFormulier(formulier)));
   if (gelukt) open.value = false;
 }
 </script>
@@ -46,16 +51,39 @@ function bewaar(): void {
 <template>
   <UModal v-model:open="open" :title="$t('editor.projectgegevens.titel')">
     <template #body>
-      <UForm id="projectgegevens-formulier" :state="formulier" :validate="valideer" class="space-y-4" @submit="bewaar">
-        <UFormField name="naam" :label="$t('editor.projectgegevens.naam')" required>
-          <UInput v-model="formulier.naam" class="w-full" autofocus />
-        </UFormField>
-        <UFormField name="klantNaam" :label="$t('editor.projectgegevens.klant')">
-          <UInput v-model="formulier.klantNaam" class="w-full" />
-        </UFormField>
-        <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
-          <USelect v-model="formulier.stroomtype" :items="stroomtypes" class="w-full" />
-        </UFormField>
+      <UForm id="projectgegevens-formulier" :state="formulier" :validate="valideer" class="space-y-6" @submit="bewaar">
+        <div class="space-y-4">
+          <UFormField name="naam" :label="$t('editor.projectgegevens.naam')" required>
+            <UInput v-model="formulier.naam" class="w-full" autofocus />
+          </UFormField>
+          <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
+            <USelect v-model="formulier.stroomtype" :items="stroomtypes" class="w-full" />
+          </UFormField>
+        </div>
+
+        <section class="space-y-4">
+          <h3 class="font-semibold">{{ $t("editor.projectgegevens.klant.titel") }}</h3>
+          <UFormField name="klantNaam" :label="$t('editor.projectgegevens.klant.naam')">
+            <UInput v-model="formulier.klantNaam" class="w-full" />
+          </UFormField>
+          <p class="text-sm text-muted">{{ $t("editor.projectgegevens.klant.adresHulp") }}</p>
+          <AdresVelden v-model="formulier.klant" naam="klant" />
+        </section>
+
+        <section class="space-y-4">
+          <h3 class="font-semibold">{{ $t("editor.projectgegevens.werf.titel") }}</h3>
+          <AdresVelden v-model="formulier.werf" naam="werf" />
+          <UFormField name="ean" :label="$t('editor.projectgegevens.werf.ean')">
+            <UInput v-model="formulier.ean" class="w-full" inputmode="numeric" data-testid="werf-ean" />
+          </UFormField>
+        </section>
+
+        <section class="space-y-4">
+          <h3 class="font-semibold">{{ $t("editor.projectgegevens.datum.titel") }}</h3>
+          <UFormField name="datum" :label="$t('editor.projectgegevens.datum.label')" required>
+            <UInput v-model="formulier.datum" type="date" class="w-full" data-testid="projectdatum" />
+          </UFormField>
+        </section>
       </UForm>
     </template>
     <template #footer>

@@ -1,5 +1,5 @@
 import type { NodeId } from "@elentrik/model";
-import { nodeLabel, type LabelTerugval } from "~/situatie/items";
+import { nodeLabel, type LabelTerugval } from "@elentrik/render";
 import { useEditorStore } from "~/stores/editor";
 
 /**

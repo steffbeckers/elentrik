@@ -28,7 +28,8 @@ export type ProjectenFetch = (
 
 type FetchFoutVorm = { status?: number; statusCode?: number; data?: { data?: { versie?: unknown } } };
 
-function huidigeVersieUitConflict(fout: unknown): number | undefined {
+/** De versie op de server uit een 409 van `$fetch`, of `undefined` als het geen conflict is. Ook voor de export. */
+export function huidigeVersieUitConflict(fout: unknown): number | undefined {
   if (typeof fout !== "object" || fout === null) return undefined;
   const { status, statusCode, data } = fout as FetchFoutVorm;
   if ((status ?? statusCode) !== 409) return undefined;

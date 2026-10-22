@@ -203,6 +203,24 @@ describe("useAutosave", () => {
     expect((await conceptVan("p1"))?.naam).toBe("b");
   });
 
+  test("meldConflict (een 409 bij het exporteren) zet het conflict zonder bewaar; laadServerversie lost het op", async () => {
+    const { store, bewaar, autosave } = opzet();
+    autosave.meldConflict(7);
+    expect(autosave.status.value).toBe("conflict");
+    expect(autosave.conflict.value).toEqual({ huidigeVersie: 7 });
+
+    // Zolang het conflict loopt, gaat er niets naar de server.
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(60_000);
+    await leeg();
+    expect(bewaar).not.toHaveBeenCalled();
+
+    await autosave.laadServerversie();
+    expect(store.versie).toBe(7);
+    expect(autosave.status.value).toBe("opgeslagen");
+    expect(autosave.conflict.value).toBeNull();
+  });
+
   test("een netwerkfout geeft status lokaal; na 10 s volgt een nieuwe poging", async () => {
     const { store, bewaar, autosave } = opzet();
     bewaar.mockRejectedValueOnce(new TypeError("netwerk"));

@@ -96,6 +96,19 @@ describe("situatieLaagSvg", () => {
     expect(XMLValidator.validate(inSvg(svg))).toBe(true);
   });
 
+  test("de schaal heeft 4 decimalen", () => {
+    const gemaakt = { ...drie[0]!, symbool: { ...drie[0]!.symbool, maat: { ...drie[0]!.symbool.maat, breedte: 24, hoogte: 12 } } };
+    expect(situatieLaagSvg([gemaakt], 133.3333)).toContain("scale(5.5556)");
+  });
+
+  test("een nodeId met aanhalingstekens wordt geëscaped en de XML blijft geldig", () => {
+    const kwaad = { ...drie[0]!, nodeId: 'a" onload="x' };
+    const svg = situatieLaagSvg([kwaad], 60);
+    expect(svg).toContain('data-node-id="a&quot; onload=&quot;x"');
+    expect(svg).not.toContain('onload="x"');
+    expect(XMLValidator.validate(inSvg(svg))).toBe(true);
+  });
+
   test("goedgevormde XML voor 3 items", () => {
     expect(XMLValidator.validate(inSvg(situatieLaagSvg(drie, 60)))).toBe(true);
   });

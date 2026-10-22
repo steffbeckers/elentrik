@@ -63,14 +63,17 @@
       "tabbladen": {
         "eendraadschema": "Eendraadschema",
         "situatieschema": "Situatieschema",
-        "kringenlijst": "Kringenlijst",
-        "binnenkort": "Binnenkort"
+        "kringenlijst": "Kringenlijst"
       },
       "bevindingen": "{fouten} en {waarschuwingen}",
       "aantalFouten": "{n} fout | {n} fouten",
       "aantalWaarschuwingen": "{n} waarschuwing | {n} waarschuwingen",
       "ongedaanMaken": "Ongedaan maken (Ctrl+Z)",
-      "opnieuw": "Opnieuw (Ctrl+Y)"
+      "opnieuw": "Opnieuw (Ctrl+Y)",
+      "exporteren": "Exporteren"
+    },
+    "kringenlijst": {
+      "titel": "Kringenlijst"
     },
     "status": {
       "opgeslagen": "Opgeslagen",
@@ -124,10 +127,34 @@
     "projectgegevens": {
       "titel": "Projectgegevens",
       "naam": "Naam",
-      "naamVerplicht": "Geef het project een naam.",
-      "klant": "Klant",
       "stroomtype": "Stroomtype",
-      "bewaren": "Bewaren"
+      "bewaren": "Bewaren",
+      "klant": {
+        "titel": "Klant",
+        "naam": "Naam",
+        "adresHulp": "Het adres van de klant is optioneel."
+      },
+      "werf": {
+        "titel": "Werf",
+        "ean": "EAN-code"
+      },
+      "datum": {
+        "titel": "Datum",
+        "label": "Datum van het project"
+      },
+      "adres": {
+        "straat": "Straat",
+        "nummer": "Nummer",
+        "bus": "Bus",
+        "postcode": "Postcode",
+        "gemeente": "Gemeente",
+        "land": "Land"
+      },
+      "fouten": {
+        "naamVerplicht": "Geef het project een naam.",
+        "adresVerplicht": "Verplicht voor een adres.",
+        "datumVerplicht": "Kies een datum."
+      }
     },
     "concept": {
       "titel": "Lokaal concept gevonden",
@@ -235,7 +262,98 @@
           "onleesbaar": "Dit bestand kon niet gelezen worden."
         }
       }
+    },
+    "export": {
+      "titel": "Exporteren als PDF",
+      "beschrijving": "De PDF komt uit het opgeslagen project en wordt als versie bewaard.",
+      "opslaan": "Het project wordt eerst opgeslagen…",
+      "geblokkeerd": {
+        "titel": "Exporteren kan nu niet",
+        "bezig": "Het project wordt nog opgeslagen. Exporteren kan zodra alles opgeslagen is.",
+        "lokaal": "Het project staat niet op de server: het opslaan mislukte en het werk is enkel lokaal bewaard. Exporteren kan zodra het opgeslagen is.",
+        "onbewaard": "Het project kon niet opgeslagen worden. Exporteren kan zodra het opgeslagen is.",
+        "conflict": "Het project is intussen elders gewijzigd. Los eerst het conflict op.",
+        "fout": "De server weigerde het project op te slaan. Probeer opnieuw op te slaan en exporteer daarna."
+      },
+      "onderdelen": {
+        "titel": "Onderdelen",
+        "eendraadschema": "Eendraadschema",
+        "situatieschema": "Situatieschema",
+        "kringenlijst": "Kringenlijst",
+        "bijlage": "Bijlage met bevindingen",
+        "geen": "Kies minstens één onderdeel.",
+        "zonderPlan": "Situatiepagina's zonder plan worden in de bijlage vermeld."
+      },
+      "bijlageVerplicht": "Er is {n} onopgeloste fout; de bijlage komt verplicht mee. | Er zijn {n} onopgeloste fouten; de bijlage komt verplicht mee.",
+      "papier": "Papier",
+      "versie": "Versie",
+      "versieOngeldig": "Geef een versie van 1 tot 40 tekens.",
+      "start": "Exporteren",
+      "bevestiging": "Er is {n} onopgeloste fout. De PDF vermeldt ze in de bijlage. Toch exporteren? | Er zijn {n} onopgeloste fouten. De PDF vermeldt ze in de bijlage. Toch exporteren?",
+      "tochExporteren": "Toch exporteren",
+      "bezig": "De PDF wordt gemaakt…",
+      "klaar": "{versie} is geëxporteerd.",
+      "mislukt": "De PDF kon niet gemaakt worden. Probeer het opnieuw.",
+      "sluiten": "Sluiten",
+      "eerdere": {
+        "titel": "Eerdere exports",
+        "geen": "Nog geen exports.",
+        "ladenMislukt": "De eerdere exports konden niet geladen worden.",
+        "versie": "Versie",
+        "datum": "Datum",
+        "fouten": "Fouten",
+        "aantalFouten": "geen fouten | {n} fout | {n} fouten",
+        "downloaden": "Downloaden"
+      }
     }
+  },
+  "bedrijf": {
+    "titel": "Bedrijfsgegevens",
+    "beschrijving": "Deze gegevens komen als installateur in de cartouche van de PDF.",
+    "terug": "Naar de projecten",
+    "link": "Bedrijfsgegevens",
+    "laden": {
+      "fout": {
+        "titel": "Bedrijfsgegevens laden mislukt",
+        "beschrijving": "De gegevens konden niet geladen worden. Probeer het opnieuw.",
+        "opnieuw": "Opnieuw proberen"
+      }
+    },
+    "velden": {
+      "naam": "Naam",
+      "ondernemingsnummer": "Ondernemingsnummer",
+      "telefoon": "Telefoon",
+      "email": "E-mail"
+    },
+    "adres": {
+      "titel": "Adres",
+      "straat": "Straat",
+      "nummer": "Nummer",
+      "bus": "Bus",
+      "postcode": "Postcode",
+      "gemeente": "Gemeente",
+      "land": "Land"
+    },
+    "fouten": {
+      "naamVerplicht": "Geef je bedrijf een naam.",
+      "adresVerplicht": "Verplicht voor een adres."
+    },
+    "logo": {
+      "titel": "Logo",
+      "beschrijving": "PNG of JPEG, hoogstens 2 MB.",
+      "voorbeeldAlt": "Voorbeeld van het logo",
+      "kies": "Logo kiezen",
+      "vervang": "Logo vervangen",
+      "geen": "Nog geen logo",
+      "fout": {
+        "onbekendType": "Dit bestandstype wordt niet aanvaard.",
+        "teGroot": "Dit logo is groter dan 2 MB.",
+        "mislukt": "Het logo kon niet worden opgeladen. Probeer het opnieuw."
+      },
+      "bewaard": "Logo opgeladen."
+    },
+    "bewaren": "Bewaren",
+    "bewaard": "Bedrijfsgegevens bewaard."
   },
   "projecten": {
     "titel": "Projecten",

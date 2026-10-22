@@ -81,9 +81,18 @@ async function bevestigVerwijderen() {
 
 <template>
   <UContainer class="py-8">
-    <div class="mb-6 flex items-center justify-between gap-4">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
       <h1 class="text-2xl font-semibold">{{ $t("projecten.titel") }}</h1>
-      <UButton icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          to="/instellingen"
+          icon="i-lucide-building-2"
+          color="neutral"
+          variant="outline"
+          :label="$t('bedrijf.link')"
+        />
+        <UButton icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
+      </div>
     </div>
 
     <UAlert

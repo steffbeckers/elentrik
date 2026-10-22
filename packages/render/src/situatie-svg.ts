@@ -15,13 +15,20 @@ const LABEL_X = 0.6;
 const LABEL_Y = 0.15;
 const LABEL_GROOTTE = 0.45;
 
+/** De schaal met 4 decimalen: bij een rasterfoto van duizenden pixels telt een tweede decimaal te grof. */
+function schaalGetal(n: number): string {
+  if (!Number.isFinite(n)) throw new RangeError(`Geen eindig getal: ${n}`);
+  const afgerond = Math.round(Number(`${Math.abs(n)}e4`)) / 1e4;
+  return afgerond === 0 ? "0" : n < 0 ? `-${afgerond}` : String(afgerond);
+}
+
 function itemSvg(item: SituatieItem, grootte_px: number): string {
   const { breedte, hoogte } = item.symbool.maat;
   const lang = Math.max(breedte, hoogte);
   // Een symbool zonder afmetingen (lang <= 0) kan niet geschaald worden; geen NaN/Infinity in de uitvoer.
   const schaal = lang > 0 ? grootte_px / lang : 1;
   const symbool =
-    `<g transform="rotate(${getal(item.rotatie)}) scale(${getal(schaal)}) ` +
+    `<g transform="rotate(${getal(item.rotatie)}) scale(${schaalGetal(schaal)}) ` +
     `translate(${getal(-breedte / 2)} ${getal(-hoogte / 2)})">${item.symbool.svg}</g>`;
   const label =
     `<text x="${getal(grootte_px * LABEL_X)}" y="${getal(grootte_px * LABEL_Y)}" ` +
