@@ -8,9 +8,6 @@ import type { BestandOpslag } from "../bestanden/opslag";
 import type { Db } from "../db";
 import { bedrijfsinstellingen } from "../db/schema";
 
-/** De bedrijfsgegevens staan in één rij met dit id. */
-const BEDRIJF_ID = 1;
-
 export type BedrijfFoutCode = "ONGELDIG";
 
 export class BedrijfFout extends Error {
@@ -25,45 +22,51 @@ export class BedrijfFout extends Error {
   }
 }
 
-/** De gegevens van de installateur; zonder rij een lege naam. */
-export async function haalBedrijf(db: Db): Promise<Partij> {
+/**
+ * De gegevens van de installateur van een organisatie (de rij met dit `organisatie_id`); zonder
+ * rij een lege naam.
+ */
+export async function haalBedrijf(db: Db, organisatieId: string): Promise<Partij> {
   const [rij] = await db
     .select({ installateur: bedrijfsinstellingen.installateur })
     .from(bedrijfsinstellingen)
-    .where(eq(bedrijfsinstellingen.id, BEDRIJF_ID));
+    .where(eq(bedrijfsinstellingen.organisatieId, organisatieId));
   return rij ? PartijSchema.parse(rij.installateur) : { naam: "" };
 }
 
-async function schrijfBedrijf(db: Db, installateur: Partij): Promise<void> {
+/** Schrijft de rij van de organisatie; ontbreekt ze nog, dan wordt ze aangemaakt. */
+async function schrijfBedrijf(db: Db, organisatieId: string, installateur: Partij): Promise<void> {
   const gewijzigd = new Date();
   await db
     .insert(bedrijfsinstellingen)
-    .values({ id: BEDRIJF_ID, installateur, gewijzigd })
-    .onConflictDoUpdate({ target: bedrijfsinstellingen.id, set: { installateur, gewijzigd } });
+    .values({ organisatieId, installateur, gewijzigd })
+    .onConflictDoUpdate({ target: bedrijfsinstellingen.organisatieId, set: { installateur, gewijzigd } });
 }
 
 /**
- * Bewaart de bedrijfsgegevens (upsert van rij 1). Een meegestuurde `logoBestandId` wordt
- * genegeerd: alleen `bewaarLogo` zet het, en een bestaand logo blijft staan.
+ * Bewaart de bedrijfsgegevens van een organisatie (upsert op `organisatie_id`). Een meegestuurde
+ * `logoBestandId` wordt genegeerd: alleen `bewaarLogo` zet het, en een bestaand logo blijft staan.
  */
-export async function bewaarBedrijf(db: Db, partij: Partij): Promise<Partij> {
+export async function bewaarBedrijf(db: Db, organisatieId: string, partij: Partij): Promise<Partij> {
   const resultaat = PartijSchema.safeParse(partij);
   if (!resultaat.success) throw new BedrijfFout("ONGELDIG", resultaat.error.issues);
   const { logoBestandId: _genegeerd, ...invoer } = resultaat.data;
-  const { logoBestandId } = await haalBedrijf(db);
+  const { logoBestandId } = await haalBedrijf(db, organisatieId);
   const bewaard: Partij = { ...invoer, ...(logoBestandId !== undefined ? { logoBestandId } : {}) };
-  await schrijfBedrijf(db, bewaard);
+  await schrijfBedrijf(db, organisatieId, bewaard);
   return bewaard;
 }
 
 /**
- * Bewaart het logo van de installateur (PNG of JPEG, hoogstens `MAX_LOGO_BYTES`) onder
- * `bedrijf/<bestandId>` en zet `installateur.logoBestandId`. Het bestand en de verwijzing
- * komen samen tot stand, of niet.
+ * Bewaart het logo van de installateur van een organisatie (PNG of JPEG, hoogstens
+ * `MAX_LOGO_BYTES`) onder `org/<organisatieId>/<bestandId>`, met `organisatie_id` op de
+ * bestandsrij en zonder project, en zet `installateur.logoBestandId`. Het bestand en de
+ * verwijzing komen samen tot stand, of niet. Een bestaand logo met een oude sleutel blijft staan.
  */
 export async function bewaarLogo(
   db: Db,
   opslag: BestandOpslag,
+  organisatieId: string,
   data: Uint8Array,
 ): Promise<BestandInfo> {
   if (data.length > MAX_LOGO_BYTES) throw new BestandFout("TE_GROOT");
@@ -76,10 +79,10 @@ export async function bewaarLogo(
   return schrijfBestandMetRij(
     db,
     opslag,
-    { projectId: null, soort: "logo", map: "bedrijf", type, data },
+    { projectId: null, organisatieId, soort: "logo", map: `org/${organisatieId}`, type, data },
     async (tx, info) => {
-      const huidig = await haalBedrijf(tx);
-      await schrijfBedrijf(tx, { ...huidig, logoBestandId: info.id });
+      const huidig = await haalBedrijf(tx, organisatieId);
+      await schrijfBedrijf(tx, organisatieId, { ...huidig, logoBestandId: info.id });
     },
   );
 }

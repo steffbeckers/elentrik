@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { gebruikTestgebruiker } from "./hulp/inloggen";
+
+// Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
+gebruikTestgebruiker(test, { voorvoegsel: "canvas-touch" });
 
 // Echte touch-invoer via CDP: muisevents kennen geen impliciete pointercapture op het kindelement
 // onder de vinger, en net die mag een pan niet afbreken wanneer het venster de capture overneemt.

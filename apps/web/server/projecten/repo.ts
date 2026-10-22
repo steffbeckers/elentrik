@@ -32,7 +32,25 @@ export type { Project, ProjectSamenvatting };
 
 const leeft = isNull(projecten.verwijderd);
 
-export async function lijstProjecten(db: Db): Promise<ProjectSamenvatting[]> {
+/** Een project van een organisatie: het id en de organisatie moeten allebei kloppen. */
+function vanOrganisatie(organisatieId: string, id: string) {
+  return and(eq(projecten.id, id), eq(projecten.organisatieId, organisatieId), leeft);
+}
+
+/**
+ * De organisatie van een levend project, of null als het project niet bestaat, verwijderd is of
+ * (nog) geen organisatie heeft. Voor de toegangscontrole op id (server/utils/toegang.ts).
+ */
+export async function projectOrganisatie(db: Db, id: string): Promise<string | null> {
+  const [rij] = await db
+    .select({ organisatieId: projecten.organisatieId })
+    .from(projecten)
+    .where(and(eq(projecten.id, id), leeft));
+  return rij?.organisatieId ?? null;
+}
+
+/** De projecten van één organisatie, het laatst gewijzigde eerst. */
+export async function lijstProjecten(db: Db, organisatieId: string): Promise<ProjectSamenvatting[]> {
   const rijen = await db
     .select({
       id: projecten.id,
@@ -41,13 +59,15 @@ export async function lijstProjecten(db: Db): Promise<ProjectSamenvatting[]> {
       gewijzigd: projecten.gewijzigd,
     })
     .from(projecten)
-    .where(leeft)
+    .where(and(eq(projecten.organisatieId, organisatieId), leeft))
     .orderBy(desc(projecten.gewijzigd));
   return rijen.map((rij) => ({ ...rij, gewijzigd: rij.gewijzigd.toISOString() }));
 }
 
+/** Een nieuw project in `organisatieId` (de actieve organisatie van de aanvrager). */
 export async function maakProject(
   db: Db,
+  organisatieId: string,
   invoer: { naam: string; klantnaam: string; stroomtype: Stroomtype },
 ): Promise<{ id: string; versie: number }> {
   const document = nieuwProjectDocument({
@@ -56,12 +76,12 @@ export async function maakProject(
   });
   const [rij] = await db
     .insert(projecten)
-    .values({ naam: invoer.naam, klantnaam: invoer.klantnaam, document })
+    .values({ organisatieId, naam: invoer.naam, klantnaam: invoer.klantnaam, document })
     .returning({ id: projecten.id, versie: projecten.versie });
   return rij!;
 }
 
-export async function haalProject(db: Db, id: string): Promise<Project | null> {
+export async function haalProject(db: Db, organisatieId: string, id: string): Promise<Project | null> {
   const [rij] = await db
     .select({
       id: projecten.id,
@@ -72,10 +92,11 @@ export async function haalProject(db: Db, id: string): Promise<Project | null> {
       gewijzigd: projecten.gewijzigd,
     })
     .from(projecten)
-    .where(and(eq(projecten.id, id), leeft));
+    .where(vanOrganisatie(organisatieId, id));
   if (!rij) return null;
   return {
     ...rij,
+    organisatieId,
     document: rij.document as InstallatieDocument,
     gewijzigd: rij.gewijzigd.toISOString(),
   };
@@ -101,6 +122,7 @@ function valideerDocument(invoer: unknown): InstallatieDocument {
  */
 export async function bewaarProject(
   db: Db,
+  organisatieId: string,
   id: string,
   versie: number,
   invoer: { naam?: string; document: unknown },
@@ -116,24 +138,26 @@ export async function bewaarProject(
       versie: sql`${projecten.versie} + 1`,
       gewijzigd: sql`now()`,
     })
-    .where(and(eq(projecten.id, id), eq(projecten.versie, versie), leeft))
+    .where(and(vanOrganisatie(organisatieId, id), eq(projecten.versie, versie)))
     .returning({ versie: projecten.versie });
   if (bijgewerkt) return bijgewerkt;
 
   const [huidig] = await db
     .select({ versie: projecten.versie })
     .from(projecten)
-    .where(and(eq(projecten.id, id), leeft));
+    .where(vanOrganisatie(organisatieId, id));
   if (!huidig) throw new ProjectFout("NIET_GEVONDEN");
   throw new ProjectFout("CONFLICT", { versie: huidig.versie });
 }
 
-export async function dupliceerProject(db: Db, id: string): Promise<{ id: string }> {
-  const bron = await haalProject(db, id);
+/** Een kopie in dezelfde organisatie als het bronproject. */
+export async function dupliceerProject(db: Db, organisatieId: string, id: string): Promise<{ id: string }> {
+  const bron = await haalProject(db, organisatieId, id);
   if (!bron) throw new ProjectFout("NIET_GEVONDEN");
   const [rij] = await db
     .insert(projecten)
     .values({
+      organisatieId,
       naam: `${bron.naam} (kopie)`,
       klantnaam: bron.klantnaam,
       document: { ...bron.document, id: nieuwId() },
@@ -142,11 +166,11 @@ export async function dupliceerProject(db: Db, id: string): Promise<{ id: string
   return rij!;
 }
 
-export async function verwijderProject(db: Db, id: string): Promise<void> {
+export async function verwijderProject(db: Db, organisatieId: string, id: string): Promise<void> {
   const rijen = await db
     .update(projecten)
     .set({ verwijderd: sql`now()` })
-    .where(and(eq(projecten.id, id), leeft))
+    .where(vanOrganisatie(organisatieId, id))
     .returning({ id: projecten.id });
   if (rijen.length === 0) throw new ProjectFout("NIET_GEVONDEN");
 }

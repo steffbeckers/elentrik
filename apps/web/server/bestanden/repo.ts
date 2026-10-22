@@ -1,7 +1,7 @@
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module
 // rechtstreeks (ruling E1).
 import { randomUUID } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   afmetingen,
   herkenSoort,
@@ -47,6 +47,8 @@ export async function schrijfBestandMetRij(
   opslag: BestandOpslag,
   invoer: {
     projectId: string | null;
+    /** Alleen voor een logo: de organisatie waartoe het hoort. */
+    organisatieId?: string | null;
     soort: (typeof bestanden.$inferInsert)["soort"];
     map: string;
     type: BestandSoort;
@@ -55,6 +57,7 @@ export async function schrijfBestandMetRij(
   metRij?: (tx: Db, info: BestandInfo) => Promise<void>,
 ): Promise<BestandInfo> {
   const { projectId, soort, map, type, data } = invoer;
+  const organisatieId = invoer.organisatieId ?? null;
   const maten = type === "pdf" ? null : afmetingen(data, type);
   const id = randomUUID();
   const sleutel = `${map}/${id}`;
@@ -68,24 +71,25 @@ export async function schrijfBestandMetRij(
   await opslag.schrijf(sleutel, data);
   if (metRij) {
     await db.transaction(async (tx) => {
-      await tx.insert(bestanden).values({ id, projectId, soort, mime, grootte: data.length, sleutel });
+      await tx.insert(bestanden).values({ id, projectId, organisatieId, soort, mime, grootte: data.length, sleutel });
       await metRij(tx, info);
     });
   } else {
-    await db.insert(bestanden).values({ id, projectId, soort, mime, grootte: data.length, sleutel });
+    await db.insert(bestanden).values({ id, projectId, organisatieId, soort, mime, grootte: data.length, sleutel });
   }
   return info;
 }
 
 /**
- * Valideert en bewaart een planbestand of een export-PDF. Het type volgt uit de bytes.
+ * Valideert en bewaart een planbestand of een export-PDF. Het type volgt uit de bytes. Het
+ * project moet leven en bij `organisatieId` horen; anders volgt NIET_GEVONDEN.
  */
 export async function bewaarBestand(
   db: Db,
   opslag: BestandOpslag,
-  invoer: { projectId: string; soort: BewaarSoort; data: Uint8Array },
+  invoer: { organisatieId: string; projectId: string; soort: BewaarSoort; data: Uint8Array },
 ): Promise<BestandInfo> {
-  const { projectId, soort, data } = invoer;
+  const { organisatieId, projectId, soort, data } = invoer;
   if (data.length > MAX_UPLOAD_BYTES) throw new BestandFout("TE_GROOT");
 
   const type = herkenSoort(data);
@@ -105,7 +109,9 @@ export async function bewaarBestand(
   const [project] = await db
     .select({ id: projecten.id })
     .from(projecten)
-    .where(and(eq(projecten.id, projectId), isNull(projecten.verwijderd)));
+    .where(
+      and(eq(projecten.id, projectId), eq(projecten.organisatieId, organisatieId), isNull(projecten.verwijderd)),
+    );
   if (!project) throw new BestandFout("NIET_GEVONDEN");
 
   return schrijfBestandMetRij(db, opslag, { projectId, soort, map: projectId, type, data });
@@ -121,6 +127,11 @@ export async function haalBestand(
   sleutel: string;
   /** `null` voor bestanden zonder project, zoals het logo. */
   projectId: string | null;
+  /**
+   * De organisatie waartoe het bestand hoort: via het project, of voor een logo via zijn eigen
+   * `organisatie_id`. `null` als het bij geen organisatie hoort; dan is het voor niemand.
+   */
+  organisatieId: string | null;
 } | null> {
   const [rij] = await db
     .select({
@@ -129,8 +140,10 @@ export async function haalBestand(
       mime: bestanden.mime,
       sleutel: bestanden.sleutel,
       projectId: bestanden.projectId,
+      organisatieId: sql<string | null>`coalesce(${projecten.organisatieId}, ${bestanden.organisatieId})`,
     })
     .from(bestanden)
+    .leftJoin(projecten, eq(projecten.id, bestanden.projectId))
     .where(eq(bestanden.id, id));
   return rij ?? null;
 }

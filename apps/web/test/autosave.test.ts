@@ -49,6 +49,7 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
   const bewaar = vi.fn<Bewaar>(async (_id, versie) => ({ versie: versie + 1 }));
   const haal = vi.fn(async (id: string): Promise<Project> => ({
     id,
+    organisatieId: "org-1",
     naam: "Van de server",
     klantnaam: "Janssens",
     gewijzigd: "2026-10-18T10:00:00.000Z",

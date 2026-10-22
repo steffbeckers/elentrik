@@ -10,6 +10,8 @@ export type ProjectSamenvatting = {
 };
 
 export type Project = ProjectSamenvatting & {
+  /** De organisatie waartoe het project hoort. */
+  organisatieId: string;
   document: InstallatieDocument;
   versie: number;
 };

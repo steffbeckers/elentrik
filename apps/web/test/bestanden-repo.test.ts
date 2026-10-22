@@ -8,7 +8,7 @@ import { maakLokaleOpslag, type BestandOpslag } from "../server/bestanden/opslag
 import { BestandFout, bewaarBestand, haalBestand } from "../server/bestanden/repo";
 import { bestanden } from "../server/db/schema";
 import { maakProject, verwijderProject } from "../server/projecten/repo";
-import { maakTestDb } from "./db";
+import { maakTestDb, maakTestOrganisatie } from "./db";
 
 const ONBEKEND = "00000000-0000-4000-8000-000000000000";
 
@@ -39,12 +39,13 @@ function pdf(): Uint8Array {
 
 async function opzet() {
   const db = await maakTestDb();
-  const { id: projectId } = await maakProject(db, {
+  const organisatieId = await maakTestOrganisatie(db);
+  const { id: projectId } = await maakProject(db, organisatieId, {
     naam: "Woning",
     klantnaam: "Peeters",
     stroomtype: "3N400V",
   });
-  return { db, projectId, opslag: maakLokaleOpslag(map) };
+  return { db, organisatieId, projectId, opslag: maakLokaleOpslag(map) };
 }
 
 async function vangFout(belofte: Promise<unknown>): Promise<BestandFout> {
@@ -59,9 +60,9 @@ async function vangFout(belofte: Promise<unknown>): Promise<BestandFout> {
 
 describe("bewaarBestand", () => {
   test("een PNG van 10x10 als plan-raster", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const data = png(10, 10);
-    const info = await bewaarBestand(db, opslag, { projectId, soort: "plan-raster", data });
+    const info = await bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data });
     expect(info).toEqual({
       id: expect.any(String),
       mime: "image/png",
@@ -74,8 +75,9 @@ describe("bewaarBestand", () => {
   });
 
   test("het type volgt uit de inhoud, ook voor plan-origineel", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const info = await bewaarBestand(db, opslag, {
+      organisatieId,
       projectId,
       soort: "plan-origineel",
       data: png(10, 10),
@@ -84,8 +86,9 @@ describe("bewaarBestand", () => {
   });
 
   test("een PDF als plan-origineel heeft geen afmetingen", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const info = await bewaarBestand(db, opslag, {
+      organisatieId,
       projectId,
       soort: "plan-origineel",
       data: pdf(),
@@ -96,60 +99,71 @@ describe("bewaarBestand", () => {
   });
 
   test("een PDF of SVG als plan-raster geeft ONGELDIG_TYPE", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const svg = new TextEncoder().encode("<svg></svg>");
     for (const data of [pdf(), svg]) {
       const fout = await vangFout(
-        bewaarBestand(db, opslag, { projectId, soort: "plan-raster", data }),
+        bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data }),
       );
       expect(fout.code).toBe("ONGELDIG_TYPE");
     }
   });
 
   test("een SVG als plan-origineel geeft ONGELDIG_TYPE", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const svg = new TextEncoder().encode("<svg></svg>");
     const fout = await vangFout(
-      bewaarBestand(db, opslag, { projectId, soort: "plan-origineel", data: svg }),
+      bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-origineel", data: svg }),
     );
     expect(fout.code).toBe("ONGELDIG_TYPE");
   });
 
   test("meer dan MAX_UPLOAD_BYTES geeft TE_GROOT", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const data = new Uint8Array(MAX_UPLOAD_BYTES + 1);
     data.set(png(10, 10));
     const fout = await vangFout(
-      bewaarBestand(db, opslag, { projectId, soort: "plan-origineel", data }),
+      bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-origineel", data }),
     );
     expect(fout.code).toBe("TE_GROOT");
   });
 
   test("een onbekend project geeft NIET_GEVONDEN en bewaart niets", async () => {
-    const { db, opslag } = await opzet();
+    const { db, organisatieId, opslag } = await opzet();
     const fout = await vangFout(
-      bewaarBestand(db, opslag, { projectId: ONBEKEND, soort: "plan-raster", data: png(10, 10) }),
+      bewaarBestand(db, opslag, { organisatieId, projectId: ONBEKEND, soort: "plan-raster", data: png(10, 10) }),
+    );
+    expect(fout.code).toBe("NIET_GEVONDEN");
+    expect(await db.select().from(bestanden)).toHaveLength(0);
+  });
+
+  test("een project van een andere organisatie telt als onbekend", async () => {
+    const { db, projectId, opslag } = await opzet();
+    const ander = await maakTestOrganisatie(db, "Ander");
+    const fout = await vangFout(
+      bewaarBestand(db, opslag, { organisatieId: ander, projectId, soort: "plan-raster", data: png(10, 10) }),
     );
     expect(fout.code).toBe("NIET_GEVONDEN");
     expect(await db.select().from(bestanden)).toHaveLength(0);
   });
 
   test("een verwijderd project telt als onbekend", async () => {
-    const { db, projectId, opslag } = await opzet();
-    await verwijderProject(db, projectId);
+    const { db, organisatieId, projectId, opslag } = await opzet();
+    await verwijderProject(db, organisatieId, projectId);
     const fout = await vangFout(
-      bewaarBestand(db, opslag, { projectId, soort: "plan-raster", data: png(10, 10) }),
+      bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data: png(10, 10) }),
     );
     expect(fout.code).toBe("NIET_GEVONDEN");
   });
 
   test("een raster van 8001x10 geeft RASTER_TE_GROOT, 8000x10 mag", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const fout = await vangFout(
-      bewaarBestand(db, opslag, { projectId, soort: "plan-raster", data: png(8001, 10) }),
+      bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data: png(8001, 10) }),
     );
     expect(fout.code).toBe("RASTER_TE_GROOT");
     const info = await bewaarBestand(db, opslag, {
+      organisatieId,
       projectId,
       soort: "plan-raster",
       data: png(8000, 10),
@@ -158,26 +172,26 @@ describe("bewaarBestand", () => {
   });
 
   test("een raster met breedte of hoogte 0 geeft ONGELDIG_TYPE", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     for (const data of [png(0, 10), png(10, 0)]) {
       const fout = await vangFout(
-        bewaarBestand(db, opslag, { projectId, soort: "plan-raster", data }),
+        bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data }),
       );
       expect(fout.code).toBe("ONGELDIG_TYPE");
     }
   });
 
   test("een afgekapte PNG (afmetingen onleesbaar) als raster geeft ONGELDIG_TYPE", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const data = png(10, 10).slice(0, 12);
     const fout = await vangFout(
-      bewaarBestand(db, opslag, { projectId, soort: "plan-raster", data }),
+      bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data }),
     );
     expect(fout.code).toBe("ONGELDIG_TYPE");
   });
 
   test("een mislukte schrijfactie laat geen rij achter en gooit de fout opnieuw", async () => {
-    const { db, projectId } = await opzet();
+    const { db, organisatieId, projectId } = await opzet();
     const kapot: BestandOpslag = {
       async schrijf() {
         throw new Error("schijf vol");
@@ -190,7 +204,7 @@ describe("bewaarBestand", () => {
       },
     };
     await expect(
-      bewaarBestand(db, kapot, { projectId, soort: "plan-raster", data: png(10, 10) }),
+      bewaarBestand(db, kapot, { organisatieId, projectId, soort: "plan-raster", data: png(10, 10) }),
     ).rejects.toThrow("schijf vol");
     expect(await db.select().from(bestanden)).toHaveLength(0);
   });
@@ -198,18 +212,18 @@ describe("bewaarBestand", () => {
 
 describe("bewaarBestand voor een export", () => {
   test("soort export met een PDF krijgt mime application/pdf en de sleutel <projectId>/<id>", async () => {
-    const { db, projectId, opslag } = await opzet();
-    const info = await bewaarBestand(db, opslag, { projectId, soort: "export", data: pdf() });
+    const { db, organisatieId, projectId, opslag } = await opzet();
+    const info = await bewaarBestand(db, opslag, { organisatieId, projectId, soort: "export", data: pdf() });
     expect(info.mime).toBe("application/pdf");
     expect(info.breedte_px).toBeUndefined();
     const [rij] = await db.select().from(bestanden).where(eq(bestanden.id, info.id));
-    expect(rij).toMatchObject({ projectId, soort: "export", sleutel: `${projectId}/${info.id}` });
+    expect(rij).toMatchObject({ organisatieId: null, projectId, soort: "export", sleutel: `${projectId}/${info.id}` });
   });
 
   test("soort export met een PNG geeft ONGELDIG_TYPE", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const fout = await vangFout(
-      bewaarBestand(db, opslag, { projectId, soort: "export", data: png(10, 10) }),
+      bewaarBestand(db, opslag, { organisatieId, projectId, soort: "export", data: png(10, 10) }),
     );
     expect(fout.code).toBe("ONGELDIG_TYPE");
   });
@@ -233,8 +247,9 @@ describe("haalBestand", () => {
   });
 
   test("geeft id, soort, mime, sleutel en project van een bewaard bestand", async () => {
-    const { db, projectId, opslag } = await opzet();
+    const { db, organisatieId, projectId, opslag } = await opzet();
     const info = await bewaarBestand(db, opslag, {
+      organisatieId,
       projectId,
       soort: "plan-raster",
       data: png(10, 10),
@@ -245,6 +260,21 @@ describe("haalBestand", () => {
       mime: "image/png",
       sleutel: `${projectId}/${info.id}`,
       projectId,
+      organisatieId,
     });
+  });
+
+  test("de organisatie van een logo komt uit de eigen kolom; zonder organisatie is ze null", async () => {
+    const { db, organisatieId } = await opzet();
+    const [logo] = await db
+      .insert(bestanden)
+      .values({ organisatieId, soort: "logo", mime: "image/png", grootte: 1, sleutel: "bedrijf/x" })
+      .returning({ id: bestanden.id });
+    const [wees] = await db
+      .insert(bestanden)
+      .values({ soort: "logo", mime: "image/png", grootte: 1, sleutel: "bedrijf/y" })
+      .returning({ id: bestanden.id });
+    expect((await haalBestand(db, logo!.id))!.organisatieId).toBe(organisatieId);
+    expect((await haalBestand(db, wees!.id))!.organisatieId).toBeNull();
   });
 });

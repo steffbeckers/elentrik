@@ -11,7 +11,7 @@ import { bewaarBedrijf, bewaarLogo, haalBedrijf } from "../server/bedrijf/repo";
 import { maakLokaleOpslag } from "../server/bestanden/opslag";
 import { leesBedrijfBody } from "../server/utils/bedrijf";
 import { leesLogoUpload, leesPlanUpload } from "../server/utils/bestanden";
-import { maakTestDb } from "./db";
+import { maakTestDb, maakTestOrganisatie } from "./db";
 
 const GRENS = "----elentrik";
 
@@ -118,15 +118,16 @@ describe("leesBedrijfBody", () => {
 
   test("een body met logoBestandId wordt aanvaard en het bewaarde logo blijft staan", async () => {
     const db = await maakTestDb();
+    const org = await maakTestOrganisatie(db);
     const map = await mkdtemp(join(tmpdir(), "elentrik-bedrijf-utils-"));
     try {
       const png = new Uint8Array(33);
       png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1]);
-      const logo = await bewaarLogo(db, maakLokaleOpslag(map), png);
+      const logo = await bewaarLogo(db, maakLokaleOpslag(map), org, png);
       const partij = await leesBedrijfBody(jsonEvent({ naam: "Nieuw", logoBestandId: "ander-id" }));
       expect(partij.logoBestandId).toBe("ander-id");
-      expect(await bewaarBedrijf(db, partij)).toEqual({ naam: "Nieuw", logoBestandId: logo.id });
-      expect(await haalBedrijf(db)).toEqual({ naam: "Nieuw", logoBestandId: logo.id });
+      expect(await bewaarBedrijf(db, org, partij)).toEqual({ naam: "Nieuw", logoBestandId: logo.id });
+      expect(await haalBedrijf(db, org)).toEqual({ naam: "Nieuw", logoBestandId: logo.id });
     } finally {
       await rm(map, { recursive: true, force: true });
     }

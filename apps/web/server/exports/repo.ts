@@ -4,7 +4,7 @@
 import { analyseer, controleer, haalRegelset, type Bevinding } from "@elentrik/arei";
 import type { InstallatieDocument } from "@elentrik/model";
 import { overgeslagenPaginas, printHtml, type PrintOpties } from "@elentrik/render";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { herkenSoort } from "../../shared/bestandsinhoud";
 import type { ExportInfo, ExportInvoer } from "../../shared/exports";
 import { haalBedrijf } from "../bedrijf/repo";
@@ -33,8 +33,15 @@ type MeeTeGeven = PdfInvoer["bestanden"][number];
  */
 const PLAN_RASTER = ["plan-raster", "plan-origineel"] as const;
 
-/** Welke bestanden `leesAfbeelding` toelaat: de soorten, en bij een plan ook het project waartoe ze horen. */
-type Toegelaten = { soorten: readonly (typeof bestanden.$inferSelect)["soort"][]; projectId: string | null };
+/**
+ * Welke bestanden `leesAfbeelding` toelaat: de soorten, de organisatie, en bij een plan ook het
+ * project waartoe ze horen.
+ */
+type Toegelaten = {
+  soorten: readonly (typeof bestanden.$inferSelect)["soort"][];
+  organisatieId: string;
+  projectId: string | null;
+};
 
 /** De extensie per toegelaten afbeeldingstype; andere types gaan niet mee. */
 const EXTENSIE: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg" };
@@ -46,10 +53,10 @@ function lokaleDatum(datum: Date): string {
 }
 
 /**
- * Leest een afbeelding (PNG of JPEG) van een van de toegelaten soorten uit de opslag. Een plan moet bij het
- * gegeven project horen (`projectId`); het logo hoort bij geen project (`null`). Een id dat geen uuid is,
- * een onbekende rij, een andere soort, een ander project, een ander type of een bestand dat niet in de
- * opslag staat, geeft `null`.
+ * Leest een afbeelding (PNG of JPEG) van een van de toegelaten soorten uit de opslag. Het bestand moet bij
+ * de organisatie horen; een plan bovendien bij het gegeven project (`projectId`), het logo bij geen project
+ * (`null`). Een id dat geen uuid is, een onbekende rij, een andere soort, een andere organisatie, een ander
+ * project, een ander type of een bestand dat niet in de opslag staat, geeft `null`.
  */
 async function leesAfbeelding(
   db: Db,
@@ -60,6 +67,7 @@ async function leesAfbeelding(
   if (!IdSchema.safeParse(id).success) return null;
   const bestand = await haalBestand(db, id);
   if (!bestand || !toegelaten.soorten.includes(bestand.soort)) return null;
+  if (bestand.organisatieId !== toegelaten.organisatieId) return null;
   if (bestand.projectId !== toegelaten.projectId) return null;
   const extensie = EXTENSIE[bestand.mime];
   if (extensie === undefined) return null;
@@ -72,6 +80,7 @@ async function leesAfbeelding(
 async function rasters(
   db: Db,
   opslag: BestandOpslag,
+  organisatieId: string,
   projectId: string,
   doc: InstallatieDocument,
 ): Promise<{ afbeeldingen: Record<string, string>; bestanden: MeeTeGeven[] }> {
@@ -79,7 +88,7 @@ async function rasters(
   const bestanden: MeeTeGeven[] = [];
   const ids = new Set(doc.situatie.paginas.flatMap((p) => (p.achtergrond ? [p.achtergrond.rasterBestandId] : [])));
   for (const id of ids) {
-    const raster = await leesAfbeelding(db, opslag, id, { soorten: PLAN_RASTER, projectId });
+    const raster = await leesAfbeelding(db, opslag, id, { soorten: PLAN_RASTER, organisatieId, projectId });
     if (!raster) continue;
     const naam = `plan-${id}.${raster.extensie}`;
     afbeeldingen[id] = naam;
@@ -113,17 +122,21 @@ function naarInfo(rij: typeof exports.$inferSelect): ExportInfo {
  * `versie` is de versie die de editor toont (`If-Match`). Is het opgeslagen document intussen een
  * andere versie, dan volgt `ProjectFout("CONFLICT", { versie })` zoals bij het bewaren, en wordt er
  * niets gemaakt of bewaard: de PDF moet het document zijn dat op het scherm staat.
+ *
+ * Het project moet bij `organisatieId` horen (anders NIET_GEVONDEN); de cartouche krijgt de
+ * bedrijfsgegevens en het logo van die organisatie.
  */
 export async function maakExport(
   db: Db,
   opslag: BestandOpslag,
+  organisatieId: string,
   projectId: string,
   versie: number,
   invoer: ExportInvoer,
   deps: ExportDeps,
 ): Promise<ExportInfo> {
   const nu = (deps.nu ?? (() => new Date()))();
-  const project = await haalProject(db, projectId);
+  const project = await haalProject(db, organisatieId, projectId);
   if (!project) throw new ProjectFout("NIET_GEVONDEN");
   if (project.versie !== versie) throw new ProjectFout("CONFLICT", { versie: project.versie });
   const doc = project.document;
@@ -137,7 +150,7 @@ export async function maakExport(
   let afbeeldingen: Record<string, string> = {};
   let overgeslagen: string[] = [];
   if (invoer.onderdelen.situatieschema) {
-    const gevonden = await rasters(db, opslag, projectId, doc);
+    const gevonden = await rasters(db, opslag, organisatieId, projectId, doc);
     afbeeldingen = gevonden.afbeeldingen;
     meegegeven.push(...gevonden.bestanden);
     overgeslagen = overgeslagenPaginas(doc, afbeeldingen);
@@ -147,11 +160,12 @@ export async function maakExport(
     bijlage: invoer.onderdelen.bijlage || aantalFouten > 0 || overgeslagen.length > 0,
   };
 
-  const installateur = await haalBedrijf(db);
+  const installateur = await haalBedrijf(db, organisatieId);
   let logo: string | undefined;
   if (installateur.logoBestandId !== undefined) {
     const afbeelding = await leesAfbeelding(db, opslag, installateur.logoBestandId, {
       soorten: ["logo"],
+      organisatieId,
       projectId: null,
     });
     if (afbeelding) {
@@ -209,14 +223,15 @@ export async function maakExport(
   return naarInfo(rij!);
 }
 
-/** De exports van een project, de nieuwste eerst. */
-export async function lijstExports(db: Db, projectId: string): Promise<ExportInfo[]> {
+/** De exports van een project van `organisatieId`, de nieuwste eerst; leeg voor een ander project. */
+export async function lijstExports(db: Db, organisatieId: string, projectId: string): Promise<ExportInfo[]> {
   const rijen = await db
-    .select()
+    .select({ exportRij: exports })
     .from(exports)
-    .where(eq(exports.projectId, projectId))
+    .innerJoin(projecten, eq(projecten.id, exports.projectId))
+    .where(and(eq(exports.projectId, projectId), eq(projecten.organisatieId, organisatieId)))
     .orderBy(desc(exports.aangemaakt), desc(exports.id));
-  return rijen.map(naarInfo);
+  return rijen.map((rij) => naarInfo(rij.exportRij));
 }
 
 /** De downloadnaam van een export-PDF: `<projectnaam> - <versieLabel>.pdf`, anders `export.pdf`. */
