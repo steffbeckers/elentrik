@@ -96,10 +96,17 @@ describe("partijUitFormulier", () => {
     expect(partij.adres?.bus).toBe("b2");
   });
 
-  test("enkel het standaardland telt niet als adres, een ander land wel", () => {
+  test("een land zonder de andere adresvelden telt als geen adres", () => {
     expect(partijUitFormulier(formulier({ land: "België" })).adres).toBeUndefined();
     expect(partijUitFormulier(formulier({ land: "" })).adres).toBeUndefined();
-    expect(partijUitFormulier(formulier({ land: "Nederland" })).adres?.land).toBe("Nederland");
+    expect(partijUitFormulier(formulier({ land: "Nederland" })).adres).toBeUndefined();
+  });
+
+  test("een ander land gaat mee zodra het adres ingevuld is", () => {
+    const partij = partijUitFormulier(
+      formulier({ straat: "K", nummer: "1", postcode: "2000", gemeente: "A", land: "Nederland" }),
+    );
+    expect(partij.adres?.land).toBe("Nederland");
   });
 
   test("een leeg land bij een ingevuld adres valt terug op België", () => {
@@ -138,6 +145,10 @@ describe("valideerFormulier", () => {
       "postcode",
       "gemeente",
     ]);
+  });
+
+  test("een gewijzigd land alleen is geen gedeeltelijk adres", () => {
+    expect(valideerFormulier(formulier({ land: "Nederland" }))).toEqual([]);
   });
 
   test("een volledig adres is geldig", () => {

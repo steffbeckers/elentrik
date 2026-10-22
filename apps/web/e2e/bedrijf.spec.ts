@@ -1,23 +1,29 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
+import {
+  bewaarBedrijfSnapshot,
+  herstelBedrijf,
+  zetBedrijfBasislijn,
+  type BedrijfSnapshot,
+} from "./hulp/bedrijf";
 
 const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const PLAN_PDF = fileURLToPath(new URL("./fixtures/plan-2p.pdf", import.meta.url));
 
-type Partij = { naam: string; adres?: unknown; logoBestandId?: string };
+// De bedrijfsgegevens zijn één gedeelde rij in de ontwikkelbank: de volledige rij (ook het logo)
+// wordt voor de run bewaard en erna teruggezet; elke test begint van een bekende basislijn.
+let snapshot: BedrijfSnapshot;
 
-// De bedrijfsgegevens zijn één gedeelde rij: bewaar de bestaande tekstgegevens en zet ze na de run terug.
-// (Een opgeladen logo blijft verwijzen naar het laatste bestand; de server kent geen "logo verwijderen".)
-let origineel: Partij | undefined;
-
-test.beforeAll(async ({ request }) => {
-  origineel = (await (await request.get("/api/bedrijfsgegevens")).json()) as Partij;
+test.beforeAll(async () => {
+  snapshot = await bewaarBedrijfSnapshot();
 });
 
-test.afterAll(async ({ request }) => {
-  if (!origineel) return;
-  const { logoBestandId: _logo, ...tekst } = origineel;
-  await request.put("/api/bedrijfsgegevens", { data: tekst });
+test.beforeEach(async ({ request }) => {
+  await zetBedrijfBasislijn(request);
+});
+
+test.afterAll(async () => {
+  await herstelBedrijf(snapshot);
 });
 
 async function opKlaar(page: Page) {
@@ -70,13 +76,23 @@ test("een gedeeltelijk adres wordt niet bewaard, een volledig adres wel", async 
   await expect(page.getByLabel("Land", { exact: true })).toHaveValue("België");
 });
 
-test("een leeg adres wordt weggelaten", async ({ page, request }) => {
+test("een adres leegmaken, ook met een ander land, laat het adres weg", async ({ page, request }) => {
+  // Eerst een volledig adres, zodat er echt iets te wissen valt.
+  await request.put("/api/bedrijfsgegevens", {
+    data: {
+      naam: "E2E",
+      adres: { straat: "Kerkstraat", nummer: "1", postcode: "2000", gemeente: "Antwerpen", land: "België" },
+    },
+  });
   await opKlaar(page);
+  await expect(page.getByLabel("Straat", { exact: true })).toHaveValue("Kerkstraat");
+
   const naam = `Elektro Zonder Adres ${Date.now()}`;
   await page.getByTestId("bedrijf-naam").fill(naam);
   for (const veld of ["Straat", "Nummer", "Bus", "Postcode", "Gemeente"]) {
     await page.getByLabel(veld, { exact: true }).fill("");
   }
+  await page.getByLabel("Land", { exact: true }).fill("Nederland");
   await page.getByTestId("bedrijf-bewaar").click();
   await expect(page.getByText("Bedrijfsgegevens bewaard.", { exact: true })).toBeVisible();
 

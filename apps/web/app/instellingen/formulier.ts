@@ -52,13 +52,9 @@ export function formulierUitPartij(partij: Partij): BedrijfFormulier {
   };
 }
 
-/** Het standaardland of een leeg land alleen telt niet als ingevuld adres. */
+/** Het land alleen telt niet: zonder straat, nummer, bus, postcode of gemeente is er geen adres. */
 function heeftAdres(f: BedrijfFormulier): boolean {
-  const land = f.land.trim();
-  return (
-    [f.straat, f.nummer, f.bus, f.postcode, f.gemeente].some((waarde) => waarde.trim() !== "") ||
-    (land !== "" && land !== STANDAARD_LAND)
-  );
+  return [f.straat, f.nummer, f.bus, f.postcode, f.gemeente].some((waarde) => waarde.trim() !== "");
 }
 
 const VERPLICHTE_ADRESVELDEN = ["straat", "nummer", "postcode", "gemeente"] as const;
