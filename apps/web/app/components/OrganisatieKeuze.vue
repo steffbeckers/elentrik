@@ -32,6 +32,8 @@ const items = computed<DropdownMenuItem[][]>(() => [
     type: "checkbox" as const,
     label: organisatie.naam,
     description: t(`rollen.${organisatie.rol}`),
+    slot: "organisatie" as const,
+    organisatieId: organisatie.id,
     checked: organisatie.id === sessie.actieveOrganisatieId,
     onSelect: () => kies(organisatie.id),
   })),
@@ -46,6 +48,11 @@ const items = computed<DropdownMenuItem[][]>(() => [
     },
   ],
 ]);
+
+/** Een item van de lijst organisaties, zoals het in de slot terugkomt. */
+function optie(item: unknown): { label?: string; organisatieId?: string } {
+  return item as { label?: string; organisatieId?: string };
+}
 
 async function aangemaakt() {
   nieuwOpen.value = false;
@@ -62,11 +69,14 @@ async function aangemaakt() {
       trailing-icon="i-lucide-chevrons-up-down"
       class="min-w-0 max-w-48 sm:max-w-64"
       :loading="bezig"
-      :title="`${$t('menu.organisatieKeuze')}: ${sessie.actieveOrganisatie.naam}`"
+      :title="$t('menu.organisatieKeuzeMet', { organisatie: sessie.actieveOrganisatie.naam })"
       data-testid="organisatie-keuze"
     >
       <span class="truncate" :class="compact ? 'sr-only xl:not-sr-only' : ''">{{ sessie.actieveOrganisatie.naam }}</span>
     </UButton>
+    <template #organisatie-label="{ item }">
+      <span :data-testid="`organisatie-optie-${optie(item).organisatieId}`">{{ optie(item).label }}</span>
+    </template>
     <template #nieuw-label>
       <span data-testid="organisatie-nieuw">{{ $t("menu.nieuwBedrijf") }}</span>
     </template>

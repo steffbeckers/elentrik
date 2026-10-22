@@ -3,7 +3,7 @@
 //
 // De sessie wordt één keer gelezen (tijdens SSR, met de cookies van het verzoek) en daarna uit de
 // store gebruikt; inloggen, wisselen en uitloggen werken de store zelf bij.
-import { bestemming } from "~/sessie/bestemming";
+import { bestemming, isPubliek } from "~/sessie/bestemming";
 import { useSessieStore } from "~/stores/sessie";
 
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -12,11 +12,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
     try {
       await sessie.laad();
     } catch {
-      // De server antwoordt niet zoals verwacht (geen 401): de pagina toont zelf de laadfout van
-      // haar gegevens, die zonder sessie toch niet lukken. De volgende navigatie probeert opnieuw.
-      return;
+      // De sessie is onbekend (de server antwoordt niet zoals verwacht, geen 401). Een publieke
+      // pagina mag; een beschermde pagina nooit: dan de foutpagina, niet de pagina zelf. De
+      // volgende navigatie probeert opnieuw.
+      if (isPubliek(to.path)) return;
+      return abortNavigation(createError({ statusCode: 503, statusMessage: "Sessie onbekend", fatal: true }));
     }
   }
-  const doel = bestemming(to, sessie.gebruiker ? { actieveOrganisatieId: sessie.actieveOrganisatieId } : null);
+  const doel = bestemming(to, sessie.sessieInfo);
   if (doel) return navigateTo(doel, { replace: true });
 });

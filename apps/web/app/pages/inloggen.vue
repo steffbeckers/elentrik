@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { veiligTerug } from "~/sessie/bestemming";
+import { terugZonderFout, veiligTerug } from "~/sessie/bestemming";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isEmail } from "~/sessie/invoer";
 import { useSessieStore } from "~/stores/sessie";
@@ -10,14 +10,20 @@ const sessie = useSessieStore();
 
 useHead({ title: () => `${t("inloggen.titel")} · ${t("app.naam")}` });
 
-/** Waar je na het inloggen heen gaat: alleen een lokaal pad, anders de start. */
-const terug = computed(() => veiligTerug(route.query.terug) ?? "/");
+/**
+ * Waar je na het inloggen heen gaat: alleen een lokaal pad, anders de start. Meldde Better Auth
+ * daarin een mislukte link (bv. een verlopen bevestigingslink: `/?error=…`), dan zonder die melding.
+ */
+const terugInfo = computed(() => terugZonderFout(veiligTerug(route.query.terug) ?? "/"));
+const terug = computed(() => terugInfo.value.pad);
 
 type Melding = { kleur: "success" | "error" | "info"; tekst: string };
 
 /** Een melding uit de URL: alleen vaste sleutels, nooit tekst uit de query zelf. */
 function meldingUitQuery(): Melding | null {
-  if (route.query.error !== undefined) return { kleur: "error", tekst: t("inloggen.linkOngeldig") };
+  if (route.query.error !== undefined || terugInfo.value.fout) {
+    return { kleur: "error", tekst: t("inloggen.linkOngeldig") };
+  }
   if (route.query.melding === "account-gemaakt") return { kleur: "success", tekst: t("inloggen.accountGemaakt") };
   if (route.query.melding === "wachtwoord-gewijzigd") {
     return { kleur: "success", tekst: t("inloggen.wachtwoordGewijzigd") };
@@ -59,7 +65,8 @@ async function inloggen() {
       else melding.value = foutMelding(error);
       return;
     }
-    await sessie.laad();
+    // Lukt het lezen van de sessie nu niet (geen 401), dan probeert de middleware het opnieuw.
+    await sessie.laad().catch(() => undefined);
     await navigateTo(terug.value, { replace: true });
   } catch (fout) {
     melding.value = foutMelding(fout);

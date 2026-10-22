@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isBedrijfsnaam, isEmail } from "~/sessie/invoer";
 import { useSessieStore, type Rol } from "~/stores/sessie";
@@ -19,6 +20,7 @@ const organisatieNaam = computed(() => sessie.actieveOrganisatie?.naam ?? "");
 const {
   data: leden,
   error: ledenFout,
+  status: ledenStatus,
   refresh: herlaadLeden,
 } = useAsyncData("leden", () => $fetch<Lid[]>("/api/organisaties/leden"), {
   server: false,
@@ -30,12 +32,23 @@ const {
 const {
   data: uitnodigingen,
   error: uitnodigingenFout,
+  status: uitnodigingenStatus,
   refresh: herlaadUitnodigingen,
 } = useAsyncData(
   "uitnodigingen",
   () => (isEigenaar.value ? $fetch<Uitnodiging[]>("/api/organisaties/uitnodigingen") : Promise.resolve([])),
   { server: false, default: () => [] as Uitnodiging[], watch: [() => sessie.actieveOrganisatieId, isEigenaar] },
 );
+
+// Nog niets binnen (ook tijdens SSR, waar de lijsten niet laden): "Laden…" in plaats van een
+// lege lijst.
+const ledenLaden = computed(() => !ledenFout.value && ledenStatus.value !== "success");
+const uitnodigingenLaden = computed(() => !uitnodigingenFout.value && uitnodigingenStatus.value !== "success");
+
+// Niet meer lid, of geen eigenaar meer (spec 5b.5): de sessie opnieuw lezen.
+const herstelSessie = useSessieHerstel();
+watch(ledenFout, herstelSessie);
+watch(uitnodigingenFout, herstelSessie);
 
 const rolOpties = computed(() => [
   { value: "eigenaar", label: t("rollen.eigenaar") },
@@ -246,6 +259,9 @@ async function verlaat() {
           :title="$t('organisatie.leden.ladenMislukt')"
           :actions="[{ label: $t('uitnodiging.opnieuw'), color: 'error', onClick: () => herlaadLeden() }]"
         />
+        <p v-else-if="ledenLaden" class="flex items-center gap-2 text-sm text-muted" data-testid="organisatie-leden-laden">
+          <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />{{ $t("organisatie.laden") }}
+        </p>
         <ul v-else class="divide-y divide-default" data-testid="organisatie-leden">
           <li
             v-for="lid in leden"
@@ -340,6 +356,9 @@ async function verlaat() {
             :title="$t('organisatie.uitnodigingen.ladenMislukt')"
             :actions="[{ label: $t('uitnodiging.opnieuw'), color: 'error', onClick: () => herlaadUitnodigingen() }]"
           />
+          <p v-else-if="uitnodigingenLaden" class="flex items-center gap-2 text-sm text-muted">
+            <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />{{ $t("organisatie.laden") }}
+          </p>
           <p v-else-if="uitnodigingen.length === 0" class="text-sm text-muted">
             {{ $t("organisatie.uitnodigingen.leeg") }}
           </p>

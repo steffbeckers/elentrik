@@ -33,6 +33,21 @@ export function veiligTerug(terug: unknown): string | null {
   return terug;
 }
 
+/** De parameters waarmee Better Auth een mislukte link (verlopen, al gebruikt) terugmeldt. */
+const FOUTPARAMETERS = ["error", "error_description"];
+
+/**
+ * Een terugkeer-URL waarin Better Auth een mislukte link meldde (bv. een verlopen
+ * bevestigingslink: `/?error=…`): of dat zo is, en het pad zonder die parameters.
+ */
+export function terugZonderFout(pad: string): { pad: string; fout: boolean } {
+  const url = new URL(pad, "http://lokaal");
+  const fout = FOUTPARAMETERS.some((naam) => url.searchParams.has(naam));
+  if (!fout) return { pad, fout };
+  for (const naam of FOUTPARAMETERS) url.searchParams.delete(naam);
+  return { pad: `${url.pathname}${url.search}${url.hash}`, fout };
+}
+
 export type RouteInfo = { path: string; fullPath: string };
 
 /** Wat de middleware van de sessie nodig heeft; null is niet ingelogd. */

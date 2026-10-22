@@ -533,7 +533,8 @@
       "bevestigen": "Verlaten"
     },
     "laatsteEigenaar": "Er moet minstens één eigenaar blijven.",
-    "alleenEigenaar": "Alleen een eigenaar mag dit."
+    "alleenEigenaar": "Alleen een eigenaar mag dit.",
+    "laden": "Laden…"
   },
   "geenOrganisatie": {
     "titel": "Je hoort nog bij geen bedrijf",
@@ -550,13 +551,25 @@
     }
   },
   "menu": {
-    "organisatieKeuze": "Organisatie kiezen",
     "nieuwBedrijf": "Nieuw bedrijf aanmaken",
     "gebruiker": "Gebruikersmenu",
     "mijnOrganisatie": "Mijn organisatie",
     "bedrijfsgegevens": "Bedrijfsgegevens",
     "uitloggen": "Uitloggen",
     "wisselenMislukt": "Wisselen van organisatie is niet gelukt.",
-    "uitloggenMislukt": "Uitloggen is niet gelukt."
+    "uitloggenMislukt": "Uitloggen is niet gelukt.",
+    "organisatieKeuzeMet": "Organisatie kiezen: {organisatie}"
+  },
+  "fout": {
+    "algemeen": {
+      "titel": "Er ging iets mis",
+      "beschrijving": "Elentrik kon je sessie of deze pagina nu niet laden. Probeer het opnieuw."
+    },
+    "nietGevonden": {
+      "titel": "Pagina niet gevonden",
+      "beschrijving": "Deze pagina bestaat niet."
+    },
+    "naarStart": "Naar de start",
+    "opnieuw": "Opnieuw proberen"
   }
 }

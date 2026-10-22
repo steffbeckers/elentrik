@@ -2,6 +2,8 @@
 // bovenbalk. De volledige stromen (registreren, magic link, uitnodigen, wisselen) staan in de
 // specs van Task 8.
 import { expect, test, type Browser } from "@playwright/test";
+import postgres from "postgres";
+import { eisE2eDatabase } from "./omgeving";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
@@ -40,10 +42,22 @@ test("de publieke pagina's zijn bereikbaar zonder sessie", async ({ browser }) =
     // Zonder token: de link is ongeldig.
     await page.goto("/wachtwoord-herstellen");
     await expect(page.getByTestId("wachtwoord-herstellen-ongeldig")).toBeVisible();
-    // Met een token: het formulier, en de token verdwijnt uit de adresbalk.
-    await page.goto("/wachtwoord-herstellen?token=geen-echte-token");
+    // Met een token: het formulier, en de token verdwijnt uit de URL, ook uit de geschiedenis.
+    await ga(page, "/wachtwoord-herstellen?token=geen-echte-token");
     await expect(page.getByTestId("wachtwoord-herstellen-wachtwoord")).toBeVisible();
     await expect(page).toHaveURL(/\/wachtwoord-herstellen$/);
+    await page.getByRole("link", { name: "Terug naar inloggen" }).click();
+    await expect(page).toHaveURL(/\/inloggen$/);
+    // De router onthoudt de vorige pagina zonder token (anders zet hij ze zo terug in de
+    // geschiedenis, en de pagina zou ze bij "terug" pas na het laden weer weghalen).
+    expect(await page.evaluate(() => JSON.stringify(window.history.state))).not.toContain("token");
+    await page.goBack();
+    await expect(page).toHaveURL(/\/wachtwoord-herstellen$/);
+    expect(page.url()).not.toContain("token");
+    // Een verlopen bevestigingslink komt terug als /?error=…: de inlogpagina meldt het.
+    await page.goto("/?error=INVALID_TOKEN");
+    await expect(page).toHaveURL(/\/inloggen\?terug=/);
+    await expect(page.getByTestId("inloggen-melding")).toHaveText("Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.");
     // Een onbekende uitnodigingstoken: niet meer geldig.
     await page.goto("/uitnodiging/geen-echte-token");
     await expect(page.getByTestId("uitnodiging-ongeldig")).toBeVisible();
@@ -67,8 +81,10 @@ test("een inloglink geeft altijd dezelfde, neutrale melding", async ({ browser }
 test("de bovenbalk toont de organisatie en het menu van de gebruiker", async ({ page }) => {
   await ga(page, "/");
   await expect(page.getByTestId("organisatie-keuze")).toContainText("Paginas Elektro");
+  const mij = (await (await page.request.get("/api/mij")).json()) as { actieveOrganisatieId: string };
   await page.getByTestId("organisatie-keuze").click();
   await expect(page.getByRole("menuitemcheckbox", { name: /Paginas Elektro/ })).toBeVisible();
+  await expect(page.getByTestId(`organisatie-optie-${mij.actieveOrganisatieId}`)).toHaveText("Paginas Elektro");
   await page.keyboard.press("Escape");
 
   await page.getByTestId("gebruiker-menu").click();
@@ -84,6 +100,32 @@ test("de laatste eigenaar kan niet vertrekken, en de pagina zegt waarom", async 
   await page.getByTestId("organisatie-verlaten").click();
   await page.getByTestId("organisatie-verlaten-bevestig").click();
   await expect(page.getByTestId("organisatie-verlaten-fout")).toHaveText("Er moet minstens één eigenaar blijven.");
+});
+
+test("een sessie die tijdens SSR verlengd wordt, krijgt ook in de browser een nieuwe cookie", async ({ page }) => {
+  // De sessie twee dagen ouder maken: met updateAge 1 dag verlengt het volgende verzoek ze.
+  const sql = postgres(eisE2eDatabase(), { max: 1, onnotice: () => {} });
+  const vervaltOp = async () => {
+    const [rij] = await sql<{ verval: Date }[]>`
+      select s.expires_at as verval from "session" s join "user" u on u.id = s.user_id
+      where u.email = ${gebruiker().email}`;
+    return rij!.verval.getTime();
+  };
+  try {
+    await sql`
+      update "session" set expires_at = expires_at - interval '2 days'
+      where user_id = (select id from "user" where email = ${gebruiker().email})`;
+    const voor = await vervaltOp();
+
+    // De eerste aanvraag is de pagina zelf (SSR): de verlengde cookie staat in haar antwoord.
+    const antwoord = await page.goto("/");
+    const cookies = (await antwoord!.headerValue("set-cookie")) ?? "";
+    expect(cookies).toContain("session_token=");
+    expect(await vervaltOp()).toBeGreaterThan(voor + 24 * 3600 * 1000);
+    await expect(page.getByTestId("organisatie-keuze")).toContainText("Paginas Elektro");
+  } finally {
+    await sql.end();
+  }
 });
 
 // Als laatste: uitloggen beëindigt de sessie die de andere tests van dit bestand gebruiken.

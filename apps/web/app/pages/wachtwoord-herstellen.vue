@@ -8,19 +8,20 @@ const route = useRoute();
 useHead({ title: () => `${t("wachtwoordHerstellen.titel")} · ${t("app.naam")}` });
 
 // De token uit de link (`?token=…`, of `?error=INVALID_TOKEN`) wordt in de browser gelezen en
-// meteen uit de adresbalk gehaald, zodat hij niet in de geschiedenis of een gedeelde URL blijft.
+// meteen uit de URL gehaald, via de router (die anders de oude URL bij een volgende navigatie
+// terug in de geschiedenis zet), zodat hij niet in de geschiedenis of een gedeelde URL blijft.
 const token = ref<string | null>(null);
 const ongeldig = ref(false);
 const gelezen = ref(false);
 
-onMounted(() => {
+onMounted(async () => {
   const waarde = route.query.token;
   if (typeof waarde === "string" && waarde !== "" && route.query.error === undefined) token.value = waarde;
   else ongeldig.value = true;
-  if (route.query.token !== undefined || route.query.error !== undefined) {
-    window.history.replaceState(window.history.state, "", route.path);
-  }
   gelezen.value = true;
+  if (route.query.token !== undefined || route.query.error !== undefined) {
+    await navigateTo({ path: route.path }, { replace: true });
+  }
 });
 
 const formulier = reactive({ wachtwoord: "" });

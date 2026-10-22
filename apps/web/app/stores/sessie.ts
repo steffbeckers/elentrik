@@ -11,6 +11,7 @@
 // (ruling E1).
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
+import type { SessieInfo } from "../sessie/bestemming";
 import { foutStatus } from "../sessie/fouten";
 
 export type Rol = "eigenaar" | "lid";
@@ -55,6 +56,10 @@ export const useSessieStore = defineStore("sessie", () => {
     () => organisaties.value.find((o) => o.id === actieveOrganisatieId.value) ?? null,
   );
   const rol = computed<Rol | null>(() => actieveOrganisatie.value?.rol ?? null);
+  /** Wat `bestemming` van de sessie nodig heeft: null is niet ingelogd. */
+  const sessieInfo = computed<SessieInfo>(() =>
+    gebruiker.value ? { actieveOrganisatieId: actieveOrganisatieId.value } : null,
+  );
 
   function gebruikApi(nieuw: SessieApi): void {
     api = nieuw;
@@ -121,6 +126,7 @@ export const useSessieStore = defineStore("sessie", () => {
     geladen,
     actieveOrganisatie,
     rol,
+    sessieInfo,
     gebruikApi,
     laad,
     registreerVoorVertrek,

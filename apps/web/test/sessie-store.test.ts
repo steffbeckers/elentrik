@@ -87,6 +87,26 @@ describe("laad", () => {
   });
 });
 
+describe("sessieInfo", () => {
+  test("niet ingelogd: null; ingelogd: de actieve organisatie (of null)", async () => {
+    const store = useSessieStore();
+    expect(store.sessieInfo).toBeNull();
+    store.gebruikApi(maakApi().api);
+    await store.laad();
+    expect(store.sessieInfo).toEqual({ actieveOrganisatieId: "o1" });
+
+    const zonder = maakApi({ mij: vi.fn(async () => ({ ...MIJ, organisaties: [], actieveOrganisatieId: null })) });
+    store.gebruikApi(zonder.api);
+    await store.laad();
+    expect(store.sessieInfo).toEqual({ actieveOrganisatieId: null });
+
+    const uit = maakApi({ mij: vi.fn(async () => Promise.reject(nietIngelogd())) });
+    store.gebruikApi(uit.api);
+    await store.laad();
+    expect(store.sessieInfo).toBeNull();
+  });
+});
+
 describe("wissel", () => {
   test("roept voorVertrek op vóór het wisselen, en laadt daarna opnieuw", async () => {
     const { api, volgorde } = maakApi();

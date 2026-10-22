@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { bestemming, isPubliek, veiligTerug } from "../app/sessie/bestemming";
+import { bestemming, isPubliek, terugZonderFout, veiligTerug } from "../app/sessie/bestemming";
 
 const metOrganisatie = { actieveOrganisatieId: "org-1" };
 const zonderOrganisatie = { actieveOrganisatieId: null };
@@ -97,5 +97,20 @@ describe("veiligTerug", () => {
 
   test("absurd lang: geweigerd", () => {
     expect(veiligTerug(`/${"a".repeat(3000)}`)).toBeNull();
+  });
+});
+
+describe("terugZonderFout", () => {
+  test("zonder error-parameter: het pad blijft, geen fout", () => {
+    expect(terugZonderFout("/projecten/p1?tab=x")).toEqual({ pad: "/projecten/p1?tab=x", fout: false });
+    expect(terugZonderFout("/")).toEqual({ pad: "/", fout: false });
+  });
+
+  test("een verlopen link (?error=…): de fout gemeld en uit het pad gehaald", () => {
+    expect(terugZonderFout("/?error=INVALID_TOKEN")).toEqual({ pad: "/", fout: true });
+    expect(terugZonderFout("/projecten/p1?tab=x&error=TOKEN_EXPIRED&error_description=weg#kop")).toEqual({
+      pad: "/projecten/p1?tab=x#kop",
+      fout: true,
+    });
   });
 });

@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import type { ProjectSamenvatting } from "~/composables/useProjectenApi";
-import { bestemming } from "~/sessie/bestemming";
-import { foutStatus } from "~/sessie/fouten";
+import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { useSessieStore } from "~/stores/sessie";
 
 const { t } = useI18n();
 const api = useProjectenApi();
 const toast = useToast();
 const sessie = useSessieStore();
-const route = useRoute();
 
 // Enkel op de client geladen: de relatieve tijden hangen van het huidige moment af. Een andere
 // actieve organisatie (de organisatiekeuze) laadt de lijst van die organisatie.
@@ -19,20 +17,8 @@ const { data: projecten, status, error, refresh } = useAsyncData("projecten", ()
   watch: [() => sessie.actieveOrganisatieId],
 });
 
-// Verlopen sessie (401) of niet meer lid van de actieve organisatie (404/403, spec 5b.5): de
-// sessie opnieuw lezen. De server kiest dan een andere organisatie (de lijst laadt opnieuw), of
-// er volgt /inloggen of /geen-organisatie.
-watch(error, async (fout) => {
-  const code = foutStatus(fout);
-  if (code !== 401 && code !== 403 && code !== 404) return;
-  try {
-    await sessie.laad();
-  } catch {
-    return;
-  }
-  const doel = bestemming(route, sessie.gebruiker ? { actieveOrganisatieId: sessie.actieveOrganisatieId } : null);
-  if (doel) await navigateTo(doel, { replace: true });
-});
+// Verlopen sessie of niet meer lid van de actieve organisatie (spec 5b.5).
+watch(error, useSessieHerstel());
 
 const gemount = ref(false);
 const laadt = computed(() => gemount.value && status.value === "pending");

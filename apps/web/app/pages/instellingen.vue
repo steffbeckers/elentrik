@@ -8,6 +8,7 @@ import {
   valideerFormulier,
   type BedrijfFormulier,
 } from "~/instellingen/formulier";
+import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { useSessieStore } from "~/stores/sessie";
 
 const { t } = useI18n();
@@ -27,6 +28,9 @@ const { data: bedrijf, status, error, refresh } = useAsyncData("bedrijf", () => 
   default: () => null,
   watch: [() => sessie.actieveOrganisatieId],
 });
+
+// Verlopen sessie of niet meer lid van de actieve organisatie (spec 5b.5).
+watch(error, useSessieHerstel());
 
 const formulier = reactive<BedrijfFormulier>(leegFormulier());
 const logoBestandId = ref<string | undefined>(undefined);
