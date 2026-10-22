@@ -2,13 +2,12 @@
 // 127.0.0.1 (een willekeurige poort), met Better Auth en de database op PGlite. Elke route wordt
 // via HTTP aangesproken met echte sessiecookies: zonder sessie, als lid van een andere
 // organisatie, zonder organisatie, als lid en als eigenaar.
-import { readdirSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
-import { join, relative, sep } from "node:path";
-import { and, eq } from "drizzle-orm";
+import { join } from "node:path";
+import { and, desc, eq } from "drizzle-orm";
 import {
   createApp,
   createRouter,
@@ -17,7 +16,6 @@ import {
   getRouterParam,
   toNodeListener,
   type EventHandler,
-  type RouterMethod,
 } from "h3";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth, zetAuth } from "../server/auth";
@@ -29,9 +27,10 @@ import { bedrijfsinstellingen, bestanden, member, projecten, session, user } fro
 import { maakExport } from "../server/exports/repo";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
 import { haalProject, maakProject, verwijderProject } from "../server/projecten/repo";
-import { vereisLid, vereisProjecttoegang, vereisSessie } from "../server/utils/toegang";
+import { kiesActieveOrganisatie, vereisLid, vereisProjecttoegang, vereisSessie } from "../server/utils/toegang";
 import type { ExportInvoer } from "../shared/exports";
 import { maakTestDb } from "./db";
+import { beveiligdeRoutebestanden, routeUit } from "./routes";
 
 // Gotenberg draait niet in Vitest: de PDF-dienst geeft een minimale geldige PDF terug.
 vi.mock("../server/pdf/gotenberg", async (origineel) => ({
@@ -40,7 +39,6 @@ vi.mock("../server/pdf/gotenberg", async (origineel) => ({
 }));
 
 const WACHTWOORD = "lang-genoeg-1";
-const API = join(import.meta.dirname, "..", "server", "api");
 
 let db: Db;
 let auth: Auth;
@@ -58,28 +56,8 @@ const verzamelaar: Verzender = {
 
 // --- Routes uit de bestandsnamen -------------------------------------------------------------
 
-type Route = { sleutel: string; methode: RouterMethod; pad: string; bestand: string };
-
-function bestandenIn(map: string): string[] {
-  return readdirSync(map, { withFileTypes: true }).flatMap((item) => {
-    const pad = join(map, item.name);
-    return item.isDirectory() ? bestandenIn(pad) : [pad];
-  });
-}
-
-/** `projecten/[id]/exports.post.ts` wordt `POST /api/projecten/:id/exports`. */
-function routeUit(bestand: string): Route {
-  const relatief = relative(API, bestand).split(sep).join("/");
-  const treffer = /^(.*?)(?:\/?index)?\.(get|post|put|delete)\.ts$/.exec(relatief);
-  if (!treffer) throw new Error(`Onbekende routevorm: ${relatief}`);
-  const pad = `/api/${treffer[1]!}`.replace(/\[(\w+)\]/g, ":$1").replace(/\/$/, "");
-  const methode = treffer[2] as RouterMethod;
-  return { sleutel: `${methode.toUpperCase()} ${pad}`, methode, pad, bestand };
-}
-
-const ROUTES = bestandenIn(API)
-  .filter((pad) => !relative(API, pad).startsWith(`auth${sep}`))
-  .map(routeUit);
+// Alles onder server/api behalve auth/[...all].ts (de catch-all van Better Auth).
+const ROUTES = beveiligdeRoutebestanden().map(routeUit);
 
 // --- Hulp ------------------------------------------------------------------------------------
 
@@ -280,14 +258,18 @@ async function projectVerzoek(methode: string, achter = "", extra: Partial<Verzo
 }
 
 const TABEL: Record<string, Rij> = {
+  // De rijen voor de lijsten en de bedrijfsgegevens werken op de actieve organisatie: B krijgt
+  // daar zijn eigen gegevens (2xx), nooit die van A. Dat bewijzen de afschermingstests verderop:
+  // "projecten per organisatie" en "bedrijfsgegevens per organisatie".
   "GET /api/projecten": {
     verzoek: async () => ({ methode: "GET", pad: "/api/projecten" }),
-    // Een lid van B krijgt de lijst van B, niet die van A (zie "lijsten" hieronder).
+    // Een lid van B krijgt de lijst van B, niet die van A (zie "projecten per organisatie").
     andereOrganisatie: 200,
     lid: 200,
     eigenaar: 200,
   },
   "POST /api/projecten": {
+    // B maakt een project in B (zie "een nieuw project krijgt de actieve organisatie").
     verzoek: async () => ({
       methode: "POST",
       pad: "/api/projecten",
@@ -345,18 +327,20 @@ const TABEL: Record<string, Rij> = {
   },
   "GET /api/bedrijfsgegevens": {
     verzoek: async () => ({ methode: "GET", pad: "/api/bedrijfsgegevens" }),
-    // Altijd de bedrijfsgegevens van de eigen actieve organisatie.
+    // Altijd de bedrijfsgegevens van de eigen actieve organisatie (zie "bedrijfsgegevens per organisatie").
     andereOrganisatie: 200,
     lid: 200,
     eigenaar: 200,
   },
   "PUT /api/bedrijfsgegevens": {
+    // B schrijft zijn eigen rij (zie "bedrijfsgegevens per organisatie").
     verzoek: async () => ({ methode: "PUT", pad: "/api/bedrijfsgegevens", json: { naam: "Elektro" } }),
     andereOrganisatie: 200,
     lid: 403,
     eigenaar: 200,
   },
   "POST /api/bedrijfsgegevens/logo": {
+    // B laadt het logo van B op (zie "bestanden per organisatie").
     verzoek: async () => ({ methode: "POST", pad: "/api/bedrijfsgegevens/logo", formulier: pngFormulier() }),
     andereOrganisatie: 201,
     lid: 403,
@@ -605,6 +589,41 @@ describe("vereisSessie en vereisLid", () => {
     // Alleen de sessie van dit verzoek krijgt de organisatie.
     const na = await db.select().from(session).where(eq(session.userId, id));
     expect(na.map((r) => r.activeOrganizationId).sort()).toEqual([orgB, null].sort());
+  });
+
+  test("een actieve organisatie die intussen gezet werd, wordt niet overschreven door de terugvaloptie", async () => {
+    const id = await registreer("race@voorbeeld.be");
+    await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
+    await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
+    await inloggen("race@voorbeeld.be");
+    // vereisSessie las de sessie zonder organisatie; vóór de terugvaloptie schrijft, kiest de
+    // gebruiker in een ander verzoek zelf A (niet het oudste lidmaatschap B).
+    const [aanmelding] = await db
+      .select()
+      .from(session)
+      .where(eq(session.userId, id))
+      .orderBy(desc(session.createdAt))
+      .limit(1);
+    await db.update(session).set({ activeOrganizationId: orgA }).where(eq(session.id, aanmelding!.id));
+
+    expect(await kiesActieveOrganisatie(aanmelding!.id, id)).toBe(orgA);
+    const [na] = await db.select().from(session).where(eq(session.id, aanmelding!.id));
+    expect(na!.activeOrganizationId).toBe(orgA);
+  });
+
+  test("de terugvaloptie zet het oudste lidmaatschap als de sessie nog leeg is, en geeft de waarde uit de database", async () => {
+    const id = await registreer("terugval@voorbeeld.be");
+    await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
+    await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
+    await inloggen("terugval@voorbeeld.be");
+    const [aanmelding] = await db
+      .select()
+      .from(session)
+      .where(eq(session.userId, id))
+      .orderBy(desc(session.createdAt))
+      .limit(1);
+    expect(await kiesActieveOrganisatie(aanmelding!.id, id)).toBe(orgB);
+    expect(await kiesActieveOrganisatie(aanmelding!.id, zonderOrganisatie.id)).toBeNull();
   });
 
   test("de lijst volgt de actieve organisatie; een project van een andere eigen organisatie blijft op id bereikbaar", async () => {

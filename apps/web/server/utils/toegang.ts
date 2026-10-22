@@ -12,7 +12,7 @@
 // Nitro importeert de exports van server/utils automatisch.
 // Expliciete imports, geen Nitro-auto-imports: Vitest importeert deze module
 // rechtstreeks (ruling E1).
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import {
   appendResponseHeader,
   createError,
@@ -49,8 +49,13 @@ function naarRol(rol: string): Rol {
 /**
  * Het oudste lidmaatschap van een gebruiker wordt de actieve organisatie van een sessie die er
  * geen heeft (bijvoorbeeld een latere aanmelding). Zonder lidmaatschap blijft het null.
+ *
+ * Alleen een sessie die nog altijd geen actieve organisatie heeft, wordt bijgewerkt: kiest de
+ * gebruiker intussen zelf een organisatie (of zet de eerste aanmelding er een), dan wint die
+ * keuze. Daarna wordt de sessie opnieuw gelezen, zodat het antwoord de waarde in de database is.
+ * Geëxporteerd voor de test van die race.
  */
-async function kiesActieveOrganisatie(sessieId: string, gebruikerId: string): Promise<string | null> {
+export async function kiesActieveOrganisatie(sessieId: string, gebruikerId: string): Promise<string | null> {
   const db = gebruikDb();
   const [eerste] = await db
     .select({ organisatieId: member.organizationId })
@@ -58,12 +63,15 @@ async function kiesActieveOrganisatie(sessieId: string, gebruikerId: string): Pr
     .where(eq(member.userId, gebruikerId))
     .orderBy(asc(member.createdAt), asc(member.id))
     .limit(1);
-  if (!eerste) return null;
-  await db
-    .update(session)
-    .set({ activeOrganizationId: eerste.organisatieId })
-    .where(and(eq(session.id, sessieId), eq(session.userId, gebruikerId)));
-  return eerste.organisatieId;
+  const deSessie = and(eq(session.id, sessieId), eq(session.userId, gebruikerId));
+  if (eerste) {
+    await db
+      .update(session)
+      .set({ activeOrganizationId: eerste.organisatieId })
+      .where(and(deSessie, isNull(session.activeOrganizationId)));
+  }
+  const [huidig] = await db.select({ actief: session.activeOrganizationId }).from(session).where(deSessie);
+  return huidig?.actief ?? null;
 }
 
 /**
