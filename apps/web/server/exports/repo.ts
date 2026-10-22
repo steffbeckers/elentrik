@@ -12,7 +12,7 @@ import { STANDAARD_DOWNLOADNAAM } from "../bestanden/headers";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { haalBestand, schrijfBestandMetRij } from "../bestanden/repo";
 import type { Db } from "../db";
-import { exports, projecten, snapshots } from "../db/schema";
+import { bestanden, exports, projecten, snapshots } from "../db/schema";
 import { PdfFout, type PdfInvoer } from "../pdf/gotenberg";
 import { haalProject, ProjectFout } from "../projecten/repo";
 import { IdSchema } from "../utils/projecten";
@@ -26,6 +26,13 @@ export type ExportDeps = {
 
 type MeeTeGeven = PdfInvoer["bestanden"][number];
 
+/**
+ * Een PNG of JPEG die de editor oplaadt dient zelf als raster: hij wordt één keer bewaard, als
+ * `plan-origineel`, en `rasterBestandId` wijst naar hetzelfde bestand. Alleen bij een PDF is het raster
+ * een apart `plan-raster`. Een PDF als `plan-origineel` valt weg door het typefilter in `leesAfbeelding`.
+ */
+const PLAN_RASTER = ["plan-raster", "plan-origineel"] as const;
+
 /** De extensie per toegelaten afbeeldingstype; andere types gaan niet mee. */
 const EXTENSIE: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg" };
 
@@ -36,18 +43,18 @@ function lokaleDatum(datum: Date): string {
 }
 
 /**
- * Leest een afbeelding (PNG of JPEG) van de gegeven soort uit de opslag. Een id dat geen uuid is,
- * een onbekende rij, een ander type of een bestand dat niet in de opslag staat, geeft `null`.
+ * Leest een afbeelding (PNG of JPEG) van een van de gegeven soorten uit de opslag. Een id dat geen uuid is,
+ * een onbekende rij, een andere soort, een ander type of een bestand dat niet in de opslag staat, geeft `null`.
  */
 async function leesAfbeelding(
   db: Db,
   opslag: BestandOpslag,
   id: string,
-  soort: "plan-raster" | "logo",
+  soorten: readonly (typeof bestanden.$inferSelect)["soort"][],
 ): Promise<{ data: Uint8Array; mime: string; extensie: string } | null> {
   if (!IdSchema.safeParse(id).success) return null;
   const bestand = await haalBestand(db, id);
-  if (!bestand || bestand.soort !== soort) return null;
+  if (!bestand || !soorten.includes(bestand.soort)) return null;
   const extensie = EXTENSIE[bestand.mime];
   if (extensie === undefined) return null;
   const stroom = await opslag.lees(bestand.sleutel);
@@ -65,7 +72,7 @@ async function rasters(
   const bestanden: MeeTeGeven[] = [];
   const ids = new Set(doc.situatie.paginas.flatMap((p) => (p.achtergrond ? [p.achtergrond.rasterBestandId] : [])));
   for (const id of ids) {
-    const raster = await leesAfbeelding(db, opslag, id, "plan-raster");
+    const raster = await leesAfbeelding(db, opslag, id, PLAN_RASTER);
     if (!raster) continue;
     const naam = `plan-${id}.${raster.extensie}`;
     afbeeldingen[id] = naam;
@@ -130,7 +137,7 @@ export async function maakExport(
   const installateur = await haalBedrijf(db);
   let logo: string | undefined;
   if (installateur.logoBestandId !== undefined) {
-    const afbeelding = await leesAfbeelding(db, opslag, installateur.logoBestandId, "logo");
+    const afbeelding = await leesAfbeelding(db, opslag, installateur.logoBestandId, ["logo"]);
     if (afbeelding) {
       logo = `logo.${afbeelding.extensie}`;
       meegegeven.push({ naam: logo, data: afbeelding.data, mime: afbeelding.mime });
