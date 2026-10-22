@@ -1,10 +1,11 @@
 // Snapshot en herstel van de bedrijfsgegevens voor e2e-tests. De gegevens zijn één gedeelde
-// rij in de ontwikkelbank; een test die ze wijzigt of een logo oplaadt moet ze volledig
+// rij in de e2e-bank; een test die ze wijzigt of een logo oplaadt moet ze volledig
 // terugzetten, ook de verwijzing naar het logo (die kan de API zelf niet terugzetten).
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { APIRequestContext } from "@playwright/test";
 import postgres from "postgres";
+import { E2E_BESTANDEN_DIR, E2E_DATABASE_URL, eisE2eDatabase } from "../omgeving";
 
 export type BedrijfSnapshot = {
   /** De volledige rij (met `logoBestandId`), of `null` als er nog geen rij was. */
@@ -14,14 +15,13 @@ export type BedrijfSnapshot = {
 };
 
 function verbind() {
-  return postgres(process.env.DATABASE_URL ?? "postgres://elentrik:elentrik@127.0.0.1:5432/elentrik", {
-    max: 1,
-  });
+  // Altijd de e2e-database; de hulp weigert elke andere.
+  return postgres(eisE2eDatabase(process.env.DATABASE_URL ?? E2E_DATABASE_URL), { max: 1 });
 }
 
-/** Dezelfde map als de server (`ELENTRIK_BESTANDEN_DIR`, standaard relatief aan apps/web). */
+/** Dezelfde map als de e2e-server (relatief aan apps/web), nooit `.data/bestanden`. */
 function bestandenMap(): string {
-  return resolve(process.env.ELENTRIK_BESTANDEN_DIR || ".data/bestanden");
+  return resolve(E2E_BESTANDEN_DIR);
 }
 
 export async function bewaarBedrijfSnapshot(): Promise<BedrijfSnapshot> {
