@@ -15,6 +15,7 @@ export {
   type Patch,
 } from "./operaties";
 export { verwijderAfwijking, voegAfwijkingToe, wijzigProject } from "./project";
+export type { ProjectWijziging } from "./project";
 export {
   PLAATSBARE_TYPES,
   hernoemPagina,

@@ -15,12 +15,14 @@ import {
   wijzigEigenschappen,
   wijzigProject,
   type Aanknoping,
+  type Adres,
   type InstallatieDocument,
   type Node,
   type NodeId,
   type OperatieResultaat,
   type Onderdeel,
   type Patch,
+  type ProjectWijziging,
   type Stroomtype,
   type Toestelsoort,
 } from "@elentrik/model";
@@ -28,6 +30,7 @@ import { schemaStripSvg } from "@elentrik/render";
 import { defineStore } from "pinia";
 import { computed, ref, shallowRef } from "vue";
 import type { Richting } from "../composables/sneltoetsen";
+import { zelfdeAdres } from "../editor/adres";
 import { samengevoegd } from "../editor/resultaten";
 
 /** Eén undo-stap. Stappen met dezelfde `groep` na elkaar worden samengevoegd. */
@@ -333,16 +336,35 @@ export const useEditorStore = defineStore("editor", () => {
     pasToe(verwijderAfwijking(vereisDocument(), regelId, nodeId));
   }
 
-  /** De projectnaam valt buiten undo (spec §4.7.4); klant en stroomtype gaan via `wijzigProject`. */
+  /**
+   * De projectnaam valt buiten undo (spec §4.7.4); de rest gaat in één keer via `wijzigProject`,
+   * dus als één undo-stap. Velden die al de gevraagde waarde hebben worden weggelaten, zodat een
+   * ongewijzigde bewaring geen lege undo-stap geeft; `klantAdres: null` telt alleen als er een adres is.
+   */
   function wijzigProjectgegevens(gegevens: {
     naam?: string;
     klantNaam?: string;
     stroomtype?: Stroomtype;
+    klantAdres?: Adres | null;
+    werfadres?: Adres;
+    ean?: string;
+    datum?: string;
   }): void {
     const doc = vereisDocument();
-    const wijziging: { klantNaam?: string; stroomtype?: Stroomtype } = {};
+    const wijziging: ProjectWijziging = {};
     if (gegevens.klantNaam !== undefined) wijziging.klantNaam = gegevens.klantNaam;
     if (gegevens.stroomtype !== undefined) wijziging.stroomtype = gegevens.stroomtype;
+    if (gegevens.klantAdres !== undefined) {
+      const huidig = doc.meta.klant.adres;
+      if (gegevens.klantAdres === null ? huidig !== undefined : !zelfdeAdres(gegevens.klantAdres, huidig)) {
+        wijziging.klantAdres = gegevens.klantAdres;
+      }
+    }
+    if (gegevens.werfadres !== undefined && !zelfdeAdres(gegevens.werfadres, doc.meta.werfadres)) {
+      wijziging.werfadres = gegevens.werfadres;
+    }
+    if (gegevens.ean !== undefined && gegevens.ean !== (doc.meta.ean ?? "")) wijziging.ean = gegevens.ean;
+    if (gegevens.datum !== undefined) wijziging.datum = gegevens.datum;
     // Eerst de operatie: gooit die, dan blijft ook de naam ongewijzigd.
     const r = wijzigProject(doc, wijziging);
     if (gegevens.naam !== undefined && gegevens.naam !== naam.value) {

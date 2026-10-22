@@ -124,10 +124,34 @@
     "projectgegevens": {
       "titel": "Projectgegevens",
       "naam": "Naam",
-      "naamVerplicht": "Geef het project een naam.",
-      "klant": "Klant",
       "stroomtype": "Stroomtype",
-      "bewaren": "Bewaren"
+      "bewaren": "Bewaren",
+      "klant": {
+        "titel": "Klant",
+        "naam": "Naam",
+        "adresHulp": "Het adres van de klant is optioneel."
+      },
+      "werf": {
+        "titel": "Werf",
+        "ean": "EAN-code"
+      },
+      "datum": {
+        "titel": "Datum",
+        "label": "Datum van het project"
+      },
+      "adres": {
+        "straat": "Straat",
+        "nummer": "Nummer",
+        "bus": "Bus",
+        "postcode": "Postcode",
+        "gemeente": "Gemeente",
+        "land": "Land"
+      },
+      "fouten": {
+        "naamVerplicht": "Geef het project een naam.",
+        "adresVerplicht": "Verplicht voor een adres.",
+        "datumVerplicht": "Kies een datum."
+      }
     },
     "concept": {
       "titel": "Lokaal concept gevonden",

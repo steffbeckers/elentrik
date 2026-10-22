@@ -1,21 +1,24 @@
 // Het bedrijfsformulier en zijn omzetting van en naar een `Partij`. Puur en zonder I/O;
 // expliciete imports, geen Nuxt-auto-imports (ruling E1).
-import type { Adres, Partij } from "@elentrik/model";
+import type { Partij } from "@elentrik/model";
 import { herkenSoort, MAX_LOGO_BYTES } from "../../shared/bestandsinhoud";
+import {
+  STANDAARD_LAND,
+  VERPLICHTE_ADRESVELDEN,
+  adresFormulierUitAdres,
+  adresUitFormulier,
+  heeftAdres,
+  leegAdresFormulier,
+  type AdresFormulier,
+} from "../editor/adres";
 
-export const STANDAARD_LAND = "België";
+export { STANDAARD_LAND };
 
-export type BedrijfFormulier = {
+export type BedrijfFormulier = AdresFormulier & {
   naam: string;
   ondernemingsnummer: string;
   telefoon: string;
   email: string;
-  straat: string;
-  nummer: string;
-  bus: string;
-  postcode: string;
-  gemeente: string;
-  land: string;
 };
 
 export type FormulierVeld = keyof BedrijfFormulier;
@@ -27,37 +30,19 @@ export function leegFormulier(): BedrijfFormulier {
     ondernemingsnummer: "",
     telefoon: "",
     email: "",
-    straat: "",
-    nummer: "",
-    bus: "",
-    postcode: "",
-    gemeente: "",
-    land: STANDAARD_LAND,
+    ...leegAdresFormulier(),
   };
 }
 
 export function formulierUitPartij(partij: Partij): BedrijfFormulier {
-  const leeg = leegFormulier();
   return {
     naam: partij.naam,
     ondernemingsnummer: partij.ondernemingsnummer ?? "",
     telefoon: partij.telefoon ?? "",
     email: partij.email ?? "",
-    straat: partij.adres?.straat ?? leeg.straat,
-    nummer: partij.adres?.nummer ?? leeg.nummer,
-    bus: partij.adres?.bus ?? leeg.bus,
-    postcode: partij.adres?.postcode ?? leeg.postcode,
-    gemeente: partij.adres?.gemeente ?? leeg.gemeente,
-    land: partij.adres?.land ?? leeg.land,
+    ...adresFormulierUitAdres(partij.adres),
   };
 }
-
-/** Het land alleen telt niet: zonder straat, nummer, bus, postcode of gemeente is er geen adres. */
-function heeftAdres(f: BedrijfFormulier): boolean {
-  return [f.straat, f.nummer, f.bus, f.postcode, f.gemeente].some((waarde) => waarde.trim() !== "");
-}
-
-const VERPLICHTE_ADRESVELDEN = ["straat", "nummer", "postcode", "gemeente"] as const;
 
 export function valideerFormulier(f: BedrijfFormulier): FormulierFout[] {
   const fouten: FormulierFout[] = [];
@@ -84,18 +69,8 @@ export function partijUitFormulier(f: BedrijfFormulier): Partij {
   if (email !== "") partij.email = email;
   if (telefoon !== "") partij.telefoon = telefoon;
 
-  if (heeftAdres(f)) {
-    const bus = f.bus.trim();
-    const adres: Adres = {
-      straat: f.straat.trim(),
-      nummer: f.nummer.trim(),
-      ...(bus !== "" ? { bus } : {}),
-      postcode: f.postcode.trim(),
-      gemeente: f.gemeente.trim(),
-      land: f.land.trim() || STANDAARD_LAND,
-    };
-    partij.adres = adres;
-  }
+  const adres = adresUitFormulier(f);
+  if (adres !== undefined) partij.adres = adres;
   return partij;
 }
 

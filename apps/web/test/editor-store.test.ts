@@ -392,6 +392,90 @@ describe("afwijkingen en projectgegevens", () => {
     expect(doc(store).meta.klant.naam).toBe("Janssens");
     expect(store.naam).toBe("Nieuwe naam");
   });
+
+  describe("wijzigProjectgegevens met adressen, EAN en datum", () => {
+    const kerkstraat = { straat: "Kerkstraat", nummer: "12", postcode: "2000", gemeente: "Antwerpen", land: "België" };
+    const dorpsstraat = { straat: "Dorpsstraat", nummer: "3", bus: "b", postcode: "9000", gemeente: "Gent", land: "België" };
+
+    test("alle documentvelden samen zijn één undo-stap en undo herstelt het oude adres", () => {
+      const store = laadNieuw();
+      const oudWerfadres = doc(store).meta.werfadres;
+
+      store.wijzigProjectgegevens({
+        naam: "Andere naam",
+        klantNaam: "Peeters",
+        klantAdres: kerkstraat,
+        werfadres: dorpsstraat,
+        ean: "541448800000000001",
+        datum: "2026-11-02",
+      });
+
+      expect(doc(store).meta.klant).toEqual({ naam: "Peeters", adres: kerkstraat });
+      expect(doc(store).meta.werfadres).toEqual(dorpsstraat);
+      expect(doc(store).meta.ean).toBe("541448800000000001");
+      expect(doc(store).meta.datum).toBe("2026-11-02");
+      expect(store.terug).toHaveLength(1);
+
+      store.ongedaanMaken();
+      expect(doc(store).meta.klant).toEqual({ naam: "Janssens" });
+      expect(doc(store).meta.werfadres).toEqual(oudWerfadres);
+      expect(doc(store).meta.ean).toBeUndefined();
+      expect(doc(store).meta.datum).toBe("2026-10-18");
+      expect(store.naam).toBe("Andere naam");
+    });
+
+    test("klantAdres null wist het adres als er een is, en undo brengt het terug", () => {
+      const store = laadNieuw();
+      store.wijzigProjectgegevens({ klantAdres: kerkstraat });
+      store.wijzigProjectgegevens({ klantAdres: null });
+      expect(doc(store).meta.klant.adres).toBeUndefined();
+      expect(store.terug).toHaveLength(2);
+
+      store.ongedaanMaken();
+      expect(doc(store).meta.klant.adres).toEqual(kerkstraat);
+    });
+
+    test("klantAdres null zonder bestaand adres maakt geen undo-stap", () => {
+      const store = laadNieuw();
+      store.wijzigProjectgegevens({ klantAdres: null });
+      expect(store.terug).toHaveLength(0);
+      expect(store.gewijzigdSindsOpslaan).toBe(0);
+    });
+
+    test("ongewijzigde adressen, EAN en datum maken geen undo-stap", () => {
+      const store = laadNieuw();
+      store.wijzigProjectgegevens({ klantAdres: kerkstraat, werfadres: dorpsstraat, ean: "123" });
+      const stappen = store.terug.length;
+      const teller = store.gewijzigdSindsOpslaan;
+
+      store.wijzigProjectgegevens({
+        klantNaam: "Janssens",
+        klantAdres: { ...kerkstraat },
+        werfadres: { ...dorpsstraat },
+        ean: "123",
+        datum: "2026-10-18",
+      });
+      expect(store.terug).toHaveLength(stappen);
+      expect(store.gewijzigdSindsOpslaan).toBe(teller);
+    });
+
+    test("een lege EAN op een document zonder EAN maakt geen undo-stap", () => {
+      const store = laadNieuw();
+      store.wijzigProjectgegevens({ ean: "" });
+      expect(store.terug).toHaveLength(0);
+    });
+
+    test("een ongeldig adres gooit en laat naam en document ongewijzigd", () => {
+      const store = laadNieuw();
+      const voor = doc(store);
+      expect(() =>
+        store.wijzigProjectgegevens({ naam: "X", werfadres: { straat: 1 } as never }),
+      ).toThrow(DocumentFout);
+      expect(store.document).toBe(voor);
+      expect(store.naam).toBe("Woning Janssens");
+      expect(store.terug).toHaveLength(0);
+    });
+  });
 });
 
 describe("markeerGewijzigd", () => {
