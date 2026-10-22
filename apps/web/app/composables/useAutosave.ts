@@ -119,6 +119,8 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   // Elk venster schrijft en wist alleen zijn eigen concept.
   const instantieId = opties.instantieId ?? maakInstantieId();
   const { gebruikerId } = opties;
+  // Nooit een concept zonder eigenaar: zonder gebruiker geen autosave.
+  if (!gebruikerId) throw new Error("De autosave heeft een ingelogde gebruiker nodig (gebruikerId).");
   const plekVan = (projectId: string): ConceptPlek => ({ gebruikerId, projectId, instantieId });
 
   const status = ref<AutosaveStatus>("opgeslagen");
@@ -274,14 +276,16 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           status.value = offlineStatus();
           wisTimer();
         } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
-          // De server weigert dit document; opnieuw proberen verandert daar niets aan.
+          // De server weigert dit document; opnieuw proberen verandert daar niets aan. De server
+          // antwoordde met een sessie: afgemeld vervalt, zodat er maar een melding tegelijk staat.
           fout.value = { status: httpCode };
+          afgemeld.value = false;
           status.value = "fout";
           wisTimer();
         } else {
-          // Netwerk, 5xx, 408 of 429: later opnieuw.
+          // Netwerk, 5xx, 408 of 429: later opnieuw; maar na een 401 alleen via `nuOpslaan()`.
           status.value = offlineStatus();
-          plan(herprobeerMs);
+          if (!afgemeld.value) plan(herprobeerMs);
         }
       }
     });

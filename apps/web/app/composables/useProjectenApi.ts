@@ -2,6 +2,7 @@
 // rechtstreeks (ruling E1). `useProjectenApi` is de Nuxt-ingang; `maakProjectenApi`
 // krijgt de fetch-functie van buitenaf en is zo zonder Nuxt te testen.
 import type { InstallatieDocument, Stroomtype } from "@elentrik/model";
+import { VERWACHTE_GEBRUIKER_HEADER } from "../../shared/gebruiker";
 import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 
 export type { Project, ProjectSamenvatting };
@@ -45,7 +46,18 @@ export function httpStatus(fout: unknown): number | undefined {
   return typeof waarde === "number" ? waarde : undefined;
 }
 
-export function maakProjectenApi(haal: ProjectenFetch) {
+export type ProjectenApiOpties = {
+  /**
+   * De gebruiker voor wie de editor bewaart. Bewaren en dupliceren sturen hem mee; is de sessie
+   * intussen van een ander (die in een ander tabblad inlogde), dan weigert de server met een 401.
+   */
+  gebruikerId?: string;
+};
+
+export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOpties = {}) {
+  const voorGebruiker: Record<string, string> = opties.gebruikerId
+    ? { [VERWACHTE_GEBRUIKER_HEADER]: opties.gebruikerId }
+    : {};
   return {
     lijst: () => haal("/api/projecten") as Promise<ProjectSamenvatting[]>,
 
@@ -61,7 +73,7 @@ export function maakProjectenApi(haal: ProjectenFetch) {
       try {
         return (await haal(`/api/projecten/${id}`, {
           method: "PUT",
-          headers: { "If-Match": String(versie) },
+          headers: { "If-Match": String(versie), ...voorGebruiker },
           body: invoer,
         })) as { versie: number };
       } catch (fout) {
@@ -72,7 +84,10 @@ export function maakProjectenApi(haal: ProjectenFetch) {
     },
 
     dupliceer: (id: string) =>
-      haal(`/api/projecten/${id}/dupliceer`, { method: "POST" }) as Promise<{ id: string }>,
+      haal(`/api/projecten/${id}/dupliceer`, {
+        method: "POST",
+        ...(opties.gebruikerId ? { headers: voorGebruiker } : {}),
+      }) as Promise<{ id: string }>,
 
     verwijder: async (id: string): Promise<void> => {
       await haal(`/api/projecten/${id}`, { method: "DELETE" });
@@ -82,6 +97,6 @@ export function maakProjectenApi(haal: ProjectenFetch) {
 
 export type ProjectenApi = ReturnType<typeof maakProjectenApi>;
 
-export function useProjectenApi(): ProjectenApi {
-  return maakProjectenApi($fetch as unknown as ProjectenFetch);
+export function useProjectenApi(opties: ProjectenApiOpties = {}): ProjectenApi {
+  return maakProjectenApi($fetch as unknown as ProjectenFetch, opties);
 }

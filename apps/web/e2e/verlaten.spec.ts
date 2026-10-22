@@ -101,7 +101,13 @@ test("de sessie verloopt tijdens het tekenen: lokaal bewaard, met een melding, e
   await expect(status).toHaveText("Niet opgeslagen: lokaal bewaard", { timeout: 15_000 });
   const melding = page.getByTestId("afgemeld-melding");
   await expect(melding).toContainText("Je bent afgemeld. Log opnieuw in om op te slaan.");
-  await expect(melding.getByRole("button", { name: "Opnieuw inloggen" })).toBeVisible();
+  // "Opnieuw inloggen" opent een nieuw tabblad dat na het inloggen op /weer-aangemeld uitkomt.
+  const [tabblad] = await Promise.all([
+    context.waitForEvent("page"),
+    melding.getByRole("button", { name: "Opnieuw inloggen" }).click(),
+  ]);
+  await expect(tabblad).toHaveURL(/\/inloggen\?terug=%2Fweer-aangemeld$/);
+  await tabblad.close();
 
   // Opnieuw ingelogd (hier: de sessie terug): "Opnieuw proberen" bewaart alles.
   await context.addCookies(cookies);
@@ -140,4 +146,13 @@ test("een project van een andere eigen organisatie openen maakt die organisatie 
     await request.delete(`/api/projecten/${id}`);
     await request.post("/api/organisaties/actief", { data: { organisatieId: thuis } });
   }
+});
+
+test("na opnieuw inloggen vanuit de editor: een pagina die zegt wat er nu moet", async ({ page }) => {
+  await page.goto("/weer-aangemeld");
+  const pagina = page.getByTestId("weer-aangemeld");
+  await expect(pagina).toContainText(
+    "Je bent opnieuw aangemeld. Sluit dit tabblad en klik in de editor op ‘Opnieuw proberen’.",
+  );
+  await expect(pagina.getByRole("button", { name: "Tabblad sluiten" })).toBeVisible();
 });

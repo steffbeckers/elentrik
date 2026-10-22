@@ -817,6 +817,54 @@ describe("useAutosave: foutsoorten", () => {
     expect(autosave.status.value).toBe("opgeslagen");
   });
 
+  test("een 401 ANDERE_GEBRUIKER (een ander logde in): hetzelfde pad, afgemeld en zonder nieuwe poging", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValue(
+      Object.assign(new Error("Ingelogd als een andere gebruiker"), {
+        statusCode: 401,
+        data: { data: { code: "ANDERE_GEBRUIKER" } },
+      }),
+    );
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("lokaal");
+    expect(autosave.afgemeld.value).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    expect((await conceptVan("p1"))?.naam).toBe("a");
+  });
+
+  test("afgemeld en dan een netwerkfout bij opnieuw proberen: geen lus van nieuwe pogingen", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(Object.assign(new Error("Niet ingelogd"), { status: 401 }));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    bewaar.mockRejectedValueOnce(new TypeError("netwerk"));
+    await autosave.nuOpslaan();
+    expect(autosave.afgemeld.value).toBe(true);
+    expect(autosave.status.value).toBe("lokaal");
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(bewaar).toHaveBeenCalledTimes(2);
+  });
+
+  test("afgemeld en dan een 404 bij opnieuw proberen: fout, en afgemeld vervalt", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(Object.assign(new Error("Niet ingelogd"), { status: 401 }));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    bewaar.mockRejectedValueOnce(Object.assign(new Error("weg"), { status: 404 }));
+    await autosave.nuOpslaan();
+    expect(autosave.status.value).toBe("fout");
+    expect(autosave.afgemeld.value).toBe(false);
+  });
+
+  test("zonder gebruiker start de autosave niet", () => {
+    expect(() => opzet({ gebruikerId: "" })).toThrow(/gebruiker/i);
+  });
+
   test("een 500 blijft lokaal en volgt een nieuwe poging na 10 s", async () => {
     const { store, bewaar, autosave } = opzet();
     bewaar.mockRejectedValueOnce(Object.assign(new Error("server stuk"), { status: 500 }));

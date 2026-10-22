@@ -125,8 +125,11 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value++;
   }
 
-  /** De laatst gekende naam van de ingelogde gebruiker; geen state (zie `auteur`). */
-  let laatsteAuteur: string | null = null;
+  /**
+   * De gebruiker van dit editorvenster, voor `door` van een afwijking; geen state. `nieuwVenster`
+   * wist hem, de eerste `laad` daarna onthoudt de ingelogde gebruiker (`onthoudAuteur`).
+   */
+  let vensterAuteur: { id: string; naam: string } | null = null;
 
   function laad(project: TeLadenProject): void {
     document.value = project.document;
@@ -140,7 +143,12 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value = 0;
     laadGeneratie.value++;
     groepGesloten = true;
-    auteur();
+    onthoudAuteur();
+  }
+
+  /** Een nieuw editorvenster (pagina): de volgende `laad` bepaalt wie er werkt. */
+  function nieuwVenster(): void {
+    vensterAuteur = null;
   }
 
   /**
@@ -325,14 +333,24 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   /**
-   * De naam van de ingelogde gebruiker, voor `door` van een afwijking. Is de sessie intussen
-   * verlopen (de sessie-store is leeg, de editor werkt lokaal verder), dan de laatst gekende naam:
-   * die van wie het project opende.
+   * Onthoudt de ingelogde gebruiker als die van dit venster. Een andere gebruiker (die intussen in
+   * een ander tabblad inlogde) overschrijft hem nooit; dezelfde gebruiker werkt zijn naam bij.
+   */
+  function onthoudAuteur(): void {
+    const huidige = useSessieStore().gebruiker;
+    if (!huidige) return;
+    if (vensterAuteur === null || vensterAuteur.id === huidige.id) {
+      vensterAuteur = { id: huidige.id, naam: huidige.naam };
+    }
+  }
+
+  /**
+   * De naam voor `door` van een afwijking: de gebruiker van dit venster. Is de sessie intussen
+   * verlopen of van een ander, dan blijft het de naam van wie het venster opende.
    */
   function auteur(): string {
-    const huidige = useSessieStore().gebruiker?.naam;
-    if (huidige) laatsteAuteur = huidige;
-    return laatsteAuteur ?? "onbekend";
+    onthoudAuteur();
+    return vensterAuteur?.naam || useSessieStore().gebruiker?.naam || "onbekend";
   }
 
   function zetAfwijking(regelId: string, nodeId: NodeId, motivatie: string): void {
@@ -421,6 +439,7 @@ export const useEditorStore = defineStore("editor", () => {
     navigeer,
     verwijderSelectie,
     zetAfwijking,
+    nieuwVenster,
     wisAfwijking,
     wijzigProjectgegevens,
   };

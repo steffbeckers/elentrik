@@ -160,6 +160,25 @@ describe("concepten per gebruiker", () => {
     expect(await nieuwsteConcept("p1", BART)).toBeNull();
   });
 
+  test("een oud concept waarvan de nieuwe sleutel al bestaat, krijgt een eigen venster: geen van beide gaat verloren", async () => {
+    await bewaarConcept(plek("X"), concept("Eigen", 500));
+    await set("concept:p1:X", concept("Oud venster", 100));
+    await nieuwsteConcept("p1", AN);
+    const sleutels = (await keys()) as string[];
+    expect(sleutels).toHaveLength(2);
+    expect(sleutels.every((s) => s.startsWith(`concept:u:${AN}:p1:`))).toBe(true);
+    const namen = await Promise.all(sleutels.map(async (s) => ((await get(s)) as Concept).naam));
+    expect(namen.sort()).toEqual(["Eigen", "Oud venster"]);
+  });
+
+  test("zonder gebruiker wordt niets bewaard of overgenomen", async () => {
+    await set("concept:p1", concept("Oud", 300));
+    await expect(bewaarConcept(plek("A", ""), concept("N", 1))).rejects.toThrow(/gebruiker/i);
+    await expect(nieuwsteConcept("p1", "")).rejects.toThrow(/gebruiker/i);
+    await expect(wisConcept(plek("A", ""))).rejects.toThrow(/gebruiker/i);
+    expect(await keys()).toEqual(["concept:p1"]);
+  });
+
   test("oude en eigen concepten: het nieuwste op tijd wordt aangeboden", async () => {
     await set("concept:p1", concept("Oud", 300));
     await set("concept:p1:X", concept("Oud venster", 100));

@@ -203,3 +203,38 @@ describe("uitloggen", () => {
     expect(store.gebruiker?.id).toBe("u1");
   });
 });
+
+describe("afgebroken vertrek", () => {
+  test("mislukt het wisselen of uitloggen na voorVertrek, dan hoort de registratie dat", async () => {
+    const kapot = Object.assign(new Error("kapot"), { status: 500 });
+    const { api } = maakApi({
+      wisselActief: vi.fn(async () => Promise.reject(kapot)),
+      uitloggen: vi.fn(async () => Promise.reject(kapot)),
+    });
+    const store = useSessieStore();
+    store.gebruikApi(api);
+    await store.laad();
+    const afgebroken = vi.fn();
+    store.registreerVoorVertrek(() => true, afgebroken);
+
+    await expect(store.wissel("o2")).rejects.toBe(kapot);
+    expect(afgebroken).toHaveBeenCalledTimes(1);
+    await expect(store.uitloggen()).rejects.toBe(kapot);
+    expect(afgebroken).toHaveBeenCalledTimes(2);
+    expect(store.gebruiker?.id).toBe("u1");
+  });
+
+  test("lukt het, of zegt voorVertrek nee, dan niet", async () => {
+    const { api } = maakApi();
+    const store = useSessieStore();
+    store.gebruikApi(api);
+    await store.laad();
+    const afgebroken = vi.fn();
+    const afmelden = store.registreerVoorVertrek(() => true, afgebroken);
+    expect(await store.wissel("o2")).toBe(true);
+    afmelden();
+    store.registreerVoorVertrek(() => false, afgebroken);
+    expect(await store.uitloggen()).toBe(false);
+    expect(afgebroken).not.toHaveBeenCalled();
+  });
+});

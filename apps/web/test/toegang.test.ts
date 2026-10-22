@@ -30,6 +30,7 @@ import { registratieLimiet } from "../server/organisaties/leden";
 import { maakUitnodigingstoken } from "../server/organisaties/uitnodigingstoken";
 import { haalProject, maakProject, verwijderProject } from "../server/projecten/repo";
 import { kiesActieveOrganisatie, vereisLid, vereisProjecttoegang, vereisSessie } from "../server/utils/toegang";
+import { VERWACHTE_GEBRUIKER_HEADER } from "../shared/gebruiker";
 import type { ExportInvoer } from "../shared/exports";
 import { maakTestDb } from "./db";
 import { apiPad, beveiligdeRoutebestanden, PUBLIEKE_ROUTES, routeUit } from "./routes";
@@ -626,6 +627,47 @@ describe("projecten per organisatie", () => {
     const exportZonder = await stuur({ methode: "POST", pad: `/api/projecten/${id}/exports` }, eigenaarB.cookie);
     expect([put.status, zonderIfMatch.status, exportZonder.status]).toEqual([404, 404, 404]);
     expect((await haalProject(db, orgA, id))!.versie).toBe(1);
+  });
+
+  test("bewaren voor een andere gebruiker dan die van de sessie: 401 ANDERE_GEBRUIKER, niets gewijzigd", async () => {
+    const id = await projectIn(orgA);
+    const { document } = (await haalProject(db, orgA, id))!;
+    const verzoek = (gebruiker?: string) =>
+      fetch(`${basis}/api/projecten/${id}`, {
+        method: "PUT",
+        headers: {
+          cookie: lidA.cookie,
+          "if-match": "1",
+          "content-type": "application/json",
+          ...(gebruiker !== undefined ? { [VERWACHTE_GEBRUIKER_HEADER]: gebruiker } : {}),
+        },
+        body: JSON.stringify({ naam: "Van een ander", document }),
+      });
+
+    // Het werk van eigenaar A, terwijl lid A nu ingelogd is.
+    const ander = await verzoek(eigenaarA.id);
+    expect(ander.status).toBe(401);
+    expect(((await ander.json()) as { data?: { code?: string } }).data?.code).toBe("ANDERE_GEBRUIKER");
+    expect((await haalProject(db, orgA, id))!.versie).toBe(1);
+
+    // Ook voor een project van een andere organisatie: 401, het bestaan lekt niet.
+    const vreemd = await projectIn(orgB);
+    const vreemdAntwoord = await fetch(`${basis}/api/projecten/${vreemd}`, {
+      method: "PUT",
+      headers: { cookie: lidA.cookie, "if-match": "1", [VERWACHTE_GEBRUIKER_HEADER]: eigenaarA.id },
+    });
+    expect(vreemdAntwoord.status).toBe(401);
+
+    // Dupliceren (bewaren als kopie) evenmin.
+    const kopie = await fetch(`${basis}/api/projecten/${id}/dupliceer`, {
+      method: "POST",
+      headers: { cookie: lidA.cookie, [VERWACHTE_GEBRUIKER_HEADER]: eigenaarA.id },
+    });
+    expect(kopie.status).toBe(401);
+
+    // De juiste gebruiker, of geen header: bewaren lukt.
+    expect((await verzoek(lidA.id)).status).toBe(200);
+    expect((await haalProject(db, orgA, id))!.versie).toBe(2);
   });
 
   test("de If-Match-controle van de export werkt nog: een oude versie geeft 409", async () => {

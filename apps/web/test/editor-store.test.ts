@@ -400,6 +400,31 @@ describe("afwijkingen en projectgegevens", () => {
     expect(doc(store).afwijkingen[0]).toMatchObject({ door: "An Peeters" });
   });
 
+  test("zetAfwijking: een andere gebruiker die intussen inlogde, neemt de naam van het venster niet over", () => {
+    const sessie = useSessieStore();
+    sessie.gebruiker = { id: "u1", naam: "An Peeters", email: "an@example.test" };
+    const store = useEditorStore();
+    store.nieuwVenster();
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
+    nieuweKring(store);
+    stapel(store, 9);
+    sessie.gebruiker = { id: "u2", naam: "Bart Claes", email: "bart@example.test" };
+    // Ook een nieuwe laad in hetzelfde venster (de serverversie) verandert dat niet.
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 2, document: doc(store) });
+    const fout = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
+    store.zetAfwijking(fout.regelId, fout.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    expect(doc(store).afwijkingen[0]).toMatchObject({ door: "An Peeters" });
+
+    // Een nieuw venster van Bart: dan wel Bart.
+    store.nieuwVenster();
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 3, document: startDocument() });
+    nieuweKring(store);
+    stapel(store, 9);
+    const andere = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
+    store.zetAfwijking(andere.regelId, andere.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    expect(doc(store).afwijkingen[0]).toMatchObject({ door: "Bart Claes" });
+  });
+
   test("een te korte motivatie gooit en laat de store ongewijzigd", () => {
     const store = laadNieuw();
     const leidingId = nieuweKring(store);

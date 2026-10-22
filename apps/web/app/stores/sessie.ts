@@ -51,6 +51,8 @@ export const useSessieStore = defineStore("sessie", () => {
   // Geen state: niet in de SSR-payload, en per instantie (dus per verzoek) gezet.
   let api: SessieApi | null = null;
   let voorVertrek: VoorVertrek = altijdDoor;
+  /** Hoort bij `voorVertrek`: het vertrek ging toch niet door (wisselen of uitloggen mislukte). */
+  let bijAfbreken: (() => void) | undefined;
 
   const actieveOrganisatie = computed<Organisatie | null>(
     () => organisaties.value.find((o) => o.id === actieveOrganisatieId.value) ?? null,
@@ -94,26 +96,42 @@ export const useSessieStore = defineStore("sessie", () => {
    * Registreert de callback vóór wisselen en uitloggen; de vorige vervalt. Geeft een functie
    * terug die ze weer afmeldt (alleen als ze nog de geregistreerde is).
    */
-  function registreerVoorVertrek(callback: VoorVertrek): () => void {
+  function registreerVoorVertrek(callback: VoorVertrek, afgebroken?: () => void): () => void {
     voorVertrek = callback;
+    bijAfbreken = afgebroken;
     return () => {
-      if (voorVertrek === callback) voorVertrek = altijdDoor;
+      if (voorVertrek !== callback) return;
+      voorVertrek = altijdDoor;
+      bijAfbreken = undefined;
     };
+  }
+
+  /** Het vertrek zelf, na een `voorVertrek` dat ja zei; mislukt het, dan hoort de registratie dat. */
+  async function vertrek(actie: () => Promise<void>): Promise<void> {
+    const afgebroken = bijAfbreken;
+    try {
+      await actie();
+    } catch (fout) {
+      afgebroken?.();
+      throw fout;
+    }
   }
 
   /** Maakt een andere organisatie actief. false: `voorVertrek` hield het tegen. */
   async function wissel(organisatieId: string): Promise<boolean> {
     if (organisatieId === actieveOrganisatieId.value) return true;
     if (!(await voorVertrek())) return false;
-    await vereisApi().wisselActief(organisatieId);
-    await laad();
+    await vertrek(async () => {
+      await vereisApi().wisselActief(organisatieId);
+      await laad();
+    });
     return true;
   }
 
   /** Logt uit en wist de sessie. false: `voorVertrek` hield het tegen. */
   async function uitloggen(): Promise<boolean> {
     if (!(await voorVertrek())) return false;
-    await vereisApi().uitloggen();
+    await vertrek(() => vereisApi().uitloggen());
     wis();
     geladen.value = true;
     return true;

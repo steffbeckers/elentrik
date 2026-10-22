@@ -311,9 +311,13 @@
       "opnieuwInloggen": "Opnieuw inloggen"
     },
     "vertrek": {
-      "bevestiging": "Er zijn wijzigingen die nog niet op de server staan. Ze blijven lokaal bewaard voor dit account. Toch doorgaan?"
+      "bevestiging": "Er zijn wijzigingen die nog niet op de server staan. Ze blijven lokaal bewaard voor dit account. Toch doorgaan?",
+      "bevestigingOnbewaard": "Je wijzigingen konden ook lokaal niet bewaard worden en gaan verloren. Toch doorgaan?"
     },
-    "organisatieGewisseld": "Je werkt nu in {organisatie}."
+    "organisatieGewisseld": "Je werkt nu in {organisatie}.",
+    "andereGebruiker": {
+      "melding": "Je bent nu aangemeld als {naam}. Deze wijzigingen horen bij {oorspronkelijk} en blijven lokaal bewaard voor dat account."
+    }
   },
   "bedrijf": {
     "titel": "Bedrijfsgegevens",
@@ -579,5 +583,10 @@
     },
     "naarStart": "Naar de start",
     "opnieuw": "Opnieuw proberen"
+  },
+  "weerAangemeld": {
+    "titel": "Opnieuw aangemeld",
+    "tekst": "Je bent opnieuw aangemeld. Sluit dit tabblad en klik in de editor op ‘Opnieuw proberen’.",
+    "sluiten": "Tabblad sluiten"
   }
 }

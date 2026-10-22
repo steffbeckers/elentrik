@@ -3,8 +3,15 @@ import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.v
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useEditorStore, type Tabblad } from "~/stores/editor";
 
-/** `afgemeld`: de sessie is verlopen (401 bij het opslaan); het werk staat lokaal in het concept. */
-defineProps<{ status: AutosaveStatus; afgemeld?: boolean }>();
+/**
+ * `afgemeld`: de sessie is verlopen (401 bij het opslaan); het werk staat lokaal in het concept.
+ * `andereGebruiker`: nu is een ander ingelogd dan wie dit venster opende (`oorspronkelijk`).
+ */
+const props = defineProps<{
+  status: AutosaveStatus;
+  afgemeld?: boolean;
+  andereGebruiker?: { naam: string; oorspronkelijk: string } | null;
+}>();
 const emit = defineEmits<{
   opnieuwProberen: [];
   opnieuwInloggen: [];
@@ -16,6 +23,13 @@ const emit = defineEmits<{
 const store = useEditorStore();
 const { t } = useI18n();
 const projectgegevensOpen = ref(false);
+
+/** De melding over de aanmelding, of null: eerst een andere gebruiker, dan een verlopen sessie. */
+const aanmeldingMelding = computed(() => {
+  if (props.andereGebruiker) return t("editor.andereGebruiker.melding", props.andereGebruiker);
+  if (props.afgemeld) return t("editor.afgemeld.melding");
+  return null;
+});
 
 /** "1 fout en 3 waarschuwingen": enkelvoud en meervoud via de pluralisatie van vue-i18n. */
 const bevindingenTekst = computed(() =>
@@ -159,13 +173,13 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
     <ProjectgegevensDialoog v-model:open="projectgegevensOpen" />
   </header>
   <UAlert
-    v-if="afgemeld"
+    v-if="aanmeldingMelding"
     color="warning"
     variant="subtle"
     icon="i-lucide-log-in"
     orientation="horizontal"
     class="rounded-none border-b border-default py-2"
-    :title="$t('editor.afgemeld.melding')"
+    :title="aanmeldingMelding"
     data-testid="afgemeld-melding"
   >
     <template #actions>

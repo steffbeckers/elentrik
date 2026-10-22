@@ -18,11 +18,13 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import {
   appendResponseHeader,
   createError,
+  getRequestHeader,
   defineEventHandler,
   type EventHandler,
   type EventHandlerRequest,
   type H3Event,
 } from "h3";
+import { ANDERE_GEBRUIKER, VERWACHTE_GEBRUIKER_HEADER } from "../../shared/gebruiker";
 import { gebruikAuth } from "../auth";
 import { gebruikDb } from "../db";
 import { member, session } from "../db/schema";
@@ -101,6 +103,25 @@ export async function vereisSessie(event: H3Event): Promise<Sessie> {
     actieveOrganisatieId,
   };
   event.context[SESSIE_SLEUTEL] = sessie;
+  return sessie;
+}
+
+/**
+ * Bewaart de client namens een bepaalde gebruiker (header `x-elentrik-gebruiker`), dan moet de
+ * sessie van die gebruiker zijn; anders 401 met code `ANDERE_GEBRUIKER` en verandert er niets.
+ * Zonder header geldt gewoon de sessie. Komt vóór elke toegangscontrole, zodat het antwoord niets
+ * zegt over het gevraagde.
+ */
+export async function vereisVerwachteGebruiker(event: H3Event): Promise<Sessie> {
+  const sessie = await vereisSessie(event);
+  const verwacht = getRequestHeader(event, VERWACHTE_GEBRUIKER_HEADER);
+  if (verwacht !== undefined && verwacht !== sessie.gebruiker.id) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: "Ingelogd als een andere gebruiker",
+      data: { code: ANDERE_GEBRUIKER },
+    });
+  }
   return sessie;
 }
 

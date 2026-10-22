@@ -30,7 +30,9 @@ function sleutel({ gebruikerId, projectId, instantieId }: ConceptPlek): string {
   return `${voorvoegsel(gebruikerId, projectId)}${instantieId}`;
 }
 
+/** Zonder gebruiker gooit dit: een concept zonder eigenaar bestaat nooit. */
 function voorvoegsel(gebruikerId: string, projectId: string): string {
+  if (!gebruikerId) throw new Error("Een concept hoort bij een gebruiker (gebruikerId ontbreekt).");
   return `concept:u:${gebruikerId}:${projectId}:`;
 }
 
@@ -45,12 +47,12 @@ function eigenSleutelVoorOud(oud: string, gebruikerId: string, projectId: string
   return sleutel({ gebruikerId, projectId, instantieId });
 }
 
-export function bewaarConcept(plek: ConceptPlek, concept: Concept): Promise<void> {
-  return set(sleutel(plek), concept);
+export async function bewaarConcept(plek: ConceptPlek, concept: Concept): Promise<void> {
+  await set(sleutel(plek), concept);
 }
 
-export function wisConcept(plek: ConceptPlek): Promise<void> {
-  return del(sleutel(plek));
+export async function wisConcept(plek: ConceptPlek): Promise<void> {
+  await del(sleutel(plek));
 }
 
 /**
@@ -108,7 +110,8 @@ export function maakInstantieId(willekeur: Willekeur | null = globalThis.crypto 
  * ingelogde gebruiker die het project opent ze aangeboden (spec 5b.2), en gaat er niets verloren.
  * Alles in één transactie: twee vensters tegelijk nemen een oud concept nooit allebei over.
  */
-function neemOudeConceptenOver(projectId: string, gebruikerId: string): Promise<void> {
+async function neemOudeConceptenOver(projectId: string, gebruikerId: string): Promise<void> {
+  voorvoegsel(gebruikerId, projectId);
   return archief()(
     "readwrite",
     (winkel) =>
@@ -121,9 +124,13 @@ function neemOudeConceptenOver(projectId: string, gebruikerId: string): Promise<
             const nieuwVerzoek = winkel.get(nieuw);
             nieuwVerzoek.onsuccess = () => {
               const oudConcept = oudVerzoek.result as Concept | undefined;
-              const bestaand = nieuwVerzoek.result as Concept | undefined;
-              // Staat er al een concept onder die sleutel, dan wint het nieuwste.
-              if (oudConcept && (!bestaand || oudConcept.tijd > bestaand.tijd)) winkel.put(oudConcept, nieuw);
+              // Staat er al een concept onder die sleutel, dan krijgt het oude een eigen, nieuw
+              // venster: geen van beide gaat verloren.
+              const doel =
+                nieuwVerzoek.result === undefined
+                  ? nieuw
+                  : sleutel({ gebruikerId, projectId, instantieId: maakInstantieId() });
+              if (oudConcept) winkel.put(oudConcept, doel);
               winkel.delete(oud);
             };
           }
