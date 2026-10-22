@@ -29,7 +29,8 @@ function bijToets(event: KeyboardEvent, rij: KringenlijstRij): void {
   kies(rij);
 }
 
-/** Schuift de rij van de laatst geselecteerde node in beeld, onder de vaste kop. */
+// Een selectie zonder rij (bord, kring) markeert niets: alleen punten staan in de lijst.
+/** Schuift de rij van de laatst geselecteerde node in beeld; `scroll-pt-10` op de container houdt haar onder de vaste kop vandaan. */
 async function scrollNaarSelectie(): Promise<void> {
   const id = store.selectie.at(-1);
   if (id === undefined) return;
@@ -47,14 +48,14 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
 <template>
   <section
     ref="container"
-    class="min-h-0 overflow-auto"
+    class="min-h-0 scroll-pt-10 overflow-auto"
     :aria-label="$t('editor.kringenlijst.titel')"
     data-testid="kringenlijst"
   >
     <p v-if="rijen.length === 0" class="p-6 text-center text-sm text-muted" data-testid="kringenlijst-leeg">
       {{ NL.geenKringen }}
     </p>
-    <table v-else class="w-full border-separate border-spacing-0 text-left text-sm">
+    <table v-else role="grid" class="w-full border-separate border-spacing-0 text-left text-sm">
       <thead>
         <tr>
           <th
@@ -71,9 +72,9 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
         <tr
           v-for="rij in rijen"
           :key="rij.nodeId"
-          role="button"
+          role="row"
           tabindex="0"
-          :aria-pressed="geselecteerd(rij)"
+          :aria-selected="geselecteerd(rij)"
           :data-rij-node="rij.nodeId"
           :data-testid="`kringenlijst-rij-${rij.punt}`"
           class="cursor-pointer outline-none hover:bg-elevated focus-visible:ring-2 focus-visible:ring-primary"
@@ -81,7 +82,7 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
           @click="kies(rij)"
           @keydown="bijToets($event, rij)"
         >
-          <td v-for="kolom in KOLOMMEN" :key="kolom" class="border-b border-default px-3 py-1.5">
+          <td v-for="kolom in KOLOMMEN" :key="kolom" role="gridcell" class="border-b border-default px-3 py-1.5">
             {{ rij[kolom] }}
           </td>
         </tr>

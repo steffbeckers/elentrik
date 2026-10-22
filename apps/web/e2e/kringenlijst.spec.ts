@@ -47,24 +47,24 @@ test("de tabel toont de kolommen van de pdf; een klik of toets selecteert het pu
 
   // Muis: de rij wordt gemarkeerd en de eigenschappen volgen.
   await rijen.first().click();
-  await expect(rijen.first()).toHaveAttribute("aria-pressed", "true");
-  await expect(rijen.nth(1)).toHaveAttribute("aria-pressed", "false");
+  await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
+  await expect(rijen.nth(1)).toHaveAttribute("aria-selected", "false");
   await expect(page.getByTestId("eigenschappen-titel")).toBeVisible();
 
   // Toetsenbord: Enter of spatie op een gefocuste rij selecteert die rij.
   await rijen.nth(1).focus();
   await page.keyboard.press("Enter");
-  await expect(rijen.nth(1)).toHaveAttribute("aria-pressed", "true");
-  await expect(rijen.first()).toHaveAttribute("aria-pressed", "false");
+  await expect(rijen.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(rijen.first()).toHaveAttribute("aria-selected", "false");
   await rijen.first().focus();
   await page.keyboard.press("Space");
-  await expect(rijen.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
 
   // De selectie blijft bij een wissel van tabblad en is terug te zien op het schema.
   await page.getByTestId("tab-eendraadschema").click();
   await expect(page.getByTestId("schema-canvas")).toBeVisible();
   await page.getByTestId("tab-kringenlijst").click();
-  await expect(rijen.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
 });
 
 test("de selectie van het schema staat gemarkeerd en in beeld, onder een vaste kop", async ({ page, request }) => {
@@ -80,7 +80,7 @@ test("de selectie van het schema staat gemarkeerd en in beeld, onder een vaste k
   const tabel = page.getByTestId("kringenlijst");
   const rijen = tabel.locator('tbody tr[data-testid^="kringenlijst-rij-"]');
   const gekozen = rijen.last();
-  await expect(gekozen).toHaveAttribute("aria-pressed", "true");
+  await expect(gekozen).toHaveAttribute("aria-selected", "true");
   await expect(gekozen).toBeInViewport();
   await expect.poll(() => tabel.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
 
@@ -88,4 +88,38 @@ test("de selectie van het schema staat gemarkeerd en in beeld, onder een vaste k
   const vak = (await tabel.boundingBox())!;
   const kop = (await tabel.getByRole("columnheader").first().boundingBox())!;
   expect(Math.abs(kop.y - vak.y)).toBeLessThan(2);
+});
+
+test("een selectie elders scrolt een rij boven het beeld onder de vaste kop vandaan", async ({ page, request }) => {
+  await page.goto(`/projecten/${await nieuwProject(request, "elders")}`);
+  await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await page.setViewportSize({ width: 1280, height: 220 });
+  await page.getByTestId("tab-kringenlijst").click();
+
+  const tabel = page.getByTestId("kringenlijst");
+  const rijen = tabel.locator('tbody tr[data-testid^="kringenlijst-rij-"]');
+  const eerste = rijen.first();
+  const id = await eerste.getAttribute("data-rij-node");
+  expect(id).toBeTruthy();
+
+  // Helemaal naar beneden: de eerste rij ligt nu boven het beeld.
+  await tabel.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  // Boven het beeld = verborgen onder de vaste kop (de kop zelf blijft staan).
+  const kopOnderrand = async () => {
+    const kop = (await tabel.getByRole("columnheader").first().boundingBox())!;
+    return kop.y + kop.height;
+  };
+  expect((await eerste.boundingBox())!.y + (await eerste.boundingBox())!.height).toBeLessThanOrEqual(await kopOnderrand());
+
+  // De selectie verandert terwijl het tabblad open staat, buiten de tabel om.
+  await page.evaluate((nodeId) => {
+    const app = (window as unknown as { useNuxtApp: () => { $pinia: { state: { value: { editor: { selectie: string[] } } } } } }).useNuxtApp();
+    app.$pinia.state.value.editor.selectie = [nodeId!];
+  }, id);
+
+  await expect(eerste).toHaveAttribute("aria-selected", "true");
+  await expect(eerste).toBeInViewport();
+  await expect.poll(async () => (await eerste.boundingBox())!.y - (await kopOnderrand())).toBeGreaterThanOrEqual(-0.5);
 });
