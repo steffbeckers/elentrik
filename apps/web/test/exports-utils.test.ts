@@ -35,11 +35,11 @@ describe("ExportInvoerSchema", () => {
   });
 });
 
-async function fout(belofte: Promise<unknown>): Promise<{ statusCode?: number; statusMessage?: string }> {
+async function fout(belofte: Promise<unknown>): Promise<{ statusCode?: number; statusMessage?: string; data?: unknown }> {
   try {
     await belofte;
   } catch (e) {
-    return e as { statusCode?: number; statusMessage?: string };
+    return e as { statusCode?: number; statusMessage?: string; data?: unknown };
   }
   throw new Error("Er werd geen fout gegooid");
 }
@@ -76,6 +76,16 @@ describe("metExportFouten", () => {
       }),
     );
     expect(e.statusCode).toBe(404);
+  });
+
+  test("ProjectFout CONFLICT wordt 409 met de huidige versie, zoals bij het bewaren", async () => {
+    const e = await fout(
+      metExportFouten("p1", async () => {
+        throw new ProjectFout("CONFLICT", { versie: 7 });
+      }),
+    );
+    expect(e.statusCode).toBe(409);
+    expect(e.data).toEqual({ versie: 7 });
   });
 
   test("een andere fout gaat ongewijzigd door", async () => {

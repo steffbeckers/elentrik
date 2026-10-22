@@ -40,6 +40,12 @@ export const KRINGENLIJST_KOP_MM = KRINGENLIJST_RIJ_MM;
 /** Tekstgrootte in de kringenlijst en de bijlage, en van een kop in de bijlage, in mm. */
 const TABEL_TEKST_MM = 3;
 const BIJLAGE_TEKST_MM = 3;
+/**
+ * De bijlage breekt haar regels zelf af; een regel die toch te breed is, zou de browser stil afknippen.
+ * Daarom rekent ze met een voorzichtige tekenbreedte: 0,6 em × 1,6 = 0,96 em per teken, breder dan de
+ * breedste Latijnse letter van het sans-serif in Gotenberg (Noto Sans: "W" is 0,93 em).
+ */
+export const BIJLAGE_BREEDTE_FACTOR = 1.6;
 const BIJLAGE_KOP_TEKST_MM = 4;
 /** Speling onderaan de bijlage, voor afrondingen van de regelhoogte in de browser. */
 const BIJLAGE_SPELING_MM = 1;
@@ -176,7 +182,7 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
       kop: true,
     });
   const tekst = (inhoud: string, klasse: string, breedte: number) => {
-    for (const regel of breekRegels(inhoud, vloer(breedte), BIJLAGE_TEKST_MM)) {
+    for (const regel of breekRegels(inhoud, vloer(breedte), BIJLAGE_TEKST_MM, BIJLAGE_BREEDTE_FACTOR)) {
       blokken.push({ html: tekstRegel(regel, breedte, BIJLAGE_TEKST_MM, klasse), hoogte: BIJLAGE_TEKST_MM * REGELHOOGTE, kop: false });
     }
   };

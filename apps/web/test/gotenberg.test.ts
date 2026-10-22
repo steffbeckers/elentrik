@@ -61,6 +61,21 @@ describe("maakPdf", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  test("de oorzaak van een netwerkfout (code en boodschap) staat in de details", async () => {
+    const oorzaak = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:3001"), { code: "ECONNREFUSED" });
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("fetch failed", { cause: oorzaak }));
+    const fout = await maakPdf(invoer, { fetch: fetchMock as unknown as typeof fetch, url: "http://g.test" }).catch((e) => e);
+    expect(fout).toBeInstanceOf(PdfFout);
+    expect(fout.code).toBe("ONBEREIKBAAR");
+    expect(fout.details).toEqual({ code: "ECONNREFUSED", bericht: "connect ECONNREFUSED 127.0.0.1:3001" });
+  });
+
+  test("een netwerkfout zonder oorzaak heeft geen details", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    const fout = await maakPdf(invoer, { fetch: fetchMock as unknown as typeof fetch, url: "http://g.test" }).catch((e) => e);
+    expect(fout.details).toBeUndefined();
+  });
+
   test("twee keer een 5xx geeft MISLUKT na twee aanroepen", async () => {
     const fetchMock = vi.fn(async () => new Response("stuk", { status: 500 }));
     const fout = await maakPdf(invoer, { fetch: fetchMock as unknown as typeof fetch, url: "http://g.test" }).catch((e) => e);

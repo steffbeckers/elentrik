@@ -2,11 +2,9 @@
 // Puur en zonder I/O; expliciete imports (ruling E1).
 import type { Adres, InstallatieDocument, Stroomtype } from "@elentrik/model";
 import {
-  VERPLICHTE_ADRESVELDEN,
   adresFormulierUitAdres,
   adresUitFormulier,
   ontbrekendeAdresvelden,
-  volledigAdresUitFormulier,
   type AdresFormulier,
 } from "./adres";
 
@@ -33,7 +31,8 @@ export type ProjectgegevensWijziging = {
   klantNaam: string;
   stroomtype: Stroomtype;
   klantAdres: Adres | null;
-  werfadres: Adres;
+  /** Ontbreekt als het formulier geen werfadres heeft: dan blijft het werfadres ongewijzigd. */
+  werfadres?: Adres;
   ean: string;
   datum: string;
 };
@@ -53,9 +52,10 @@ export function formulierUitProject(naam: string, doc: InstallatieDocument): Pro
 export function valideerProjectFormulier(f: ProjectFormulier): ProjectFormulierFout[] {
   const fouten: ProjectFormulierFout[] = [];
   if (f.naam.trim() === "") fouten.push({ name: "naam", fout: "naamVerplicht" });
-  // Het werfadres is altijd verplicht; het klantadres alleen zodra het deels ingevuld is.
-  for (const veld of VERPLICHTE_ADRESVELDEN) {
-    if (f.werf[veld].trim() === "") fouten.push({ name: `werf.${veld}`, fout: "adresVerplicht" });
+  // Werf- en klantadres zijn optioneel, maar een gedeeltelijk adres vraagt de rest. Bestaande projecten
+  // hebben een leeg werfadres: dat mag hernoemen of de klant wijzigen niet blokkeren.
+  for (const veld of ontbrekendeAdresvelden(f.werf)) {
+    fouten.push({ name: `werf.${veld}`, fout: "adresVerplicht" });
   }
   for (const veld of ontbrekendeAdresvelden(f.klant)) {
     fouten.push({ name: `klant.${veld}`, fout: "adresVerplicht" });
@@ -64,14 +64,18 @@ export function valideerProjectFormulier(f: ProjectFormulier): ProjectFormulierF
   return fouten;
 }
 
-/** Verwacht een geldig formulier (zie `valideerProjectFormulier`). Een leeg klantadres wordt `null`. */
+/**
+ * Verwacht een geldig formulier (zie `valideerProjectFormulier`). Een leeg klantadres wordt `null`;
+ * een leeg werfadres gaat niet mee, zodat het werfadres in het document ongewijzigd blijft.
+ */
 export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijziging {
+  const werfadres = adresUitFormulier(f.werf);
   return {
     naam: f.naam.trim(),
     klantNaam: f.klantNaam.trim(),
     stroomtype: f.stroomtype,
     klantAdres: adresUitFormulier(f.klant) ?? null,
-    werfadres: volledigAdresUitFormulier(f.werf),
+    ...(werfadres !== undefined ? { werfadres } : {}),
     ean: f.ean.trim(),
     datum: f.datum.trim(),
   };

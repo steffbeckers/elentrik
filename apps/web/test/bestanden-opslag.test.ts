@@ -131,6 +131,18 @@ describe("bestandHeaders: geen parameterinjectie via unicode-normalisatie", () =
     expect(filenameWaarde(header)).toBe("Huis _ filename_UTF-8''evil.exe_ x_");
   });
 
+  test("volbrede ； en ＝ worden _ in filename, net als ; en =", () => {
+    const header = controleer("Huis\uff1b x\uff1dy.pdf");
+    expect(filenameWaarde(header)).toBe("Huis_ x_y.pdf");
+    expect(header).toContain("filename*=UTF-8''Huis%EF%BC%9B%20x%EF%BC%9Dy.pdf");
+  });
+
+  test("een ligatuur valt uiteen in haar letters in filename en blijft heel in filename*", () => {
+    const header = controleer("\ufb01naal o\ufb03ce.pdf");
+    expect(filenameWaarde(header)).toBe("finaal office.pdf");
+    expect(header).toContain("filename*=UTF-8''%EF%AC%81naal%20o%EF%AC%83ce.pdf");
+  });
+
   test("een naam van enkel volbrede verboden tekens wordt export.pdf in filename", () => {
     const header = controleer("\uff02\uff3c\uff0f");
     expect(filenameWaarde(header)).toBe("export.pdf");

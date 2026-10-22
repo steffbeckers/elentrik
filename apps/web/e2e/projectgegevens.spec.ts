@@ -27,13 +27,20 @@ test("klant- en werfgegevens invullen, bewaren, ongedaan maken en herladen", asy
   const dialoog = page.getByRole("dialog");
   await expect(dialoog.getByTestId("projectdatum")).not.toHaveValue("");
 
-  // Het werfadres is verplicht: zonder invulling blijft de dialoog open met fouten.
+  // Een leeg werfadres blokkeert niets: hernoemen lukt zonder werfadres.
+  await dialoog.getByLabel("Naam").first().fill(`${naam} hernoemd`);
   await dialoog.getByRole("button", { name: "Bewaren" }).click();
-  await expect(dialoog.getByText("Verplicht voor een adres.")).toHaveCount(4);
+  await expect(dialoog).toHaveCount(0);
+  await expect(page.getByTestId("projectnaam")).toContainText("hernoemd");
+
+  // Een gedeeltelijk werfadres vraagt de rest, zoals het klantadres.
+  await page.getByTestId("projectnaam").click();
+  await dialoog.getByTestId("werf-straat").fill("Dorpsstraat");
+  await dialoog.getByRole("button", { name: "Bewaren" }).click();
+  await expect(dialoog.getByText("Verplicht voor een adres.")).toHaveCount(3);
   await expect(dialoog).toBeVisible();
 
   // Een gedeeltelijk klantadres vraagt de rest, het hele klantadres is anders optioneel.
-  await dialoog.getByTestId("werf-straat").fill("Dorpsstraat");
   await dialoog.getByTestId("werf-nummer").fill("3");
   await dialoog.getByTestId("werf-postcode").fill("9000");
   await dialoog.getByTestId("werf-gemeente").fill("Gent");

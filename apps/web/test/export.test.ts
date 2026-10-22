@@ -22,6 +22,10 @@ describe("volgendVersieLabel", () => {
     expect(volgendVersieLabel(0)).toBe("V1");
     expect(volgendVersieLabel(4)).toBe("V5");
   });
+
+  test("zonder lijst (laden mislukt) geen voorstel: de gebruiker vult het label zelf in", () => {
+    expect(volgendVersieLabel(null)).toBe("");
+  });
 });
 
 describe("onopgelosteFouten", () => {

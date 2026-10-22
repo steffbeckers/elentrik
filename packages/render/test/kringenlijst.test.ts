@@ -42,6 +42,15 @@ describe("kringenlijst", () => {
     expect(r!.leiding).toMatch(/^\S+ 3G2,5$/);
   });
 
+  test("de woorden van het differentieel komen uit de teksten", () => {
+    const { doc } = installatie()
+      .differentieel(30, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))))
+      .bouw();
+    const teksten = { ...NL, differentieel: { eenheid: "mA", type: "Typ" } };
+    const [r] = kringenlijst(doc, analyseer(doc), teksten);
+    expect(r!.differentieel).toBe("30 mA Typ A");
+  });
+
   test("de dichtstbijzijnde differentieel geldt; een lid van de 300 mA-reeks toont 300 mA", () => {
     const doc = referentieAppartement();
     const rijen = kringenlijst(doc, analyseer(doc), NL);

@@ -32,9 +32,10 @@ export function afkorten(tekst: string, breedte_mm: number, grootte_mm: number):
  * Breekt de tekst greedy op woorden in regels die elk in `breedte_mm` passen. Witruimte wordt
  * samengevoegd, een regeleinde blijft een regeleinde, een woord dat langer is dan een regel wordt
  * hard gebroken. Een lege tekst geeft geen regels. Gooit een `RangeError` als er geen teken past.
+ * `factor` vermenigvuldigt de geschatte tekenbreedte: groter dan 1 is voorzichtiger (minder tekens per regel).
  */
-export function breekRegels(tekst: string, breedte_mm: number, grootte_mm: number): string[] {
-  const max = tekensPerRegel(breedte_mm, grootte_mm);
+export function breekRegels(tekst: string, breedte_mm: number, grootte_mm: number, factor = 1): string[] {
+  const max = tekensPerRegel(breedte_mm / factor, grootte_mm);
   if (max < 1) throw new RangeError(`Geen teken past in ${breedte_mm} mm bij ${grootte_mm} mm`);
   const regels: string[] = [];
   for (const alinea of tekst.split("\n")) {

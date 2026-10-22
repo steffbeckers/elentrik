@@ -1,11 +1,22 @@
 import { analyseer, controleer, formatteerBericht, haalRegelset, type Bevinding } from "@elentrik/arei";
-import { installatie, referentieAppartement, referentieWoning } from "@elentrik/arei/testing";
+import {
+  installatie,
+  referentieAppartement,
+  referentieMetOnderbord,
+  referentieRijwoning,
+  referentieWoning,
+} from "@elentrik/arei/testing";
 import { bruikbaar, papierMaat, STANDAARD_PAPIER_A4, tekstBreedte } from "@elentrik/layout";
 import type { InstallatieDocument, Partij } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { NL, overgeslagenPaginas, printHtml, type PrintOpties } from "../src/index";
 import { cartouche } from "../src/print/cartouche";
-import { KRINGENLIJST_KOP_MM, KRINGENLIJST_RIJ_MM, kringenlijstRijenPerPagina } from "../src/print/print-html";
+import {
+  BIJLAGE_BREEDTE_FACTOR,
+  KRINGENLIJST_KOP_MM,
+  KRINGENLIJST_RIJ_MM,
+  kringenlijstRijenPerPagina,
+} from "../src/print/print-html";
 import { afkorten, breekRegels } from "../src/print/tekst";
 import { kloon, nummerNodeIds } from "./hulp";
 
@@ -115,6 +126,33 @@ describe("printHtml", () => {
     );
     expect(uit.overgeslagen).toEqual([]);
     await expect(nummerNodeIds(uit.html)).toMatchFileSnapshot("__snapshots__/print-woning-a3.html");
+  });
+
+  test("snapshot: referentieRijwoning op A4 met alle onderdelen", async () => {
+    const doc = metGegevens(referentieRijwoning());
+    const uit = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties());
+    await expect(nummerNodeIds(uit.html)).toMatchFileSnapshot("__snapshots__/print-rijwoning-a4.html");
+  });
+
+  test("snapshot: referentieMetOnderbord op A4 met alle onderdelen", async () => {
+    const doc = metGegevens(referentieMetOnderbord());
+    const uit = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties());
+    await expect(nummerNodeIds(uit.html)).toMatchFileSnapshot("__snapshots__/print-met-onderbord-a4.html");
+  });
+
+  test("de HTML laadt niets van het net: geen src of href naar http(s)", () => {
+    const referenties = [referentieAppartement(), referentieRijwoning(), referentieWoning(), referentieMetOnderbord()];
+    for (const referentie of referenties) {
+      const doc = metSituatie(metGegevens(referentie));
+      const { html } = printHtml(
+        doc,
+        analyseer(doc),
+        bevindingenVan(doc),
+        opties({ afbeeldingen: { "raster-1": "plan-1.png" }, logo: "logo.png" }),
+      );
+      expect(html).not.toMatch(/src="http/i);
+      expect(html).not.toMatch(/href="http/i);
+    }
   });
 
   test("een volledig document met @page op papiermaat en een vaste maat per pagina", () => {
@@ -229,6 +267,32 @@ describe("printHtml", () => {
     expect(regelsMotivatie.length).toBeGreaterThan(1);
     for (const r of regelsMotivatie) expect(tekstBreedte(r.tekst, r.grootte)).toBeLessThanOrEqual(r.breedte);
     expect(regelsMotivatie.map((r) => r.tekst).join(" ")).toBe(`${NL.bijlage.motivatie}: ${motivatie}`);
+  });
+
+  test("lange teksten: een motivatie in hoofdletters W past met de voorzichtige breedte, ook in het echte lettertype", () => {
+    const doc = metGegevens(referentieAppartement());
+    const analyse = analyseer(doc);
+    const motivatie = Array.from({ length: 40 }, (_, i) => "W".repeat(5 + (i % 30))).join(" ");
+    doc.afwijkingen.push({
+      regelId: "arei.kring.max-contactdozen",
+      nodeId: analyse.kringen[0]!.puntIds[0]!,
+      motivatie,
+      door: "WWWWWWWWWW",
+      datum: "2026-10-02",
+    });
+    // De breedste Latijnse letter in Noto Sans (het sans-serif van Gotenberg): "W" is 0,93 em.
+    const W_EM = 0.93;
+    for (const papier of ["A4", "A3"] as const) {
+      const { html } = printHtml(doc, analyse, [], opties({ papier, onderdelen: alleenOnderdeel("bijlage") }));
+      const bijlage = regels(html).filter((r) => ["motivatie", "door", "afwijking"].includes(r.klasse));
+      const motivatieRegels = bijlage.filter((r) => r.klasse === "motivatie");
+      expect(motivatieRegels.length).toBeGreaterThan(1);
+      for (const r of bijlage) {
+        expect(tekstBreedte(r.tekst, r.grootte) * BIJLAGE_BREEDTE_FACTOR).toBeLessThanOrEqual(r.breedte);
+        expect(r.tekst.length * r.grootte * W_EM).toBeLessThanOrEqual(r.breedte);
+      }
+      expect(motivatieRegels.map((r) => r.tekst).join(" ")).toBe(`${NL.bijlage.motivatie}: ${motivatie}`);
+    }
   });
 
   test("lange teksten: elke tekstregel in het document past in zijn vak", () => {
@@ -717,5 +781,10 @@ describe("breekRegels", () => {
 
   test("een regel waar geen teken in past is een RangeError", () => {
     expect(() => breekRegels("abc", 1, 2.5)).toThrow(RangeError);
+  });
+
+  test("een factor maakt de geschatte tekenbreedte groter: minder tekens per regel", () => {
+    expect(breekRegels("x".repeat(20), 15, 2.5, 2)).toEqual(["x".repeat(5), "x".repeat(5), "x".repeat(5), "x".repeat(5)]);
+    expect(breekRegels("x".repeat(20), 15, 2.5, 1)).toEqual(breekRegels("x".repeat(20), 15, 2.5));
   });
 });

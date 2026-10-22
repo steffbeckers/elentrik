@@ -60,6 +60,32 @@ test("de tabel toont de kolommen van de pdf; een klik of toets selecteert het pu
   await page.keyboard.press("Space");
   await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
 
+  // Roving tabindex: alleen de actieve rij staat in de tabvolgorde.
+  const tabindexen = () => rijen.evaluateAll((els) => els.map((el) => el.getAttribute("tabindex")));
+  await expect.poll(tabindexen).toEqual(["0", ...Array<string>(aantal - 1).fill("-1")]);
+
+  // Pijlen, Home en End verplaatsen de focus tussen de rijen; de selectie blijft tot Enter.
+  await page.keyboard.press("ArrowDown");
+  await expect(rijen.nth(1)).toBeFocused();
+  await expect(rijen.nth(1)).toHaveAttribute("tabindex", "0");
+  await expect(rijen.first()).toHaveAttribute("tabindex", "-1");
+  await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("ArrowUp");
+  await expect(rijen.first()).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(rijen.first()).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(rijen.last()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(rijen.last()).toBeFocused();
+  await expect.poll(tabindexen).toEqual([...Array<string>(aantal - 1).fill("-1"), "0"]);
+  await page.keyboard.press("Enter");
+  await expect(rijen.last()).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Home");
+  await expect(rijen.first()).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
+
   // De selectie blijft bij een wissel van tabblad en is terug te zien op het schema.
   await page.getByTestId("tab-eendraadschema").click();
   await expect(page.getByTestId("schema-canvas")).toBeVisible();

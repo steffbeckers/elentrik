@@ -64,6 +64,11 @@ export type Autosave = {
   laadServerversie(): Promise<void>;
   bewaarAlsKopie(): Promise<void>;
   /**
+   * Een 409 van buiten het bewaren (de export): de server heeft een andere versie dan de editor.
+   * Hetzelfde conflictpad als een 409 bij het bewaren; `laadServerversie` of `bewaarAlsKopie` lost het op.
+   */
+  meldConflict(huidigeVersie: number): void;
+  /**
    * Stopt de watcher en de timers. Gebeurt ook automatisch als de scope verdwijnt. Staan er dan
    * onbewaarde wijzigingen (en geen conflict of fout), dan volgt nog één poging om ze te bewaren.
    */
@@ -338,6 +343,12 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     });
   }
 
+  function meldConflict(huidigeVersie: number): void {
+    conflict.value = { huidigeVersie };
+    status.value = "conflict";
+    wisTimer();
+  }
+
   function stop(): void {
     if (gestopt) return;
     gestopt = true;
@@ -368,5 +379,15 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return conceptGelukt;
   }
 
-  return { status, conflict, fout, nuOpslaan, laadServerversie, bewaarAlsKopie, stop, wachtOpConcept };
+  return {
+    status,
+    conflict,
+    fout,
+    nuOpslaan,
+    laadServerversie,
+    bewaarAlsKopie,
+    meldConflict,
+    stop,
+    wachtOpConcept,
+  };
 }

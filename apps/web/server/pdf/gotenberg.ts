@@ -71,6 +71,21 @@ async function foutDetails(antwoord: Response): Promise<{ status: number; body: 
   return { status: antwoord.status, body };
 }
 
+/**
+ * De oorzaak van een netwerkfout voor de log: Node's fetch geeft een `TypeError("fetch failed")` met de
+ * echte reden (bv. `ECONNREFUSED`) in `cause`. Zonder bruikbare oorzaak `undefined`.
+ */
+function netwerkOorzaak(e: unknown): { code?: string; bericht?: string } | undefined {
+  const oorzaak = e instanceof Error ? e.cause : undefined;
+  if (typeof oorzaak !== "object" || oorzaak === null) return undefined;
+  const { code, message } = oorzaak as { code?: unknown; message?: unknown };
+  const details = {
+    ...(typeof code === "string" ? { code } : {}),
+    ...(typeof message === "string" && message !== "" ? { bericht: message } : {}),
+  };
+  return Object.keys(details).length > 0 ? details : undefined;
+}
+
 function isPdf(data: Uint8Array): boolean {
   return PDF_KOP.every((byte, i) => data[i] === byte);
 }
@@ -118,7 +133,10 @@ async function eenPoging(
       return { fout: new PdfFout("TIMEOUT", "De PDF-dienst antwoordde niet op tijd."), opnieuw: true };
     }
     const reden = e instanceof Error ? e.message : String(e);
-    return { fout: new PdfFout("ONBEREIKBAAR", `De PDF-dienst is niet bereikbaar (${reden}).`), opnieuw: true };
+    return {
+      fout: new PdfFout("ONBEREIKBAAR", `De PDF-dienst is niet bereikbaar (${reden}).`, netwerkOorzaak(e)),
+      opnieuw: true,
+    };
   } finally {
     clearTimeout(timer);
   }

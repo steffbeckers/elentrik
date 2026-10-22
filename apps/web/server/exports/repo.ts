@@ -109,17 +109,23 @@ function naarInfo(rij: typeof exports.$inferSelect): ExportInfo {
  * lukt, komen bestand, snapshot en exportrij tot stand (het bestand vóór de rijen, de rijen in één
  * transactie). Bij een `PdfFout` wordt niets bewaard. De bijlage is verplicht bij onopgeloste fouten
  * en bij overgeslagen situatiepagina's. Een onbekend project geeft `ProjectFout("NIET_GEVONDEN")`.
+ *
+ * `versie` is de versie die de editor toont (`If-Match`). Is het opgeslagen document intussen een
+ * andere versie, dan volgt `ProjectFout("CONFLICT", { versie })` zoals bij het bewaren, en wordt er
+ * niets gemaakt of bewaard: de PDF moet het document zijn dat op het scherm staat.
  */
 export async function maakExport(
   db: Db,
   opslag: BestandOpslag,
   projectId: string,
+  versie: number,
   invoer: ExportInvoer,
   deps: ExportDeps,
 ): Promise<ExportInfo> {
   const nu = (deps.nu ?? (() => new Date()))();
   const project = await haalProject(db, projectId);
   if (!project) throw new ProjectFout("NIET_GEVONDEN");
+  if (project.versie !== versie) throw new ProjectFout("CONFLICT", { versie: project.versie });
   const doc = project.document;
 
   const analyse = analyseer(doc);
@@ -151,6 +157,12 @@ export async function maakExport(
     if (afbeelding) {
       logo = `logo.${afbeelding.extensie}`;
       meegegeven.push({ naam: logo, data: afbeelding.data, mime: afbeelding.mime });
+    } else {
+      // De export gaat door zonder logo, maar het ontbrekende bestand mag niet onopgemerkt blijven.
+      console.warn("Logo van de installateur ontbreekt; export zonder logo", {
+        projectId,
+        logoBestandId: installateur.logoBestandId,
+      });
     }
   }
 

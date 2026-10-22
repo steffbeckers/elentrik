@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { maakExportsApi, type ExportsFetch } from "../app/composables/useExportsApi";
+import { ConflictFout } from "../app/composables/useProjectenApi";
 import type { ExportInfo, ExportInvoer } from "../shared/exports";
 
 type Oproep = Parameters<ExportsFetch>;
@@ -24,15 +25,27 @@ const info: ExportInfo = {
 };
 
 describe("useExportsApi", () => {
-  test("maak stuurt de invoer als POST naar /api/projecten/:id/exports", async () => {
-    const invoer: ExportInvoer = {
-      onderdelen: { eendraadschema: true, situatieschema: false, kringenlijst: true, bijlage: true },
-      papier: "A3",
-      versieLabel: "V1",
-    };
+  const invoer: ExportInvoer = {
+    onderdelen: { eendraadschema: true, situatieschema: false, kringenlijst: true, bijlage: true },
+    papier: "A3",
+    versieLabel: "V1",
+  };
+
+  test("maak stuurt de invoer als POST naar /api/projecten/:id/exports, met de getoonde versie als If-Match", async () => {
     const { api, oproepen } = maakApi(info);
-    expect(await api.maak("p1", invoer)).toEqual(info);
-    expect(oproepen).toEqual([["/api/projecten/p1/exports", { method: "POST", body: invoer }]]);
+    expect(await api.maak("p1", 6, invoer)).toEqual(info);
+    expect(oproepen).toEqual([
+      ["/api/projecten/p1/exports", { method: "POST", headers: { "If-Match": "6" }, body: invoer }],
+    ]);
+  });
+
+  test("een 409 wordt een ConflictFout met de versie op de server, zoals bij het bewaren", async () => {
+    const api = maakExportsApi(async () => {
+      throw Object.assign(new Error("409"), { status: 409, data: { data: { versie: 7 } } });
+    });
+    const fout = await api.maak("p1", 6, invoer).catch((e: unknown) => e);
+    expect(fout).toBeInstanceOf(ConflictFout);
+    expect((fout as ConflictFout).huidigeVersie).toBe(7);
   });
 
   test("lijst leest /api/projecten/:id/exports", async () => {

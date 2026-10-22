@@ -21,6 +21,8 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:8.37.0-chromium
     restart: unless-stopped
+    # Ruimer dan de 60 s van de client (gotenberg.ts): zo vuurt de time-out van de client eerst.
+    command: ["gotenberg", "--api-timeout=65s"]
     ports:
       - "127.0.0.1:3001:3000"
     healthcheck:

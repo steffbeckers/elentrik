@@ -26,7 +26,7 @@ describe("formulierUitProject", () => {
     expect(f.klantNaam).toBe("Janssens");
     expect(f.stroomtype).toBe("3N400V");
     expect(f.klant).toEqual({ straat: "", nummer: "", bus: "", postcode: "", gemeente: "", land: "België" });
-    expect(f.werf.land).toBe("BE");
+    expect(f.werf.land).toBe("België");
     expect(f.ean).toBe("");
     expect(f.datum).toBe("2026-10-18");
   });
@@ -48,9 +48,14 @@ describe("valideerProjectFormulier", () => {
     ]);
   });
 
-  test("het werfadres is altijd verplicht", () => {
-    expect(valideerProjectFormulier(startFormulier())).toEqual([
-      { name: "werf.straat", fout: "adresVerplicht" },
+  test("een leeg werfadres blokkeert niets: hernoemen of de klant wijzigen kan zonder werfadres", () => {
+    expect(valideerProjectFormulier(startFormulier())).toEqual([]);
+    expect(valideerProjectFormulier(startFormulier({ naam: "Nieuwe naam", klantNaam: "Peeters" }))).toEqual([]);
+  });
+
+  test("een gedeeltelijk werfadres vraagt de rest, zoals het klantadres", () => {
+    const f = startFormulier();
+    expect(valideerProjectFormulier({ ...f, werf: { ...f.werf, straat: "D" } })).toEqual([
       { name: "werf.nummer", fout: "adresVerplicht" },
       { name: "werf.postcode", fout: "adresVerplicht" },
       { name: "werf.gemeente", fout: "adresVerplicht" },
@@ -82,10 +87,16 @@ describe("gegevensUitFormulier", () => {
       klantNaam: "Janssens",
       stroomtype: "2x230V",
       klantAdres: null,
-      werfadres: { straat: "Dorpsstraat", nummer: "3", postcode: "9000", gemeente: "Gent", land: "BE" },
+      werfadres: { straat: "Dorpsstraat", nummer: "3", postcode: "9000", gemeente: "Gent", land: "België" },
       ean: "54",
       datum: "2026-10-18",
     });
+  });
+
+  test("een leeg werfadres gaat niet mee: het werfadres in het document blijft ongewijzigd", () => {
+    const gegevens = gegevensUitFormulier(startFormulier({ naam: "Nieuwe naam" }));
+    expect(gegevens).not.toHaveProperty("werfadres");
+    expect(gegevens.naam).toBe("Nieuwe naam");
   });
 
   test("een ingevuld klantadres gaat mee", () => {

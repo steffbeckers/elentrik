@@ -281,7 +281,8 @@
         "situatieschema": "Situatieschema",
         "kringenlijst": "Kringenlijst",
         "bijlage": "Bijlage met bevindingen",
-        "geen": "Kies minstens één onderdeel."
+        "geen": "Kies minstens één onderdeel.",
+        "zonderPlan": "Situatiepagina's zonder plan worden in de bijlage vermeld."
       },
       "bijlageVerplicht": "Er is {n} onopgeloste fout; de bijlage komt verplicht mee. | Er zijn {n} onopgeloste fouten; de bijlage komt verplicht mee.",
       "papier": "Papier",

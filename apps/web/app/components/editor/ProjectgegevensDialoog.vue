@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { StroomtypeSchema } from "@elentrik/model";
 import AdresVelden from "~/components/editor/AdresVelden.vue";
+import { leegAdresFormulier } from "~/editor/adres";
 import {
   formulierUitProject,
   gegevensUitFormulier,
@@ -23,8 +24,8 @@ const formulier = reactive<ProjectFormulier>({
   naam: "",
   klantNaam: "",
   stroomtype: "2x230V",
-  klant: { straat: "", nummer: "", bus: "", postcode: "", gemeente: "", land: "" },
-  werf: { straat: "", nummer: "", bus: "", postcode: "", gemeente: "", land: "" },
+  klant: leegAdresFormulier(),
+  werf: leegAdresFormulier(),
   ean: "",
   datum: "",
 });
@@ -71,7 +72,7 @@ function bewaar(): void {
 
         <section class="space-y-4">
           <h3 class="font-semibold">{{ $t("editor.projectgegevens.werf.titel") }}</h3>
-          <AdresVelden v-model="formulier.werf" naam="werf" verplicht />
+          <AdresVelden v-model="formulier.werf" naam="werf" />
           <UFormField name="ean" :label="$t('editor.projectgegevens.werf.ean')">
             <UInput v-model="formulier.ean" class="w-full" inputmode="numeric" data-testid="werf-ean" />
           </UFormField>

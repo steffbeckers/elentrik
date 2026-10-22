@@ -23,6 +23,8 @@ export type Teksten = {
     differentieel: string;
     leiding: string;
   };
+  /** Het differentieel in de kringenlijst: "{gevoeligheid} {eenheid} {type} {klasse}", bv. "30 mA type A". */
+  differentieel: { eenheid: string; type: string };
   types: Record<NodeType, string>;
   /** Kleine letters: de soort staat tussen haakjes achter "Toestel". */
   toestelsoorten: Record<Toestelsoort, string>;
@@ -71,6 +73,7 @@ export const NL: Teksten = {
     differentieel: "Differentieel",
     leiding: "Leiding",
   },
+  differentieel: { eenheid: "mA", type: "type" },
   types: {
     aansluiting: "Aansluiting",
     teller: "Teller",

@@ -100,6 +100,78 @@ test("exporteren kan niet als opslaan mislukt", async ({ page, request }) => {
   await expect(dialoog.getByTestId("export-start")).toBeDisabled();
 });
 
+test("een ander venster bewaarde intussen: de export geeft het conflictscherm en maakt geen PDF", async ({
+  page,
+  request,
+}) => {
+  const id = await nieuwProject(request, "conflict");
+  await page.goto(`/projecten/${id}`);
+  // Ruime wachttijd: als eerste test van een run compileert de dev-server de editor nog.
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 30_000 });
+
+  // Een ander "venster" bewaart een nieuwe versie; dit venster toont nog de oude en heeft zelf niets gewijzigd.
+  const project = (await (await request.get(`/api/projecten/${id}`)).json()) as {
+    versie: number;
+    naam: string;
+    document: unknown;
+  };
+  const put = await request.put(`/api/projecten/${id}`, {
+    headers: { "If-Match": String(project.versie) },
+    data: { naam: `${project.naam} elders`, document: project.document },
+  });
+  expect(put.ok(), await put.text()).toBe(true);
+
+  await page.getByTestId("exporteren").click();
+  const dialoog = page.getByRole("dialog");
+  await expect(dialoog.getByTestId("export-hint-zonder-plan")).toHaveText(
+    "Situatiepagina's zonder plan worden in de bijlage vermeld.",
+  );
+  await expect(dialoog.getByTestId("export-versie")).toHaveValue("V1");
+  const antwoord = page.waitForResponse(
+    (r) => r.url().endsWith(`/api/projecten/${id}/exports`) && r.request().method() === "POST",
+  );
+  await dialoog.getByTestId("export-start").click();
+  expect((await antwoord).status()).toBe(409);
+  expect((await antwoord).request().headers()["if-match"]).toBe(String(project.versie));
+
+  // De exportdialoog sluit en het bestaande conflictscherm neemt het over.
+  const conflict = page.getByRole("dialog");
+  await expect(conflict).toContainText("Conflict");
+  await expect(conflict.getByRole("button", { name: "Serverversie laden" })).toBeVisible();
+  await expect(conflict.getByRole("button", { name: "Mijn versie als kopie bewaren" })).toBeVisible();
+  await expect(page.getByTestId("export-start")).toHaveCount(0);
+  const lijst = (await (await request.get(`/api/projecten/${id}/exports`)).json()) as unknown[];
+  expect(lijst).toEqual([]);
+
+  // Serverversie laden: daarna toont dit venster de nieuwe versie en lukt de export.
+  await conflict.getByRole("button", { name: "Serverversie laden" }).click();
+  await expect(conflict).toHaveCount(0);
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen");
+  await expect(page.getByTestId("projectnaam")).toContainText("elders");
+  await page.getByTestId("exporteren").click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("dialog").getByTestId("export-start").click();
+  await download;
+  await expect(page.getByRole("dialog").getByTestId("export-rij-V1")).toBeVisible();
+});
+
+test("kan de lijst van eerdere exports niet laden, dan geen voorgesteld versielabel", async ({ page, request }) => {
+  const id = await nieuwProject(request, "lijstfout");
+  await page.route(`**/api/projecten/${id}/exports`, (route) =>
+    route.request().method() === "GET" ? route.fulfill({ status: 500 }) : route.fallback(),
+  );
+  await page.goto(`/projecten/${id}`);
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 30_000 });
+  await page.getByTestId("exporteren").click();
+
+  const dialoog = page.getByRole("dialog");
+  await expect(dialoog.getByTestId("export-lijst")).toContainText("De eerdere exports konden niet geladen worden.");
+  await expect(dialoog.getByTestId("export-versie")).toHaveValue("");
+  await expect(dialoog.getByTestId("export-start")).toBeDisabled();
+  await dialoog.getByTestId("export-versie").fill("V7");
+  await expect(dialoog.getByTestId("export-start")).toBeEnabled();
+});
+
 // ---------------------------------------------------------------------------------------------
 // De echte export door Gotenberg: bedrijfsgegevens, situatieplan, werfadres, download en pagina's.
 // ---------------------------------------------------------------------------------------------

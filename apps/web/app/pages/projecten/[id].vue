@@ -336,6 +336,7 @@ onBeforeUnmount(() => {
       v-model:open="exportOpen"
       :status="autosave.status.value"
       :nu-opslaan="autosave.nuOpslaan"
+      @conflict="autosave.meldConflict"
     />
     <ConflictDialoog
       v-model:open="conflictOpen"

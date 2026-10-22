@@ -51,7 +51,10 @@ function rij(
     type: typeTekst(node, teksten),
     ruimte: node.ruimte ? teksten.ruimtes[node.ruimte] : "",
     beveiliging: beveiligingTekst(doc, beveiligingId),
-    differentieel: differentieel?.type === "differentieel" ? `${differentieel.gevoeligheid_mA} mA type ${differentieel.klasse}` : "",
+    differentieel:
+      differentieel?.type === "differentieel"
+        ? `${differentieel.gevoeligheid_mA} ${teksten.differentieel.eenheid} ${teksten.differentieel.type} ${differentieel.klasse}`
+        : "",
     leiding: leiding?.type === "leiding" ? leidingLabel(leiding) : "",
   };
 }

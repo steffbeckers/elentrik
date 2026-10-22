@@ -40,7 +40,7 @@ describe("nieuwDocument", () => {
       nummer: "",
       postcode: "",
       gemeente: "",
-      land: "BE",
+      land: "België",
     });
     expect(doc.situatie).toEqual({ paginas: [] });
     expect(doc.afwijkingen).toEqual([]);

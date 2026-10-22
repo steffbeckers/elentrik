@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useExportsApi } from "~/composables/useExportsApi";
+import { ConflictFout } from "~/composables/useProjectenApi";
 import { magExporteren, onopgelosteFouten, serverBoodschap, volgendVersieLabel } from "~/editor/export";
 import { useEditorStore } from "~/stores/editor";
 import type { ExportInfo, ExportOnderdelen, Papierformaat } from "../../../shared/exports";
@@ -11,6 +12,10 @@ const props = defineProps<{
   status: AutosaveStatus;
   /** Bewaart de wijzigingen nu, zonder de vertraging van de autosave. */
   nuOpslaan: () => Promise<void>;
+}>();
+const emit = defineEmits<{
+  /** De server heeft een andere versie dan de editor toont (409): de pagina toont het conflictscherm. */
+  conflict: [huidigeVersie: number];
 }>();
 
 const store = useEditorStore();
@@ -90,7 +95,7 @@ async function bijOpenen(): Promise<void> {
   // Een mislukt bewaren zet de status zelf (`lokaal`, `fout`, ...): de dialoog toont dan de reden.
   await Promise.all([props.nuOpslaan().catch(() => {}), projectId === null ? undefined : laadLijst(projectId)]);
   if (deze !== opening) return;
-  versie.value = volgendVersieLabel(eerdere.value.length);
+  versie.value = volgendVersieLabel(lijstFout.value ? null : eerdere.value.length);
   fase.value = "formulier";
 }
 
@@ -116,16 +121,22 @@ function download(url: string): void {
   link.remove();
 }
 
+/** Loopt er al een export, dan start een tweede klik er geen nieuwe. */
+let exportLoopt = false;
+
 async function exporteer(): Promise<void> {
+  if (exportLoopt) return;
   const projectId = store.projectId;
   if (projectId === null || geblokkeerd.value) {
     fase.value = "formulier";
     return;
   }
+  exportLoopt = true;
   const deze = opening;
   fase.value = "bezig";
   try {
-    const info = await api.maak(projectId, {
+    // De versie die de editor toont: heeft de server een andere, dan volgt een ConflictFout.
+    const info = await api.maak(projectId, store.versie, {
       onderdelen: { ...onderdelen, bijlage: bijlageVerplicht.value || onderdelen.bijlage },
       papier: papier.value,
       versieLabel: versie.value.trim(),
@@ -135,10 +146,17 @@ async function exporteer(): Promise<void> {
     if (deze !== opening) return;
     await laadLijst(projectId);
     if (deze !== opening) return;
-    versie.value = volgendVersieLabel(eerdere.value.length);
+    versie.value = volgendVersieLabel(lijstFout.value ? null : eerdere.value.length);
   } catch (fout) {
+    if (fout instanceof ConflictFout) {
+      // Niet de PDF van een andere versie dan op het scherm: het conflictscherm neemt het over.
+      open.value = false;
+      emit("conflict", fout.huidigeVersie);
+      return;
+    }
     toast.add({ title: serverBoodschap(fout) ?? t("editor.export.mislukt"), color: "error" });
   } finally {
+    exportLoopt = false;
     if (deze === opening) fase.value = "formulier";
   }
 }
@@ -226,6 +244,9 @@ const datumFormaat = computed(
               />
             </template>
             <p v-if="geenOnderdeel" class="text-sm text-error">{{ $t("editor.export.onderdelen.geen") }}</p>
+            <p class="text-sm text-muted" data-testid="export-hint-zonder-plan">
+              {{ $t("editor.export.onderdelen.zonderPlan") }}
+            </p>
           </fieldset>
 
           <UFormField :label="$t('editor.export.papier')">
