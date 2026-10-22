@@ -7,7 +7,7 @@ import type { Db } from "../db";
 import { bedrijfsinstellingen, bestanden, projecten } from "../db/schema";
 
 /** De rij met de bedrijfsgegevens van vóór de organisaties. */
-const LEGACY_BEDRIJF_ID = 1;
+export const LEGACY_BEDRIJF_ID = 1;
 
 export interface OvernameOpties {
   /**

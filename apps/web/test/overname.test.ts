@@ -205,9 +205,43 @@ describe("eerste bevestigde aanmelding", () => {
       .from(bedrijfsinstellingen)
       .where(eq(bedrijfsinstellingen.organisatieId, org!.id));
     expect(eigen!.installateur).toEqual({ naam: "Janssens BV" });
+    const [eersteLid] = await lidmaatschappen("eerste@voorbeeld.be");
     const [legacy] = await db.select().from(bedrijfsinstellingen).where(eq(bedrijfsinstellingen.id, 1));
-    expect(legacy!.organisatieId).not.toBe(org!.id);
+    expect(legacy!.organisatieId).toBe(eersteLid!.organizationId);
     expect(legacy!.installateur.naam).toBe(BESTAAND.naam);
+  });
+
+  test("zonder projecten neemt de eerste gebruiker toch de bedrijfsgegevens met logo over, een tweede niet", async () => {
+    const { logoId } = await zaaiBestaandeGegevens();
+    await db.delete(projecten);
+
+    await registreer("eerste@voorbeeld.be", "Peeters Elektro");
+    await bevestig("eerste@voorbeeld.be");
+    const [eersteLid] = await lidmaatschappen("eerste@voorbeeld.be");
+
+    const [legacy] = await db.select().from(bedrijfsinstellingen).where(eq(bedrijfsinstellingen.id, 1));
+    expect(legacy!.organisatieId).toBe(eersteLid!.organizationId);
+    expect(legacy!.installateur).toEqual({ ...BESTAAND, logoBestandId: logoId });
+    const [logo] = await db.select().from(bestanden).where(eq(bestanden.id, logoId));
+    expect(logo!.organisatieId).toBe(eersteLid!.organizationId);
+    // Geen tweede rij voor de eerste organisatie.
+    expect(
+      await db.select().from(bedrijfsinstellingen).where(eq(bedrijfsinstellingen.organisatieId, eersteLid!.organizationId)),
+    ).toHaveLength(1);
+
+    await registreer("tweede@voorbeeld.be", "Janssens BV");
+    await bevestig("tweede@voorbeeld.be");
+    const [tweedeLid] = await lidmaatschappen("tweede@voorbeeld.be");
+
+    const [naTweede] = await db.select().from(bedrijfsinstellingen).where(eq(bedrijfsinstellingen.id, 1));
+    expect(naTweede!.organisatieId).toBe(eersteLid!.organizationId);
+    const [eigen] = await db
+      .select()
+      .from(bedrijfsinstellingen)
+      .where(eq(bedrijfsinstellingen.organisatieId, tweedeLid!.organizationId));
+    expect(eigen!.installateur).toEqual({ naam: "Janssens BV" });
+    const [logoNa] = await db.select().from(bestanden).where(eq(bestanden.id, logoId));
+    expect(logoNa!.organisatieId).toBe(eersteLid!.organizationId);
   });
 
   test("opnieuw inloggen maakt geen tweede organisatie", async () => {

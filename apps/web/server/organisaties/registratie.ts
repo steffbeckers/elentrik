@@ -10,7 +10,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { and, count, eq, isNull } from "drizzle-orm";
 import type { Db } from "../db";
 import { bedrijfsinstellingen, member, organization, projecten, session, user } from "../db/schema";
-import { neemBestaandeGegevensOver, type OvernameOpties } from "./overname";
+import { LEGACY_BEDRIJF_ID, neemBestaandeGegevensOver, type OvernameOpties } from "./overname";
 
 export interface RegistratieOpties extends OvernameOpties {
   /** De sessie van deze aanmelding; de nieuwe organisatie wordt er de actieve organisatie. */
@@ -37,7 +37,8 @@ export function maakSlug(naam: string): string {
  * Maakt voor een bevestigde gebruiker zonder organisatie, met een `wachtendeBedrijfsnaam`, een
  * organisatie met die naam en de gebruiker als `owner`; maakt ze actief in de sessie, vult
  * `installateur.naam` in als die nog leeg is, wist `wachtendeBedrijfsnaam` en neemt de bestaande
- * gegevens over als er nog projecten zonder organisatie zijn. Alles in één transactie.
+ * gegevens over als er nog projecten zonder organisatie of legacy-bedrijfsgegevens zijn. Alles in
+ * één transactie.
  *
  * Wie al lid is van een organisatie (of via een uitnodiging zonder bedrijfsnaam kwam), krijgt
  * geen nieuwe; een wachtende naam vervalt dan. Geeft het id van de nieuwe organisatie, of null.
@@ -83,12 +84,20 @@ export async function richtEersteOrganisatieIn(
       createdAt: nu,
     });
 
+    // Overnemen als er nog projecten zonder organisatie zijn, of bedrijfsgegevens van vóór de
+    // organisaties (ook zonder projecten). Eenmalig: daarna is beide gekoppeld.
     const [zonderOrganisatie] = await tx
       .select({ id: projecten.id })
       .from(projecten)
       .where(isNull(projecten.organisatieId))
       .limit(1);
-    if (zonderOrganisatie) await neemBestaandeGegevensOver(tx, organisatieId, opties);
+    const [legacyBedrijf] = zonderOrganisatie
+      ? []
+      : await tx
+          .select({ id: bedrijfsinstellingen.id })
+          .from(bedrijfsinstellingen)
+          .where(and(eq(bedrijfsinstellingen.id, LEGACY_BEDRIJF_ID), isNull(bedrijfsinstellingen.organisatieId)));
+    if (zonderOrganisatie || legacyBedrijf) await neemBestaandeGegevensOver(tx, organisatieId, opties);
 
     // De bedrijfsnaam wordt installateur.naam, maar overschrijft nooit een bestaande naam.
     const [bedrijf] = await tx
