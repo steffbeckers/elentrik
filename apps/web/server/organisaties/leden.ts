@@ -340,6 +340,8 @@ export async function trekIn(event: H3Event): Promise<null> {
   await viaAuth(event, () =>
     gebruikAuth().api.cancelInvitation({ body: { invitationId: id }, headers: event.headers, returnHeaders: true }),
   );
+  // De link in de mail is daarmee ook niets meer waard: de token verdwijnt.
+  await wisUitnodigingstokens(gebruikDb(), id);
   setResponseStatus(event, 204);
   return null;
 }

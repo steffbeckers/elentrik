@@ -142,32 +142,39 @@ function tekst(waarde: unknown): string | undefined {
   return typeof waarde === "string" && waarde !== "" ? waarde : undefined;
 }
 
-/** De organisatie waarop een organization-endpoint werkt: uit body, query, uitnodiging of sessie. */
-async function organisatieVan(db: Db, ctx: AuthCtx, body: Body, actief: string | null): Promise<string | null> {
+/**
+ * Alle organisaties die een organization-endpoint kan bedoelen: uit body, query, slug, de
+ * uitnodiging en de actieve organisatie van de sessie. Better Auth kiest per endpoint een andere
+ * voorrang; daarom controleert de eigenaarsregel ze allemaal, zodat een mengeling (bv. het id van
+ * de ene en de slug van een andere organisatie) niets omzeilt.
+ */
+async function mogelijkeOrganisaties(db: Db, ctx: AuthCtx, body: Body, actief: string | null): Promise<string[]> {
   const query = (ctx.query && typeof ctx.query === "object" ? ctx.query : {}) as Body;
-  if (ctx.path === "/organization/cancel-invitation") {
-    const invitationId = tekst(body.invitationId);
-    if (!invitationId) return null;
-    const [rij] = await db
-      .select({ org: schema.invitation.organizationId })
-      .from(schema.invitation)
-      .where(eq(schema.invitation.id, invitationId));
-    return rij?.org ?? null;
-  }
-  const slug = tekst(query.organizationSlug);
+  const ids = new Set<string>();
+  for (const id of [tekst(body.organizationId), tekst(query.organizationId), actief]) if (id) ids.add(id);
+  const slug = tekst(query.organizationSlug) ?? tekst(body.organizationSlug);
   if (slug) {
     const [rij] = await db
       .select({ id: schema.organization.id })
       .from(schema.organization)
       .where(eq(schema.organization.slug, slug));
-    return rij?.id ?? null;
+    if (rij) ids.add(rij.id);
   }
-  return tekst(body.organizationId) ?? tekst(query.organizationId) ?? actief;
+  const invitationId = tekst(body.invitationId) ?? tekst(query.invitationId);
+  if (invitationId) {
+    const [rij] = await db
+      .select({ org: schema.invitation.organizationId })
+      .from(schema.invitation)
+      .where(eq(schema.invitation.id, invitationId));
+    if (rij) ids.add(rij.org);
+  }
+  return [...ids];
 }
 
 /**
  * De regels voor organisaties op de endpoints van Better Auth zelf (ruling R5), vóór Better Auth
- * het verzoek behandelt:
+ * het verzoek behandelt. Van buitenaf zijn die endpoints dicht (ruling R7, de auth-route); dit is
+ * de verdediging in de diepte voor de server-side aanroepen (`auth.api.*`):
  * - beheer (leden, rollen, uitnodigingen, hernoemen, en het geheel met de uitnodigingen) alleen
  *   door een eigenaar: een lid krijgt 403 `ALLEEN_EIGENAAR`;
  * - de laatste eigenaar kan niet vertrekken, verwijderd of gedegradeerd worden: 409
@@ -182,19 +189,22 @@ async function bewaakOrganisatie(db: Db, ctx: AuthCtx): Promise<void> {
   const sessie = await getSessionFromCtx(ctx).catch(() => null);
   if (!sessie) return;
   const actief = (sessie.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? null;
-  const organisatieId = await organisatieVan(db, ctx, body, actief);
-  if (!organisatieId) return;
 
   if (ALLEEN_EIGENAAR.has(ctx.path)) {
-    const [zelf] = await db
-      .select({ rol: schema.member.role })
-      .from(schema.member)
-      .where(and(eq(schema.member.userId, sessie.user.id), eq(schema.member.organizationId, organisatieId)));
-    if (zelf && !isEigenaarRol(zelf.rol)) {
-      throw new APIError("FORBIDDEN", { code: "ALLEEN_EIGENAAR", message: "Alleen een eigenaar mag dit." });
+    for (const organisatieId of await mogelijkeOrganisaties(db, ctx, body, actief)) {
+      const [zelf] = await db
+        .select({ rol: schema.member.role })
+        .from(schema.member)
+        .where(and(eq(schema.member.userId, sessie.user.id), eq(schema.member.organizationId, organisatieId)));
+      if (zelf && !isEigenaarRol(zelf.rol)) {
+        throw new APIError("FORBIDDEN", { code: "ALLEEN_EIGENAAR", message: "Alleen een eigenaar mag dit." });
+      }
     }
   }
   if (!RAAKT_EIGENAAR.has(ctx.path)) return;
+  // Verlaten, verwijderen en een rol wijzigen werken op organizationId uit de body of de actieve.
+  const organisatieId = tekst(body.organizationId) ?? actief;
+  if (!organisatieId) return;
 
   let doel: { rol: string } | undefined;
   let nieuweRol: string | null = null;

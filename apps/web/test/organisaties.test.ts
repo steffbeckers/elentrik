@@ -3,7 +3,7 @@
 // want de client kan die ook rechtstreeks aanspreken (ruling R5).
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth, zetAuth } from "../server/auth";
@@ -15,7 +15,7 @@ import { maakLimiet } from "../server/organisaties/limiet";
 import { maakUitnodigingstoken } from "../server/organisaties/uitnodigingstoken";
 import { maakProject } from "../server/projecten/repo";
 import { maakTestDb } from "./db";
-import { beveiligdeRoutebestanden, routeUit } from "./routes";
+import { API, AUTH_ROUTE, beveiligdeRoutebestanden, routeUit } from "./routes";
 
 const WACHTWOORD = "lang-genoeg-1";
 
@@ -200,6 +200,9 @@ beforeAll(async () => {
     const module = (await import(route.bestand)) as { default: EventHandler };
     router.use(route.pad, module.default, route.methode);
   }
+  // De catch-all van Better Auth, zoals Nitro hem serveert: voor de toegangstests van buitenaf.
+  const authRoute = (await import(`${API}/${AUTH_ROUTE}`)) as { default: EventHandler };
+  router.use("/api/auth/**", authRoute.default);
   app.use(router);
   server = createServer(toNodeListener(app));
   await new Promise<void>((klaar) => server.listen(0, "127.0.0.1", klaar));
@@ -597,6 +600,9 @@ describe("uitnodigingen beheren", () => {
     expect(weg.status).toBe(204);
     const [rij] = await db.select({ status: invitation.status }).from(invitation).where(eq(invitation.id, nieuw.id));
     expect(rij!.status).toBe("canceled");
+    // De token uit de mail is gewist, niet alleen ongeldig.
+    expect(await db.select().from(verification).where(eq(verification.value, nieuw.id))).toEqual([]);
+    expect((await stuur("GET", `/api/uitnodigingen/${token}`)).status).toBe(410);
     expect(await json(stuur("GET", "/api/organisaties/uitnodigingen", eigenaar.cookie))).toEqual([]);
     // Een tweede keer intrekken: niet meer open.
     expect((await stuur("DELETE", `/api/organisaties/uitnodigingen/${nieuw.id}`, eigenaar.cookie)).status).toBe(410);
@@ -922,6 +928,145 @@ describe("registreren via een uitnodiging", () => {
   });
 });
 
+// --- Better Auth-organisatieroutes van buitenaf (ruling R7) --------------------------------------
+
+/** Alle organisatie-endpoints van Better Auth 1.7.7 behalve /organization/create. */
+const DICHTE_ORGANISATIEPADEN = [
+  "accept-invitation",
+  "add-team-member",
+  "cancel-invitation",
+  "check-slug",
+  "create-role",
+  "create-team",
+  "delete",
+  "delete-role",
+  "get-active-member",
+  "get-active-member-role",
+  "get-full-organization",
+  "get-invitation",
+  "get-organization",
+  "get-role",
+  "has-permission",
+  "invite-member",
+  "leave",
+  "list",
+  "list-invitations",
+  "list-members",
+  "list-roles",
+  "list-team-members",
+  "list-teams",
+  "list-user-invitations",
+  "list-user-teams",
+  "reject-invitation",
+  "remove-member",
+  "remove-team",
+  "remove-team-member",
+  "set-active",
+  "set-active-team",
+  "update",
+  "update-member-role",
+  "update-role",
+  "update-team",
+].map((pad) => `/organization/${pad}`);
+
+/** Een verzoek van buitenaf op /api/auth, zoals de browser het stuurt (met Origin). */
+async function viaAuthHttp(methode: string, pad: string, cookie?: string, json_?: unknown): Promise<Response> {
+  const headers = new Headers({ origin: "http://127.0.0.1:3000" });
+  if (cookie) headers.set("cookie", cookie);
+  let body: string | undefined;
+  if (json_ !== undefined) {
+    headers.set("content-type", "application/json");
+    body = JSON.stringify(json_);
+  }
+  return fetch(`${basis}/api/auth${pad}`, { method: methode, headers, ...(body !== undefined ? { body } : {}) });
+}
+
+describe("Better Auth-organisatieroutes van buitenaf", () => {
+  test("elk organisatie-endpoint behalve create geeft 404, met GET en POST", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    for (const pad of DICHTE_ORGANISATIEPADEN) {
+      const get = await viaAuthHttp("GET", `${pad}?organizationId=${org}`, eigenaar.cookie);
+      const post = await viaAuthHttp("POST", pad, eigenaar.cookie, { organizationId: org });
+      await get.arrayBuffer();
+      await post.arrayBuffer();
+      expect([get.status, post.status], pad).toEqual([404, 404]);
+    }
+  });
+
+  test("de omweg met id en slug van twee organisaties, varianten van het pad en een onbekend pad: 404", async () => {
+    const { eigenaar, lid, org } = await organisatieMetLid();
+    await uitnodiging(org, eigenaar.id, nieuwAdres("verborgen"));
+    // Het lid is eigenaar van een eigen organisatie O.
+    const eigenOrg = await auth.api.createOrganization({
+      body: { name: "Eigen", slug: `eigen-${crypto.randomUUID()}` },
+      headers: authHeaders(lid.cookie),
+    });
+    const paden = [
+      `/organization/list-invitations?organizationId=${org}&organizationSlug=${eigenOrg!.slug}`,
+      "/organization/foo",
+      "/organization",
+      "/organization/",
+      "/organization/create/",
+      "/Organization/create",
+      "/organization/list-invitations/",
+      "/%6Frganization/list-invitations",
+      "/organization%2Flist-invitations",
+      "/ORGANIZATION/LIST-INVITATIONS",
+    ];
+    for (const pad of paden) {
+      const antwoord = await viaAuthHttp("GET", pad, lid.cookie);
+      const tekst = await antwoord.text();
+      expect(antwoord.status, pad).toBe(404);
+      expect(tekst, pad).not.toContain("verborgen");
+    }
+  });
+
+  test("/organization/create werkt van buitenaf, met de naamregel; andere auth-routes blijven open", async () => {
+    const zonder = await gebruiker();
+    const slug = `nieuw-${crypto.randomUUID()}`;
+    const antwoord = await viaAuthHttp("POST", "/organization/create", zonder.cookie, { name: "Nieuw bedrijf", slug });
+    expect(antwoord.status).toBe(200);
+    const [rij] = await db.select().from(organization).where(eq(organization.slug, slug));
+    expect(rij!.name).toBe("Nieuw bedrijf");
+    expect(await rolVan(zonder.id, rij!.id)).toBe("owner");
+
+    const teLang = await viaAuthHttp("POST", "/organization/create", zonder.cookie, {
+      name: "x".repeat(81),
+      slug: `lang-${crypto.randomUUID()}`,
+    });
+    expect(teLang.status).toBe(400);
+    const sessie = await viaAuthHttp("GET", "/get-session", zonder.cookie);
+    expect(sessie.status).toBe(200);
+    expect(await sessie.json()).toMatchObject({ user: { id: zonder.id } });
+  });
+
+  test("de eigen routes doen hetzelfde werk wel: lijst, uitnodigen, wisselen", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    expect((await stuur("GET", "/api/organisaties/leden", eigenaar.cookie)).status).toBe(200);
+    expect(
+      (await stuur("POST", "/api/organisaties/uitnodigingen", eigenaar.cookie, { email: nieuwAdres(), rol: "lid" })).status,
+    ).toBe(201);
+    expect((await stuur("GET", "/api/organisaties/uitnodigingen", eigenaar.cookie)).status).toBe(200);
+    expect((await stuur("POST", "/api/organisaties/actief", eigenaar.cookie, { organisatieId: org })).status).toBe(200);
+  });
+
+  test("ook server-side: id van de ene en slug van een andere organisatie omzeilen de eigenaarsregel niet", async () => {
+    const { eigenaar, lid, org } = await organisatieMetLid();
+    await uitnodiging(org, eigenaar.id, nieuwAdres("verborgen"));
+    const eigenOrg = await auth.api.createOrganization({
+      body: { name: "Eigen", slug: `eigen-${crypto.randomUUID()}` },
+      headers: authHeaders(lid.cookie),
+    });
+    const fout = await weigering(
+      auth.api.listInvitations({
+        query: { organizationId: org, organizationSlug: eigenOrg!.slug } as { organizationId: string },
+        headers: authHeaders(lid.cookie),
+      }),
+    );
+    expect(fout).toEqual({ status: 403, code: "ALLEEN_EIGENAAR" });
+  });
+});
+
 // --- Wachtwoordherstel -------------------------------------------------------------------------
 
 describe("wachtwoordherstel", () => {
@@ -994,6 +1139,54 @@ describe("databasetrigger voor de laatste eigenaar", () => {
       }),
     );
     expect(databaseBericht(fout)).toBe("LAATSTE_EIGENAAR");
+    const rollen = await db.select({ rol: member.role }).from(member).where(eq(member.organizationId, org));
+    expect(rollen.map((r) => r.rol)).toEqual(["owner", "owner"]);
+  });
+
+  test("een lijstrol owner,member naar member voor de laatste eigenaar: geweigerd", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+    await db.update(member).set({ role: "owner,member" }).where(eq(member.id, eigenaarLid));
+    const fout = await foutVan(db.update(member).set({ role: "member" }).where(eq(member.id, eigenaarLid)));
+    expect(databaseBericht(fout)).toBe("LAATSTE_EIGENAAR");
+    expect(await rolVan(eigenaar.id, org)).toBe("owner,member");
+  });
+
+  test("de laatste eigenaar naar een andere organisatie verplaatsen: geweigerd", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const ander = await gebruiker("Ander");
+    const andereOrg = await organisatieVan(ander.id);
+    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+    const fout = await foutVan(db.update(member).set({ organizationId: andereOrg }).where(eq(member.id, eigenaarLid)));
+    expect(databaseBericht(fout)).toBe("LAATSTE_EIGENAAR");
+    expect(await rolVan(eigenaar.id, org)).toBe("owner");
+  });
+
+  test("de trigger vangt een race die de controles mist: via auth.api in onze route wordt het 409", async () => {
+    const { eigenaar, org, lidId: idVanLid } = await organisatieMetLid();
+    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+    await db.update(member).set({ role: "owner" }).where(eq(member.id, idVanLid));
+    // Een gelijktijdig verzoek nagebootst: net vóór Better Auth het tweede lid verwijdert, degradeert
+    // "iemand anders" de eerste eigenaar. Alle controles vooraf zagen nog twee eigenaars.
+    // De ids zijn door de test gemaakte uuids.
+    await db.execute(
+      sql.raw(`CREATE FUNCTION test_race() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.id = '${idVanLid}' THEN UPDATE "member" SET role = 'member' WHERE id = '${eigenaarLid}'; END IF;
+  RETURN OLD;
+END $$`),
+    );
+    await db.execute(
+      sql.raw(`CREATE TRIGGER a_test_race BEFORE DELETE ON "member" FOR EACH ROW EXECUTE FUNCTION test_race()`),
+    );
+    try {
+      const antwoord = await stuur("DELETE", `/api/organisaties/leden/${idVanLid}`, eigenaar.cookie);
+      expect(antwoord.status).toBe(409);
+      expect(await foutcode(antwoord)).toBe("LAATSTE_EIGENAAR");
+    } finally {
+      await db.execute(sql.raw(`DROP TRIGGER a_test_race ON "member"`));
+      await db.execute(sql.raw(`DROP FUNCTION test_race()`));
+    }
     const rollen = await db.select({ rol: member.role }).from(member).where(eq(member.organizationId, org));
     expect(rollen.map((r) => r.rol)).toEqual(["owner", "owner"]);
   });

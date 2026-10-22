@@ -3,6 +3,11 @@
 -- zodat twee eigenaars die elkaar tegelijk degraderen of verwijderen na elkaar komen; de tweede
 -- ziet dan geen andere eigenaar meer en faalt met de boodschap LAATSTE_EIGENAAR.
 -- Verdwijnt de organisatie of de gebruiker zelf (een cascade), dan houdt de trigger niets tegen.
+-- Dit steunt op READ COMMITTED (de standaard van Postgres): na het wachten op de rijvergrendeling
+-- ziet de volgende opdracht in de functie (NOT EXISTS) een nieuwe momentopname, met de wijziging
+-- van de andere transactie. Onder REPEATABLE READ zou de tweede transactie haar oude momentopname
+-- houden (de organisatierij wordt alleen vergrendeld, niet gewijzigd) en de garantie verliezen;
+-- de app gebruikt dat isolatieniveau niet.
 CREATE OR REPLACE FUNCTION "elentrik_is_eigenaar"(rol text) RETURNS boolean
 LANGUAGE sql IMMUTABLE AS $$
   SELECT ',' || replace(coalesce(rol, ''), ' ', '') || ',' LIKE '%,owner,%'
