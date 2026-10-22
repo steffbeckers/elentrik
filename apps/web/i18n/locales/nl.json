@@ -237,6 +237,54 @@
       }
     }
   },
+  "bedrijf": {
+    "titel": "Bedrijfsgegevens",
+    "beschrijving": "Deze gegevens komen als installateur in de cartouche van de PDF.",
+    "terug": "Naar de projecten",
+    "link": "Bedrijfsgegevens",
+    "laden": {
+      "fout": {
+        "titel": "Bedrijfsgegevens laden mislukt",
+        "beschrijving": "De gegevens konden niet geladen worden. Probeer het opnieuw.",
+        "opnieuw": "Opnieuw proberen"
+      }
+    },
+    "velden": {
+      "naam": "Naam",
+      "ondernemingsnummer": "Ondernemingsnummer",
+      "telefoon": "Telefoon",
+      "email": "E-mail"
+    },
+    "adres": {
+      "titel": "Adres",
+      "straat": "Straat",
+      "nummer": "Nummer",
+      "bus": "Bus",
+      "postcode": "Postcode",
+      "gemeente": "Gemeente",
+      "land": "Land"
+    },
+    "fouten": {
+      "naamVerplicht": "Geef je bedrijf een naam.",
+      "adresVerplicht": "Verplicht voor een adres."
+    },
+    "logo": {
+      "titel": "Logo",
+      "beschrijving": "PNG of JPEG, hoogstens 2 MB.",
+      "voorbeeldAlt": "Voorbeeld van het logo",
+      "kies": "Logo kiezen",
+      "vervang": "Logo vervangen",
+      "geen": "Nog geen logo",
+      "fout": {
+        "onbekendType": "Dit bestandstype wordt niet aanvaard.",
+        "teGroot": "Dit logo is groter dan 2 MB.",
+        "mislukt": "Het logo kon niet worden opgeladen. Probeer het opnieuw."
+      },
+      "bewaard": "Logo opgeladen."
+    },
+    "bewaren": "Bewaren",
+    "bewaard": "Bedrijfsgegevens bewaard."
+  },
   "projecten": {
     "titel": "Projecten",
     "nieuw": "Nieuw project",
