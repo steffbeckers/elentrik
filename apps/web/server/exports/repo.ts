@@ -33,6 +33,9 @@ type MeeTeGeven = PdfInvoer["bestanden"][number];
  */
 const PLAN_RASTER = ["plan-raster", "plan-origineel"] as const;
 
+/** Welke bestanden `leesAfbeelding` toelaat: de soorten, en bij een plan ook het project waartoe ze horen. */
+type Toegelaten = { soorten: readonly (typeof bestanden.$inferSelect)["soort"][]; projectId: string | null };
+
 /** De extensie per toegelaten afbeeldingstype; andere types gaan niet mee. */
 const EXTENSIE: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg" };
 
@@ -43,18 +46,21 @@ function lokaleDatum(datum: Date): string {
 }
 
 /**
- * Leest een afbeelding (PNG of JPEG) van een van de gegeven soorten uit de opslag. Een id dat geen uuid is,
- * een onbekende rij, een andere soort, een ander type of een bestand dat niet in de opslag staat, geeft `null`.
+ * Leest een afbeelding (PNG of JPEG) van een van de toegelaten soorten uit de opslag. Een plan moet bij het
+ * gegeven project horen (`projectId`); het logo hoort bij geen project (`null`). Een id dat geen uuid is,
+ * een onbekende rij, een andere soort, een ander project, een ander type of een bestand dat niet in de
+ * opslag staat, geeft `null`.
  */
 async function leesAfbeelding(
   db: Db,
   opslag: BestandOpslag,
   id: string,
-  soorten: readonly (typeof bestanden.$inferSelect)["soort"][],
+  toegelaten: Toegelaten,
 ): Promise<{ data: Uint8Array; mime: string; extensie: string } | null> {
   if (!IdSchema.safeParse(id).success) return null;
   const bestand = await haalBestand(db, id);
-  if (!bestand || !soorten.includes(bestand.soort)) return null;
+  if (!bestand || !toegelaten.soorten.includes(bestand.soort)) return null;
+  if (bestand.projectId !== toegelaten.projectId) return null;
   const extensie = EXTENSIE[bestand.mime];
   if (extensie === undefined) return null;
   const stroom = await opslag.lees(bestand.sleutel);
@@ -66,13 +72,14 @@ async function leesAfbeelding(
 async function rasters(
   db: Db,
   opslag: BestandOpslag,
+  projectId: string,
   doc: InstallatieDocument,
 ): Promise<{ afbeeldingen: Record<string, string>; bestanden: MeeTeGeven[] }> {
   const afbeeldingen: Record<string, string> = {};
   const bestanden: MeeTeGeven[] = [];
   const ids = new Set(doc.situatie.paginas.flatMap((p) => (p.achtergrond ? [p.achtergrond.rasterBestandId] : [])));
   for (const id of ids) {
-    const raster = await leesAfbeelding(db, opslag, id, PLAN_RASTER);
+    const raster = await leesAfbeelding(db, opslag, id, { soorten: PLAN_RASTER, projectId });
     if (!raster) continue;
     const naam = `plan-${id}.${raster.extensie}`;
     afbeeldingen[id] = naam;
@@ -124,7 +131,7 @@ export async function maakExport(
   let afbeeldingen: Record<string, string> = {};
   let overgeslagen: string[] = [];
   if (invoer.onderdelen.situatieschema) {
-    const gevonden = await rasters(db, opslag, doc);
+    const gevonden = await rasters(db, opslag, projectId, doc);
     afbeeldingen = gevonden.afbeeldingen;
     meegegeven.push(...gevonden.bestanden);
     overgeslagen = overgeslagenPaginas(doc, afbeeldingen);
@@ -137,7 +144,10 @@ export async function maakExport(
   const installateur = await haalBedrijf(db);
   let logo: string | undefined;
   if (installateur.logoBestandId !== undefined) {
-    const afbeelding = await leesAfbeelding(db, opslag, installateur.logoBestandId, ["logo"]);
+    const afbeelding = await leesAfbeelding(db, opslag, installateur.logoBestandId, {
+      soorten: ["logo"],
+      projectId: null,
+    });
     if (afbeelding) {
       logo = `logo.${afbeelding.extensie}`;
       meegegeven.push({ naam: logo, data: afbeelding.data, mime: afbeelding.mime });

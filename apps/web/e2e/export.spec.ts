@@ -197,9 +197,14 @@ test.describe("echte pdf-export", () => {
     // De onderdelen staan in vaste volgorde en elke cartouche telt mee in "Pagina k / N".
     expect(volgorde).toEqual(["Eendraadschema", "Situatieschema", "Kringenlijst", "Bijlage"]);
     pdf.paginaTeksten.forEach((tekst, i) => expect(tekst).toContain(`Pagina ${i + 1} / ${pdf.aantalPaginas}`));
-    // De bijlage vermeldt de info en de situatiepagina is niet overgeslagen.
+    // De bijlage vermeldt de info en de situatiepagina is niet overgeslagen. "Info (5)" hangt af van het
+    // sjabloon "Kring stopcontacten" (6 contactdozen, A1 tot A6) waarvan enkel A1 op het plan staat.
     expect(pdf.paginaTeksten.at(-1)).toContain("Info (5)");
     expect(pdf.paginaTeksten.at(-1)).not.toContain("Overgeslagen");
+    // Het logo staat in de cartouche van pagina 1 (het eendraadschema heeft zelf geen afbeelding): dat is
+    // de enige afbeelding op die pagina. Het plan staat op de situatiepagina.
+    expect(pdf.afbeeldingenPerPagina[0]).toBeGreaterThanOrEqual(1);
+    expect(pdf.afbeeldingenPerPagina[volgorde.indexOf("Situatieschema")]).toBeGreaterThanOrEqual(2);
     // De cartouche toont de bedrijfsnaam en het werfadres.
     expect(pdf.paginaTeksten[0]).toContain("Elektro E2E");
     expect(pdf.paginaTeksten[0]).toContain("Dorpsstraat 3");

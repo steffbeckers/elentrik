@@ -232,7 +232,7 @@ describe("haalBestand", () => {
     expect(await haalBestand(db, ONBEKEND)).toBeNull();
   });
 
-  test("geeft id, soort, mime en sleutel van een bewaard bestand", async () => {
+  test("geeft id, soort, mime, sleutel en project van een bewaard bestand", async () => {
     const { db, projectId, opslag } = await opzet();
     const info = await bewaarBestand(db, opslag, {
       projectId,
@@ -244,6 +244,7 @@ describe("haalBestand", () => {
       soort: "plan-raster",
       mime: "image/png",
       sleutel: `${projectId}/${info.id}`,
+      projectId,
     });
   });
 });

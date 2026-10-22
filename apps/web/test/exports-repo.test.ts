@@ -291,6 +291,55 @@ describe("maakExport", () => {
     expect(html).not.toContain("Overgeslagen pagina");
   });
 
+  test.each([
+    {
+      geval: "een PDF als plan-origineel",
+      maak: (db: Db, opslag: BestandOpslag, projectId: string) =>
+        bewaarBestand(db, opslag, { projectId, soort: "plan-origineel", data: PDF }),
+    },
+    {
+      geval: "een logo",
+      maak: (db: Db, opslag: BestandOpslag) => bewaarLogo(db, opslag, png(30, 10)),
+    },
+    {
+      geval: "een export",
+      maak: (db: Db, opslag: BestandOpslag, projectId: string) =>
+        bewaarBestand(db, opslag, { projectId, soort: "export", data: PDF }),
+    },
+    {
+      geval: "een PNG als plan-origineel van een ander project",
+      maak: async (db: Db, opslag: BestandOpslag) => {
+        const { id: anderId } = await maakProject(db, { naam: "Ander huis", klantnaam: "", stroomtype: "3N400V" });
+        return bewaarBestand(db, opslag, { projectId: anderId, soort: "plan-origineel", data: png(40, 20) });
+      },
+    },
+  ])("$geval als rasterBestandId wordt overgeslagen en staat in de bijlage", async ({ maak }) => {
+    const db = await maakTestDb();
+    const opslag = maakLokaleOpslag(map);
+    const { id: projectId } = await maakProject(db, { naam: "Huis", klantnaam: "", stroomtype: "3N400V" });
+    const vreemd = await maak(db, opslag, projectId);
+    const doc = structuredClone(referentieWoning());
+    metSituatiePagina(doc, "Vreemd plan", vreemd.id);
+    await bewaarProject(db, projectId, 1, { document: doc });
+
+    const nep = nepPdf();
+    await maakExport(
+      db,
+      opslag,
+      projectId,
+      invoer({ onderdelen: { eendraadschema: false, situatieschema: true, kringenlijst: false, bijlage: false } }),
+      { maakPdf: nep.maakPdf },
+    );
+    const { html, bestanden: meegegeven } = nep.oproepen[0]!;
+    // Een logo-rij hoort wel als logo mee (het is het bedrijfslogo), maar niet als plan.
+    expect(meegegeven.filter((b) => b.naam.startsWith("plan-"))).toEqual([]);
+    expect(html).not.toContain(`plan-${vreemd.id}`);
+    expect(html).toContain("Overgeslagen pagina");
+    expect(html).toContain("Vreemd plan");
+    const [rij] = await db.select().from(exports);
+    expect((rij!.onderdelen as { bijlage: boolean }).bijlage).toBe(true);
+  });
+
   test("zonder situatieschema worden geen rasters gelezen en is de bijlage niet verplicht", async () => {
     const db = await maakTestDb();
     const opslag = maakLokaleOpslag(map);
