@@ -21,6 +21,10 @@ export default defineNuxtConfig({
   buildDir: process.env.ELENTRIK_BUILD_DIR || ".nuxt",
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
   css: ["~/assets/css/main.css"],
+  runtimeConfig: {
+    // Alleen op de server: de basis-URL waarmee de auth-client tijdens SSR Better Auth aanspreekt.
+    authBasisUrl: process.env.BETTER_AUTH_URL || "http://127.0.0.1:3000",
+  },
   nitro: {
     publicAssets: [
       pdfjsBron("wasm"),

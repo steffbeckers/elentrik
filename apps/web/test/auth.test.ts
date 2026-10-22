@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, type MockInstance, test, vi } from "vitest";
 import { type Auth, leesGeheim, maakAuth } from "../server/auth";
 import type { Db } from "../server/db";
-import { invitation, member, session, user, verification } from "../server/db/schema";
+import { invitation, member, organization, session, user, verification } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
 import { maakTestDb } from "./db";
 
@@ -99,6 +99,16 @@ async function bevestigdeGebruiker(email: string) {
   mails.length = 0;
 }
 
+/** Geen enkele rij in `verification` bevat de ruwe token uit een mail. */
+async function verwachtNietOpgeslagen(token: string) {
+  expect(token.length).toBeGreaterThanOrEqual(16);
+  const rijen = await db.select().from(verification);
+  for (const rij of rijen) {
+    expect(rij.identifier).not.toContain(token);
+    expect(rij.value).not.toContain(token);
+  }
+}
+
 async function inloggen(email: string, wachtwoord = WACHTWOORD) {
   return auth.api.signInEmail({ body: { email, password: wachtwoord }, headers: headers() });
 }
@@ -129,8 +139,12 @@ describe("geheim", () => {
     ).toThrow(/BETTER_AUTH_SECRET/);
   });
 
-  test("een ingesteld geheim komt terug", () => {
-    expect(leesGeheim({ BETTER_AUTH_SECRET: "x".repeat(40) })).toBe("x".repeat(40));
+  test("een geheim van 31 tekens is te kort, 32 tekens mag", () => {
+    expect(() => leesGeheim({ BETTER_AUTH_SECRET: "x".repeat(31) })).toThrow(/32 tekens/);
+    expect(() => leesGeheim({ BETTER_AUTH_SECRET: "x".repeat(31), NODE_ENV: "production" })).toThrow(
+      /32 tekens/,
+    );
+    expect(leesGeheim({ BETTER_AUTH_SECRET: "x".repeat(32) })).toBe("x".repeat(32));
   });
 });
 
@@ -146,6 +160,46 @@ describe("registreren en bevestigen", () => {
     expect(verstuurd[0]!.tekst).toContain("Dag Jan Peeters,");
 
     await expect(inloggen(email)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  test("inloggen zonder bevestiging stuurt de bevestigingsmail opnieuw, en die link werkt", async () => {
+    const email = nieuwAdres();
+    await registreer(email);
+    mails.length = 0;
+
+    await expect(inloggen(email)).rejects.toMatchObject({ statusCode: 403 });
+    const opnieuw = await mailsVoor(email);
+    expect(opnieuw).toHaveLength(1);
+    expect(opnieuw[0]!.onderwerp).toBe("Bevestig je e-mailadres bij Elentrik");
+
+    const token = linkUit(opnieuw[0]!).searchParams.get("token")!;
+    await auth.api.verifyEmail({ query: { token }, headers: headers() });
+    expect((await inloggen(email)).token).toEqual(expect.any(String));
+  });
+
+  test("opnieuw registreren met een bestaand adres: zelfde vorm van antwoord, geen mail", async () => {
+    const bestaand = nieuwAdres();
+    await bevestigdeGebruiker(bestaand);
+    const nieuw = nieuwAdres();
+
+    const antwoordNieuw = await registreer(nieuw);
+    mails.length = 0;
+    const antwoordBestaand = await registreer(bestaand);
+
+    expect(antwoordBestaand.token).toBeNull();
+    expect(Object.keys(antwoordBestaand).sort()).toEqual(Object.keys(antwoordNieuw).sort());
+    expect(Object.keys(antwoordBestaand.user).sort()).toEqual(Object.keys(antwoordNieuw.user).sort());
+    expect(antwoordBestaand.user.email).toBe(bestaand);
+    expect(await mailsVoor(bestaand)).toHaveLength(0);
+    expect(await db.select().from(user).where(eq(user.email, bestaand))).toHaveLength(1);
+  });
+
+  test("de bevestigingstoken staat niet in de database", async () => {
+    const email = nieuwAdres();
+    await registreer(email);
+    const [bevestiging] = await mailsVoor(email);
+    const token = linkUit(bevestiging!).searchParams.get("token")!;
+    await verwachtNietOpgeslagen(token);
   });
 
   test("de bevestigingslink uit de mail laat de gebruiker inloggen", async () => {
@@ -190,14 +244,32 @@ describe("registreren en bevestigen", () => {
     const [rij] = await db.select().from(user).where(eq(user.email, email));
     expect(rij!.wachtendeBedrijfsnaam).toBe("Peeters Elektro");
   });
+
+  test("update-user kan wachtendeBedrijfsnaam niet zetten; de naam wijzigen mag wel", async () => {
+    const email = nieuwAdres();
+    await bevestigdeGebruiker(email);
+    const h = await sessieHeaders(email);
+
+    await expect(
+      auth.api.updateUser({ body: { wachtendeBedrijfsnaam: "Kaper BV" }, headers: h }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      auth.api.updateUser({ body: { name: "Jan", wachtendeBedrijfsnaam: null }, headers: h }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+
+    await auth.api.updateUser({ body: { name: "Jan P." }, headers: h });
+    const [rij] = await db.select().from(user).where(eq(user.email, email));
+    expect(rij!.name).toBe("Jan P.");
+    expect(rij!.wachtendeBedrijfsnaam).toBe("Peeters Elektro");
+  });
 });
 
 describe("mail op de achtergrond", () => {
-  test("een falende mailserver blokkeert de registratie niet en de log bevat geen link of adres", async () => {
+  test("een falende mailserver blokkeert de registratie niet; de log noemt alleen soort en foutcode", async () => {
     const fouten = vi.spyOn(console, "error").mockImplementation(() => {});
     zetVerzender({
-      async verstuur() {
-        throw new Error("SMTP onbereikbaar");
+      async verstuur(mail) {
+        throw Object.assign(new Error(`Ontvanger ${mail.aan} geweigerd`), { code: "EENVELOPE" });
       },
     });
     try {
@@ -207,8 +279,7 @@ describe("mail op de achtergrond", () => {
       await new Promise((r) => setTimeout(r, 0));
       expect(fouten).toHaveBeenCalledTimes(1);
       const gelogd = fouten.mock.calls.flat().map(String).join(" ");
-      expect(gelogd).toContain("SMTP onbereikbaar");
-      expect(gelogd).not.toContain("http");
+      expect(gelogd).toBe("Mail (bevestiging) versturen mislukt: EENVELOPE");
       expect(gelogd).not.toContain(email);
     } finally {
       fouten.mockRestore();
@@ -262,6 +333,8 @@ describe("magic link", () => {
     expect(duur).toBeGreaterThan(15 * 60 * 1000 - 5000);
     expect(duur).toBeLessThanOrEqual(15 * 60 * 1000 + 5000);
 
+    await verwachtNietOpgeslagen(link.searchParams.get("token")!);
+
     const resultaat = await auth.api.magicLinkVerify({
       query: { token: link.searchParams.get("token")! },
       headers: headers(),
@@ -288,6 +361,7 @@ describe("wachtwoord vergeten", () => {
     const link = linkUit(mail!);
     expect(link.origin).toBe(BASIS);
     const token = link.pathname.split("/").at(-1)!;
+    await verwachtNietOpgeslagen(token);
 
     await auth.api.resetPassword({ body: { newPassword: "nieuw-wachtwoord-2", token }, headers: headers() });
 
@@ -369,5 +443,53 @@ describe("organisaties", () => {
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
     expect(await db.select().from(invitation).where(eq(invitation.organizationId, org!.id))).toHaveLength(0);
+  });
+
+  test("addMember en updateMemberRole met admin worden geweigerd", async () => {
+    const eigenaar = nieuwAdres();
+    await bevestigdeGebruiker(eigenaar);
+    const h = await sessieHeaders(eigenaar);
+    const org = await auth.api.createOrganization({
+      body: { name: "Rollen BV", slug: `rollen-${teller}` },
+      headers: h,
+    });
+    const lidAdres = nieuwAdres();
+    await bevestigdeGebruiker(lidAdres);
+    const [lidRij] = await db.select().from(user).where(eq(user.email, lidAdres));
+
+    await expect(
+      auth.api.addMember({
+        body: { userId: lidRij!.id, role: "admin" as "member", organizationId: org!.id },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(await db.select().from(member).where(eq(member.userId, lidRij!.id))).toHaveLength(0);
+
+    const lid = await auth.api.addMember({
+      body: { userId: lidRij!.id, role: "member", organizationId: org!.id },
+    });
+    await expect(
+      auth.api.updateMemberRole({
+        body: { memberId: lid!.id, role: "admin" as "member", organizationId: org!.id },
+        headers: h,
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    const [naWeigering] = await db.select().from(member).where(eq(member.id, lid!.id));
+    expect(naWeigering!.role).toBe("member");
+  });
+
+  test("een organisatie verwijderen kan niet, ook niet door de eigenaar", async () => {
+    const eigenaar = nieuwAdres();
+    await bevestigdeGebruiker(eigenaar);
+    const h = await sessieHeaders(eigenaar);
+    const org = await auth.api.createOrganization({
+      body: { name: "Blijft BV", slug: `blijft-${teller}` },
+      headers: h,
+    });
+
+    await expect(
+      auth.api.deleteOrganization({ body: { organizationId: org!.id }, headers: h }),
+    ).rejects.toMatchObject({ statusCode: expect.any(Number) });
+    expect(await db.select().from(organization).where(eq(organization.id, org!.id))).toHaveLength(1);
+    expect(await db.select().from(member).where(eq(member.organizationId, org!.id))).toHaveLength(1);
   });
 });
