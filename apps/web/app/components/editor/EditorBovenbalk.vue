@@ -4,7 +4,7 @@ import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useEditorStore, type Tabblad } from "~/stores/editor";
 
 defineProps<{ status: AutosaveStatus }>();
-const emit = defineEmits<{ opnieuwProberen: []; toonConflict: []; toonBevindingen: [] }>();
+const emit = defineEmits<{ opnieuwProberen: []; toonConflict: []; toonBevindingen: []; exporteren: [] }>();
 
 const store = useEditorStore();
 const { t } = useI18n();
@@ -153,6 +153,14 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
         :disabled="store.vooruit.length === 0"
         data-testid="opnieuw"
         @click="store.opnieuw()"
+      />
+
+      <UButton
+        icon="i-lucide-file-down"
+        size="sm"
+        :label="$t('editor.bovenbalk.exporteren')"
+        data-testid="exporteren"
+        @click="emit('exporteren')"
       />
     </div>
 

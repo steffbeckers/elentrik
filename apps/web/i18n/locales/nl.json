@@ -70,7 +70,8 @@
       "aantalFouten": "{n} fout | {n} fouten",
       "aantalWaarschuwingen": "{n} waarschuwing | {n} waarschuwingen",
       "ongedaanMaken": "Ongedaan maken (Ctrl+Z)",
-      "opnieuw": "Opnieuw (Ctrl+Y)"
+      "opnieuw": "Opnieuw (Ctrl+Y)",
+      "exporteren": "Exporteren"
     },
     "status": {
       "opgeslagen": "Opgeslagen",
@@ -258,6 +259,48 @@
           "mislukt": "Het plan kon niet worden opgeladen. Probeer het opnieuw.",
           "onleesbaar": "Dit bestand kon niet gelezen worden."
         }
+      }
+    },
+    "export": {
+      "titel": "Exporteren als PDF",
+      "beschrijving": "De PDF komt uit het opgeslagen project en wordt als versie bewaard.",
+      "opslaan": "Het project wordt eerst opgeslagen…",
+      "geblokkeerd": {
+        "titel": "Exporteren kan nu niet",
+        "bezig": "Het project wordt nog opgeslagen. Exporteren kan zodra alles opgeslagen is.",
+        "lokaal": "Het project staat niet op de server: het opslaan mislukte en het werk is enkel lokaal bewaard. Exporteren kan zodra het opgeslagen is.",
+        "onbewaard": "Het project kon niet opgeslagen worden. Exporteren kan zodra het opgeslagen is.",
+        "conflict": "Het project is intussen elders gewijzigd. Los eerst het conflict op.",
+        "fout": "De server weigerde het project op te slaan. Probeer opnieuw op te slaan en exporteer daarna."
+      },
+      "onderdelen": {
+        "titel": "Onderdelen",
+        "eendraadschema": "Eendraadschema",
+        "situatieschema": "Situatieschema",
+        "kringenlijst": "Kringenlijst",
+        "bijlage": "Bijlage met bevindingen",
+        "geen": "Kies minstens één onderdeel."
+      },
+      "bijlageVerplicht": "Er is {n} onopgeloste fout; de bijlage komt verplicht mee. | Er zijn {n} onopgeloste fouten; de bijlage komt verplicht mee.",
+      "papier": "Papier",
+      "versie": "Versie",
+      "versieOngeldig": "Geef een versie van 1 tot 40 tekens.",
+      "start": "Exporteren",
+      "bevestiging": "Er is {n} onopgeloste fout. De PDF vermeldt ze in de bijlage. Toch exporteren? | Er zijn {n} onopgeloste fouten. De PDF vermeldt ze in de bijlage. Toch exporteren?",
+      "tochExporteren": "Toch exporteren",
+      "bezig": "De PDF wordt gemaakt…",
+      "klaar": "{versie} is geëxporteerd.",
+      "mislukt": "De PDF kon niet gemaakt worden. Probeer het opnieuw.",
+      "sluiten": "Sluiten",
+      "eerdere": {
+        "titel": "Eerdere exports",
+        "geen": "Nog geen exports.",
+        "ladenMislukt": "De eerdere exports konden niet geladen worden.",
+        "versie": "Versie",
+        "datum": "Datum",
+        "fouten": "Fouten",
+        "aantalFouten": "geen fouten | {n} fout | {n} fouten",
+        "downloaden": "Downloaden"
       }
     }
   },

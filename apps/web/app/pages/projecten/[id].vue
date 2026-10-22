@@ -5,6 +5,7 @@ import ConceptDialoog from "~/components/editor/ConceptDialoog.vue";
 import ConflictDialoog from "~/components/editor/ConflictDialoog.vue";
 import EditorBovenbalk from "~/components/editor/EditorBovenbalk.vue";
 import EigenschappenPaneel from "~/components/editor/EigenschappenPaneel.vue";
+import ExportDialoog from "~/components/editor/ExportDialoog.vue";
 import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
@@ -127,6 +128,10 @@ onBeforeRouteLeave(() => {
   return window.confirm(t("editor.verlaten.bevestiging"));
 });
 
+// --- Exporteren ---------------------------------------------------------------
+
+const exportOpen = ref(false);
+
 // --- Situatieschema ----------------------------------------------------------
 
 /** Het punt dat met een klik op het plan geplaatst wordt (gekozen in "Te plaatsen"), of null. */
@@ -228,6 +233,7 @@ onBeforeUnmount(() => {
         @opnieuw-proberen="opnieuwProberen"
         @toon-conflict="conflictOpen = true"
         @toon-bevindingen="toonBevindingen"
+        @exporteren="exportOpen = true"
       />
       <div class="grid min-h-0 flex-1 grid-cols-[14rem_minmax(0,1fr)_20rem]">
         <template v-if="store.tabblad === 'eendraadschema'">
@@ -323,6 +329,11 @@ onBeforeUnmount(() => {
       :tijd="concept.concept.tijd"
       @laden="laadConcept"
       @verwerpen="verwerpConcept"
+    />
+    <ExportDialoog
+      v-model:open="exportOpen"
+      :status="autosave.status.value"
+      :nu-opslaan="autosave.nuOpslaan"
     />
     <ConflictDialoog
       v-model:open="conflictOpen"
