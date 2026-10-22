@@ -1,0 +1,40 @@
+Elentrik
+Copyright (c) 2026 Steff Beckers. Alle rechten voorbehouden.
+
+Deze software, met inbegrip van de broncode, de documentatie, de ontwerpen,
+de symbolen en alle andere bestanden in deze repository (samen "de Software"),
+is eigendom van Steff Beckers en wordt beschermd door het auteursrecht.
+
+Dat de broncode publiek zichtbaar is, betekent niet dat u er rechten op krijgt.
+Zonder voorafgaande schriftelijke toestemming van de rechthebbende is het
+verboden de Software of een deel ervan:
+
+  1. te gebruiken, uit te voeren of te installeren, behalve om de broncode te
+     bekijken;
+  2. te kopiëren, te verveelvoudigen of op te slaan, behalve de tijdelijke
+     kopieën die nodig zijn om de broncode te bekijken;
+  3. te wijzigen, te vertalen, aan te passen of er afgeleide werken van te
+     maken;
+  4. te verspreiden, te publiceren, in sublicentie te geven, te verhuren, uit
+     te lenen, te verkopen of op enige andere wijze ter beschikking te stellen,
+     ook niet als dienst via een netwerk;
+  5. te gebruiken om een concurrerend product of een concurrerende dienst te
+     ontwikkelen.
+
+Een fork binnen GitHub ontstaat enkel door de functies van dat platform en
+geeft geen rechten bovenop wat hierboven toegestaan is.
+
+Software van derden die deze repository gebruikt, zoals de afhankelijkheden
+die in de package.json-bestanden vermeld staan, valt onder de eigen licenties
+van die derden. Deze licentie heeft daar geen betrekking op.
+
+DE SOFTWARE WORDT GELEVERD "ZOALS ZE IS", ZONDER ENIGE GARANTIE, UITDRUKKELIJK
+OF STILZWIJGEND, MET INBEGRIP VAN MAAR NIET BEPERKT TOT GARANTIES VAN
+VERHANDELBAARHEID, GESCHIKTHEID VOOR EEN BEPAALD DOEL OF HET NIET-INBREUK
+MAKEN OP RECHTEN VAN DERDEN. DE RECHTHEBBENDE IS IN GEEN GEVAL AANSPRAKELIJK
+VOOR ENIGE SCHADE DIE VOORTVLOEIT UIT HET GEBRUIK VAN DE SOFTWARE.
+
+Op deze licentie is het Belgische recht van toepassing.
+
+Wie de Software wil gebruiken of een licentie wil verkrijgen, kan contact
+opnemen met de rechthebbende via steff@steffbeckers.com.
