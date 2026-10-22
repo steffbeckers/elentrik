@@ -47,7 +47,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
     <UButton
       color="neutral"
       variant="ghost"
-      class="max-w-64 truncate font-semibold"
+      class="min-w-24 max-w-64 truncate font-semibold"
       :title="$t('editor.bovenbalk.projectgegevens')"
       data-testid="projectnaam"
       @click="projectgegevensOpen = true"
@@ -143,6 +143,10 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
         data-testid="exporteren"
         @click="emit('exporteren')"
       />
+
+      <USeparator orientation="vertical" class="h-6" />
+      <OrganisatieKeuze compact />
+      <GebruikerMenu compact />
     </div>
 
     <ProjectgegevensDialoog v-model:open="projectgegevensOpen" />
