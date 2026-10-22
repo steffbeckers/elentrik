@@ -12,14 +12,22 @@
 // rechtstreeks (ruling E1).
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { magicLink, organization } from "better-auth/plugins";
 import { memberAc, ownerAc } from "better-auth/plugins/organization/access";
+import { and, eq } from "drizzle-orm";
 import { type Db, gebruikDb } from "../db";
 import * as schema from "../db/schema";
 import { bevestigMail, herstelMail, magicLinkMail, uitnodigingMail } from "../mail/sjablonen";
 import { gebruikVerzender, type Mail } from "../mail/verzend";
 import { richtEersteOrganisatieIn } from "../organisaties/registratie";
+import {
+  geldigeNaam,
+  haaltLaatsteEigenaarWeg,
+  LAATSTE_EIGENAAR,
+  LAATSTE_EIGENAAR_BOODSCHAP,
+  MAX_NAAMLENGTE,
+} from "../organisaties/regels";
 
 const PLAATSHOUDER = "<vervang";
 export const MINIMALE_GEHEIMLENGTE = 32;
@@ -84,15 +92,77 @@ function verstuur(soort: MailSoort, mail: Mail, aan: string): void {
 }
 
 /** `wachtendeBedrijfsnaam` mag alleen bij de registratie gezet worden, niet via /update-user. */
-const alleenBijRegistratie = createAuthMiddleware(async (ctx) => {
-  if (ctx.path !== "/update-user") return;
-  const body: unknown = ctx.body;
+function alleenBijRegistratie(path: string, body: unknown): void {
+  if (path !== "/update-user") return;
   if (body && typeof body === "object" && "wachtendeBedrijfsnaam" in body) {
     throw new APIError("BAD_REQUEST", {
       message: "wachtendeBedrijfsnaam kan alleen bij de registratie gezet worden.",
     });
   }
-});
+}
+
+function laatsteEigenaar(): APIError {
+  return new APIError("CONFLICT", { code: LAATSTE_EIGENAAR, message: LAATSTE_EIGENAAR_BOODSCHAP });
+}
+
+function eisGeldigeNaam(naam: unknown): string {
+  const geldig = geldigeNaam(naam);
+  if (geldig === null) {
+    throw new APIError("BAD_REQUEST", { message: `De naam telt 1 tot ${MAX_NAAMLENGTE} tekens.` });
+  }
+  return geldig;
+}
+
+type Body = Record<string, unknown>;
+
+/**
+ * De laatste eigenaar blijft, ook via de endpoints van Better Auth (ruling R5): vóór verlaten,
+ * een lid verwijderen of een rol wijzigen. Better Auth weigert die gevallen zelf ook, maar met
+ * 400 en een eigen code; dit geeft overal 409 met `LAATSTE_EIGENAAR`. Zonder sessie of met een
+ * onbekend lid doet dit niets: dan weigert Better Auth zelf.
+ */
+async function eisEenEigenaarBlijft(
+  db: Db,
+  ctx: Parameters<typeof getSessionFromCtx>[0] & { path: string; body?: unknown },
+): Promise<void> {
+  const paden = ["/organization/leave", "/organization/remove-member", "/organization/update-member-role"];
+  if (!paden.includes(ctx.path)) return;
+  const body = (ctx.body && typeof ctx.body === "object" ? ctx.body : {}) as Body;
+  const sessie = await getSessionFromCtx(ctx).catch(() => null);
+  if (!sessie) return;
+  const actief = (sessie.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? null;
+  const organisatieId = typeof body.organizationId === "string" && body.organizationId ? body.organizationId : actief;
+  if (!organisatieId) return;
+
+  let doel: { rol: string } | undefined;
+  let nieuweRol: string | null = null;
+  if (ctx.path === "/organization/leave") {
+    [doel] = await db
+      .select({ rol: schema.member.role })
+      .from(schema.member)
+      .where(and(eq(schema.member.userId, sessie.user.id), eq(schema.member.organizationId, organisatieId)));
+  } else if (ctx.path === "/organization/remove-member") {
+    const sleutel = typeof body.memberIdOrEmail === "string" ? body.memberIdOrEmail : "";
+    [doel] = sleutel.includes("@")
+      ? await db
+          .select({ rol: schema.member.role })
+          .from(schema.member)
+          .innerJoin(schema.user, eq(schema.user.id, schema.member.userId))
+          .where(and(eq(schema.user.email, sleutel.toLowerCase()), eq(schema.member.organizationId, organisatieId)))
+      : await db
+          .select({ rol: schema.member.role })
+          .from(schema.member)
+          .where(and(eq(schema.member.id, sleutel), eq(schema.member.organizationId, organisatieId)));
+  } else {
+    const memberId = typeof body.memberId === "string" ? body.memberId : "";
+    [doel] = await db
+      .select({ rol: schema.member.role })
+      .from(schema.member)
+      .where(and(eq(schema.member.id, memberId), eq(schema.member.organizationId, organisatieId)));
+    nieuweRol = Array.isArray(body.role) ? body.role.join(",") : typeof body.role === "string" ? body.role : "";
+  }
+  if (doel && (await haaltLaatsteEigenaarWeg(db, organisatieId, doel, nieuweRol))) throw laatsteEigenaar();
+}
 
 export function maakAuth(db: Db = gebruikDb()) {
   return betterAuth({
@@ -114,7 +184,12 @@ export function maakAuth(db: Db = gebruikDb()) {
     }),
     // Hersteltokens (en elke andere identifier) alleen gehasht opslaan.
     verification: { storeIdentifier: "hashed" },
-    hooks: { before: alleenBijRegistratie },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        alleenBijRegistratie(ctx.path, ctx.body);
+        await eisEenEigenaarBlijft(db, ctx);
+      }),
+    },
     databaseHooks: {
       session: {
         create: {
@@ -179,10 +254,31 @@ export function maakAuth(db: Db = gebruikDb()) {
         // Een uitnodiging aanvaarden vereist een bevestigd adres (spec 5b.4).
         requireEmailVerificationOnInvitation: true,
         roles: { owner: ownerAc, member: memberAc },
+        // Alleen een eigenaar beheert leden en uitnodigingen: dat volgt uit de rechten van
+        // `memberAc` (geen enkel recht op leden, uitnodigingen of de organisatie).
         organizationHooks: {
           beforeCreateInvitation: async ({ invitation }) => eisGeldigeRol(invitation.role),
           beforeAddMember: async ({ member }) => eisGeldigeRol(member.role),
-          beforeUpdateMemberRole: async ({ newRole }) => eisGeldigeRol(newRole),
+          // Ook hier de laatste eigenaar, als vangnet naast de controle vóór het verzoek.
+          beforeUpdateMemberRole: async ({ member, newRole }) => {
+            eisGeldigeRol(newRole);
+            if (await haaltLaatsteEigenaarWeg(db, member.organizationId, { rol: member.role }, newRole)) {
+              throw laatsteEigenaar();
+            }
+          },
+          beforeRemoveMember: async ({ member }) => {
+            if (await haaltLaatsteEigenaarWeg(db, member.organizationId, { rol: member.role }, null)) {
+              throw laatsteEigenaar();
+            }
+          },
+          // Een organisatienaam telt 1 tot 80 tekens na trimmen, ook via Better Auth.
+          beforeCreateOrganization: async ({ organization }) => {
+            eisGeldigeNaam(organization.name);
+          },
+          beforeUpdateOrganization: async ({ organization }) => {
+            if (organization.name === undefined) return;
+            return { data: { name: eisGeldigeNaam(organization.name) } };
+          },
         },
         sendInvitationEmail: async ({ id, email, role, organization, inviter }) => {
           verstuur(

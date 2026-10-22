@@ -23,14 +23,15 @@ import { bewaarBedrijf, bewaarLogo, haalBedrijf } from "../server/bedrijf/repo";
 import { maakLokaleOpslag, zetOpslag, type BestandOpslag } from "../server/bestanden/opslag";
 import { bewaarBestand, haalBestand } from "../server/bestanden/repo";
 import { type Db, zetDb } from "../server/db";
-import { bedrijfsinstellingen, bestanden, member, projecten, session, user } from "../server/db/schema";
+import { bedrijfsinstellingen, bestanden, invitation, member, projecten, session, user } from "../server/db/schema";
 import { maakExport } from "../server/exports/repo";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
+import { registratieLimiet } from "../server/organisaties/leden";
 import { haalProject, maakProject, verwijderProject } from "../server/projecten/repo";
 import { kiesActieveOrganisatie, vereisLid, vereisProjecttoegang, vereisSessie } from "../server/utils/toegang";
 import type { ExportInvoer } from "../shared/exports";
 import { maakTestDb } from "./db";
-import { beveiligdeRoutebestanden, routeUit } from "./routes";
+import { apiPad, beveiligdeRoutebestanden, PUBLIEKE_ROUTES, routeUit } from "./routes";
 
 // Gotenberg draait niet in Vitest: de PDF-dienst geeft een minimale geldige PDF terug.
 vi.mock("../server/pdf/gotenberg", async (origineel) => ({
@@ -177,6 +178,30 @@ async function planIn(organisatieId: string): Promise<string> {
   return (await bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data: png(10, 10) })).id;
 }
 
+/** Een extra lid van een organisatie, rechtstreeks in de tabellen; geeft het lidmaatschaps-id. */
+async function extraLid(organisatieId: string): Promise<string> {
+  const userId = crypto.randomUUID();
+  await db.insert(user).values({ id: userId, name: "Extra", email: `extra-${userId}@voorbeeld.be`, emailVerified: true });
+  const id = crypto.randomUUID();
+  await db.insert(member).values({ id, organizationId: organisatieId, userId, role: "member", createdAt: new Date() });
+  return id;
+}
+
+/** Een openstaande uitnodiging van een organisatie voor een nieuw adres. */
+async function uitnodigingIn(organisatieId: string): Promise<string> {
+  const id = crypto.randomUUID();
+  await db.insert(invitation).values({
+    id,
+    organizationId: organisatieId,
+    email: `gast-${id}@voorbeeld.be`,
+    role: "member",
+    status: "pending",
+    expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+    inviterId: eigenaarA.id,
+  });
+  return id;
+}
+
 async function exportIn(organisatieId: string): Promise<string> {
   const projectId = await projectIn(organisatieId);
   const info = await maakExport(db, opslag, organisatieId, projectId, 1, EXPORT_INVOER, {
@@ -247,10 +272,19 @@ type Actor = "zonderSessie" | "andereOrganisatie" | "zonderOrganisatie" | "lid" 
 type Rij = {
   /** Een vers verzoek op de gegevens van organisatie A. */
   verzoek: () => Promise<Verzoek>;
-  /** De verwachte status per actor; zonder sessie is altijd 401, zonder organisatie altijd 404. */
+  /**
+   * De verwachte status per actor. Zonder sessie is 401 en zonder organisatie 404, tenzij de rij
+   * het anders zegt: een publieke route (`publiek: true`, ook in PUBLIEKE_ROUTES) of een route die
+   * geen organisatie nodig heeft.
+   */
   andereOrganisatie: number;
   lid: number;
   eigenaar: number;
+  zonderSessie?: number;
+  zonderOrganisatie?: number;
+  publiek?: true;
+  /** Herstelt de gegevens na het verzoek van elke actor (bv. een lid dat vertrok). */
+  na?: () => Promise<void>;
 };
 
 async function projectVerzoek(methode: string, achter = "", extra: Partial<Verzoek> = {}): Promise<Verzoek> {
@@ -352,11 +386,150 @@ const TABEL: Record<string, Rij> = {
     lid: 200,
     eigenaar: 200,
   },
+  // --- Organisaties en leden (Task 5); de details staan in test/organisaties.test.ts. ---
+  "GET /api/mij": {
+    // Ook zonder organisatie: een lege lijst, zodat de client weet waarheen.
+    verzoek: async () => ({ methode: "GET", pad: "/api/mij" }),
+    zonderOrganisatie: 200,
+    andereOrganisatie: 200,
+    lid: 200,
+    eigenaar: 200,
+  },
+  "POST /api/organisaties/actief": {
+    verzoek: async () => ({ methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: orgA } }),
+    andereOrganisatie: 404,
+    lid: 200,
+    eigenaar: 200,
+  },
+  "PUT /api/organisaties/naam": {
+    // Werkt op de actieve organisatie: B hernoemt B.
+    verzoek: async () => ({ methode: "PUT", pad: "/api/organisaties/naam", json: { naam: "Hernoemd" } }),
+    andereOrganisatie: 200,
+    lid: 403,
+    eigenaar: 200,
+  },
+  "POST /api/organisaties/verlaten": {
+    // A en B hebben elk een enige eigenaar: 409. Het lid vertrekt echt en wordt daarna hersteld.
+    verzoek: async () => ({ methode: "POST", pad: "/api/organisaties/verlaten" }),
+    andereOrganisatie: 409,
+    lid: 204,
+    eigenaar: 409,
+    na: async () => {
+      for (const [wie, org, rol] of [
+        [lidA, orgA, "member"],
+        [eigenaarA, orgA, "owner"],
+        [eigenaarB, orgB, "owner"],
+      ] as const) {
+        const [nog] = await db
+          .select({ id: member.id })
+          .from(member)
+          .where(and(eq(member.userId, wie.id), eq(member.organizationId, org)));
+        if (!nog) await wordLid(wie.id, org, rol);
+      }
+    },
+  },
+  "GET /api/organisaties/leden": {
+    // Werkt op de actieve organisatie: B ziet de leden van B.
+    verzoek: async () => ({ methode: "GET", pad: "/api/organisaties/leden" }),
+    andereOrganisatie: 200,
+    lid: 200,
+    eigenaar: 200,
+  },
+  "PUT /api/organisaties/leden/:id": {
+    verzoek: async () => ({
+      methode: "PUT",
+      pad: `/api/organisaties/leden/${await extraLid(orgA)}`,
+      // Een lid blijft lid: een tweede eigenaar zou de rij "verlaten" voor de eigenaar laten slagen.
+      json: { rol: "lid" },
+    }),
+    andereOrganisatie: 404,
+    lid: 403,
+    eigenaar: 200,
+  },
+  "DELETE /api/organisaties/leden/:id": {
+    verzoek: async () => ({ methode: "DELETE", pad: `/api/organisaties/leden/${await extraLid(orgA)}` }),
+    andereOrganisatie: 404,
+    lid: 403,
+    eigenaar: 204,
+  },
+  "GET /api/organisaties/uitnodigingen": {
+    // Werkt op de actieve organisatie: B ziet de uitnodigingen van B.
+    verzoek: async () => ({ methode: "GET", pad: "/api/organisaties/uitnodigingen" }),
+    andereOrganisatie: 200,
+    lid: 403,
+    eigenaar: 200,
+  },
+  "POST /api/organisaties/uitnodigingen": {
+    // Werkt op de actieve organisatie: B nodigt uit in B.
+    verzoek: async () => ({
+      methode: "POST",
+      pad: "/api/organisaties/uitnodigingen",
+      json: { email: `nieuw-${crypto.randomUUID()}@voorbeeld.be`, rol: "lid" },
+    }),
+    andereOrganisatie: 201,
+    lid: 403,
+    eigenaar: 201,
+  },
+  "DELETE /api/organisaties/uitnodigingen/:id": {
+    verzoek: async () => ({ methode: "DELETE", pad: `/api/organisaties/uitnodigingen/${await uitnodigingIn(orgA)}` }),
+    andereOrganisatie: 404,
+    lid: 403,
+    eigenaar: 204,
+  },
+  "GET /api/uitnodigingen/:id": {
+    // Publiek: de link uit de mail opent de pagina voor er een account is.
+    publiek: true,
+    verzoek: async () => ({ methode: "GET", pad: `/api/uitnodigingen/${await uitnodigingIn(orgA)}` }),
+    zonderSessie: 200,
+    zonderOrganisatie: 200,
+    andereOrganisatie: 200,
+    lid: 200,
+    eigenaar: 200,
+  },
+  "POST /api/uitnodigingen/:id/aanvaard": {
+    // Een uitnodiging voor een ander adres: elke ingelogde actor krijgt 403.
+    verzoek: async () => ({ methode: "POST", pad: `/api/uitnodigingen/${await uitnodigingIn(orgA)}/aanvaard` }),
+    zonderOrganisatie: 403,
+    andereOrganisatie: 403,
+    lid: 403,
+    eigenaar: 403,
+  },
+  "POST /api/uitnodigingen/:id/registreer": {
+    // Publiek: elke actor registreert een nieuw account via een verse uitnodiging. De limiet per
+    // IP wordt per verzoek gewist; de limiet zelf staat in test/organisaties.test.ts.
+    publiek: true,
+    verzoek: async () => {
+      registratieLimiet.wis();
+      return {
+        methode: "POST",
+        pad: `/api/uitnodigingen/${await uitnodigingIn(orgA)}/registreer`,
+        json: { naam: "Gast", wachtwoord: WACHTWOORD },
+      };
+    },
+    zonderSessie: 201,
+    zonderOrganisatie: 201,
+    andereOrganisatie: 201,
+    lid: 201,
+    eigenaar: 201,
+  },
 };
 
 describe("routetabel", () => {
   test("elke route heeft een rij in de tabel, en elke rij een route", () => {
     expect(ROUTES.map((r) => r.sleutel).sort()).toEqual(Object.keys(TABEL).sort());
+  });
+
+  test("de publieke rijen zijn precies de routes in PUBLIEKE_ROUTES", () => {
+    const publiek = ROUTES.filter((r) => PUBLIEKE_ROUTES.includes(apiPad(r.bestand))).map((r) => r.sleutel);
+    const rijen = Object.entries(TABEL)
+      .filter(([, rij]) => rij.publiek)
+      .map(([sleutel]) => sleutel);
+    expect(publiek.sort()).toEqual(rijen.sort());
+    expect(publiek).toHaveLength(PUBLIEKE_ROUTES.length);
+    // Zonder sessie geeft alleen een publieke rij iets anders dan 401.
+    for (const [sleutel, rij] of Object.entries(TABEL)) {
+      if (!rij.publiek) expect(rij.zonderSessie ?? 401, sleutel).toBe(401);
+    }
   });
 
   test.each(ROUTES.map((r) => r.sleutel))("%s", async (sleutel) => {
@@ -374,11 +547,12 @@ describe("routetabel", () => {
       const antwoord = await stuur(await rij.verzoek(), cookies[actor]);
       await antwoord.arrayBuffer();
       gekregen[actor] = antwoord.status;
+      await rij.na?.();
     }
     expect(gekregen).toEqual({
-      zonderSessie: 401,
+      zonderSessie: rij.zonderSessie ?? 401,
       andereOrganisatie: rij.andereOrganisatie,
-      zonderOrganisatie: 404,
+      zonderOrganisatie: rij.zonderOrganisatie ?? 404,
       lid: rij.lid,
       eigenaar: rij.eigenaar,
     });

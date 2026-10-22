@@ -1,5 +1,7 @@
 // Toegangscontrole voor de API-routes: sessie, lidmaatschap en rol. Elke route onder server/api
 // (behalve auth/) gebruikt `defineBeveiligdeHandler`; test/routes-beveiligd.test.ts dwingt dat af.
+// Een publieke route (zonder sessie) zegt dat expliciet met `{ publiek: true }`, en staat met naam
+// in de lijst PUBLIEKE_ROUTES van test/routes.ts.
 //
 // - Zonder sessie: 401.
 // - Iets van een organisatie waarvan je geen lid bent (of dat niet bestaat): 404, zodat het
@@ -24,6 +26,7 @@ import {
 import { gebruikAuth } from "../auth";
 import { gebruikDb } from "../db";
 import { member, session } from "../db/schema";
+import { isEigenaarRol } from "../organisaties/regels";
 import { projectOrganisatie } from "../projecten/repo";
 
 /** De rollen zoals de API en de UI ze noemen; intern heten ze `owner` en `member`. */
@@ -31,7 +34,7 @@ export type Rol = "eigenaar" | "lid";
 
 export type Gebruiker = { id: string; naam: string; email: string };
 
-export type Sessie = { gebruiker: Gebruiker; actieveOrganisatieId: string | null };
+export type Sessie = { gebruiker: Gebruiker; sessieId: string; actieveOrganisatieId: string | null };
 
 export type Context = { gebruiker: Gebruiker; organisatieId: string; rol: Rol };
 
@@ -42,8 +45,8 @@ function nietGevonden(): never {
 }
 
 /** `owner` (ook in een lijst als `owner,member`) is eigenaar; elke andere rol is lid. */
-function naarRol(rol: string): Rol {
-  return rol.split(",").some((r) => r.trim() === "owner") ? "eigenaar" : "lid";
+export function naarRol(rol: string): Rol {
+  return isEigenaarRol(rol) ? "eigenaar" : "lid";
 }
 
 /**
@@ -94,6 +97,7 @@ export async function vereisSessie(event: H3Event): Promise<Sessie> {
     huidig.activeOrganizationId ?? (await kiesActieveOrganisatie(huidig.id, user.id));
   const sessie: Sessie = {
     gebruiker: { id: user.id, naam: user.name, email: user.email },
+    sessieId: huidig.id,
     actieveOrganisatieId,
   };
   event.context[SESSIE_SLEUTEL] = sessie;
@@ -143,15 +147,25 @@ export async function vereisProjecttoegang(
   return { ...context, project: { id: projectId, organisatieId } };
 }
 
+export type HandlerOpties = {
+  /**
+   * Een publieke route, zonder sessie (bijvoorbeeld registreren via een uitnodiging). Alleen
+   * expliciet, en de route staat dan met naam in PUBLIEKE_ROUTES van test/routes.ts.
+   */
+  publiek?: true;
+};
+
 /**
  * De handler van elke API-route (behalve /api/auth): eist eerst een sessie (anders 401) en roept
- * dan de handler aan, die zelf `vereisLid` of `vereisProjecttoegang` gebruikt.
+ * dan de handler aan, die zelf `vereisLid` of `vereisProjecttoegang` gebruikt. Met
+ * `{ publiek: true }` vervalt de sessie-eis; de handler doet dan zelf alle controles.
  */
 export function defineBeveiligdeHandler<T>(
   handler: (event: H3Event) => T | Promise<T>,
+  opties: HandlerOpties = {},
 ): EventHandler<EventHandlerRequest, Promise<T>> {
   return defineEventHandler(async (event) => {
-    await vereisSessie(event);
+    if (opties.publiek !== true) await vereisSessie(event);
     return handler(event);
   });
 }
