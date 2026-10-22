@@ -8,6 +8,7 @@ import EigenschappenPaneel from "~/components/editor/EigenschappenPaneel.vue";
 import ExportDialoog from "~/components/editor/ExportDialoog.vue";
 import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
+import KringenlijstTabel from "~/components/kringenlijst/KringenlijstTabel.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
 import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
 import PlanToevoegenDialoog from "~/components/situatie/PlanToevoegenDialoog.vue";
@@ -240,6 +241,7 @@ onBeforeUnmount(() => {
           <OnderdelenPaneel class="overflow-y-auto border-r border-default" />
           <SchemaCanvas />
         </template>
+        <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="col-span-2 border-r border-default" />
         <template v-else>
           <TePlaatsenPaneel v-model:gekozen="teplaatsen" class="overflow-y-auto border-r border-default" />
           <div v-if="heeftPaginas" class="flex min-h-0 flex-col">

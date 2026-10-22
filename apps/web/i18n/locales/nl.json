@@ -63,8 +63,7 @@
       "tabbladen": {
         "eendraadschema": "Eendraadschema",
         "situatieschema": "Situatieschema",
-        "kringenlijst": "Kringenlijst",
-        "binnenkort": "Binnenkort"
+        "kringenlijst": "Kringenlijst"
       },
       "bevindingen": "{fouten} en {waarschuwingen}",
       "aantalFouten": "{n} fout | {n} fouten",
@@ -72,6 +71,9 @@
       "ongedaanMaken": "Ongedaan maken (Ctrl+Z)",
       "opnieuw": "Opnieuw (Ctrl+Y)",
       "exporteren": "Exporteren"
+    },
+    "kringenlijst": {
+      "titel": "Kringenlijst"
     },
     "status": {
       "opgeslagen": "Opgeslagen",

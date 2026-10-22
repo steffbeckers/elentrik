@@ -39,8 +39,8 @@ export type Stap = { patches: Patch[]; inversePatches: Patch[]; groep?: string }
 /** Maximaal aantal undo-stappen; daarboven valt de oudste weg. */
 export const MAX_STAPPEN = 200;
 
-/** De twee tabbladen van de editor. */
-export type Tabblad = "eendraadschema" | "situatieschema";
+/** De tabbladen van de editor. */
+export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst";
 
 export type TeLadenProject = { id: string; naam: string; versie: number; document: InstallatieDocument };
 

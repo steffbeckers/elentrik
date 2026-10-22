@@ -22,8 +22,7 @@ const bevindingenTekst = computed(() =>
   }),
 );
 
-const TABBLADEN = ["eendraadschema", "situatieschema"] as const satisfies readonly Tabblad[];
-const UITGESCHAKELDE_TABBLADEN = ["kringenlijst"] as const;
+const TABBLADEN = ["eendraadschema", "situatieschema", "kringenlijst"] as const satisfies readonly Tabblad[];
 
 const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = {
   opgeslagen: { icoon: "i-lucide-cloud-check", klasse: "text-muted" },
@@ -69,24 +68,6 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
         :label="$t(`editor.bovenbalk.tabbladen.${tabblad}`)"
         @click="store.tabblad = tabblad"
       />
-      <UTooltip
-        v-for="tabblad in UITGESCHAKELDE_TABBLADEN"
-        :key="tabblad"
-        :text="$t('editor.bovenbalk.tabbladen.binnenkort')"
-      >
-        <!-- Een uitgeschakelde knop krijgt geen muisgebeurtenissen: de tooltip hangt aan de span. -->
-        <span tabindex="0">
-          <UButton
-            role="tab"
-            aria-selected="false"
-            disabled
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            :label="$t(`editor.bovenbalk.tabbladen.${tabblad}`)"
-          />
-        </span>
-      </UTooltip>
     </nav>
 
     <div class="ml-auto flex items-center gap-2">

@@ -81,6 +81,25 @@ describe("laad", () => {
   });
 });
 
+describe("tabblad", () => {
+  test("kan de kringenlijst zijn en wordt bij laad teruggezet", () => {
+    const store = laadNieuw();
+    expect(store.tabblad).toBe("eendraadschema");
+    store.tabblad = "kringenlijst";
+    expect(store.tabblad).toBe("kringenlijst");
+    store.laad({ id: "p2", naam: "Andere", versie: 1, document: startDocument() });
+    expect(store.tabblad).toBe("eendraadschema");
+  });
+
+  test("een wissel van tabblad laat de selectie staan", () => {
+    const store = laadNieuw();
+    const id = eersteVan(store, "verdeelbord");
+    store.selectie = [id];
+    store.tabblad = "kringenlijst";
+    expect(store.selectie).toEqual([id]);
+  });
+});
+
 describe("undo/redo", () => {
   test("voegToe op het rail-einde is 1 stap; ongedaanMaken en opnieuw", () => {
     const store = laadNieuw();
