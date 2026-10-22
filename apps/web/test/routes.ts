@@ -14,7 +14,7 @@ export const AUTH_ROUTE = "auth/[...all].ts";
  * De publieke routes: ze gebruiken de wrapper, maar met `{ publiek: true }` (geen sessie nodig).
  * Elke publieke route staat hier met naam; de statische test en de routetabel controleren dat.
  */
-export const PUBLIEKE_ROUTES = ["uitnodigingen/[id].get.ts", "uitnodigingen/[id]/registreer.post.ts"];
+export const PUBLIEKE_ROUTES = ["uitnodigingen/[token].get.ts", "uitnodigingen/[token]/registreer.post.ts"];
 
 export function bestandenIn(map: string): string[] {
   return readdirSync(map, { withFileTypes: true }).flatMap((item) => {

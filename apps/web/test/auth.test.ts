@@ -420,7 +420,13 @@ describe("organisaties", () => {
     const [mail] = await mailsVoor(gast);
     expect(mail!.onderwerp).toBe("Jan Peeters nodigt je uit voor Peeters Elektro op Elentrik");
     expect(mail!.tekst).toContain("met de rol lid.");
-    expect(linkUit(mail!).toString()).toBe(`${BASIS}/uitnodiging/${uitnodiging.id}`);
+    // De link bevat een geheime token (alleen gehasht bewaard), niet het id van de uitnodiging.
+    const link = linkUit(mail!);
+    const token = link.pathname.split("/").at(-1)!;
+    expect(link.toString()).toBe(`${BASIS}/uitnodiging/${token}`);
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(mail!.tekst).not.toContain(uitnodiging.id);
+    await verwachtNietOpgeslagen(token);
 
     const [rij] = await db.select().from(invitation).where(eq(invitation.id, uitnodiging.id));
     const duur = rij!.expiresAt.getTime() - nu;

@@ -27,6 +27,7 @@ import { bedrijfsinstellingen, bestanden, invitation, member, projecten, session
 import { maakExport } from "../server/exports/repo";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
 import { registratieLimiet } from "../server/organisaties/leden";
+import { maakUitnodigingstoken } from "../server/organisaties/uitnodigingstoken";
 import { haalProject, maakProject, verwijderProject } from "../server/projecten/repo";
 import { kiesActieveOrganisatie, vereisLid, vereisProjecttoegang, vereisSessie } from "../server/utils/toegang";
 import type { ExportInvoer } from "../shared/exports";
@@ -200,6 +201,12 @@ async function uitnodigingIn(organisatieId: string): Promise<string> {
     inviterId: eigenaarA.id,
   });
   return id;
+}
+
+/** De geheime token van een verse uitnodiging (zoals in de mail). */
+async function uitnodigingstokenIn(organisatieId: string): Promise<string> {
+  const id = await uitnodigingIn(organisatieId);
+  return maakUitnodigingstoken(db, id, new Date(Date.now() + 7 * 24 * 3600 * 1000));
 }
 
 async function exportIn(organisatieId: string): Promise<string> {
@@ -476,25 +483,25 @@ const TABEL: Record<string, Rij> = {
     lid: 403,
     eigenaar: 204,
   },
-  "GET /api/uitnodigingen/:id": {
+  "GET /api/uitnodigingen/:token": {
     // Publiek: de link uit de mail opent de pagina voor er een account is.
     publiek: true,
-    verzoek: async () => ({ methode: "GET", pad: `/api/uitnodigingen/${await uitnodigingIn(orgA)}` }),
+    verzoek: async () => ({ methode: "GET", pad: `/api/uitnodigingen/${await uitnodigingstokenIn(orgA)}` }),
     zonderSessie: 200,
     zonderOrganisatie: 200,
     andereOrganisatie: 200,
     lid: 200,
     eigenaar: 200,
   },
-  "POST /api/uitnodigingen/:id/aanvaard": {
+  "POST /api/uitnodigingen/:token/aanvaard": {
     // Een uitnodiging voor een ander adres: elke ingelogde actor krijgt 403.
-    verzoek: async () => ({ methode: "POST", pad: `/api/uitnodigingen/${await uitnodigingIn(orgA)}/aanvaard` }),
+    verzoek: async () => ({ methode: "POST", pad: `/api/uitnodigingen/${await uitnodigingstokenIn(orgA)}/aanvaard` }),
     zonderOrganisatie: 403,
     andereOrganisatie: 403,
     lid: 403,
     eigenaar: 403,
   },
-  "POST /api/uitnodigingen/:id/registreer": {
+  "POST /api/uitnodigingen/:token/registreer": {
     // Publiek: elke actor registreert een nieuw account via een verse uitnodiging. De limiet per
     // IP wordt per verzoek gewist; de limiet zelf staat in test/organisaties.test.ts.
     publiek: true,
@@ -502,7 +509,7 @@ const TABEL: Record<string, Rij> = {
       registratieLimiet.wis();
       return {
         methode: "POST",
-        pad: `/api/uitnodigingen/${await uitnodigingIn(orgA)}/registreer`,
+        pad: `/api/uitnodigingen/${await uitnodigingstokenIn(orgA)}/registreer`,
         json: { naam: "Gast", wachtwoord: WACHTWOORD },
       };
     },

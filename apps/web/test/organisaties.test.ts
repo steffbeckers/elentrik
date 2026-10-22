@@ -8,10 +8,11 @@ import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth, zetAuth } from "../server/auth";
 import { type Db, zetDb } from "../server/db";
-import { account, invitation, member, organization, session, user } from "../server/db/schema";
+import { account, invitation, member, organization, session, user, verification } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
-import { registratieLimiet } from "../server/organisaties/leden";
+import { registratieLimiet, vertaalAuthFout } from "../server/organisaties/leden";
 import { maakLimiet } from "../server/organisaties/limiet";
+import { maakUitnodigingstoken } from "../server/organisaties/uitnodigingstoken";
 import { maakProject } from "../server/projecten/repo";
 import { maakTestDb } from "./db";
 import { beveiligdeRoutebestanden, routeUit } from "./routes";
@@ -122,24 +123,34 @@ async function organisatieMetLid(): Promise<{ eigenaar: Gebruiker; lid: Gebruike
   return { eigenaar, lid: { id, email, cookie: await inloggen(email) }, org, lidId: lidmaatschap };
 }
 
-/** Een uitnodiging rechtstreeks in de tabel. */
+/**
+ * Een uitnodiging rechtstreeks in de tabel, met de geheime token zoals de mail die zou bevatten
+ * (met dezelfde vervaldatum als de uitnodiging).
+ */
 async function uitnodiging(
   organisatieId: string,
   inviterId: string,
   email: string,
   opties: { rol?: string; verlooptOp?: Date; status?: string } = {},
-): Promise<string> {
+): Promise<{ id: string; token: string }> {
   const id = crypto.randomUUID();
+  const verlooptOp = opties.verlooptOp ?? new Date(Date.now() + 7 * 24 * 3600 * 1000);
   await db.insert(invitation).values({
     id,
     organizationId: organisatieId,
     email,
     role: opties.rol ?? "member",
     status: opties.status ?? "pending",
-    expiresAt: opties.verlooptOp ?? new Date(Date.now() + 7 * 24 * 3600 * 1000),
+    expiresAt: verlooptOp,
     inviterId,
   });
-  return id;
+  return { id, token: await maakUitnodigingstoken(db, id, verlooptOp) };
+}
+
+/** De link uit de laatste uitnodigingsmail aan dit adres. */
+function uitnodigingslink(adres: string): URL {
+  const mail = mails.findLast((m) => m.aan === adres);
+  return new URL(mail!.tekst.match(/https?:\/\/\S*\/uitnodiging\/\S+/)![0]);
 }
 
 async function stuur(methode: string, pad: string, cookie?: string, json?: unknown): Promise<Response> {
@@ -406,21 +417,60 @@ describe("leden", () => {
     expect([rol.status, weg.status, onbekend.status]).toEqual([404, 404, 404]);
   });
 
-  test("een lid via Better Auth: rollen wijzigen en leden verwijderen worden geweigerd", async () => {
-    const { eigenaar, lid, org } = await organisatieMetLid();
-    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+  test("een lid via Better Auth: de rol of het lidmaatschap van een ander lid wijzigen: 403", async () => {
+    const { lid, org } = await organisatieMetLid();
+    // Het doel is een gewoon lid, geen (laatste) eigenaar: alleen het recht van de aanroeper telt.
+    const anderEmail = nieuwAdres("ander");
+    const anderId = await registreer(anderEmail);
+    const anderLid = await wordLid(anderId, org, "member");
+    const voor = await db.select().from(member).where(eq(member.id, anderLid));
     const rol = await weigering(
       auth.api.updateMemberRole({
-        body: { memberId: eigenaarLid, role: "member", organizationId: org },
+        body: { memberId: anderLid, role: "owner", organizationId: org },
         headers: authHeaders(lid.cookie),
       }),
     );
     const weg = await weigering(
-      auth.api.removeMember({ body: { memberIdOrEmail: eigenaarLid, organizationId: org }, headers: authHeaders(lid.cookie) }),
+      auth.api.removeMember({ body: { memberIdOrEmail: anderLid, organizationId: org }, headers: authHeaders(lid.cookie) }),
     );
-    expect(rol.status).toBeGreaterThanOrEqual(400);
-    expect(weg.status).toBeGreaterThanOrEqual(400);
-    expect(await rolVan(eigenaar.id, org)).toBe("owner");
+    const viaEmail = await weigering(
+      auth.api.removeMember({ body: { memberIdOrEmail: anderEmail, organizationId: org }, headers: authHeaders(lid.cookie) }),
+    );
+    expect([rol, weg, viaEmail]).toEqual([
+      { status: 403, code: "ALLEEN_EIGENAAR" },
+      { status: 403, code: "ALLEEN_EIGENAAR" },
+      { status: 403, code: "ALLEEN_EIGENAAR" },
+    ]);
+    expect(await db.select().from(member).where(eq(member.id, anderLid))).toEqual(voor);
+  });
+
+  test("een lid via Better Auth: de uitnodigingen lezen (lijst of het geheel van de organisatie): 403", async () => {
+    const { eigenaar, lid, org } = await organisatieMetLid();
+    await uitnodiging(org, eigenaar.id, nieuwAdres("geheim"));
+    // Eerst een verzoek, zodat org de actieve organisatie van de sessie van het lid is.
+    expect(await json(stuur("GET", "/api/mij", lid.cookie))).toMatchObject({ actieveOrganisatieId: org });
+    const lijst = await weigering(
+      auth.api.listInvitations({ query: { organizationId: org }, headers: authHeaders(lid.cookie) }),
+    );
+    const lijstActief = await weigering(auth.api.listInvitations({ headers: authHeaders(lid.cookie) }));
+    const geheel = await weigering(
+      auth.api.getFullOrganization({ query: { organizationId: org }, headers: authHeaders(lid.cookie) }),
+    );
+    const geheelActief = await weigering(auth.api.getFullOrganization({ headers: authHeaders(lid.cookie) }));
+    for (const fout of [lijst, lijstActief, geheel, geheelActief]) {
+      expect(fout).toEqual({ status: 403, code: "ALLEEN_EIGENAAR" });
+    }
+    // Een eigenaar ziet ze wel.
+    const vanEigenaar = await auth.api.listInvitations({
+      query: { organizationId: org },
+      headers: authHeaders(eigenaar.cookie),
+    });
+    expect(vanEigenaar).toHaveLength(1);
+    const geheelEigenaar = await auth.api.getFullOrganization({
+      query: { organizationId: org },
+      headers: authHeaders(eigenaar.cookie),
+    });
+    expect(geheelEigenaar?.invitations).toHaveLength(1);
   });
 
   test("een verwijderd lid verliest meteen de toegang: het volgende projectverzoek geeft 404", async () => {
@@ -529,7 +579,16 @@ describe("uitnodigingen beheren", () => {
     const nieuw = await json<{ id: string }>(antwoord);
     expect(nieuw).toMatchObject({ email: gast, rol: "lid", verlooptOp: expect.any(String) });
     await new Promise((klaar) => setTimeout(klaar, 0));
-    expect(mails.find((m) => m.aan === gast)?.tekst).toContain(`/uitnodiging/${nieuw.id}`);
+    // De link bevat de geheime token, niet het id; de database kent alleen de hash.
+    const link = uitnodigingslink(gast);
+    const token = link.pathname.split("/").at(-1)!;
+    expect(link.pathname).toBe(`/uitnodiging/${token}`);
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const mail = mails.findLast((m) => m.aan === gast)!;
+    expect(mail.tekst).not.toContain(nieuw.id);
+    expect(mail.html).not.toContain(nieuw.id);
+    expect(JSON.stringify(await db.select().from(verification))).not.toContain(token);
+    expect(await json(stuur("GET", `/api/uitnodigingen/${token}`))).toMatchObject({ id: nieuw.id, email: gast });
 
     const lijst = await json<{ id: string; rol: string }[]>(stuur("GET", "/api/organisaties/uitnodigingen", eigenaar.cookie));
     expect(lijst).toEqual([{ id: nieuw.id, email: gast, rol: "lid", verlooptOp: expect.any(String) }]);
@@ -569,7 +628,7 @@ describe("uitnodigingen beheren", () => {
 
   test("een lid: uitnodigen, de lijst en intrekken geven 403", async () => {
     const { eigenaar, lid, org } = await organisatieMetLid();
-    const id = await uitnodiging(org, eigenaar.id, nieuwAdres());
+    const { id } = await uitnodiging(org, eigenaar.id, nieuwAdres());
     const maak = await stuur("POST", "/api/organisaties/uitnodigingen", lid.cookie, { email: nieuwAdres(), rol: "lid" });
     const lijst = await stuur("GET", "/api/organisaties/uitnodigingen", lid.cookie);
     const trek = await stuur("DELETE", `/api/organisaties/uitnodigingen/${id}`, lid.cookie);
@@ -578,7 +637,7 @@ describe("uitnodigingen beheren", () => {
 
   test("een lid via Better Auth: uitnodigen en intrekken worden geweigerd", async () => {
     const { eigenaar, lid, org } = await organisatieMetLid();
-    const id = await uitnodiging(org, eigenaar.id, nieuwAdres());
+    const { id } = await uitnodiging(org, eigenaar.id, nieuwAdres());
     const maak = await weigering(
       auth.api.createInvitation({
         body: { email: nieuwAdres(), role: "member", organizationId: org },
@@ -586,14 +645,17 @@ describe("uitnodigingen beheren", () => {
       }),
     );
     const trek = await weigering(auth.api.cancelInvitation({ body: { invitationId: id }, headers: authHeaders(lid.cookie) }));
-    expect([maak.status, trek.status]).toEqual([403, 403]);
+    expect([maak, trek]).toEqual([
+      { status: 403, code: "ALLEEN_EIGENAAR" },
+      { status: 403, code: "ALLEEN_EIGENAAR" },
+    ]);
     const [rij] = await db.select({ status: invitation.status }).from(invitation).where(eq(invitation.id, id));
     expect(rij!.status).toBe("pending");
   });
 
   test("een uitnodiging van een andere organisatie intrekken: 404", async () => {
     const { eigenaar, org } = await organisatieMetLid();
-    const id = await uitnodiging(org, eigenaar.id, nieuwAdres());
+    const { id } = await uitnodiging(org, eigenaar.id, nieuwAdres());
     const ander = await gebruiker("Ander");
     expect((await stuur("DELETE", `/api/organisaties/uitnodigingen/${id}`, ander.cookie)).status).toBe(404);
   });
@@ -602,11 +664,11 @@ describe("uitnodigingen beheren", () => {
 // --- Een uitnodiging bekijken en aanvaarden --------------------------------------------------
 
 describe("uitnodiging aanvaarden", () => {
-  test("de uitnodiging is zonder sessie te bekijken: organisatie, rol en adres", async () => {
+  test("de uitnodiging is zonder sessie te bekijken met de token: organisatie, rol en adres", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const gast = nieuwAdres();
-    const id = await uitnodiging(org, eigenaar.id, gast, { rol: "owner" });
-    const antwoord = await stuur("GET", `/api/uitnodigingen/${id}`);
+    const { id, token } = await uitnodiging(org, eigenaar.id, gast, { rol: "owner" });
+    const antwoord = await stuur("GET", `/api/uitnodigingen/${token}`);
     expect(antwoord.status).toBe(200);
     expect(await antwoord.json()).toEqual({
       id,
@@ -615,29 +677,48 @@ describe("uitnodiging aanvaarden", () => {
       organisatie: { naam: "Bedrijf" },
       verlooptOp: expect.any(String),
     });
-    expect((await stuur("GET", "/api/uitnodigingen/bestaat-niet")).status).toBe(404);
+    // Het id, een onbekende of een misvormde token: allemaal 410, zonder onderscheid.
+    for (const sleutel of [id, "A".repeat(43), "bestaat-niet"]) {
+      expect((await stuur("GET", `/api/uitnodigingen/${sleutel}`)).status, sleutel).toBe(410);
+    }
   });
 
-  test("met het juiste, bevestigde adres: lid en actief; een tweede keer: 410", async () => {
+  test("een nieuwe mail voor dezelfde uitnodiging vervangt de vorige token", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const { id, token: oud } = await uitnodiging(org, eigenaar.id, nieuwAdres());
+    const nieuw = await maakUitnodigingstoken(db, id, new Date(Date.now() + 3600_000));
+    expect((await stuur("GET", `/api/uitnodigingen/${oud}`)).status).toBe(410);
+    expect((await stuur("GET", `/api/uitnodigingen/${nieuw}`)).status).toBe(200);
+  });
+
+  test("met de token en het juiste, bevestigde adres: lid en actief; een tweede keer: 410", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const gast = await gebruiker(undefined, "gast");
-    const id = await uitnodiging(org, eigenaar.id, gast.email);
-    const antwoord = await stuur("POST", `/api/uitnodigingen/${id}/aanvaard`, gast.cookie);
+    const { token } = await uitnodiging(org, eigenaar.id, gast.email);
+    const antwoord = await stuur("POST", `/api/uitnodigingen/${token}/aanvaard`, gast.cookie);
     expect(antwoord.status).toBe(200);
     expect(await antwoord.json()).toEqual({ organisatieId: org });
     expect(await rolVan(gast.id, org)).toBe("member");
     expect(await json(stuur("GET", "/api/mij", gast.cookie))).toMatchObject({ actieveOrganisatieId: org });
 
-    const opnieuw = await stuur("POST", `/api/uitnodigingen/${id}/aanvaard`, gast.cookie);
+    const opnieuw = await stuur("POST", `/api/uitnodigingen/${token}/aanvaard`, gast.cookie);
     expect(opnieuw.status).toBe(410);
-    expect((await stuur("GET", `/api/uitnodigingen/${id}`)).status).toBe(410);
+    expect((await stuur("GET", `/api/uitnodigingen/${token}`)).status).toBe(410);
+  });
+
+  test("aanvaarden met het id in plaats van de token: 410", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const gast = await gebruiker(undefined, "met-id");
+    const { id } = await uitnodiging(org, eigenaar.id, gast.email);
+    expect((await stuur("POST", `/api/uitnodigingen/${id}/aanvaard`, gast.cookie)).status).toBe(410);
+    expect(await lidId(gast.id, org)).toBeUndefined();
   });
 
   test("een uitnodiging voor a@x, aanvaard door b@x: 403, ook via Better Auth", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const b = await gebruiker(undefined, "b");
-    const id = await uitnodiging(org, eigenaar.id, nieuwAdres("a"));
-    expect((await stuur("POST", `/api/uitnodigingen/${id}/aanvaard`, b.cookie)).status).toBe(403);
+    const { id, token } = await uitnodiging(org, eigenaar.id, nieuwAdres("a"));
+    expect((await stuur("POST", `/api/uitnodigingen/${token}/aanvaard`, b.cookie)).status).toBe(403);
     const viaAuth = await weigering(auth.api.acceptInvitation({ body: { invitationId: id }, headers: authHeaders(b.cookie) }));
     expect(viaAuth.status).toBe(403);
     expect(await lidId(b.id, org)).toBeUndefined();
@@ -649,23 +730,23 @@ describe("uitnodiging aanvaarden", () => {
     const { eigenaar, org } = await organisatieMetLid();
     const gast = await gebruiker(undefined, "onbevestigd");
     await db.update(user).set({ emailVerified: false }).where(eq(user.id, gast.id));
-    const id = await uitnodiging(org, eigenaar.id, gast.email);
-    expect((await stuur("POST", `/api/uitnodigingen/${id}/aanvaard`, gast.cookie)).status).toBe(403);
+    const { id, token } = await uitnodiging(org, eigenaar.id, gast.email);
+    expect((await stuur("POST", `/api/uitnodigingen/${token}/aanvaard`, gast.cookie)).status).toBe(403);
     const viaAuth = await weigering(auth.api.acceptInvitation({ body: { invitationId: id }, headers: authHeaders(gast.cookie) }));
     expect(viaAuth.status).toBe(403);
     expect(await lidId(gast.id, org)).toBeUndefined();
   });
 
-  test("een verlopen of ingetrokken uitnodiging: 410, en Better Auth weigert ze ook", async () => {
+  test("een verlopen of ingetrokken uitnodiging: 410, en Better Auth weigert ze ook (400)", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const gast = await gebruiker(undefined, "laat");
     const verlopen = await uitnodiging(org, eigenaar.id, gast.email, { verlooptOp: new Date(Date.now() - 1000) });
     const ingetrokken = await uitnodiging(org, eigenaar.id, gast.email, { status: "canceled" });
-    for (const id of [verlopen, ingetrokken]) {
-      expect((await stuur("POST", `/api/uitnodigingen/${id}/aanvaard`, gast.cookie)).status, id).toBe(410);
-      expect((await stuur("GET", `/api/uitnodigingen/${id}`)).status, id).toBe(410);
+    for (const { id, token } of [verlopen, ingetrokken]) {
+      expect((await stuur("POST", `/api/uitnodigingen/${token}/aanvaard`, gast.cookie)).status, id).toBe(410);
+      expect((await stuur("GET", `/api/uitnodigingen/${token}`)).status, id).toBe(410);
       const viaAuth = await weigering(auth.api.acceptInvitation({ body: { invitationId: id }, headers: authHeaders(gast.cookie) }));
-      expect(viaAuth.status).toBeGreaterThanOrEqual(400);
+      expect(viaAuth.status).toBe(400);
     }
     expect(await lidId(gast.id, org)).toBeUndefined();
   });
@@ -685,11 +766,18 @@ describe("uitnodiging aanvaarden", () => {
 // --- Registreren via een uitnodiging ---------------------------------------------------------
 
 describe("registreren via een uitnodiging", () => {
-  test("geen eigen organisatie, meteen lid, adres bevestigd, uitnodiging aanvaard en ingelogd", async () => {
+  const BODY = { naam: "Gast", wachtwoord: WACHTWOORD };
+
+  test("met de token uit de mail: geen eigen organisatie, meteen lid, bevestigd, aanvaard en ingelogd", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const gast = nieuwAdres("collega");
-    const id = await uitnodiging(org, eigenaar.id, gast);
-    const antwoord = await stuur("POST", `/api/uitnodigingen/${id}/registreer`, undefined, {
+    // Via de echte route, zodat de token uit de verstuurde mail komt.
+    await stuur("POST", "/api/organisaties/uitnodigingen", eigenaar.cookie, { email: gast, rol: "lid" });
+    await new Promise((klaar) => setTimeout(klaar, 0));
+    const token = uitnodigingslink(gast).pathname.split("/").at(-1)!;
+    const [uitgenodigd] = await db.select({ id: invitation.id }).from(invitation).where(eq(invitation.email, gast));
+
+    const antwoord = await stuur("POST", `/api/uitnodigingen/${token}/registreer`, undefined, {
       naam: "  Collega  ",
       wachtwoord: WACHTWOORD,
     });
@@ -701,7 +789,10 @@ describe("registreren via een uitnodiging", () => {
     expect(nieuw).toMatchObject({ name: "Collega", emailVerified: true, wachtendeBedrijfsnaam: null });
     const lidmaatschappen = await db.select().from(member).where(eq(member.userId, nieuw!.id));
     expect(lidmaatschappen.map((l) => [l.organizationId, l.role])).toEqual([[org, "member"]]);
-    const [rij] = await db.select({ status: invitation.status }).from(invitation).where(eq(invitation.id, id));
+    const [rij] = await db
+      .select({ status: invitation.status })
+      .from(invitation)
+      .where(eq(invitation.id, uitgenodigd!.id));
     expect(rij!.status).toBe("accepted");
 
     expect(await antwoord.json()).toMatchObject({ organisatieId: org });
@@ -717,36 +808,71 @@ describe("registreren via een uitnodiging", () => {
     expect(await db.select().from(account).where(eq(account.userId, nieuw!.id))).toHaveLength(1);
   });
 
+  test("met het id van de uitnodiging in plaats van de token: geweigerd (410), geen account", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const gast = nieuwAdres("kaper");
+    const { id } = await uitnodiging(org, eigenaar.id, gast, { rol: "owner" });
+    expect((await stuur("POST", `/api/uitnodigingen/${id}/registreer`, undefined, BODY)).status).toBe(410);
+    expect(await db.select().from(user).where(eq(user.email, gast))).toHaveLength(0);
+    const [rij] = await db.select({ status: invitation.status }).from(invitation).where(eq(invitation.id, id));
+    expect(rij!.status).toBe("pending");
+  });
+
+  test("een verkeerde of verlopen token: 410, zonder onderscheid", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const { token } = await uitnodiging(org, eigenaar.id, nieuwAdres());
+    const verkeerd = token.slice(0, -1) + (token.endsWith("A") ? "B" : "A");
+    const id = crypto.randomUUID();
+    await db.insert(invitation).values({
+      id,
+      organizationId: org,
+      email: nieuwAdres(),
+      role: "member",
+      status: "pending",
+      expiresAt: new Date(Date.now() + 3600_000),
+      inviterId: eigenaar.id,
+    });
+    // De uitnodiging is nog open, maar de token is verlopen.
+    const verlopenToken = await maakUitnodigingstoken(db, id, new Date(Date.now() - 1000));
+    const antwoorden: Response[] = [];
+    for (const t of [verkeerd, verlopenToken, "A".repeat(43), "kort"]) {
+      antwoorden.push(await stuur("POST", `/api/uitnodigingen/${t}/registreer`, undefined, BODY));
+    }
+    const bodies = await Promise.all(antwoorden.map((a) => a.json()));
+    expect(antwoorden.map((a) => a.status)).toEqual([410, 410, 410, 410]);
+    expect(new Set(bodies.map((b) => JSON.stringify(b))).size).toBe(1);
+  });
+
   test("de rol uit de uitnodiging wordt overgenomen", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const gast = nieuwAdres();
-    const id = await uitnodiging(org, eigenaar.id, gast, { rol: "owner" });
-    expect((await stuur("POST", `/api/uitnodigingen/${id}/registreer`, undefined, { naam: "Gast", wachtwoord: WACHTWOORD })).status).toBe(201);
+    const { token } = await uitnodiging(org, eigenaar.id, gast, { rol: "owner" });
+    expect((await stuur("POST", `/api/uitnodigingen/${token}/registreer`, undefined, BODY)).status).toBe(201);
     const [nieuw] = await db.select({ id: user.id }).from(user).where(eq(user.email, gast));
     expect(await rolVan(nieuw!.id, org)).toBe("owner");
   });
 
-  test("een tweede keer, verlopen of ingetrokken: 410; onbekend: 404", async () => {
+  test("een tweede keer, verlopen of ingetrokken: 410", async () => {
     const { eigenaar, org } = await organisatieMetLid();
-    const id = await uitnodiging(org, eigenaar.id, nieuwAdres());
-    const body = { naam: "Gast", wachtwoord: WACHTWOORD };
-    expect((await stuur("POST", `/api/uitnodigingen/${id}/registreer`, undefined, body)).status).toBe(201);
-    expect((await stuur("POST", `/api/uitnodigingen/${id}/registreer`, undefined, body)).status).toBe(410);
+    const { token } = await uitnodiging(org, eigenaar.id, nieuwAdres());
+    expect((await stuur("POST", `/api/uitnodigingen/${token}/registreer`, undefined, BODY)).status).toBe(201);
+    expect((await stuur("POST", `/api/uitnodigingen/${token}/registreer`, undefined, BODY)).status).toBe(410);
 
     const verlopenAdres = nieuwAdres();
     const verlopen = await uitnodiging(org, eigenaar.id, verlopenAdres, { verlooptOp: new Date(Date.now() - 1000) });
     const ingetrokken = await uitnodiging(org, eigenaar.id, nieuwAdres(), { status: "canceled" });
-    expect((await stuur("POST", `/api/uitnodigingen/${verlopen}/registreer`, undefined, body)).status).toBe(410);
-    expect((await stuur("POST", `/api/uitnodigingen/${ingetrokken}/registreer`, undefined, body)).status).toBe(410);
-    expect((await stuur("POST", "/api/uitnodigingen/bestaat-niet/registreer", undefined, body)).status).toBe(404);
+    expect((await stuur("POST", `/api/uitnodigingen/${verlopen.token}/registreer`, undefined, BODY)).status).toBe(410);
+    expect((await stuur("POST", `/api/uitnodigingen/${ingetrokken.token}/registreer`, undefined, BODY)).status).toBe(
+      410,
+    );
     expect(await db.select().from(user).where(eq(user.email, verlopenAdres))).toHaveLength(0);
   });
 
   test("een bestaand account met dat adres: 409 ACCOUNT_BESTAAT, en de uitnodiging blijft open", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const bestaand = await gebruiker(undefined, "bestaand");
-    const id = await uitnodiging(org, eigenaar.id, bestaand.email.toUpperCase());
-    const antwoord = await stuur("POST", `/api/uitnodigingen/${id}/registreer`, undefined, {
+    const { id, token } = await uitnodiging(org, eigenaar.id, bestaand.email.toUpperCase());
+    const antwoord = await stuur("POST", `/api/uitnodigingen/${token}/registreer`, undefined, {
       naam: "Kaper",
       wachtwoord: "een-ander-wachtwoord",
     });
@@ -763,9 +889,9 @@ describe("registreren via een uitnodiging", () => {
   test("een ongeldige body: 400, zonder iets te wijzigen", async () => {
     const { eigenaar, org } = await organisatieMetLid();
     const gast = nieuwAdres();
-    const id = await uitnodiging(org, eigenaar.id, gast);
+    const { id, token } = await uitnodiging(org, eigenaar.id, gast);
     for (const body of [{ naam: "Gast", wachtwoord: "123456789" }, { naam: "  ", wachtwoord: WACHTWOORD }, {}]) {
-      expect((await stuur("POST", `/api/uitnodigingen/${id}/registreer`, undefined, body)).status).toBe(400);
+      expect((await stuur("POST", `/api/uitnodigingen/${token}/registreer`, undefined, body)).status).toBe(400);
     }
     expect(await db.select().from(user).where(eq(user.email, gast))).toHaveLength(0);
     const [rij] = await db.select({ status: invitation.status }).from(invitation).where(eq(invitation.id, id));
@@ -775,14 +901,11 @@ describe("registreren via een uitnodiging", () => {
   test("rate limiting: na 5 pogingen per minuut volgt 429", async () => {
     const statussen: number[] = [];
     for (let i = 0; i < 6; i += 1) {
-      const antwoord = await stuur("POST", "/api/uitnodigingen/bestaat-niet/registreer", undefined, {
-        naam: "Gast",
-        wachtwoord: WACHTWOORD,
-      });
+      const antwoord = await stuur("POST", "/api/uitnodigingen/bestaat-niet/registreer", undefined, BODY);
       statussen.push(antwoord.status);
       if (antwoord.status === 429) expect(Number(antwoord.headers.get("retry-after"))).toBeGreaterThan(0);
     }
-    expect(statussen).toEqual([404, 404, 404, 404, 404, 429]);
+    expect(statussen).toEqual([410, 410, 410, 410, 410, 429]);
   });
 
   test("de limiet geldt per venster: na een minuut mag het weer", () => {
@@ -796,6 +919,96 @@ describe("registreren via een uitnodiging", () => {
     expect(limiet.probeer("ander").toegelaten).toBe(true);
     nu = 60_001;
     expect(limiet.probeer("ip").toegelaten).toBe(true);
+  });
+});
+
+// --- Wachtwoordherstel -------------------------------------------------------------------------
+
+describe("wachtwoordherstel", () => {
+  test("na een wachtwoordherstel gelden de bestaande sessies niet meer", async () => {
+    const wie = await gebruiker(undefined, "herstel");
+    expect((await stuur("GET", "/api/mij", wie.cookie)).status).toBe(200);
+    await auth.api.requestPasswordReset({
+      body: { email: wie.email, redirectTo: "/wachtwoord-herstellen" },
+      headers: authHeaders(),
+    });
+    await new Promise((klaar) => setTimeout(klaar, 0));
+    const mail = mails.findLast((m) => m.aan === wie.email);
+    const token = new URL(mail!.tekst.match(/https?:\/\/\S+/)![0]).pathname.split("/").at(-1)!;
+    await auth.api.resetPassword({ body: { newPassword: "nieuw-wachtwoord-2", token }, headers: authHeaders() });
+
+    expect((await stuur("GET", "/api/mij", wie.cookie)).status).toBe(401);
+    expect(await db.select().from(session).where(eq(session.userId, wie.id))).toHaveLength(0);
+  });
+});
+
+// --- De laatste eigenaar in de database --------------------------------------------------------
+
+/** De fout van een databaseopdracht, of undefined als ze lukte. */
+async function foutVan(opdracht: Promise<unknown>): Promise<unknown> {
+  return opdracht.then(
+    () => undefined,
+    (f: unknown) => f,
+  );
+}
+
+/** Het bericht van de databasefout (Drizzle verpakt de fout van Postgres in `cause`). */
+function databaseBericht(f: unknown): string | undefined {
+  const fout = f as { message?: string; cause?: { message?: string } } | undefined;
+  return fout?.cause?.message ?? fout?.message;
+}
+
+describe("databasetrigger voor de laatste eigenaar", () => {
+  test("de laatste eigenaar rechtstreeks verwijderen of degraderen faalt met LAATSTE_EIGENAAR", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+    const weg = await foutVan(db.delete(member).where(eq(member.id, eigenaarLid)));
+    const degradeer = await foutVan(db.update(member).set({ role: "member" }).where(eq(member.id, eigenaarLid)));
+    expect([databaseBericht(weg), databaseBericht(degradeer)]).toEqual(["LAATSTE_EIGENAAR", "LAATSTE_EIGENAAR"]);
+    expect(await rolVan(eigenaar.id, org)).toBe("owner");
+  });
+
+  test("met een tweede eigenaar mag het; een lid of een andere kolom raakt de trigger niet", async () => {
+    const { eigenaar, lid, org, lidId: idVanLid } = await organisatieMetLid();
+    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+    await db.update(member).set({ createdAt: new Date() }).where(eq(member.id, eigenaarLid));
+    await db.update(member).set({ role: "owner" }).where(eq(member.id, idVanLid));
+    await db.update(member).set({ role: "member" }).where(eq(member.id, eigenaarLid));
+    await db.delete(member).where(eq(member.id, eigenaarLid));
+    expect(await rolVan(lid.id, org)).toBe("owner");
+    expect(await lidId(eigenaar.id, org)).toBeUndefined();
+    // Een lid dat geen eigenaar is, mag altijd weg.
+    const extra = await wordLid(eigenaar.id, org, "member");
+    await db.delete(member).where(eq(member.id, extra));
+    expect(await lidId(eigenaar.id, org)).toBeUndefined();
+  });
+
+  test("beide eigenaars in één transactie weghalen: de tweede faalt en alles rolt terug", async () => {
+    const { eigenaar, org, lidId: idVanLid } = await organisatieMetLid();
+    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+    await db.update(member).set({ role: "owner" }).where(eq(member.id, idVanLid));
+    const fout = await foutVan(
+      db.transaction(async (tx) => {
+        await tx.update(member).set({ role: "member" }).where(eq(member.id, eigenaarLid));
+        await tx.delete(member).where(eq(member.id, idVanLid));
+      }),
+    );
+    expect(databaseBericht(fout)).toBe("LAATSTE_EIGENAAR");
+    const rollen = await db.select({ rol: member.role }).from(member).where(eq(member.organizationId, org));
+    expect(rollen.map((r) => r.rol)).toEqual(["owner", "owner"]);
+  });
+
+  test("de fout van de trigger wordt in onze routes 409 LAATSTE_EIGENAAR", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    const eigenaarLid = (await lidId(eigenaar.id, org))!;
+    const fout = await foutVan(db.delete(member).where(eq(member.id, eigenaarLid)));
+    expect(vertaalAuthFout(fout)).toMatchObject({ statusCode: 409, data: { code: "LAATSTE_EIGENAAR" } });
+  });
+
+  test("verdwijnt de gebruiker zelf (cascade), dan houdt de trigger niets tegen", async () => {
+    const { eigenaar, org } = await organisatieMetLid();
+    await db.delete(user).where(eq(user.id, eigenaar.id));
+    expect(await lidId(eigenaar.id, org)).toBeUndefined();
   });
 });
 

@@ -21,9 +21,11 @@ import * as schema from "../db/schema";
 import { bevestigMail, herstelMail, magicLinkMail, uitnodigingMail } from "../mail/sjablonen";
 import { gebruikVerzender, type Mail } from "../mail/verzend";
 import { richtEersteOrganisatieIn } from "../organisaties/registratie";
+import { maakUitnodigingstoken } from "../organisaties/uitnodigingstoken";
 import {
   geldigeNaam,
   haaltLaatsteEigenaarWeg,
+  isEigenaarRol,
   LAATSTE_EIGENAAR,
   LAATSTE_EIGENAAR_BOODSCHAP,
   MAX_NAAMLENGTE,
@@ -115,24 +117,84 @@ function eisGeldigeNaam(naam: unknown): string {
 
 type Body = Record<string, unknown>;
 
+/** Endpoints van Better Auth die alleen een eigenaar van de organisatie mag gebruiken (ruling R5). */
+const ALLEEN_EIGENAAR = new Set([
+  "/organization/update",
+  "/organization/invite-member",
+  "/organization/cancel-invitation",
+  "/organization/remove-member",
+  "/organization/update-member-role",
+  // Uitnodigingen (met hun adressen) zijn beheer: een lid ziet ze niet, ook niet in het geheel.
+  "/organization/list-invitations",
+  "/organization/get-full-organization",
+]);
+
+/** Endpoints die de laatste eigenaar kunnen weghalen. */
+const RAAKT_EIGENAAR = new Set([
+  "/organization/leave",
+  "/organization/remove-member",
+  "/organization/update-member-role",
+]);
+
+type AuthCtx = Parameters<typeof getSessionFromCtx>[0] & { path: string; body?: unknown; query?: unknown };
+
+function tekst(waarde: unknown): string | undefined {
+  return typeof waarde === "string" && waarde !== "" ? waarde : undefined;
+}
+
+/** De organisatie waarop een organization-endpoint werkt: uit body, query, uitnodiging of sessie. */
+async function organisatieVan(db: Db, ctx: AuthCtx, body: Body, actief: string | null): Promise<string | null> {
+  const query = (ctx.query && typeof ctx.query === "object" ? ctx.query : {}) as Body;
+  if (ctx.path === "/organization/cancel-invitation") {
+    const invitationId = tekst(body.invitationId);
+    if (!invitationId) return null;
+    const [rij] = await db
+      .select({ org: schema.invitation.organizationId })
+      .from(schema.invitation)
+      .where(eq(schema.invitation.id, invitationId));
+    return rij?.org ?? null;
+  }
+  const slug = tekst(query.organizationSlug);
+  if (slug) {
+    const [rij] = await db
+      .select({ id: schema.organization.id })
+      .from(schema.organization)
+      .where(eq(schema.organization.slug, slug));
+    return rij?.id ?? null;
+  }
+  return tekst(body.organizationId) ?? tekst(query.organizationId) ?? actief;
+}
+
 /**
- * De laatste eigenaar blijft, ook via de endpoints van Better Auth (ruling R5): vóór verlaten,
- * een lid verwijderen of een rol wijzigen. Better Auth weigert die gevallen zelf ook, maar met
- * 400 en een eigen code; dit geeft overal 409 met `LAATSTE_EIGENAAR`. Zonder sessie of met een
- * onbekend lid doet dit niets: dan weigert Better Auth zelf.
+ * De regels voor organisaties op de endpoints van Better Auth zelf (ruling R5), vóór Better Auth
+ * het verzoek behandelt:
+ * - beheer (leden, rollen, uitnodigingen, hernoemen, en het geheel met de uitnodigingen) alleen
+ *   door een eigenaar: een lid krijgt 403 `ALLEEN_EIGENAAR`;
+ * - de laatste eigenaar kan niet vertrekken, verwijderd of gedegradeerd worden: 409
+ *   `LAATSTE_EIGENAAR` (Better Auth weigert dat zelf ook, maar met 400 en een eigen code).
+ * Zonder sessie, zonder lidmaatschap of met een onbekend doel doet dit niets: dan weigert Better
+ * Auth zelf. De databasetrigger (migratie 0005) houdt de laatste eigenaar ook bij gelijktijdige
+ * verzoeken vast.
  */
-async function eisEenEigenaarBlijft(
-  db: Db,
-  ctx: Parameters<typeof getSessionFromCtx>[0] & { path: string; body?: unknown },
-): Promise<void> {
-  const paden = ["/organization/leave", "/organization/remove-member", "/organization/update-member-role"];
-  if (!paden.includes(ctx.path)) return;
+async function bewaakOrganisatie(db: Db, ctx: AuthCtx): Promise<void> {
+  if (!ALLEEN_EIGENAAR.has(ctx.path) && !RAAKT_EIGENAAR.has(ctx.path)) return;
   const body = (ctx.body && typeof ctx.body === "object" ? ctx.body : {}) as Body;
   const sessie = await getSessionFromCtx(ctx).catch(() => null);
   if (!sessie) return;
   const actief = (sessie.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? null;
-  const organisatieId = typeof body.organizationId === "string" && body.organizationId ? body.organizationId : actief;
+  const organisatieId = await organisatieVan(db, ctx, body, actief);
   if (!organisatieId) return;
+
+  if (ALLEEN_EIGENAAR.has(ctx.path)) {
+    const [zelf] = await db
+      .select({ rol: schema.member.role })
+      .from(schema.member)
+      .where(and(eq(schema.member.userId, sessie.user.id), eq(schema.member.organizationId, organisatieId)));
+    if (zelf && !isEigenaarRol(zelf.rol)) {
+      throw new APIError("FORBIDDEN", { code: "ALLEEN_EIGENAAR", message: "Alleen een eigenaar mag dit." });
+    }
+  }
+  if (!RAAKT_EIGENAAR.has(ctx.path)) return;
 
   let doel: { rol: string } | undefined;
   let nieuweRol: string | null = null;
@@ -142,7 +204,7 @@ async function eisEenEigenaarBlijft(
       .from(schema.member)
       .where(and(eq(schema.member.userId, sessie.user.id), eq(schema.member.organizationId, organisatieId)));
   } else if (ctx.path === "/organization/remove-member") {
-    const sleutel = typeof body.memberIdOrEmail === "string" ? body.memberIdOrEmail : "";
+    const sleutel = tekst(body.memberIdOrEmail) ?? "";
     [doel] = sleutel.includes("@")
       ? await db
           .select({ rol: schema.member.role })
@@ -154,11 +216,10 @@ async function eisEenEigenaarBlijft(
           .from(schema.member)
           .where(and(eq(schema.member.id, sleutel), eq(schema.member.organizationId, organisatieId)));
   } else {
-    const memberId = typeof body.memberId === "string" ? body.memberId : "";
     [doel] = await db
       .select({ rol: schema.member.role })
       .from(schema.member)
-      .where(and(eq(schema.member.id, memberId), eq(schema.member.organizationId, organisatieId)));
+      .where(and(eq(schema.member.id, tekst(body.memberId) ?? ""), eq(schema.member.organizationId, organisatieId)));
     nieuweRol = Array.isArray(body.role) ? body.role.join(",") : typeof body.role === "string" ? body.role : "";
   }
   if (doel && (await haaltLaatsteEigenaarWeg(db, organisatieId, doel, nieuweRol))) throw laatsteEigenaar();
@@ -187,7 +248,7 @@ export function maakAuth(db: Db = gebruikDb()) {
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         alleenBijRegistratie(ctx.path, ctx.body);
-        await eisEenEigenaarBlijft(db, ctx);
+        await bewaakOrganisatie(db, ctx);
       }),
     },
     databaseHooks: {
@@ -220,6 +281,8 @@ export function maakAuth(db: Db = gebruikDb()) {
       enabled: true,
       minPasswordLength: 10,
       requireEmailVerification: true,
+      // Na een wachtwoordherstel gelden de bestaande sessies niet meer.
+      revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
         verstuur("herstel", herstelMail({ naam: user.name, link: url }), user.email);
       },
@@ -280,14 +343,17 @@ export function maakAuth(db: Db = gebruikDb()) {
             return { data: { name: eisGeldigeNaam(organization.name) } };
           },
         },
-        sendInvitationEmail: async ({ id, email, role, organization, inviter }) => {
+        // De link bevat een geheime token, niet het id van de uitnodiging: het id kan een lid of
+        // eigenaar zien, de token staat alleen in deze mail (de database kent alleen de hash).
+        sendInvitationEmail: async ({ id, email, role, organization, inviter, invitation }) => {
+          const token = await maakUitnodigingstoken(db, id, new Date(invitation.expiresAt));
           verstuur(
             "uitnodiging",
             uitnodigingMail({
               uitnodiger: inviter.user.name,
               organisatie: organization.name,
               rol: ROLNAMEN[role] ?? role,
-              link: `${basisUrl()}/uitnodiging/${id}`,
+              link: `${basisUrl()}/uitnodiging/${token}`,
             }),
             email,
           );

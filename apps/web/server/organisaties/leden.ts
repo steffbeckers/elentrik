@@ -36,6 +36,7 @@ import {
   LAATSTE_EIGENAAR_BOODSCHAP,
   MAX_NAAMLENGTE,
 } from "./regels";
+import { uitnodigingVanToken, wisUitnodigingstokens } from "./uitnodigingstoken";
 
 // --- Fouten ----------------------------------------------------------------------------------
 
@@ -61,8 +62,21 @@ const AUTH_CODES: Record<string, [number, string, string?]> = {
   MEMBER_NOT_FOUND: [404, "Niet gevonden"],
 };
 
-/** Een fout van `auth.api.*` als h3-fout; de boodschap van Better Auth gaat niet mee. */
-function vertaalAuthFout(fout_: unknown): unknown {
+/** Komt deze fout (ergens in de keten van oorzaken) van de databasetrigger voor de laatste eigenaar? */
+function isTriggerLaatsteEigenaar(f: unknown): boolean {
+  for (let huidig: unknown = f; huidig && typeof huidig === "object"; huidig = (huidig as { cause?: unknown }).cause) {
+    if ((huidig as { message?: unknown }).message === LAATSTE_EIGENAAR) return true;
+  }
+  return false;
+}
+
+/**
+ * Een fout van `auth.api.*` als h3-fout; de boodschap van Better Auth gaat niet mee. De
+ * databasetrigger voor de laatste eigenaar (migratie 0005) wordt 409 `LAATSTE_EIGENAAR`.
+ * Geëxporteerd voor de test van die vertaling.
+ */
+export function vertaalAuthFout(fout_: unknown): unknown {
+  if (isTriggerLaatsteEigenaar(fout_)) return laatsteEigenaar();
   if (!fout_ || typeof fout_ !== "object" || !("statusCode" in fout_) || !("body" in fout_)) return fout_;
   const status = (fout_ as { statusCode: unknown }).statusCode;
   const code = ((fout_ as { body?: { code?: unknown } }).body ?? {}).code;
@@ -335,11 +349,13 @@ export async function trekIn(event: H3Event): Promise<null> {
 export type UitnodigingInfo = Uitnodiging & { organisatie: { naam: string } };
 
 /**
- * Een uitnodiging op id, zonder sessie (de pagina /uitnodiging/:id): adres, rol en de naam van
- * de organisatie. Het id is willekeurig en staat alleen in de mail. Onbekend: 404; gebruikt,
- * ingetrokken of verlopen: 410.
+ * De open uitnodiging bij de token uit het pad. Een onbekende, misvormde, verlopen, gebruikte of
+ * ingetrokken token geeft altijd hetzelfde: 410.
  */
-export async function toonUitnodiging(event: H3Event): Promise<UitnodigingInfo> {
+async function openUitnodiging(event: H3Event) {
+  const token = getRouterParam(event, "token") ?? "";
+  const id = await uitnodigingVanToken(gebruikDb(), token);
+  if (!id) throw nietMeerGeldig();
   const [rij] = await gebruikDb()
     .select({
       id: invitation.id,
@@ -347,13 +363,22 @@ export async function toonUitnodiging(event: H3Event): Promise<UitnodigingInfo> 
       rol: invitation.role,
       status: invitation.status,
       expiresAt: invitation.expiresAt,
+      organisatieId: invitation.organizationId,
       organisatie: organization.name,
     })
     .from(invitation)
     .innerJoin(organization, eq(organization.id, invitation.organizationId))
-    .where(eq(invitation.id, padId(event)));
-  if (!rij) throw nietGevonden();
-  if (!isOpen(rij)) throw nietMeerGeldig();
+    .where(eq(invitation.id, id));
+  if (!rij || !isOpen(rij)) throw nietMeerGeldig();
+  return rij;
+}
+
+/**
+ * Een uitnodiging op de geheime token uit de mail, zonder sessie (de pagina /uitnodiging/:token):
+ * adres, rol en de naam van de organisatie. Niet (meer) geldig: 410.
+ */
+export async function toonUitnodiging(event: H3Event): Promise<UitnodigingInfo> {
+  const rij = await openUitnodiging(event);
   return {
     id: rij.id,
     email: rij.email,
@@ -364,25 +389,23 @@ export async function toonUitnodiging(event: H3Event): Promise<UitnodigingInfo> 
 }
 
 /**
- * Aanvaardt een uitnodiging voor de ingelogde gebruiker: alleen met hetzelfde, bevestigde adres
- * (anders 403), en alleen als ze nog open is (anders 410). De organisatie wordt actief.
+ * Aanvaardt de uitnodiging achter de token voor de ingelogde gebruiker: alleen als ze nog geldig
+ * is (anders 410) en met hetzelfde, bevestigde adres (anders 403). De organisatie wordt actief.
  */
 export async function aanvaard(event: H3Event): Promise<{ organisatieId: string }> {
   const { gebruiker } = await vereisSessie(event);
-  const id = padId(event);
-  const db = gebruikDb();
-  const [rij] = await db.select().from(invitation).where(eq(invitation.id, id));
-  if (!rij) throw nietGevonden();
+  const rij = await openUitnodiging(event);
   if (rij.email.toLowerCase() !== gebruiker.email.toLowerCase()) {
     throw fout(403, "Deze uitnodiging is voor een ander adres");
   }
-  if (!isOpen(rij)) throw nietMeerGeldig();
+  const db = gebruikDb();
   const [account_] = await db.select({ bevestigd: user.emailVerified }).from(user).where(eq(user.id, gebruiker.id));
   if (!account_?.bevestigd) throw fout(403, "Bevestig eerst je e-mailadres");
   await viaAuth(event, () =>
-    gebruikAuth().api.acceptInvitation({ body: { invitationId: id }, headers: event.headers, returnHeaders: true }),
+    gebruikAuth().api.acceptInvitation({ body: { invitationId: rij.id }, headers: event.headers, returnHeaders: true }),
   );
-  return { organisatieId: rij.organizationId };
+  await wisUitnodigingstokens(db, rij.id);
+  return { organisatieId: rij.organisatieId };
 }
 
 // --- Registreren via een uitnodiging ---------------------------------------------------------
@@ -409,7 +432,8 @@ function isUniekeSleutelFout(f: unknown): boolean {
  * uitnodiging, die daarmee aanvaard is; er komt geen eigen organisatie. Daarna volgt een sessie
  * met die organisatie actief.
  *
- * Onbekend: 404. Niet meer open: 410. Een account met dat adres bestaat al: 409
+ * De token uit de mail bewijst het adres; het id van de uitnodiging volstaat niet. Een
+ * onbekende, verlopen, gebruikte of ingetrokken token: 410. Een account met dat adres bestaat al: 409
  * `ACCOUNT_BESTAAT` (de pagina biedt dan inloggen aan). Meer dan 5 pogingen per minuut: 429.
  */
 export async function registreerViaUitnodiging(event: H3Event): Promise<{ organisatieId: string }> {
@@ -419,19 +443,19 @@ export async function registreerViaUitnodiging(event: H3Event): Promise<{ organi
     setResponseHeader(event, "retry-after", poging.wachtSeconden);
     throw fout(429, "Te veel pogingen; probeer het straks opnieuw");
   }
-  const id = padId(event);
   const { naam, wachtwoord } = await leesBody(event, RegistratieSchema);
+  const db = gebruikDb();
+  const id = await uitnodigingVanToken(db, getRouterParam(event, "token") ?? "");
+  if (!id) throw nietMeerGeldig();
 
   const auth = gebruikAuth();
   const hash = await (await auth.$context).password.hash(wachtwoord);
-  const db = gebruikDb();
   let gegevens: { email: string; organisatieId: string };
   try {
     gegevens = await db.transaction(async (tx) => {
       // De uitnodiging vergrendelen: twee gelijktijdige registraties gebruiken ze samen één keer.
       const [rij] = await tx.select().from(invitation).where(eq(invitation.id, id)).for("update");
-      if (!rij) throw nietGevonden();
-      if (!isOpen(rij)) throw nietMeerGeldig();
+      if (!rij || !isOpen(rij)) throw nietMeerGeldig();
       const email = rij.email.toLowerCase();
       const [bestaand] = await tx.select({ id: user.id }).from(user).where(eq(user.email, email));
       if (bestaand) throw fout(409, "Er bestaat al een account met dit adres", "ACCOUNT_BESTAAT");
@@ -469,6 +493,7 @@ export async function registreerViaUitnodiging(event: H3Event): Promise<{ organi
     if (isUniekeSleutelFout(f)) throw fout(409, "Er bestaat al een account met dit adres", "ACCOUNT_BESTAAT");
     throw f;
   }
+  await wisUitnodigingstokens(db, id);
 
   // Inloggen met het nieuwe wachtwoord geeft de sessie en haar cookie; de organisatie van de
   // uitnodiging wordt er de actieve organisatie.
