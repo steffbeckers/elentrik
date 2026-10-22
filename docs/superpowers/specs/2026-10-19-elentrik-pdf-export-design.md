@@ -141,7 +141,11 @@ Ze worden gevalideerd met de bestaande Zod-schema's.
 - **API:**
   - `GET /api/bedrijfsgegevens` en `PUT /api/bedrijfsgegevens`, met Zod-validatie.
   - `POST /api/bedrijfsgegevens/logo`.
-  - `POST /api/projecten/:id/exports`, met als invoer `{ onderdelen, papier, versieLabel }`. De server:
+  - `POST /api/projecten/:id/exports`, met als invoer `{ onderdelen, papier, versieLabel }` en de header `If-Match: <versie>`, de versie die de client toont.
+    - Zonder header volgt 428.
+    - Verschilt de versie van de opgeslagen versie, dan volgt 409 met de huidige versie, zoals bij het opslaan. Er wordt dan niets bewaard en de client toont de conflictdialoog.
+
+    Daarna doet de server het volgende:
     1. laadt het opgeslagen document en de bedrijfsgegevens;
     2. maakt een snapshot;
     3. draait `analyseer` en `controleer`;
@@ -167,7 +171,7 @@ Ze worden gevalideerd met de bestaande Zod-schema's.
 - **Exportdialoog:**
   1. Bij het openen gebeurt eerst `autosave.nuOpslaan()`. Lukt dat niet (conflict of fout), dan kan de gebruiker niet exporteren en ziet hij de reden.
   2. Zijn er onopgeloste fouten, dan vraagt Elentrik een bevestiging met het aantal. De bijlage is dan aangevinkt en uitgeschakeld, met uitleg.
-  3. Het versielabel is standaard "V{n+1}", met n het aantal eerdere exports.
+  3. Het versielabel is standaard "V{n+1}", met n het aantal eerdere exports. Kan de lijst niet geladen worden, dan blijft het label leeg en moet de gebruiker het zelf invullen.
   4. Tijdens het exporteren is er een voortgangsindicator. Daarna start de download automatisch, en de lijst met eerdere exports wordt bijgewerkt.
 - **Tabblad Kringenlijst:**
   - een tabel uit `kringenlijst()`, met dezelfde kolommen;
