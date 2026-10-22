@@ -32,6 +32,7 @@ import { computed, ref, shallowRef } from "vue";
 import type { Richting } from "../composables/sneltoetsen";
 import { zelfdeAdres } from "../editor/adres";
 import { samengevoegd } from "../editor/resultaten";
+import { useSessieStore } from "./sessie";
 
 /** Eén undo-stap. Stappen met dezelfde `groep` na elkaar worden samengevoegd. */
 export type Stap = { patches: Patch[]; inversePatches: Patch[]; groep?: string };
@@ -124,6 +125,9 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value++;
   }
 
+  /** De laatst gekende naam van de ingelogde gebruiker; geen state (zie `auteur`). */
+  let laatsteAuteur: string | null = null;
+
   function laad(project: TeLadenProject): void {
     document.value = project.document;
     projectId.value = project.id;
@@ -136,6 +140,7 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value = 0;
     laadGeneratie.value++;
     groepGesloten = true;
+    auteur();
   }
 
   /**
@@ -319,14 +324,24 @@ export const useEditorStore = defineStore("editor", () => {
     pasToe(samengevoegd(doc, resultaten));
   }
 
+  /**
+   * De naam van de ingelogde gebruiker, voor `door` van een afwijking. Is de sessie intussen
+   * verlopen (de sessie-store is leeg, de editor werkt lokaal verder), dan de laatst gekende naam:
+   * die van wie het project opende.
+   */
+  function auteur(): string {
+    const huidige = useSessieStore().gebruiker?.naam;
+    if (huidige) laatsteAuteur = huidige;
+    return laatsteAuteur ?? "onbekend";
+  }
+
   function zetAfwijking(regelId: string, nodeId: NodeId, motivatie: string): void {
     pasToe(
       voegAfwijkingToe(vereisDocument(), {
         regelId,
         nodeId,
         motivatie,
-        // TODO(plan inloggen en organisaties): `door` wordt de ingelogde gebruiker.
-        door: "lokaal",
+        door: auteur(),
         datum: vandaag(),
       }),
     );

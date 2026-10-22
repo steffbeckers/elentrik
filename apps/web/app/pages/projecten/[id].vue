@@ -18,7 +18,10 @@ import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
 import { httpStatus } from "~/composables/useProjectenApi";
 import { useNodeTekst } from "~/composables/useNodeTekst";
+import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { veiligTerug } from "~/sessie/bestemming";
 import { useEditorStore } from "~/stores/editor";
+import { useSessieStore } from "~/stores/sessie";
 import { useSituatieStore } from "~/stores/situatie";
 
 const route = useRoute();
@@ -27,6 +30,8 @@ const id = String(route.params.id);
 const api = useProjectenApi();
 const store = useEditorStore();
 const situatie = useSituatieStore();
+const sessie = useSessieStore();
+const herstelSessie = useSessieHerstel();
 const { nodeTekst } = useNodeTekst();
 const { t } = useI18n();
 const toast = useToast();
@@ -36,6 +41,10 @@ useHead({ title: () => (store.projectId === id && store.naam ? `${store.naam} ·
 type Laadstatus = "laden" | "klaar" | "nietGevonden" | "fout";
 const laadstatus = ref<Laadstatus>("laden");
 
+// De concepten van dit venster horen bij wie het opende. De middleware laat de editor alleen
+// met een sessie toe, dus de gebruiker is er altijd.
+const gebruikerId = sessie.gebruiker?.id ?? "";
+
 const autosave = useAutosave({
   store,
   bewaar: api.bewaar,
@@ -44,6 +53,7 @@ const autosave = useAutosave({
   naarProject: async (kopieId) => {
     await navigateTo(`/projecten/${kopieId}`);
   },
+  gebruikerId,
 });
 
 // --- Laden en het lokale concept -------------------------------------------
@@ -57,15 +67,43 @@ async function laad(): Promise<void> {
   try {
     project = await api.haal(id);
   } catch (fout) {
-    laadstatus.value = httpStatus(fout) === 404 ? "nietGevonden" : "fout";
+    const status = httpStatus(fout);
+    laadstatus.value = status === 404 ? "nietGevonden" : "fout";
+    // Geen sessie meer: naar /inloggen, met deze pagina als terugkeer-URL.
+    if (status === 401) await herstelSessie(fout);
     return;
   }
+  await werkInOrganisatieVan(project.organisatieId);
   store.laad({ id: project.id, naam: project.naam, versie: project.versie, document: project.document });
   // Een kapot conceptarchief mag het openen niet tegenhouden. Pas na de conceptcontrole is de pagina klaar.
   // Elk concept van het project telt, los van de klok: het bestaat alleen zolang er onbewaard werk is.
-  concept.value = await nieuwsteConcept(project.id).catch(() => null);
+  // Alleen de eigen concepten van de gebruiker, en één keer de oude zonder gebruiker.
+  // Zonder gebruiker (kan niet, zie boven) wordt niets aangeboden: geen oud concept gaat naar "niemand".
+  concept.value = gebruikerId ? await nieuwsteConcept(project.id, gebruikerId).catch(() => null) : null;
   conceptOpen.value = concept.value !== null;
   laadstatus.value = "klaar";
+}
+
+/** Tijdens het openen: er wordt niets verlaten, dus `voorVertrek` vraagt niets. */
+let bijOpenen = false;
+
+/**
+ * Een project van een andere organisatie waarvan de gebruiker lid is (een bladwijzer, een tweede
+ * tabblad): die organisatie wordt actief, met een korte melding (spec 5b.1). Lukt het wisselen
+ * niet, dan werkt de editor toch: de server geeft toegang op lidmaatschap.
+ */
+async function werkInOrganisatieVan(organisatieId: string): Promise<void> {
+  if (organisatieId === sessie.actieveOrganisatieId) return;
+  bijOpenen = true;
+  try {
+    if (!(await sessie.wissel(organisatieId))) return;
+    const organisatie = sessie.actieveOrganisatie?.naam;
+    if (organisatie) toast.add({ title: t("editor.organisatieGewisseld", { organisatie }) });
+  } catch {
+    toast.add({ title: t("menu.wisselenMislukt"), color: "error" });
+  } finally {
+    bijOpenen = false;
+  }
 }
 
 async function laadConcept(): Promise<void> {
@@ -122,12 +160,50 @@ function bijVerlaten(event: BeforeUnloadEvent): void {
   if (waarschuwBijVerlaten(autosave.status.value)) event.preventDefault();
 }
 
+/**
+ * Wisselen van organisatie en uitloggen in de app: eerst nog opslaan. Lukt dat niet, dan vraagt
+ * de editor of de gebruiker toch verder wil; het werk blijft in het concept van deze gebruiker.
+ */
+let vertrekBevestigd = false;
+async function voorVertrek(): Promise<boolean> {
+  if (bijOpenen) return true;
+  await autosave.nuOpslaan().catch(() => {});
+  if (!waarschuwBijVerlaten(autosave.status.value)) return true;
+  vertrekBevestigd = window.confirm(t("editor.vertrek.bevestiging"));
+  return vertrekBevestigd;
+}
+// Een nieuwe wijziging na die bevestiging verdient opnieuw de vraag bij het verlaten.
+watch(
+  () => store.gewijzigdSindsOpslaan,
+  () => {
+    vertrekBevestigd = false;
+  },
+);
+
 // Navigeren in de app: dezelfde vraag als bij `beforeunload`. Annuleren houdt de gebruiker hier.
-// Bij een conflict of fout bewaart `stop()` niets, maar het concept blijft staan.
+// Bij een conflict of fout bewaart `stop()` niets, maar het concept blijft staan. Na wisselen of
+// uitloggen werd het al gevraagd (`voorVertrek`): dan niet nog eens.
 onBeforeRouteLeave(() => {
+  if (vertrekBevestigd) {
+    vertrekBevestigd = false;
+    return true;
+  }
   if (!waarschuwBijVerlaten(autosave.status.value)) return true;
   return window.confirm(t("editor.verlaten.bevestiging"));
 });
+
+// --- Verlopen sessie -----------------------------------------------------------
+
+/** Inloggen in een nieuw tabblad: het werk in dit tabblad blijft staan. */
+function opnieuwInloggen(): void {
+  const terug = veiligTerug(route.fullPath) ?? "/";
+  window.open(`/inloggen?terug=${encodeURIComponent(terug)}`, "_blank", "noopener");
+}
+
+/** Terug in dit tabblad na een 401: de sessie opnieuw lezen (bv. na inloggen in een ander tabblad). */
+function bijFocus(): void {
+  if (autosave.afgemeld.value) void sessie.laad().catch(() => {});
+}
 
 // --- Exporteren ---------------------------------------------------------------
 
@@ -213,14 +289,20 @@ function bestandBuitenDropzone(event: DragEvent): void {
   if (event.type === "dragover") event.dataTransfer.dropEffect = "none";
 }
 
+let afmeldenVoorVertrek: (() => void) | undefined;
+
 onMounted(() => {
+  afmeldenVoorVertrek = sessie.registreerVoorVertrek(voorVertrek);
   window.addEventListener("beforeunload", bijVerlaten);
+  window.addEventListener("focus", bijFocus);
   window.addEventListener("dragover", bestandBuitenDropzone);
   window.addEventListener("drop", bestandBuitenDropzone);
   void laad();
 });
 onBeforeUnmount(() => {
+  afmeldenVoorVertrek?.();
   window.removeEventListener("beforeunload", bijVerlaten);
+  window.removeEventListener("focus", bijFocus);
   window.removeEventListener("dragover", bestandBuitenDropzone);
   window.removeEventListener("drop", bestandBuitenDropzone);
 });
@@ -231,7 +313,9 @@ onBeforeUnmount(() => {
     <template v-if="laadstatus === 'klaar' && store.document">
       <EditorBovenbalk
         :status="autosave.status.value"
+        :afgemeld="autosave.afgemeld.value"
         @opnieuw-proberen="opnieuwProberen"
+        @opnieuw-inloggen="opnieuwInloggen"
         @toon-conflict="conflictOpen = true"
         @toon-bevindingen="toonBevindingen"
         @exporteren="exportOpen = true"

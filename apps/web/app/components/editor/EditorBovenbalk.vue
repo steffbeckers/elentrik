@@ -3,8 +3,15 @@ import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.v
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useEditorStore, type Tabblad } from "~/stores/editor";
 
-defineProps<{ status: AutosaveStatus }>();
-const emit = defineEmits<{ opnieuwProberen: []; toonConflict: []; toonBevindingen: []; exporteren: [] }>();
+/** `afgemeld`: de sessie is verlopen (401 bij het opslaan); het werk staat lokaal in het concept. */
+defineProps<{ status: AutosaveStatus; afgemeld?: boolean }>();
+const emit = defineEmits<{
+  opnieuwProberen: [];
+  opnieuwInloggen: [];
+  toonConflict: [];
+  toonBevindingen: [];
+  exporteren: [];
+}>();
 
 const store = useEditorStore();
 const { t } = useI18n();
@@ -151,4 +158,34 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
 
     <ProjectgegevensDialoog v-model:open="projectgegevensOpen" />
   </header>
+  <UAlert
+    v-if="afgemeld"
+    color="warning"
+    variant="subtle"
+    icon="i-lucide-log-in"
+    orientation="horizontal"
+    class="rounded-none border-b border-default py-2"
+    :title="$t('editor.afgemeld.melding')"
+    data-testid="afgemeld-melding"
+  >
+    <template #actions>
+      <UButton
+        size="xs"
+        color="warning"
+        icon="i-lucide-external-link"
+        :label="$t('editor.afgemeld.opnieuwInloggen')"
+        data-testid="opnieuw-inloggen"
+        @click="emit('opnieuwInloggen')"
+      />
+      <UButton
+        size="xs"
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-rotate-cw"
+        :label="$t('editor.status.opnieuwProberen')"
+        data-testid="afgemeld-opnieuw-proberen"
+        @click="emit('opnieuwProberen')"
+      />
+    </template>
+  </UAlert>
 </template>

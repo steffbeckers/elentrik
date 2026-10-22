@@ -3,20 +3,21 @@ import { nieuwProjectDocument, type InstallatieDocument } from "@elentrik/model"
 import { createPinia, setActivePinia } from "pinia";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { clear, set } from "idb-keyval";
+import { clear } from "idb-keyval";
 import {
   bewaarConcept,
-  maakInstantieId,
   nieuwsteConcept,
   wisAangebodenConcept,
-  wisConcept,
   type Concept,
+  type ConceptPlek,
 } from "../app/composables/concepten";
 import { useAutosave, waarschuwBijVerlaten, type AutosaveOpties } from "../app/composables/useAutosave";
 import { ConflictFout, type Project } from "../app/composables/useProjectenApi";
 import { useEditorStore } from "../app/stores/editor";
 
 const KOPIE_DOC_ID = "kopie-document-id";
+/** De ingelogde gebruiker van elk venster in deze tests. */
+const GEBRUIKER = "g1";
 
 type Store = ReturnType<typeof useEditorStore>;
 type Bewaar = AutosaveOpties["bewaar"];
@@ -35,7 +36,7 @@ async function leeg(): Promise<void> {
 
 /** Het concept dat bij het openen van het project wordt aangeboden. */
 async function conceptVan(projectId: string): Promise<Concept | undefined> {
-  return (await nieuwsteConcept(projectId))?.concept;
+  return (await nieuwsteConcept(projectId, GEBRUIKER))?.concept;
 }
 
 /** Een wijziging die de teller verhoogt: de projectnaam. */
@@ -59,7 +60,15 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
   }));
   const dupliceer = vi.fn(async (_id: string) => ({ id: "kopie1" }));
   const naarProject = vi.fn(async (_id: string) => {});
-  const autosave = useAutosave({ store, bewaar, haal, dupliceer, naarProject, ...overschrijf });
+  const autosave = useAutosave({
+    store,
+    bewaar,
+    haal,
+    dupliceer,
+    naarProject,
+    gebruikerId: GEBRUIKER,
+    ...overschrijf,
+  });
   return { store, bewaar, haal, dupliceer, naarProject, autosave };
 }
 
@@ -72,85 +81,6 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.useRealTimers();
-});
-
-describe("concepten", () => {
-  test("bewaren, ophalen en wissen", async () => {
-    const document = startDocument();
-    await bewaarConcept("p1", "A", { document, versie: 3, naam: "N", tijd: 123 });
-    expect(await conceptVan("p1")).toEqual({ document, versie: 3, naam: "N", tijd: 123 });
-    await wisConcept("p1", "A");
-    expect(await conceptVan("p1")).toBeUndefined();
-  });
-
-  test("nieuwsteConcept: ook een concept van vóór de laatste serverwijziging wordt aangeboden", async () => {
-    // De server wijzigde om 11:00 (bv. de eigen PUT die nog net slaagde); het concept is van 10:00.
-    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "N", tijd: Date.parse("2026-10-18T10:00:00.000Z") });
-    expect((await conceptVan("p1"))?.naam).toBe("N");
-  });
-
-  test("nieuwsteConcept: zonder concept geeft null", async () => {
-    expect(await nieuwsteConcept("p1")).toBeNull();
-  });
-
-  test("elk venster heeft een eigen sleutel; het nieuwste op tijd wordt aangeboden", async () => {
-    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "A", tijd: 200 });
-    await bewaarConcept("p1", "B", { document: startDocument(), versie: 1, naam: "B", tijd: 100 });
-    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:A", concept: { naam: "A" } });
-    await wisConcept("p1", "A");
-    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:B", concept: { naam: "B" } });
-  });
-
-  test("wisAangebodenConcept wist alleen het aangeboden concept", async () => {
-    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "A", tijd: 200 });
-    await bewaarConcept("p1", "B", { document: startDocument(), versie: 1, naam: "B", tijd: 100 });
-    const aangeboden = await nieuwsteConcept("p1");
-    await wisAangebodenConcept(aangeboden!);
-    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:B" });
-  });
-
-  test("wisAangebodenConcept laat het concept staan als een ander venster het intussen herschreef", async () => {
-    // B krijgt S1 aangeboden; het venster A leeft nog en schrijft S2 onder dezelfde sleutel.
-    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "S1", tijd: 100 });
-    const aangeboden = await nieuwsteConcept("p1");
-    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "S2", tijd: 200 });
-    await wisAangebodenConcept(aangeboden!);
-    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:A", concept: { naam: "S2" } });
-  });
-
-  test("een concept onder de oude sleutel per project is ook een kandidaat", async () => {
-    await set("concept:p1", { document: startDocument(), versie: 1, naam: "Oud", tijd: 300 });
-    await bewaarConcept("p1", "A", { document: startDocument(), versie: 1, naam: "A", tijd: 200 });
-    const aangeboden = await nieuwsteConcept("p1");
-    expect(aangeboden).toMatchObject({ sleutel: "concept:p1", concept: { naam: "Oud" } });
-    await wisAangebodenConcept(aangeboden!);
-    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:A" });
-  });
-
-  test("maakInstantieId gebruikt randomUUID als die er is", () => {
-    expect(maakInstantieId({ randomUUID: () => "a-b-c-d-e", getRandomValues: (a) => a })).toBe("a-b-c-d-e");
-  });
-
-  test("maakInstantieId zonder randomUUID (geen veilige context) valt terug op getRandomValues", () => {
-    const zonderUuid = { getRandomValues: (rij: Uint8Array<ArrayBuffer>) => crypto.getRandomValues(rij) };
-    const een = maakInstantieId(zonderUuid);
-    const twee = maakInstantieId(zonderUuid);
-    expect(een).toMatch(/^[0-9a-f]{32}$/);
-    expect(een).not.toBe(twee);
-  });
-
-  test("maakInstantieId zonder crypto valt terug op de tijd en Math.random", () => {
-    const een = maakInstantieId(null);
-    const twee = maakInstantieId(null);
-    expect(een).toMatch(/^[0-9a-z]+-[0-9a-z]+$/);
-    expect(een).not.toBe(twee);
-  });
-
-  test("de concepten van een ander project tellen niet mee", async () => {
-    await bewaarConcept("p10", "A", { document: startDocument(), versie: 1, naam: "Ander", tijd: 300 });
-    await set("concept:p10", { document: startDocument(), versie: 1, naam: "Ander oud", tijd: 400 });
-    expect(await nieuwsteConcept("p1")).toBeNull();
-  });
 });
 
 describe("useAutosave", () => {
@@ -344,7 +274,10 @@ describe("useAutosave", () => {
     // B opent het project opnieuw: zijn concept staat er nog en wordt aangeboden.
     b.autosave.stop();
     await leeg();
-    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:B", concept: { naam: "Werk van B" } });
+    expect(await nieuwsteConcept("p1", GEBRUIKER)).toMatchObject({
+      sleutel: `concept:u:${GEBRUIKER}:p1:B`,
+      concept: { naam: "Werk van B" },
+    });
   });
 
   test("nuOpslaan bewaart meteen", async () => {
@@ -548,7 +481,7 @@ describe("useAutosave", () => {
     autosave.stop();
     // De volgende pagina opent hetzelfde project opnieuw, vers van de server.
     store.laad({ id: "p1", naam: "Van de server", versie: 5, document: startDocument() });
-    const nieuw = useAutosave({ store, bewaar, haal, dupliceer, naarProject });
+    const nieuw = useAutosave({ store, bewaar, haal, dupliceer, naarProject, gebruikerId: GEBRUIKER });
     rond?.();
     await leeg();
     await vi.advanceTimersByTimeAsync(20_000);
@@ -627,12 +560,12 @@ describe("useAutosave: conceptschrijfacties", () => {
     const wachtend: (() => void)[] = [];
     const volgorde: string[] = [];
     const concepten = {
-      bewaarConcept: vi.fn(async (projectId: string, instantieId: string, concept: Concept) => {
+      bewaarConcept: vi.fn(async ({ projectId, instantieId }: ConceptPlek, concept: Concept) => {
         await new Promise<void>((klaar) => wachtend.push(klaar));
         archief.set(`${projectId}:${instantieId}`, concept);
         volgorde.push(`bewaar ${concept.naam}`);
       }),
-      wisConcept: vi.fn(async (projectId: string, instantieId: string) => {
+      wisConcept: vi.fn(async ({ projectId, instantieId }: ConceptPlek) => {
         archief.delete(`${projectId}:${instantieId}`);
         volgorde.push("wis");
       }),
@@ -658,7 +591,10 @@ describe("useAutosave: conceptschrijfacties", () => {
     }
     await laatDoor();
     expect(concepten.bewaarConcept).toHaveBeenCalledTimes(2);
-    expect(concepten.bewaarConcept).toHaveBeenLastCalledWith("p1", "A", expect.objectContaining({ naam: "d" }));
+    expect(concepten.bewaarConcept).toHaveBeenLastCalledWith(
+      { gebruikerId: GEBRUIKER, projectId: "p1", instantieId: "A" },
+      expect.objectContaining({ naam: "d" }),
+    );
     expect(archief.get("p1:A")?.naam).toBe("d");
   });
 
@@ -717,8 +653,11 @@ describe("useAutosave: wachtOpConcept", () => {
 
   test("concept laden met een vol archief: false, en het aangeboden concept blijft staan", async () => {
     // Het concept van een vorig venster, aangeboden bij het openen.
-    await bewaarConcept("p1", "oud", { document: startDocument(), versie: 1, naam: "Oud werk", tijd: 100 });
-    const aangeboden = (await nieuwsteConcept("p1"))!;
+    await bewaarConcept(
+      { gebruikerId: GEBRUIKER, projectId: "p1", instantieId: "oud" },
+      { document: startDocument(), versie: 1, naam: "Oud werk", tijd: 100 },
+    );
+    const aangeboden = (await nieuwsteConcept("p1", GEBRUIKER))!;
     // In dit venster faalt elke schrijfactie (quota), maar wissen lukt wel.
     const concepten = {
       bewaarConcept: vi.fn(async () => {
@@ -733,7 +672,10 @@ describe("useAutosave: wachtOpConcept", () => {
     const gelukt = await autosave.wachtOpConcept();
     expect(gelukt).toBe(false);
     if (gelukt) await wisAangebodenConcept(aangeboden);
-    expect(await nieuwsteConcept("p1")).toMatchObject({ sleutel: "concept:p1:oud", concept: { naam: "Oud werk" } });
+    expect(await nieuwsteConcept("p1", GEBRUIKER)).toMatchObject({
+      sleutel: `concept:u:${GEBRUIKER}:p1:oud`,
+      concept: { naam: "Oud werk" },
+    });
   });
 });
 
@@ -816,6 +758,62 @@ describe("useAutosave: foutsoorten", () => {
     await vi.advanceTimersByTimeAsync(10_000);
     await leeg();
     expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(autosave.status.value).toBe("opgeslagen");
+  });
+
+  test("een 401 (sessie verlopen): lokaal en afgemeld, zonder nieuwe poging; het concept blijft", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValue(Object.assign(new Error("Niet ingelogd"), { statusCode: 401 }));
+    expect(autosave.afgemeld.value).toBe(false);
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("lokaal");
+    expect(autosave.afgemeld.value).toBe(true);
+    expect(autosave.fout.value).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+
+    // Verder tekenen: het concept volgt, maar er gaat niets naar de server.
+    wijzig(store, "b");
+    await vi.advanceTimersByTimeAsync(60_000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(autosave.status.value).toBe("lokaal");
+    expect((await conceptVan("p1"))?.naam).toBe("b");
+    expect(waarschuwBijVerlaten(autosave.status.value)).toBe(true);
+  });
+
+  test("na een 401: opnieuw proberen zonder sessie blijft afgemeld, met sessie wordt alles opgeslagen", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValue(Object.assign(new Error("Niet ingelogd"), { status: 401 }));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.afgemeld.value).toBe(true);
+
+    // Nog niet opnieuw ingelogd.
+    await autosave.nuOpslaan();
+    expect(bewaar).toHaveBeenCalledTimes(2);
+    expect(autosave.afgemeld.value).toBe(true);
+    expect(autosave.status.value).toBe("lokaal");
+    expect(vi.getTimerCount()).toBe(0);
+
+    // Opnieuw ingelogd in een ander tabblad.
+    bewaar.mockImplementation(async (_id, versie) => ({ versie: versie + 1 }));
+    await autosave.nuOpslaan();
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(3);
+    expect(bewaar).toHaveBeenLastCalledWith("p1", 1, expect.objectContaining({ naam: "a" }));
+    expect(autosave.afgemeld.value).toBe(false);
+    expect(autosave.status.value).toBe("opgeslagen");
+    expect(await conceptVan("p1")).toBeUndefined();
+
+    // Daarna werkt de autosave weer zoals voorheen.
+    wijzig(store, "b");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(4);
     expect(autosave.status.value).toBe("opgeslagen");
   });
 

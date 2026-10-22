@@ -305,7 +305,15 @@
         "aantalFouten": "geen fouten | {n} fout | {n} fouten",
         "downloaden": "Downloaden"
       }
-    }
+    },
+    "afgemeld": {
+      "melding": "Je bent afgemeld. Log opnieuw in om op te slaan.",
+      "opnieuwInloggen": "Opnieuw inloggen"
+    },
+    "vertrek": {
+      "bevestiging": "Er zijn wijzigingen die nog niet op de server staan. Ze blijven lokaal bewaard voor dit account. Toch doorgaan?"
+    },
+    "organisatieGewisseld": "Je werkt nu in {organisatie}."
   },
   "bedrijf": {
     "titel": "Bedrijfsgegevens",
