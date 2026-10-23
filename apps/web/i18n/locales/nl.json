@@ -3,8 +3,7 @@
     "naam": "Elentrik"
   },
   "algemeen": {
-    "annuleren": "Annuleren",
-    "fout": "Er ging iets mis. Probeer het opnieuw."
+    "annuleren": "Annuleren"
   },
   "editor": {
     "canvas": {
@@ -541,8 +540,7 @@
       "wachtwoordVerplicht": "Vul je wachtwoord in.",
       "wachtwoordTeKort": "Een wachtwoord telt minstens 10 tekens.",
       "wachtwoordTeLang": "Een wachtwoord telt hoogstens 128 tekens.",
-      "bedrijfsnaam": "De naam van het bedrijf telt 1 tot 80 tekens.",
-      "teVeel": "Te veel pogingen. Wacht even en probeer het opnieuw."
+      "bedrijfsnaam": "De naam van het bedrijf telt 1 tot 80 tekens."
     }
   },
   "inloggen": {
@@ -752,7 +750,7 @@
   "taal": {
     "kiezen": "Taal kiezen",
     "label": "Taal",
-    "bewarenMislukt": "Je taalkeuze kon niet op je account bewaard worden. Op dit toestel blijft ze gewijzigd.",
+    "bewarenMislukt": "Je taalkeuze kon niet bewaard worden. Bij je volgende aanmelding of herlading wordt ze teruggezet; probeer opnieuw.",
     "wisselenMislukt": "De taal kon niet gewisseld worden. Probeer het opnieuw."
   },
   "fouten": {

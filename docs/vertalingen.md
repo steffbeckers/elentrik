@@ -9,10 +9,11 @@ De vertalingen zijn eigen werk (clean room). Ze nemen geen tekst of terminologie
 - **Talen:** `nl` (standaard), `fr` en `en`. De locales zijn `nl-BE`, `fr-BE` en `en-GB`.
 - **Belgisch Frans:** we spreken de gebruiker aan met "vous". Waar een getal voluit staat, schrijven we "septante" en "nonante" (niet "soixante-dix" en "quatre-vingt-dix"). Cijfers in de interface en op het schema blijven cijfers.
 - **Engels:** Brits Engels (`en-GB`). "Socket" en "tumble dryer", geen "outlet" en "dryer".
-- **Ongewijzigd in elke taal:**
+- **Ongewijzigd in elke taal:** de waarden en de artikelnummers zelf, zodat een keurder in elke taal hetzelfde leest:
   - artikelnummers van het AREI/RGIE;
-  - grenswaarden (`30 mA`, `16 A`, `2,5 mm²`);
-  - technische labels op het schema, zoals `XVB 3G2,5`, met een decimale komma. Die labels worden nooit vertaald, zodat een keurder de tekening in elke taal hetzelfde leest.
+  - grenswaarden en andere waarden (`30 mA`, `16 A`, `2,5 mm²`): de waarde en de eenheid zijn in elke taal dezelfde; alleen de schrijfwijze van het getal volgt de locale (zie hieronder).
+- **Notatie van getallen:** in lopende tekst (de interface en de berichten in de pdf) volgt de notatie van een getal de locale van de taal: `2,5 mm²` in het Nederlands en Frans, `2.5 mm²` in het Engels. Alleen de technische labels op het schema houden de Belgische decimale komma, in elke taal, zoals `XVB 3G2,5`. Die labels worden nooit vertaald of herschreven.
+- **Franse typografie:** voor `:`, `;`, `?` en `!` staat een vaste spatie (U+00A0), en de duizendtalscheiding van `Intl` (fr-BE) is een smalle vaste spatie (U+202F). De pdf breekt een regel nooit op die spaties.
 - **Niet vertaald:** wat de gebruiker zelf typt (projectnamen, klantgegevens, eigen ruimtenamen, de motivatie van een afwijking).
 - **Plaatshouders en meervoudsvormen:** `{naam}` en `|` staan per sleutel identiek in elke taal.
 - **Datums in de pdf:** dag/maand/jaar in de locale van de dossiertaal, met een jaar van vier cijfers in elke taal: `19/10/2026` (nl, fr en en). Een dag onder de 10 heeft één cijfer (`5/03/2026`). Dit geldt voor de cartouche en voor de datum van een afwijking.
@@ -126,7 +127,7 @@ De veldnamen en keuzes van het paneel Eigenschappen (`velden.*` in de vertaalbes
 | kinderbeveiliging | sécurité enfants | child protection |
 | waterdicht | étanche | waterproof |
 | vermogen | puissance | power |
-| soort | sorte | kind |
+| soort | type | type |
 | standaard | standard | standard |
 | TL | tube fluorescent | fluorescent tube |
 | spot | spot | spotlight |
@@ -181,8 +182,8 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | proefperiode | période d'essai | free trial |
 | formule | formule | plan |
 | project | projet | project |
-| dossier | dossier | file |
-| dossiertaal | langue du dossier | file language |
+| dossier | dossier | dossier |
+| dossiertaal | langue du dossier | dossier language |
 | versie (van een project) | version | version |
 | exporteren | exporter | export |
 | bewaren | enregistrer | save |

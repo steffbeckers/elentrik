@@ -4,6 +4,13 @@ import { escapeXml, getal } from "@elentrik/symbols";
 
 const WEGLATING = "…";
 
+/**
+ * Gewone witruimte: hier mag een regel breken. De vaste spaties U+00A0 en U+202F staan er bewust
+ * niet bij (`\s` omvat ze wel): Frans zet er een voor ":", ";", "?" en "!" en gebruikt U+202F als
+ * duizendtalscheiding, en die moeten bij hun woord blijven.
+ */
+const WITRUIMTE = /[ \t\n\r\f\v]+/;
+
 /** Hoeveel tekens (UTF-16-eenheden, zoals `tekstBreedte` telt) er in `breedte_mm` passen. */
 function tekensPerRegel(breedte_mm: number, grootte_mm: number): number {
   const perTeken = tekstBreedte("x", grootte_mm);
@@ -40,7 +47,7 @@ export function breekRegels(tekst: string, breedte_mm: number, grootte_mm: numbe
   const regels: string[] = [];
   for (const alinea of tekst.split("\n")) {
     let regel = "";
-    for (let woord of alinea.split(/\s+/).filter((w) => w !== "")) {
+    for (let woord of alinea.split(WITRUIMTE).filter((w) => w !== "")) {
       if (regel !== "" && regel.length + 1 + woord.length <= max) {
         regel += ` ${woord}`;
         continue;
@@ -66,12 +73,12 @@ export function vloer(mm: number): number {
 
 /**
  * Eén tekstregel als `<div class="t …">` met een vaste breedte en tekstgrootte in mm. Witruimte
- * (ook regeleinden en tabs) wordt één spatie, zodat de regel nooit hoger wordt; daarna wordt de
+ * (ook regeleinden en tabs, maar niet de vaste spaties) wordt één spatie, zodat de regel nooit hoger wordt; daarna wordt de
  * tekst afgekort tot hij past en geëscaped.
  */
 export function tekstRegel(tekst: string, breedte_mm: number, grootte_mm: number, klasse = ""): string {
   const breedte = vloer(breedte_mm);
-  const eenRegel = tekst.replace(/\s+/g, " ").trim();
+  const eenRegel = tekst.split(WITRUIMTE).filter((w) => w !== "").join(" ");
   const klassen = klasse === "" ? "t" : `t ${klasse}`;
   return (
     `<div class="${klassen}" style="width:${getal(breedte)}mm;font-size:${getal(grootte_mm)}mm">` +

@@ -3,8 +3,7 @@
     "naam": "Elentrik"
   },
   "algemeen": {
-    "annuleren": "Cancel",
-    "fout": "Something went wrong. Please try again."
+    "annuleren": "Cancel"
   },
   "editor": {
     "canvas": {
@@ -135,7 +134,7 @@
       "naam": "Name",
       "stroomtype": "Current type",
       "dossierTaal": {
-        "label": "File language",
+        "label": "Dossier language",
         "hulp": "The language of the PDF when exporting."
       },
       "bewaren": "Save",
@@ -276,7 +275,7 @@
     "export": {
       "titel": "Export as PDF",
       "beschrijving": "The PDF is made from the saved project and kept as a version.",
-      "dossierTaal": "File language: {taal}",
+      "dossierTaal": "Dossier language: {taal}",
       "opslaan": "Saving the project first…",
       "geblokkeerd": {
         "titel": "Export is not possible right now",
@@ -482,7 +481,7 @@
       "label": "Power"
     },
     "soort": {
-      "label": "Kind",
+      "label": "Type",
       "opties": {
         "standaard": "Standard",
         "led": "LED",
@@ -541,8 +540,7 @@
       "wachtwoordVerplicht": "Enter your password.",
       "wachtwoordTeKort": "A password must be at least 10 characters long.",
       "wachtwoordTeLang": "A password must be at most 128 characters long.",
-      "bedrijfsnaam": "The company name must be 1 to 80 characters.",
-      "teVeel": "Too many attempts. Wait a moment and try again."
+      "bedrijfsnaam": "The company name must be 1 to 80 characters."
     }
   },
   "inloggen": {
@@ -752,7 +750,7 @@
   "taal": {
     "kiezen": "Choose language",
     "label": "Language",
-    "bewarenMislukt": "Your language choice could not be saved to your account. It stays changed on this device.",
+    "bewarenMislukt": "Your language choice could not be saved to your account. It will be reset the next time you sign in or reload; please try again.",
     "wisselenMislukt": "The language could not be changed. Please try again."
   },
   "fouten": {
@@ -781,8 +779,8 @@
     "GEEN_KLANT": "This company has no payment details yet. Choose a subscription first.",
     "ABONNEMENTEN_UIT": "Payment has not been set up yet.",
     "LAATSTE_EIGENAAR": "At least one owner must remain.",
-    "AL_LID": "This address is already a member.",
-    "AL_UITGENODIGD": "This address has already been invited.",
+    "AL_LID": "Someone with this address is already a member.",
+    "AL_UITGENODIGD": "Someone with this address has already been invited.",
     "UITNODIGING_VERVALLEN": "This invitation is no longer valid.",
     "UITNODIGING_ANDER_ADRES": "This invitation is for a different address.",
     "EMAIL_NIET_BEVESTIGD": "Confirm your email address first, then try again.",

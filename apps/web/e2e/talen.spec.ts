@@ -1,4 +1,5 @@
 import { BERICHTEN } from "@elentrik/arei";
+import { en_gb, fr } from "@nuxt/ui/locale";
 import { TEKSTEN } from "@elentrik/render";
 import {
   expect,
@@ -69,6 +70,14 @@ test("de taal kiezen in het gebruikersmenu blijft na herladen en volgt het accou
   await page.reload();
   await wachtOpHydratatie(page);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(vertaling("fr", "projecten.titel"));
+
+  // Ook Nuxt UI zelf spreekt Frans: de sluitknop van een dialoog heeft het aria-label van zijn Franse locale.
+  await page.getByRole("button", { name: vertaling("fr", "projecten.nieuw") }).click();
+  const nieuwDialoog = page.getByRole("dialog");
+  await expect(nieuwDialoog.getByRole("button", { name: fr.messages.modal.close, exact: true })).toBeVisible();
+  await expect(nieuwDialoog.getByRole("button", { name: en_gb.messages.modal.close, exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(nieuwDialoog).toHaveCount(0);
 
   // Een andere browser (Engels, zonder cookie) die inlogt als dezelfde gebruiker: het account wint.
   const context = await browserIn(browser, "en-GB");

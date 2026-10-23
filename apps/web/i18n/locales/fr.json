@@ -3,8 +3,7 @@
     "naam": "Elentrik"
   },
   "algemeen": {
-    "annuleren": "Annuler",
-    "fout": "Une erreur s'est produite. Veuillez réessayer."
+    "annuleren": "Annuler"
   },
   "editor": {
     "canvas": {
@@ -482,7 +481,7 @@
       "label": "Puissance"
     },
     "soort": {
-      "label": "Sorte",
+      "label": "Type",
       "opties": {
         "standaard": "Standard",
         "led": "LED",
@@ -541,8 +540,7 @@
       "wachtwoordVerplicht": "Saisissez votre mot de passe.",
       "wachtwoordTeKort": "Un mot de passe doit contenir au moins 10 caractères.",
       "wachtwoordTeLang": "Un mot de passe doit contenir au maximum 128 caractères.",
-      "bedrijfsnaam": "Le nom de l'entreprise doit contenir de 1 à 80 caractères.",
-      "teVeel": "Trop de tentatives. Patientez un instant et réessayez."
+      "bedrijfsnaam": "Le nom de l'entreprise doit contenir de 1 à 80 caractères."
     }
   },
   "inloggen": {
@@ -752,7 +750,7 @@
   "taal": {
     "kiezen": "Choisir la langue",
     "label": "Langue",
-    "bewarenMislukt": "Votre choix de langue n'a pas pu être enregistré sur votre compte. Il reste appliqué sur cet appareil.",
+    "bewarenMislukt": "Votre choix de langue n'a pas pu être enregistré sur votre compte. Il sera rétabli lors de votre prochaine connexion ou du prochain rechargement ; veuillez réessayer.",
     "wisselenMislukt": "La langue n'a pas pu être changée. Réessayez."
   },
   "fouten": {

@@ -892,6 +892,18 @@ describe("breekRegels", () => {
     expect(breekRegels("a   b\nc", 100, 2.5)).toEqual(["a b", "c"]);
   });
 
+  test("breekt nooit op een vaste spatie (U+00A0) of smalle vaste spatie (U+202F)", () => {
+    // Elk van de twee koppelt "admis" en ":" (Frans) of 12 en 345 (duizendtal): ze blijven bij elkaar.
+    for (const vast of ["\u00a0", "\u202f"]) {
+      const tekst = `Maximum admis${vast}: 8 prises`;
+      // Zo smal dat alleen "Maximum" en "admis:" samen op een regel kunnen: op de vaste spatie breken kan dus niet.
+      const uit = breekRegels(tekst, 18, 2.5);
+      expect(uit.join(" ")).toBe(tekst);
+      expect(uit.some((r) => r.startsWith(":") || r.endsWith("admis"))).toBe(false);
+      expect(breekRegels(`een${vast}twee`, 100, 2.5)).toEqual([`een${vast}twee`]);
+    }
+  });
+
   test("een lege tekst geeft geen regels", () => {
     expect(breekRegels("   ", 100, 2.5)).toEqual([]);
   });

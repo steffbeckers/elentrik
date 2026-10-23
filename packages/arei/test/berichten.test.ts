@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
-import { BERICHTEN, formatteerBericht, type Bevinding, type Taal } from "../src/index";
+import { TaalSchema, type Taal as ModelTaal } from "@elentrik/model";
+import { describe, expect, expectTypeOf, test } from "vitest";
+import { BERICHTEN, formatteerBericht, LOCALES, type Bevinding, type Taal } from "../src/index";
 
 const TALEN: readonly Taal[] = ["nl", "fr", "en"];
 
@@ -14,6 +15,23 @@ function getallen(tekst: string): string[] {
 }
 
 describe("berichtencatalogus", () => {
+  test("de talen van het model zijn dezelfde als die van arei (type en waarden)", () => {
+    // Het model heeft een eigen `TaalSchema` omdat arei van het model afhangt; deze test koppelt de twee lijsten.
+    expectTypeOf<ModelTaal>().toEqualTypeOf<Taal>();
+    expect([...TaalSchema.options].sort()).toEqual(Object.keys(LOCALES).sort());
+  });
+
+  test("fr: voor ':', ';', '?' en '!' staat een vaste spatie (U+00A0), nooit een gewone", () => {
+    for (const [sleutel, tekst] of Object.entries(BERICHTEN.fr)) {
+      expect(tekst, sleutel).not.toMatch(/ [:;?!]/);
+    }
+    expect(BERICHTEN.fr["arei.kring.max-contactdozen.overschreden"]).toContain("admis\u00a0:");
+  });
+
+  test("fr-BE: Intl gebruikt een smalle vaste spatie (U+202F) als duizendtalscheiding", () => {
+    expect(new Intl.NumberFormat(LOCALES.fr).format(12345)).toBe("12\u202f345");
+  });
+
   test("de catalogus heeft nl, fr en en", () => {
     expect(Object.keys(BERICHTEN).sort()).toEqual([...TALEN].sort());
   });

@@ -74,7 +74,6 @@ const AUTH_CODES: Record<string, [number, string, Foutcode]> = {
     "Bevestig eerst je e-mailadres",
     "EMAIL_NIET_BEVESTIGD",
   ],
-  MEMBER_NOT_FOUND: [404, "Niet gevonden", "NIET_GEVONDEN"], // dezelfde als nietGevondenFout()
 };
 
 /** Komt deze fout (ergens in de keten van oorzaken) van de databasetrigger voor de laatste eigenaar? */
@@ -95,6 +94,8 @@ export function vertaalAuthFout(fout_: unknown): unknown {
   if (!fout_ || typeof fout_ !== "object" || !("statusCode" in fout_) || !("body" in fout_)) return fout_;
   const status = (fout_ as { statusCode: unknown }).statusCode;
   const code = ((fout_ as { body?: { code?: unknown } }).body ?? {}).code;
+  // Een onbekend lid is dezelfde 404 als elk ander onbekend object (zie server/fouten.ts).
+  if (code === "MEMBER_NOT_FOUND") return nietGevonden();
   const bekend = typeof code === "string" ? AUTH_CODES[code] : undefined;
   if (bekend) return fout(bekend[0], bekend[1], bekend[2]);
   if (status === 401) return fout(401, "Niet ingelogd", "NIET_AANGEMELD");
