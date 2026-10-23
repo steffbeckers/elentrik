@@ -52,6 +52,36 @@ bedrijfsgegevens. Dat gebeurt één keer.
 - **Geheim:** `BETTER_AUTH_SECRET` is een eigen, lange willekeurige waarde (minstens 32 tekens),
   alleen in `.env` en nooit in de repo.
 
+## Talen
+
+Elentrik is er in het Nederlands (standaard), het Frans (Belgisch) en het Engels. De woordenlijst
+met de afgesproken termen staat in `docs/vertalingen.md`.
+
+- **De taal van de interface** kiest een gebruiker in het gebruikersmenu ("Taal") of, voor het
+  inloggen, met de taalkiezer onder de aanmeld- en registratiepagina's. Vóór het inloggen geldt de
+  cookie `elentrik_taal` (een jaar geldig), en zonder cookie de taal van de browser
+  (`Accept-Language`), anders Nederlands. Na het inloggen wint de taal van het account (`user.taal`,
+  bewaard door `PUT /api/mij/taal`): ze volgt de gebruiker naar een ander toestel en de cookie wordt
+  erbij gezet. De mails (bevestiging, inloglink, wachtwoordherstel, uitnodiging) komen in de taal van het account; een
+  uitnodiging in de taal van wie uitnodigt.
+- **De dossiertaal** is de taal van het dossier: de PDF (paginatitels, cartouche, kolommen, bijlage).
+  Ze staat per project in de projectgegevens ("Dossiertaal") en kan los van de interfacetaal
+  verschillen: een Franstalige installateur kan een Nederlandstalig dossier maken. Een nieuw
+  project krijgt de taal van de maker; oudere projecten zonder dossiertaal zijn Nederlands. De
+  bevindingen in de editor staan in de taal van de interface, niet van het dossier. Wat de
+  gebruiker zelf typt (namen, adressen, motivaties) wordt nooit vertaald.
+- **Nieuwe teksten** komen altijd in alle drie de bestanden: `apps/web/i18n/locales/nl.json`,
+  `fr.json` en `en.json`, met dezelfde sleutels, plaatshouders (`{naam}`) en meervoudsvormen. De
+  pariteitstest `apps/web/test/vertalingen.test.ts` faalt anders. Berichten van de AREI-regels
+  (`packages/arei`) en de PDF-teksten (`packages/render`) hebben hun eigen drie bestanden per
+  pakket, met een eigen pariteitstest. Nieuwe termen komen eerst in `docs/vertalingen.md`.
+- **De e2e-tests** draaien in het Nederlands (`locale: "nl-BE"` in `playwright.config.ts`);
+  `e2e/talen.spec.ts` test de drie talen. Een spec die een andere taal nodig heeft, maakt een eigen
+  browsercontext met die `locale` (en een lege `storageState`, anders erft hij de sessie).
+
+**Opvolgpunt vóór de lancering:** laat het Frans (en het Engels) nalezen door iemand met die taal
+als moedertaal. De vertalingen zijn eigen werk, niet nagelezen door een moedertaalspreker.
+
 ## Abonnementen en Stripe
 
 Elentrik rekent af via Stripe Checkout, met een gratis proefperiode van 30 dagen voor het eerste
