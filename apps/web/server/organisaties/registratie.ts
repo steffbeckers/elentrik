@@ -8,6 +8,7 @@
 // (ruling E1).
 import { randomBytes, randomUUID } from "node:crypto";
 import { and, count, eq, isNull } from "drizzle-orm";
+import { kenProefperiodeToe } from "../abonnementen/proef";
 import type { Db } from "../db";
 import { bedrijfsinstellingen, member, organization, projecten, session, user } from "../db/schema";
 import { LEGACY_BEDRIJF_ID, neemBestaandeGegevensOver, type OvernameOpties } from "./overname";
@@ -83,6 +84,8 @@ export async function richtEersteOrganisatieIn(
       role: "owner",
       createdAt: nu,
     });
+    // Het eerste eigen bedrijf van de gebruiker krijgt de proefperiode (spec 4.1).
+    await kenProefperiodeToe(tx, { organisatieId, gebruikerId: gebruiker.id, nu });
 
     // Overnemen als er nog projecten zonder organisatie zijn, of bedrijfsgegevens van vóór de
     // organisaties (ook zonder projecten). Eenmalig: daarna is beide gekoppeld.
