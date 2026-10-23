@@ -30,6 +30,7 @@ import type { Foutcode } from "../../shared/foutcodes";
 import { isTaal, TAAL_HEADER, type Taal } from "../../shared/taal";
 import { gebruikAuth } from "../auth";
 import { gebruikDb } from "../db";
+import { nietGevondenFout } from "../fouten";
 import { account, invitation, member, organization, session, user } from "../db/schema";
 import { leesBody } from "../utils/projecten";
 import { kiesActieveOrganisatie, naarRol, type Rol, vereisLid, vereisSessie } from "../utils/toegang";
@@ -54,7 +55,7 @@ function fout(statusCode: number, message: string, code: Foutcode): H3Error {
   return createError({ statusCode, message, data: { code } });
 }
 
-const nietGevonden = () => fout(404, "Niet gevonden", "NIET_GEVONDEN");
+const nietGevonden = () => nietGevondenFout();
 const nietMeerGeldig = () => fout(410, "Deze uitnodiging is niet meer geldig", "UITNODIGING_VERVALLEN");
 const laatsteEigenaar = () => fout(409, LAATSTE_EIGENAAR_BOODSCHAP, LAATSTE_EIGENAAR);
 
@@ -73,7 +74,7 @@ const AUTH_CODES: Record<string, [number, string, Foutcode]> = {
     "Bevestig eerst je e-mailadres",
     "EMAIL_NIET_BEVESTIGD",
   ],
-  MEMBER_NOT_FOUND: [404, "Niet gevonden", "NIET_GEVONDEN"],
+  MEMBER_NOT_FOUND: [404, "Niet gevonden", "NIET_GEVONDEN"], // dezelfde als nietGevondenFout()
 };
 
 /** Komt deze fout (ergens in de keten van oorzaken) van de databasetrigger voor de laatste eigenaar? */

@@ -1,5 +1,5 @@
-import { createError } from "h3";
 import { gebruikDb } from "../../db";
+import { nietGevondenFout } from "../../fouten";
 import { haalProject } from "../../projecten/repo";
 import { projectId } from "../../utils/projecten";
 import { defineBeveiligdeHandler, vereisProjecttoegang } from "../../utils/toegang";
@@ -8,8 +8,6 @@ import { defineBeveiligdeHandler, vereisProjecttoegang } from "../../utils/toega
 export default defineBeveiligdeHandler(async (event) => {
   const { project: toegang } = await vereisProjecttoegang(event, projectId(event));
   const project = await haalProject(gebruikDb(), toegang.organisatieId, toegang.id);
-  if (!project) {
-    throw createError({ statusCode: 404, statusMessage: "Project niet gevonden", data: { code: "PROJECT_NIET_GEVONDEN" } });
-  }
+  if (!project) throw nietGevondenFout();
   return project;
 });

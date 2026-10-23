@@ -19,6 +19,7 @@ import type { Foutcode } from "../../shared/foutcodes";
 import type { Taal } from "../../shared/taal";
 import { basisUrl } from "../auth/oorsprong";
 import { gebruikDb, type Db } from "../db";
+import { nietGevondenFout } from "../fouten";
 import { abonnementen, organization } from "../db/schema";
 import { leesGebruikerstaal } from "../gebruikers/taal";
 import { leesBody } from "../utils/projecten";
@@ -162,7 +163,7 @@ export async function startCheckout(
       .select({ naam: organization.name, proefEinde: organization.proefEinde })
       .from(organization)
       .where(eq(organization.id, i.organisatieId));
-    if (!org) throw fout(404, "Niet gevonden", "NIET_GEVONDEN");
+    if (!org) throw nietGevondenFout();
     const leesRij = async () =>
       (await tx.select().from(abonnementen).where(eq(abonnementen.organisatieId, i.organisatieId)))[0];
     const blokkeert = (r: Awaited<ReturnType<typeof leesRij>>) => {
@@ -259,7 +260,7 @@ export async function synchroniseerRoute(event: H3Event): Promise<AbonnementOver
   const db = gebruikDb();
   const rij = await haalAbonnementRij(db, organisatieId);
   const checkout = await stand.stripe.haalCheckout(sessie);
-  if (!rij || !checkout || checkout.klantId !== rij.stripeKlantId) throw fout(404, "Niet gevonden", "NIET_GEVONDEN");
+  if (!rij || !checkout || checkout.klantId !== rij.stripeKlantId) throw nietGevondenFout();
   await synchroniseerKlant(db, stand.stripe, stand.config.prijzen, rij.stripeKlantId);
   return maakOverzicht(db, organisatieId, stand);
 }

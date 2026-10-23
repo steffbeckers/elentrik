@@ -34,6 +34,7 @@ import { ACTIEVE_ORGANISATIE_HEADER, ANDERE_ORGANISATIE } from "../../shared/org
 import { gebruikAuth } from "../auth";
 import { vertrouwdeOorsprongen } from "../auth/oorsprong";
 import { gebruikDb } from "../db";
+import { nietGevondenFout } from "../fouten";
 import { member, session, user } from "../db/schema";
 import { isEigenaarRol } from "../organisaties/regels";
 import { projectOrganisatie } from "../projecten/repo";
@@ -50,7 +51,7 @@ export type Context = { gebruiker: Gebruiker; organisatieId: string; rol: Rol };
 const SESSIE_SLEUTEL = "elentrikSessie";
 
 function nietGevonden(): never {
-  throw createError({ statusCode: 404, statusMessage: "Niet gevonden", data: { code: "NIET_GEVONDEN" } });
+  throw nietGevondenFout();
 }
 
 /** `owner` (ook in een lijst als `owner,member`) is eigenaar; elke andere rol is lid. */

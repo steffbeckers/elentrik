@@ -6,6 +6,7 @@ import { createError, getHeader, getRouterParam, readMultipartFormData, type H3E
 import { z } from "zod";
 import { MAX_LOGO_BYTES, MAX_UPLOAD_BYTES } from "../../shared/bestandsinhoud";
 import { BestandFout, type PlanSoort } from "../bestanden/repo";
+import { nietGevondenFout } from "../fouten";
 import { IdSchema } from "./projecten";
 const SoortSchema = z.enum(["plan-origineel", "plan-raster"]);
 
@@ -15,9 +16,7 @@ const MULTIPART_OVERHEAD_BYTES = 1024 * 1024;
 /** Een id dat geen uuid is, kan nooit een bestaand bestand zijn: 404. */
 export function bestandId(event: H3Event): string {
   const id = IdSchema.safeParse(getRouterParam(event, "id"));
-  if (!id.success) {
-    throw createError({ statusCode: 404, statusMessage: "Bestand niet gevonden", data: { code: "BESTAND_NIET_GEVONDEN" } });
-  }
+  if (!id.success) throw nietGevondenFout();
   return id.data;
 }
 
@@ -67,7 +66,7 @@ export async function metBestandFouten<T>(actie: () => Promise<T>): Promise<T> {
     if (!(fout instanceof BestandFout)) throw fout;
     switch (fout.code) {
       case "NIET_GEVONDEN":
-        throw createError({ statusCode: 404, statusMessage: "Project niet gevonden", data: { code: "PROJECT_NIET_GEVONDEN" } });
+        throw nietGevondenFout();
       case "TE_GROOT":
         throw createError({ statusCode: 413, statusMessage: "Bestand te groot", data: { code: "BESTAND_TE_GROOT" } });
       case "ONGELDIG_TYPE":

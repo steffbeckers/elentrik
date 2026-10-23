@@ -6,6 +6,7 @@
 import { StroomtypeSchema } from "@elentrik/model";
 import { createError, getHeader, getRouterParam, readBody, type H3Event } from "h3";
 import { z } from "zod";
+import { nietGevondenFout } from "../fouten";
 import { ProjectFout } from "../projecten/repo";
 
 /** Een id in de database: een uuid. Ook gebruikt door de bestanden-hulp en de exports-repo. */
@@ -28,9 +29,7 @@ export const BewaarProjectSchema = z.object({
 /** Een id dat geen uuid is, kan nooit een bestaand project zijn: 404. */
 export function projectId(event: H3Event): string {
   const id = IdSchema.safeParse(getRouterParam(event, "id"));
-  if (!id.success) {
-    throw createError({ statusCode: 404, statusMessage: "Project niet gevonden", data: { code: "PROJECT_NIET_GEVONDEN" } });
-  }
+  if (!id.success) throw nietGevondenFout();
   return id.data;
 }
 
@@ -80,7 +79,7 @@ export async function metProjectFouten<T>(actie: () => Promise<T>): Promise<T> {
     if (!(fout instanceof ProjectFout)) throw fout;
     switch (fout.code) {
       case "NIET_GEVONDEN":
-        throw createError({ statusCode: 404, statusMessage: "Project niet gevonden", data: { code: "PROJECT_NIET_GEVONDEN" } });
+        throw nietGevondenFout();
       case "CONFLICT":
         throw createError({
           statusCode: 409,

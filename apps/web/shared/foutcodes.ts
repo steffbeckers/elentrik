@@ -5,6 +5,9 @@
 // statusMessage en een 4xx-status een code uit deze lijst meegeeft, en dat elke code hier ook
 // echt gebruikt wordt.
 //
+// De scan in die test ziet alleen h3-`createError` (en hulpfuncties met een statusCode-parameter);
+// de `APIError`-guards in server/auth/index.ts (bv. ALLEEN_EIGENAAR) worden niet gescand.
+//
 // Expliciete import in de server en client (ruling E1): dit bestand importeert niets.
 
 /**
@@ -19,10 +22,10 @@ export const SERVER_FOUTCODES = [
   "ALLEEN_EIGENAAR",
   "NIET_TOEGELATEN",
   "VERZOEK_VAN_ANDERE_SITE",
-  // Niet gevonden: een andere organisatie geeft dezelfde 404 als iets dat niet bestaat
+  // Niet gevonden: ELK object (project, bestand, export, lid, uitnodiging...) dat niet bestaat of
+  // van een andere organisatie is, geeft deze ene code en dezelfde statusMessage (server/fouten.ts).
+  // Een code per soort object zou het bestaan van andermans gegevens verraden.
   "NIET_GEVONDEN",
-  "PROJECT_NIET_GEVONDEN",
-  "BESTAND_NIET_GEVONDEN",
   // Invoer
   "ONGELDIGE_INVOER",
   "ONGELDIGE_NAAM",
