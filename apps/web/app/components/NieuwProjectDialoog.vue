@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { StroomtypeSchema, type Stroomtype } from "@elentrik/model";
+import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 
 const open = defineModel<boolean>("open", { default: false });
 const emit = defineEmits<{ aangemaakt: [id: string] }>();
 
 const { t } = useI18n();
+// Een nieuw project komt in de actieve organisatie: die van deze pagina gaat mee (409 als een
+// ander tabblad intussen wisselde; de dialoog blijft dan open).
 const api = useProjectenApi();
 const toast = useToast();
+const andereOrganisatie = useAndereOrganisatie();
 
 const stroomtypes = computed(() =>
   StroomtypeSchema.options.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
@@ -42,7 +46,8 @@ async function maak() {
     });
     open.value = false;
     emit("aangemaakt", id);
-  } catch {
+  } catch (fout) {
+    if (await andereOrganisatie(fout)) return;
     toast.add({ title: t("algemeen.fout"), color: "error" });
   } finally {
     bezig.value = false;

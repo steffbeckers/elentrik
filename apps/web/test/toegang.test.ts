@@ -31,6 +31,7 @@ import { maakUitnodigingstoken } from "../server/organisaties/uitnodigingstoken"
 import { haalProject, maakProject, verwijderProject } from "../server/projecten/repo";
 import { kiesActieveOrganisatie, vereisLid, vereisProjecttoegang, vereisSessie } from "../server/utils/toegang";
 import { VERWACHTE_GEBRUIKER_HEADER } from "../shared/gebruiker";
+import { ACTIEVE_ORGANISATIE_HEADER } from "../shared/organisatie";
 import type { ExportInvoer } from "../shared/exports";
 import { maakTestDb } from "./db";
 import { apiPad, beveiligdeRoutebestanden, PUBLIEKE_ROUTES, routeUit } from "./routes";
@@ -146,12 +147,14 @@ type Verzoek = {
   json?: unknown;
   formulier?: FormData;
   ifMatch?: number;
+  headers?: Record<string, string>;
 };
 
 async function stuur(verzoek: Verzoek, cookie?: string): Promise<Response> {
   const headers = new Headers();
   if (cookie) headers.set("cookie", cookie);
   if (verzoek.ifMatch !== undefined) headers.set("if-match", String(verzoek.ifMatch));
+  for (const [naam, waarde] of Object.entries(verzoek.headers ?? {})) headers.set(naam, waarde);
   let body: BodyInit | undefined;
   if (verzoek.json !== undefined) {
     headers.set("content-type", "application/json");
@@ -798,7 +801,7 @@ describe("vereisSessie en vereisLid", () => {
     expect([rol.status, ander.status, onbekend.status]).toEqual([403, 404, 404]);
   });
 
-  test("zonder actieve organisatie wordt het oudste lidmaatschap actief en in de sessie bewaard", async () => {
+  test("zonder actieve organisatie en zonder eerdere keuze wordt het oudste lidmaatschap actief en in de sessie bewaard", async () => {
     const id = await registreer("twee@voorbeeld.be");
     await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
     await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
@@ -896,5 +899,262 @@ describe("vereisSessie en vereisLid", () => {
       rol: "lid",
       project: { id: project, organisatieId: orgA },
     });
+  });
+});
+
+// --- De laatst gekozen organisatie (spec 2.4) ------------------------------------------------
+
+async function actieveOrganisatie(cookie: string): Promise<string | null> {
+  const sessie = (await (await stuur({ methode: "GET", pad: "/test/sessie" }, cookie)).json()) as {
+    actieveOrganisatieId: string | null;
+  };
+  return sessie.actieveOrganisatieId;
+}
+
+describe("de laatst gekozen organisatie", () => {
+  test("na een wissel naar Y en opnieuw inloggen is Y actief, niet het oudste lidmaatschap", async () => {
+    const id = await registreer("laatst-gekozen@voorbeeld.be");
+    await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
+    await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
+    const eerste = await inloggen("laatst-gekozen@voorbeeld.be");
+    expect(await actieveOrganisatie(eerste)).toBe(orgB);
+    const wissel = await stuur(
+      { methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: orgA } },
+      eerste,
+    );
+    expect(wissel.status).toBe(200);
+
+    const tweede = await inloggen("laatst-gekozen@voorbeeld.be");
+    expect(await actieveOrganisatie(tweede)).toBe(orgA);
+  });
+
+  test("is de gebruiker geen lid meer van de laatst gekozen organisatie, dan het oudste lidmaatschap", async () => {
+    const id = await registreer("niet-meer-gekozen@voorbeeld.be");
+    await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
+    await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
+    const eerste = await inloggen("niet-meer-gekozen@voorbeeld.be");
+    await stuur({ methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: orgA } }, eerste);
+    await db.delete(member).where(and(eq(member.userId, id), eq(member.organizationId, orgA)));
+
+    const tweede = await inloggen("niet-meer-gekozen@voorbeeld.be");
+    expect(await actieveOrganisatie(tweede)).toBe(orgB);
+  });
+});
+
+// --- Een verouderd tabblad (x-elentrik-organisatie) ------------------------------------------
+
+describe("schrijven op de actieve organisatie vanuit een verouderd tabblad", () => {
+  // T is eigenaar van Een en Twee; zijn sessie wisselde (in een ander tabblad) naar Twee, maar
+  // het oude tabblad denkt nog dat Een actief is.
+  let t: Gebruiker;
+  let een: string;
+  let twee: string;
+  const voor = (organisatieId: string) => ({ [ACTIEVE_ORGANISATIE_HEADER]: organisatieId });
+
+  async function foutcode(antwoord: Response): Promise<string | undefined> {
+    return ((await antwoord.json()) as { data?: { code?: string } }).data?.code;
+  }
+
+  async function projectenIn(organisatieId: string): Promise<number> {
+    return (await db.select({ id: projecten.id }).from(projecten).where(eq(projecten.organisatieId, organisatieId)))
+      .length;
+  }
+
+  beforeAll(async () => {
+    t = await gebruiker("tabbladen@voorbeeld.be", "Tab Een");
+    een = await organisatieVan(t.id);
+    const ander = await gebruiker("tabbladen-twee@voorbeeld.be", "Tab Twee");
+    twee = await organisatieVan(ander.id);
+    await wordLid(t.id, twee, "owner");
+    const wissel = await stuur(
+      { methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: twee } },
+      t.cookie,
+    );
+    expect(wissel.status).toBe(200);
+    await bewaarBedrijf(db, een, { naam: "Gegevens Een" });
+    await bewaarBedrijf(db, twee, { naam: "Gegevens Twee" });
+  });
+
+  test("bedrijfsgegevens bewaren: 409 ANDERE_ORGANISATIE en niets gewijzigd", async () => {
+    const antwoord = await stuur(
+      { methode: "PUT", pad: "/api/bedrijfsgegevens", json: { naam: "Bedoeld voor Een" }, headers: voor(een) },
+      t.cookie,
+    );
+    expect(antwoord.status).toBe(409);
+    expect(await foutcode(antwoord)).toBe("ANDERE_ORGANISATIE");
+    expect((await haalBedrijf(db, een)).naam).toBe("Gegevens Een");
+    expect((await haalBedrijf(db, twee)).naam).toBe("Gegevens Twee");
+  });
+
+  test("een nieuw project: 409 ANDERE_ORGANISATIE en geen project", async () => {
+    const [voorEen, voorTwee] = [await projectenIn(een), await projectenIn(twee)];
+    const antwoord = await stuur(
+      {
+        methode: "POST",
+        pad: "/api/projecten",
+        json: { naam: "Bedoeld voor Een", klantnaam: "", stroomtype: "2x230V" },
+        headers: voor(een),
+      },
+      t.cookie,
+    );
+    expect(antwoord.status).toBe(409);
+    expect(await foutcode(antwoord)).toBe("ANDERE_ORGANISATIE");
+    expect([await projectenIn(een), await projectenIn(twee)]).toEqual([voorEen, voorTwee]);
+  });
+
+  test("de organisatie verlaten: 409 ANDERE_ORGANISATIE en nog altijd lid van beide", async () => {
+    const antwoord = await stuur({ methode: "POST", pad: "/api/organisaties/verlaten", headers: voor(een) }, t.cookie);
+    expect(antwoord.status).toBe(409);
+    expect(await foutcode(antwoord)).toBe("ANDERE_ORGANISATIE");
+    const lidmaatschappen = await db.select({ org: member.organizationId }).from(member).where(eq(member.userId, t.id));
+    expect(lidmaatschappen.map((l) => l.org).sort()).toEqual([een, twee].sort());
+  });
+
+  test("logo, naam, uitnodigen, intrekken, rol wijzigen en verwijderen: 409, en niets gewijzigd", async () => {
+    const uitnodiging = await uitnodigingIn(een);
+    const lid = await extraLid(een);
+    const gast = "gast-verouderd@voorbeeld.be";
+    const verzoeken: Verzoek[] = [
+      { methode: "POST", pad: "/api/bedrijfsgegevens/logo", formulier: pngFormulier() },
+      { methode: "PUT", pad: "/api/organisaties/naam", json: { naam: "Gekaapt" } },
+      { methode: "POST", pad: "/api/organisaties/uitnodigingen", json: { email: gast, rol: "lid" } },
+      { methode: "DELETE", pad: `/api/organisaties/uitnodigingen/${uitnodiging}` },
+      { methode: "PUT", pad: `/api/organisaties/leden/${lid}`, json: { rol: "eigenaar" } },
+      { methode: "DELETE", pad: `/api/organisaties/leden/${lid}` },
+    ];
+    for (const verzoek of verzoeken) {
+      const antwoord = await stuur({ ...verzoek, headers: voor(een) }, t.cookie);
+      expect([antwoord.status, await foutcode(antwoord)], `${verzoek.methode} ${verzoek.pad}`).toEqual([
+        409,
+        "ANDERE_ORGANISATIE",
+      ]);
+    }
+    expect((await haalBedrijf(db, een)).logoBestandId).toBeUndefined();
+    expect((await haalBedrijf(db, twee)).logoBestandId).toBeUndefined();
+    const mij = (await (await stuur({ methode: "GET", pad: "/api/mij" }, t.cookie)).json()) as {
+      organisaties: { naam: string }[];
+    };
+    expect(mij.organisaties.map((o) => o.naam).sort()).toEqual(["Tab Een", "Tab Twee"]);
+    expect(await db.select().from(invitation).where(eq(invitation.email, gast))).toEqual([]);
+    const [open] = await db.select({ status: invitation.status }).from(invitation).where(eq(invitation.id, uitnodiging));
+    expect(open!.status).toBe("pending");
+    const [extra] = await db.select({ rol: member.role }).from(member).where(eq(member.id, lid));
+    expect(extra!.rol).toBe("member");
+  });
+
+  test("met de actieve organisatie in de header, of zonder header: bewaren lukt", async () => {
+    const juist = await stuur(
+      { methode: "PUT", pad: "/api/bedrijfsgegevens", json: { naam: "Twee bewaard" }, headers: voor(twee) },
+      t.cookie,
+    );
+    expect(juist.status).toBe(200);
+    expect((await haalBedrijf(db, twee)).naam).toBe("Twee bewaard");
+    const zonder = await stuur({ methode: "PUT", pad: "/api/bedrijfsgegevens", json: { naam: "Twee zonder" } }, t.cookie);
+    expect(zonder.status).toBe(200);
+    expect((await haalBedrijf(db, twee)).naam).toBe("Twee zonder");
+    expect((await haalBedrijf(db, een)).naam).toBe("Gegevens Een");
+  });
+
+  test("projectroutes gaan op lidmaatschap en negeren de header", async () => {
+    const id = await projectIn(een);
+    const { document } = (await haalProject(db, een, id))!;
+    const antwoord = await stuur(
+      { methode: "PUT", pad: `/api/projecten/${id}`, ifMatch: 1, json: { naam: "In Een", document }, headers: voor(een) },
+      t.cookie,
+    );
+    expect(antwoord.status).toBe(200);
+    expect((await haalProject(db, een, id))!.versie).toBe(2);
+  });
+});
+
+// --- CSRF: verzoeken van een andere site -----------------------------------------------------
+
+describe("verzoeken van een andere site", () => {
+  async function aantalProjecten(): Promise<number> {
+    return (await db.select({ id: projecten.id }).from(projecten).where(eq(projecten.organisatieId, orgA))).length;
+  }
+
+  const nieuwProject = { naam: "Via een andere site", klantnaam: "", stroomtype: "2x230V" };
+
+  test("een POST, PUT of DELETE van een andere site: 403, en er verandert niets", async () => {
+    const voor = await aantalProjecten();
+    const gevallen: Record<string, string>[] = [
+      { "sec-fetch-site": "cross-site" },
+      { "sec-fetch-site": "cross-site", origin: "http://127.0.0.1:3000" },
+      { origin: "http://kwaad.example" },
+      { origin: "http://127.0.0.1:3100" },
+      { origin: "null" },
+    ];
+    for (const headers of gevallen) {
+      const antwoord = await stuur(
+        { methode: "POST", pad: "/api/projecten", json: nieuwProject, headers },
+        eigenaarA.cookie,
+      );
+      expect(antwoord.status, JSON.stringify(headers)).toBe(403);
+    }
+    expect(await aantalProjecten()).toBe(voor);
+
+    await bewaarBedrijf(db, orgA, { naam: "Niet van buiten" });
+    const put = await stuur(
+      {
+        methode: "PUT",
+        pad: "/api/bedrijfsgegevens",
+        json: { naam: "Van buiten" },
+        headers: { "sec-fetch-site": "cross-site" },
+      },
+      eigenaarA.cookie,
+    );
+    expect(put.status).toBe(403);
+    expect((await haalBedrijf(db, orgA)).naam).toBe("Niet van buiten");
+
+    const id = await projectIn(orgA);
+    const weg = await stuur(
+      { methode: "DELETE", pad: `/api/projecten/${id}`, headers: { "sec-fetch-site": "cross-site" } },
+      eigenaarA.cookie,
+    );
+    expect(weg.status).toBe(403);
+    expect(await haalProject(db, orgA, id)).not.toBeNull();
+  });
+
+  test("ook een publieke route weigert een POST van een andere site", async () => {
+    const antwoord = await stuur({
+      methode: "POST",
+      pad: `/api/uitnodigingen/${await uitnodigingstokenIn(orgA)}/registreer`,
+      json: { naam: "Buiten", wachtwoord: "lang-genoeg-123" },
+      headers: { "sec-fetch-site": "cross-site" },
+    });
+    expect(antwoord.status).toBe(403);
+  });
+
+  test("dezelfde oorsprong, dezelfde site, de eigen origin (ook als localhost) of geen van beide: toegelaten", async () => {
+    const voor = await aantalProjecten();
+    const gevallen: Record<string, string>[] = [
+      { "sec-fetch-site": "same-origin", origin: "http://127.0.0.1:3000" },
+      { "sec-fetch-site": "same-site" },
+      { "sec-fetch-site": "none" },
+      { origin: "http://127.0.0.1:3000" },
+      { origin: "http://localhost:3000" },
+      {},
+    ];
+    for (const headers of gevallen) {
+      const antwoord = await stuur(
+        { methode: "POST", pad: "/api/projecten", json: nieuwProject, headers },
+        eigenaarA.cookie,
+      );
+      expect(antwoord.status, JSON.stringify(headers)).toBe(201);
+    }
+    expect(await aantalProjecten()).toBe(voor + gevallen.length);
+  });
+
+  test("lezen (GET) van een andere site blijft toegelaten", async () => {
+    const antwoord = await stuur(
+      {
+        methode: "GET",
+        pad: "/api/projecten",
+        headers: { "sec-fetch-site": "cross-site", origin: "http://kwaad.example" },
+      },
+      eigenaarA.cookie,
+    );
+    expect(antwoord.status).toBe(200);
   });
 });

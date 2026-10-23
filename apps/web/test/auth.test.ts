@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, type MockInstance, test, vi } from "vitest";
 import { type Auth, leesGeheim, maakAuth } from "../server/auth";
+import { vertrouwdeOorsprongen } from "../server/auth/oorsprong";
 import type { Db } from "../server/db";
 import { invitation, member, organization, session, user, verification } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
@@ -245,6 +246,31 @@ describe("registreren en bevestigen", () => {
     expect(rij!.wachtendeBedrijfsnaam).toBe("Peeters Elektro");
   });
 
+  test("een bedrijfsnaam die na trimmen geen 1 tot 80 tekens telt, wordt bij de registratie geweigerd", async () => {
+    for (const naam of ["", "   ", "x".repeat(81), ` ${"y".repeat(81)} `]) {
+      const email = nieuwAdres();
+      await expect(
+        auth.api.signUpEmail({
+          body: { name: "Jan Peeters", email, password: WACHTWOORD, wachtendeBedrijfsnaam: naam },
+          headers: headers(),
+        }),
+      ).rejects.toMatchObject({ statusCode: 400 });
+      expect(await db.select().from(user).where(eq(user.email, email)), JSON.stringify(naam)).toHaveLength(0);
+    }
+    expect(await mailsVoor("niemand")).toEqual([]);
+    expect(mails).toEqual([]);
+
+    // 80 tekens (na trimmen) mag, en zonder bedrijfsnaam (een uitnodiging) ook.
+    for (const naam of [` ${"z".repeat(80)} `, undefined]) {
+      const email = nieuwAdres();
+      await auth.api.signUpEmail({
+        body: { name: "Jan Peeters", email, password: WACHTWOORD, ...(naam !== undefined ? { wachtendeBedrijfsnaam: naam } : {}) },
+        headers: headers(),
+      });
+      expect(await db.select().from(user).where(eq(user.email, email))).toHaveLength(1);
+    }
+  });
+
   test("update-user kan wachtendeBedrijfsnaam niet zetten; de naam wijzigen mag wel", async () => {
     const email = nieuwAdres();
     await bevestigdeGebruiker(email);
@@ -381,6 +407,23 @@ describe("wachtwoord vergeten", () => {
     });
     expect(antwoord.status).toBe(true);
     expect(await mailsVoor(onbekend)).toHaveLength(0);
+  });
+});
+
+describe("vertrouwde oorsprongen", () => {
+  test("wijst de basis-URL naar 127.0.0.1, dan geldt ook localhost op dezelfde poort", () => {
+    expect(vertrouwdeOorsprongen("http://127.0.0.1:3000")).toEqual(["http://127.0.0.1:3000", "http://localhost:3000"]);
+    expect(vertrouwdeOorsprongen("http://127.0.0.1:3100/")).toEqual(["http://127.0.0.1:3100", "http://localhost:3100"]);
+    expect(vertrouwdeOorsprongen("http://localhost:3000")).toEqual(["http://localhost:3000"]);
+    expect(vertrouwdeOorsprongen("https://elentrik.example")).toEqual(["https://elentrik.example"]);
+  });
+
+  test("Better Auth vertrouwt de basis-URL en haar localhost-variant, en geen andere poort", async () => {
+    const context = await auth.$context;
+    expect(context.isTrustedOrigin("http://127.0.0.1:3000")).toBe(true);
+    expect(context.isTrustedOrigin("http://localhost:3000")).toBe(true);
+    expect(context.isTrustedOrigin("http://localhost:3100")).toBe(false);
+    expect(context.isTrustedOrigin("http://kwaad.example")).toBe(false);
   });
 });
 

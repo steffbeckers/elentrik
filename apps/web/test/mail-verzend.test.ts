@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { gebruikVerzender, maakVerzender, smtpPoort, zetVerzender } from "../server/mail/verzend";
+import { gebruikVerzender, maakVerzender, smtpOpties, smtpPoort, zetVerzender } from "../server/mail/verzend";
 
 const mail = { aan: "jan@voorbeeld.be", onderwerp: "Hallo", tekst: "platte tekst", html: "<p>html</p>" };
 
@@ -63,5 +63,42 @@ describe("smtpPoort", () => {
     for (const waarde of [undefined, "", "abc", "12x", "0", "-5", "70000", "25.5", "NaN"]) {
       expect(smtpPoort(waarde)).toBe(1025);
     }
+  });
+});
+
+describe("smtpOpties", () => {
+  test("zonder aanmelding of TLS: zoals Mailpit lokaal", () => {
+    expect(smtpOpties({})).toEqual({ host: "127.0.0.1", port: 1025, secure: false });
+    expect(smtpOpties({ SMTP_HOST: "mail.local", SMTP_PORT: "2525" })).toEqual({
+      host: "mail.local",
+      port: 2525,
+      secure: false,
+    });
+  });
+
+  test("met gebruiker, wachtwoord en SMTP_BEVEILIGD=true: aanmelding en TLS", () => {
+    expect(
+      smtpOpties({
+        SMTP_HOST: "smtp.voorbeeld.be",
+        SMTP_PORT: "465",
+        SMTP_GEBRUIKER: "elentrik",
+        SMTP_WACHTWOORD: "geheim-wachtwoord",
+        SMTP_BEVEILIGD: "true",
+      }),
+    ).toEqual({
+      host: "smtp.voorbeeld.be",
+      port: 465,
+      secure: true,
+      auth: { user: "elentrik", pass: "geheim-wachtwoord" },
+    });
+  });
+
+  test("alleen true (ongeacht hoofdletters) zet TLS aan; een gebruiker zonder wachtwoord (of omgekeerd) meldt niet aan", () => {
+    for (const waarde of ["", "false", "1", "ja"]) {
+      expect(smtpOpties({ SMTP_BEVEILIGD: waarde }).secure, waarde).toBe(false);
+    }
+    expect(smtpOpties({ SMTP_BEVEILIGD: " TRUE " }).secure).toBe(true);
+    expect(smtpOpties({ SMTP_GEBRUIKER: "elentrik" })).not.toHaveProperty("auth");
+    expect(smtpOpties({ SMTP_WACHTWOORD: "geheim" })).not.toHaveProperty("auth");
   });
 });

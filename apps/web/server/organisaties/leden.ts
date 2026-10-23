@@ -154,8 +154,8 @@ export type Mij = {
 
 /**
  * De ingelogde gebruiker, zijn organisaties en de actieve organisatie. Is de actieve organisatie
- * er niet meer een van de gebruiker (hij werd verwijderd), dan kiest de sessie opnieuw: het
- * oudste lidmaatschap, of geen.
+ * er niet meer een van de gebruiker (hij werd verwijderd), dan kiest de sessie opnieuw: de laatst
+ * gekozen organisatie waarvan hij nog lid is, anders het oudste lidmaatschap, of geen.
  */
 export async function mij(event: H3Event): Promise<Mij> {
   const sessie = await vereisSessie(event);
@@ -307,10 +307,21 @@ export async function lijstUitnodigingen(event: H3Event): Promise<Uitnodiging[]>
   }));
 }
 
-/** Nodigt een adres uit als eigenaar of lid: alleen een eigenaar. Better Auth stuurt de mail. */
+/** Elke uitnodiging is een mail naar een vreemd adres: hoogstens 20 per uur per gebruiker. */
+export const uitnodigingLimiet = maakLimiet({ max: 20, vensterMs: 3600_000 });
+
+/**
+ * Nodigt een adres uit als eigenaar of lid: alleen een eigenaar. Better Auth stuurt de mail. Meer
+ * dan 20 uitnodigingen per uur van dezelfde gebruiker: 429 `TE_VEEL_UITNODIGINGEN`.
+ */
 export async function nodigUit(event: H3Event): Promise<Uitnodiging> {
-  const { organisatieId } = await vereisLid(event, { rol: "eigenaar" });
+  const { gebruiker, organisatieId } = await vereisLid(event, { rol: "eigenaar" });
   const { email, rol } = await leesBody(event, z.object({ email: z.email().max(254), rol: RolSchema }));
+  const poging = uitnodigingLimiet.probeer(gebruiker.id);
+  if (!poging.toegelaten) {
+    setResponseHeader(event, "retry-after", poging.wachtSeconden);
+    throw fout(429, "Te veel uitnodigingen; probeer het straks opnieuw", "TE_VEEL_UITNODIGINGEN");
+  }
   const nieuw = await viaAuth(event, () =>
     gebruikAuth().api.createInvitation({
       body: { email, role: naarIntern(rol), organizationId: organisatieId },

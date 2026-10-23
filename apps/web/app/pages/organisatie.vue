@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
+import { useOrganisatieApi } from "~/composables/useOrganisatieApi";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isBedrijfsnaam, isEmail } from "~/sessie/invoer";
@@ -10,6 +12,9 @@ type Uitnodiging = { id: string; email: string; rol: Rol; verlooptOp: string };
 const { t } = useI18n();
 const sessie = useSessieStore();
 const toast = useToast();
+// Elke wijziging stuurt de actieve organisatie van deze pagina mee (een ander tabblad kan wisselen).
+const api = useOrganisatieApi();
+const andereOrganisatie = useAndereOrganisatie();
 
 useHead({ title: () => `${t("organisatie.titel")} · ${t("app.naam")}` });
 
@@ -66,7 +71,9 @@ function foutTekst(fout: unknown): string {
   return t("algemeen.fout");
 }
 
-function meldFout(fout: unknown) {
+/** Wisselde een ander tabblad de organisatie (409 ANDERE_ORGANISATIE), dan meldt die dat zelf. */
+async function meldFout(fout: unknown) {
+  if (await andereOrganisatie(fout)) return;
   toast.add({ title: foutTekst(fout), color: "error" });
 }
 
@@ -84,11 +91,11 @@ async function bewaarNaam() {
   if (naamBezig.value) return;
   naamBezig.value = true;
   try {
-    await $fetch("/api/organisaties/naam", { method: "PUT", body: { naam: naamFormulier.naam.trim() } });
+    await api.hernoem(naamFormulier.naam.trim());
     await sessie.laad();
     toast.add({ title: t("organisatie.naam.bewaard"), color: "success" });
   } catch (fout) {
-    meldFout(fout);
+    await meldFout(fout);
   } finally {
     naamBezig.value = false;
   }
@@ -102,12 +109,12 @@ async function wijzigRol(lid: Lid, rol: string) {
   if (lidBezig.value || rol === lid.rol || (rol !== "eigenaar" && rol !== "lid")) return;
   lidBezig.value = lid.id;
   try {
-    await $fetch(`/api/organisaties/leden/${encodeURIComponent(lid.id)}`, { method: "PUT", body: { rol } });
+    await api.wijzigRol(lid.id, rol);
     toast.add({ title: t("organisatie.leden.rolGewijzigd"), color: "success" });
     // Wie zichzelf lid maakt, verliest het beheer: de sessie weet dat meteen.
     if (lid.gebruikerId === sessie.gebruiker?.id) await sessie.laad();
   } catch (fout) {
-    meldFout(fout);
+    await meldFout(fout);
   } finally {
     lidBezig.value = null;
     // Ook na een weigering: de keuzelijst toont weer de echte rol.
@@ -128,13 +135,13 @@ async function bevestigVerwijderen() {
   if (!lid || lidBezig.value) return;
   lidBezig.value = lid.id;
   try {
-    await $fetch(`/api/organisaties/leden/${encodeURIComponent(lid.id)}`, { method: "DELETE" });
+    await api.verwijderLid(lid.id);
     toast.add({ title: t("organisatie.leden.verwijderd", { naam: lid.naam }), color: "success" });
     teVerwijderen.value = null;
     await herlaadLeden();
   } catch (fout) {
     teVerwijderen.value = null;
-    meldFout(fout);
+    await meldFout(fout);
   } finally {
     lidBezig.value = null;
   }
@@ -154,13 +161,13 @@ async function nodigUit() {
   uitnodigBezig.value = true;
   try {
     const email = uitnodigFormulier.email.trim();
-    await $fetch("/api/organisaties/uitnodigingen", { method: "POST", body: { email, rol: uitnodigFormulier.rol } });
+    await api.nodigUit(email, uitnodigFormulier.rol);
     toast.add({ title: t("organisatie.uitnodigen.verstuurd", { email }), color: "success" });
     uitnodigFormulier.email = "";
     uitnodigFormulier.rol = "lid";
     await herlaadUitnodigingen();
   } catch (fout) {
-    meldFout(fout);
+    await meldFout(fout);
   } finally {
     uitnodigBezig.value = false;
   }
@@ -172,10 +179,10 @@ async function trekIn(uitnodiging: Uitnodiging) {
   if (intrekBezig.value) return;
   intrekBezig.value = uitnodiging.id;
   try {
-    await $fetch(`/api/organisaties/uitnodigingen/${encodeURIComponent(uitnodiging.id)}`, { method: "DELETE" });
+    await api.trekIn(uitnodiging.id);
     toast.add({ title: t("organisatie.uitnodigingen.ingetrokken"), color: "success" });
   } catch (fout) {
-    if (foutStatus(fout) !== 410) meldFout(fout);
+    if (foutStatus(fout) !== 410) await meldFout(fout);
   } finally {
     intrekBezig.value = null;
     await herlaadUitnodigingen();
@@ -201,12 +208,16 @@ async function verlaat() {
   verlatenBezig.value = true;
   verlatenFout.value = null;
   try {
-    await $fetch("/api/organisaties/verlaten", { method: "POST" });
+    await api.verlaat();
     verlatenOpen.value = false;
     // De sessie kiest zelf een andere organisatie, of geen: dan volgt /geen-organisatie.
     await sessie.laad();
     await navigateTo("/", { replace: true });
   } catch (fout) {
+    if (await andereOrganisatie(fout)) {
+      verlatenOpen.value = false;
+      return;
+    }
     verlatenFout.value = foutTekst(fout);
   } finally {
     verlatenBezig.value = false;

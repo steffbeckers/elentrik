@@ -8,6 +8,7 @@ import {
   valideerFormulier,
   type BedrijfFormulier,
 } from "~/instellingen/formulier";
+import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { useSessieStore } from "~/stores/sessie";
 
@@ -16,6 +17,10 @@ const api = useBedrijfApi();
 const bestanden = useBestandenApi();
 const toast = useToast();
 const sessie = useSessieStore();
+// Bewaren en het logo sturen de actieve organisatie van deze pagina mee; wisselde een ander
+// tabblad intussen, dan meldt dit dat (409 ANDERE_ORGANISATIE) en gaat er niets verloren aan
+// de serverkant.
+const andereOrganisatie = useAndereOrganisatie();
 
 /** Alleen een eigenaar wijzigt de bedrijfsgegevens; een lid ziet ze (de server weigert met 403). */
 const alleenLezen = computed(() => sessie.rol !== "eigenaar");
@@ -65,7 +70,8 @@ async function bewaar() {
     Object.assign(formulier, formulierUitPartij(bewaard));
     logoBestandId.value = bewaard.logoBestandId;
     toast.add({ title: t("bedrijf.bewaard"), color: "success" });
-  } catch {
+  } catch (fout) {
+    if (await andereOrganisatie(fout)) return;
     toast.add({ title: t("algemeen.fout"), color: "error" });
   } finally {
     bezig.value = false;
@@ -101,6 +107,7 @@ async function opLogoGekozen(gebeurtenis: Event) {
     logoBestandId.value = info.id;
     toast.add({ title: t("bedrijf.logo.bewaard"), color: "success" });
   } catch (fout) {
+    if (await andereOrganisatie(fout)) return;
     const code = httpStatus(fout);
     meldLogoFout(code === 413 ? "teGroot" : code === 415 ? "onbekendType" : "mislukt");
   } finally {

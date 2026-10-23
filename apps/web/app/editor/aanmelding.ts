@@ -45,6 +45,15 @@ export async function opnieuwProberen(opties: {
   return "geprobeerd";
 }
 
+/**
+ * Toont de editor de melding "afgemeld" (met "Opnieuw inloggen")? Na een 401 bij het bewaren, en
+ * ook zodra de sessie geen gebruiker meer heeft (uitgelogd in een ander tabblad, of "Opnieuw
+ * proberen" bij status fout vond geen sessie): anders verdwijnen de menu's zonder uitleg.
+ */
+export function toonAfgemeld(toestand: { afgemeld: boolean; gebruikerId: string | null }): boolean {
+  return toestand.afgemeld || toestand.gebruikerId === null;
+}
+
 /** De i18n-sleutel van de bevestiging vóór wisselen of uitloggen, of null als alles bewaard is. */
 export function vertrekBevestiging(
   status: AutosaveStatus,

@@ -11,10 +11,15 @@
 // Het lidmaatschap wordt bij elk verzoek opnieuw in de database gecontroleerd; de actieve
 // organisatie in de sessie bepaalt alleen welke organisatie een lijst of de bedrijfsgegevens tonen.
 //
+// Een schrijfactie op de actieve organisatie mag meegeven welke organisatie de pagina bedoelt
+// (header `x-elentrik-organisatie`); is de sessie intussen van een andere organisatie (een ander
+// tabblad wisselde), dan volgt 409 `ANDERE_ORGANISATIE`. Een wijzigend verzoek dat een andere site
+// stuurt (CSRF), weigert `defineBeveiligdeHandler` met 403.
+//
 // Nitro importeert de exports van server/utils automatisch.
 // Expliciete imports, geen Nitro-auto-imports: Vitest importeert deze module
 // rechtstreeks (ruling E1).
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne } from "drizzle-orm";
 import {
   appendResponseHeader,
   createError,
@@ -25,7 +30,9 @@ import {
   type H3Event,
 } from "h3";
 import { ANDERE_GEBRUIKER, VERWACHTE_GEBRUIKER_HEADER } from "../../shared/gebruiker";
+import { ACTIEVE_ORGANISATIE_HEADER, ANDERE_ORGANISATIE } from "../../shared/organisatie";
 import { gebruikAuth } from "../auth";
+import { vertrouwdeOorsprongen } from "../auth/oorsprong";
 import { gebruikDb } from "../db";
 import { member, session } from "../db/schema";
 import { isEigenaarRol } from "../organisaties/regels";
@@ -52,8 +59,36 @@ export function naarRol(rol: string): Rol {
 }
 
 /**
- * Het oudste lidmaatschap van een gebruiker wordt de actieve organisatie van een sessie die er
- * geen heeft (bijvoorbeeld een latere aanmelding). Zonder lidmaatschap blijft het null.
+ * De organisatie die een sessie zonder actieve organisatie krijgt (bijvoorbeeld een latere
+ * aanmelding): de laatst gekozen organisatie (spec 2.4), dat is de actieve organisatie van de
+ * laatst bijgewerkte andere sessie van de gebruiker waarvan hij nog lid is; anders zijn oudste
+ * lidmaatschap. Zonder lidmaatschap: null.
+ */
+async function voorkeur(sessieId: string, gebruikerId: string): Promise<string | null> {
+  const db = gebruikDb();
+  const [laatst] = await db
+    .select({ organisatieId: member.organizationId })
+    .from(session)
+    .innerJoin(
+      member,
+      and(eq(member.userId, session.userId), eq(member.organizationId, session.activeOrganizationId)),
+    )
+    .where(and(eq(session.userId, gebruikerId), ne(session.id, sessieId)))
+    .orderBy(desc(session.updatedAt), desc(session.createdAt))
+    .limit(1);
+  if (laatst) return laatst.organisatieId;
+  const [eerste] = await db
+    .select({ organisatieId: member.organizationId })
+    .from(member)
+    .where(eq(member.userId, gebruikerId))
+    .orderBy(asc(member.createdAt), asc(member.id))
+    .limit(1);
+  return eerste?.organisatieId ?? null;
+}
+
+/**
+ * Geeft een sessie zonder actieve organisatie er een: de laatst gekozen, anders het oudste
+ * lidmaatschap (`voorkeur`). Zonder lidmaatschap blijft het null.
  *
  * Alleen een sessie die nog altijd geen actieve organisatie heeft, wordt bijgewerkt: kiest de
  * gebruiker intussen zelf een organisatie (of zet de eerste aanmelding er een), dan wint die
@@ -62,17 +97,12 @@ export function naarRol(rol: string): Rol {
  */
 export async function kiesActieveOrganisatie(sessieId: string, gebruikerId: string): Promise<string | null> {
   const db = gebruikDb();
-  const [eerste] = await db
-    .select({ organisatieId: member.organizationId })
-    .from(member)
-    .where(eq(member.userId, gebruikerId))
-    .orderBy(asc(member.createdAt), asc(member.id))
-    .limit(1);
+  const gekozen = await voorkeur(sessieId, gebruikerId);
   const deSessie = and(eq(session.id, sessieId), eq(session.userId, gebruikerId));
-  if (eerste) {
+  if (gekozen) {
     await db
       .update(session)
-      .set({ activeOrganizationId: eerste.organisatieId })
+      .set({ activeOrganizationId: gekozen })
       .where(and(deSessie, isNull(session.activeOrganizationId)));
   }
   const [huidig] = await db.select({ actief: session.activeOrganizationId }).from(session).where(deSessie);
@@ -126,15 +156,34 @@ export async function vereisVerwachteGebruiker(event: H3Event): Promise<Sessie> 
 }
 
 /**
+ * Bedoelt de client met header `x-elentrik-organisatie` een andere organisatie dan de actieve van
+ * de sessie (een oud tabblad, terwijl een ander tabblad wisselde), dan 409 met code
+ * `ANDERE_ORGANISATIE`, vóór er iets gelezen of gewijzigd wordt. Zonder header, of zonder actieve
+ * organisatie (dan volgt 404), gebeurt hier niets.
+ */
+function eisVerwachteOrganisatie(event: H3Event, actieveOrganisatieId: string | null): void {
+  const verwacht = getRequestHeader(event, ACTIEVE_ORGANISATIE_HEADER);
+  if (verwacht === undefined || actieveOrganisatieId === null || verwacht === actieveOrganisatieId) return;
+  throw createError({
+    statusCode: 409,
+    statusMessage: "De actieve organisatie is intussen een andere",
+    data: { code: ANDERE_ORGANISATIE },
+  });
+}
+
+/**
  * De context van een lid van een organisatie: standaard de actieve organisatie van de sessie.
  * Controleert het lidmaatschap in de database bij elke aanroep. Geen lid (of geen organisatie):
- * 404. Een vereiste rol die ontbreekt: 403.
+ * 404. Een vereiste rol die ontbreekt: 403. Op de actieve organisatie geldt ook de header
+ * `x-elentrik-organisatie` (409 `ANDERE_ORGANISATIE`); met een expliciete `organisatieId` (een
+ * project op id, wisselen) niet.
  */
 export async function vereisLid(
   event: H3Event,
   opties: { organisatieId?: string; rol?: Rol } = {},
 ): Promise<Context> {
   const { gebruiker, actieveOrganisatieId } = await vereisSessie(event);
+  if (opties.organisatieId === undefined) eisVerwachteOrganisatie(event, actieveOrganisatieId);
   const organisatieId = opties.organisatieId ?? actieveOrganisatieId;
   if (!organisatieId) nietGevonden();
 
@@ -176,16 +225,38 @@ export type HandlerOpties = {
   publiek?: true;
 };
 
+const WIJZIGENDE_METHODES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 /**
- * De handler van elke API-route (behalve /api/auth): eist eerst een sessie (anders 401) en roept
- * dan de handler aan, die zelf `vereisLid` of `vereisProjecttoegang` gebruikt. Met
- * `{ publiek: true }` vervalt de sessie-eis; de handler doet dan zelf alle controles.
+ * CSRF: een wijzigend verzoek (POST, PUT, PATCH, DELETE) dat een andere site stuurt, krijgt 403.
+ * - Met `Sec-Fetch-Site` (elke huidige browser) beslist die: alleen `cross-site` wordt geweigerd.
+ * - Zonder `Sec-Fetch-Site` maar met een `Origin`: die moet de oorsprong van de basis-URL zijn
+ *   (of haar localhost-variant), anders 403.
+ * - Zonder beide (server-side aanroepen, tests, oude clients): toegelaten.
+ */
+export function eisEigenSite(event: H3Event): void {
+  if (!WIJZIGENDE_METHODES.has(event.method)) return;
+  const site = getRequestHeader(event, "sec-fetch-site");
+  const oorsprong = getRequestHeader(event, "origin");
+  const vreemd =
+    site !== undefined
+      ? site === "cross-site"
+      : oorsprong !== undefined && !vertrouwdeOorsprongen().includes(oorsprong);
+  if (vreemd) throw createError({ statusCode: 403, statusMessage: "Verzoek van een andere site" });
+}
+
+/**
+ * De handler van elke API-route (behalve /api/auth): weigert eerst een wijzigend verzoek van een
+ * andere site (403, `eisEigenSite`), eist dan een sessie (anders 401) en roept de handler aan, die
+ * zelf `vereisLid` of `vereisProjecttoegang` gebruikt. Met `{ publiek: true }` vervalt de
+ * sessie-eis; de handler doet dan zelf alle andere controles.
  */
 export function defineBeveiligdeHandler<T>(
   handler: (event: H3Event) => T | Promise<T>,
   opties: HandlerOpties = {},
 ): EventHandler<EventHandlerRequest, Promise<T>> {
   return defineEventHandler(async (event) => {
+    eisEigenSite(event);
     if (opties.publiek !== true) await vereisSessie(event);
     return handler(event);
   });

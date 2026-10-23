@@ -28,9 +28,11 @@ test("registreren: bevestigen en inloggen, en de bestaande projecten en bedrijfs
   page,
 }) => {
   // Gegevens van vóór het inloggen: twee projecten zonder organisatie en een bedrijfsrij zonder
-  // organisatie (id 1). De allereerste bevestigde aanmelding hierna neemt ze over. Dat is deze
-  // registratie: de specs die deze draaien aanmaken hun gebruikers pas na dit bestand, en
-  // gebruikers die al een organisatie hebben nemen niets over.
+  // organisatie (id 1). De eerstvolgende bevestigde aanmelding van een registratie neemt ze over.
+  // Dat is deze registratie omdat Playwright met één worker draait (`workers: 1` in
+  // playwright.config.ts) en het zaaien en het registreren in deze ene test gebeuren: tussen beide
+  // kan geen andere spec iemand registreren. De volgorde van de spec-bestanden speelt geen rol;
+  // gebruikers die al een organisatie hebben, nemen niets over.
   await metE2eDatabase(async (sql) => {
     for (const naam of projectNamen) {
       const document = nieuwProjectDocument({ klantNaam: "Overname", stroomtype: "2x230V" });

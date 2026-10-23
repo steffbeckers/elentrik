@@ -546,7 +546,11 @@
     },
     "laatsteEigenaar": "Er moet minstens één eigenaar blijven.",
     "alleenEigenaar": "Alleen een eigenaar mag dit.",
-    "laden": "Laden…"
+    "laden": "Laden…",
+    "andereOrganisatie": {
+      "melding": "Je actieve organisatie werd intussen gewijzigd naar {organisatie}. Kijk je wijziging na en probeer opnieuw.",
+      "zonderNaam": "Je actieve organisatie werd intussen gewijzigd. Kijk je wijziging na en probeer opnieuw."
+    }
   },
   "geenOrganisatie": {
     "titel": "Je hoort nog bij geen bedrijf",

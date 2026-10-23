@@ -22,13 +22,32 @@ export function smtpPoort(waarde: string | undefined): number {
   return waarde && Number.isInteger(poort) && poort >= 1 && poort <= 65535 ? poort : STANDAARD_POORT;
 }
 
+export type SmtpOpties = {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth?: { user: string; pass: string };
+};
+
+/**
+ * De SMTP-instellingen uit de omgeving. Zonder SMTP_GEBRUIKER en SMTP_WACHTWOORD geen aanmelding,
+ * zonder SMTP_BEVEILIGD=true geen TLS: zo werkt Mailpit lokaal (zie .env.example). Deze waarden
+ * worden nergens gelogd.
+ */
+export function smtpOpties(env: Record<string, string | undefined> = process.env): SmtpOpties {
+  const opties: SmtpOpties = {
+    host: env.SMTP_HOST || "127.0.0.1",
+    port: smtpPoort(env.SMTP_PORT),
+    secure: env.SMTP_BEVEILIGD?.trim().toLowerCase() === "true",
+  };
+  if (env.SMTP_GEBRUIKER && env.SMTP_WACHTWOORD) {
+    opties.auth = { user: env.SMTP_GEBRUIKER, pass: env.SMTP_WACHTWOORD };
+  }
+  return opties;
+}
+
 function maakSmtpTransport(): MailTransport {
-  return createTransport({
-    host: process.env.SMTP_HOST || "127.0.0.1",
-    port: smtpPoort(process.env.SMTP_PORT),
-    // Lokaal zonder TLS of aanmelding (Mailpit); zie .env.example.
-    secure: false,
-  });
+  return createTransport(smtpOpties());
 }
 
 export function maakVerzender(transport?: MailTransport): Verzender {

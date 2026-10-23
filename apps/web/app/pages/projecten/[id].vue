@@ -19,7 +19,12 @@ import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
 import { httpStatus } from "~/composables/useProjectenApi";
 import { useNodeTekst } from "~/composables/useNodeTekst";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
-import { opnieuwProberen as probeerOpnieuw, vertrekBevestiging, type SessieControle } from "~/editor/aanmelding";
+import {
+  opnieuwProberen as probeerOpnieuw,
+  toonAfgemeld,
+  vertrekBevestiging,
+  type SessieControle,
+} from "~/editor/aanmelding";
 import { useEditorStore } from "~/stores/editor";
 import { useSessieStore } from "~/stores/sessie";
 import { useSituatieStore } from "~/stores/situatie";
@@ -238,6 +243,14 @@ watch(autosave.afgemeld, (afgemeld) => {
   if (afgemeld) void sessie.laad().catch(() => {});
 });
 
+/**
+ * De melding "afgemeld" met "Opnieuw inloggen": na een 401, en ook zodra de sessie geen gebruiker
+ * meer heeft (bv. "Opnieuw proberen" bij status fout vond geen sessie meer).
+ */
+const afgemeldMelding = computed(() =>
+  toonAfgemeld({ afgemeld: autosave.afgemeld.value, gebruikerId: sessie.gebruiker?.id ?? null }),
+);
+
 /** Nu is een andere gebruiker ingelogd dan die van dit venster: zijn naam, anders null. */
 const andereGebruiker = computed(() => {
   const huidig = sessie.gebruiker;
@@ -353,7 +366,7 @@ onBeforeUnmount(() => {
     <template v-if="laadstatus === 'klaar' && store.document">
       <EditorBovenbalk
         :status="autosave.status.value"
-        :afgemeld="autosave.afgemeld.value"
+        :afgemeld="afgemeldMelding"
         :andere-gebruiker="andereGebruiker"
         @opnieuw-proberen="opnieuwProberen"
         @opnieuw-inloggen="opnieuwInloggen"

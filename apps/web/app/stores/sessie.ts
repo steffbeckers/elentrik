@@ -78,7 +78,11 @@ export const useSessieStore = defineStore("sessie", () => {
     actieveOrganisatieId.value = null;
   }
 
-  /** Leest /api/mij opnieuw. Een 401 betekent niet ingelogd; elke andere fout gaat door. */
+  /**
+   * Leest /api/mij opnieuw. Een 401 betekent niet ingelogd; elke andere fout gaat door en laat
+   * de sessie ongeladen (ook na een eerdere lading, bv. net na inloggen), zodat de volgende
+   * navigatie opnieuw probeert.
+   */
   async function laad(): Promise<void> {
     try {
       const mij = await vereisApi().mij();
@@ -86,7 +90,10 @@ export const useSessieStore = defineStore("sessie", () => {
       organisaties.value = mij.organisaties;
       actieveOrganisatieId.value = mij.actieveOrganisatieId;
     } catch (fout) {
-      if (foutStatus(fout) !== 401) throw fout;
+      if (foutStatus(fout) !== 401) {
+        geladen.value = false;
+        throw fout;
+      }
       wis();
     }
     geladen.value = true;

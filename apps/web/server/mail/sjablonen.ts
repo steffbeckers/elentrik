@@ -50,9 +50,8 @@ export function bevestigMail({ naam, link }: { naam: string; link: string }): Ma
     ],
     knop: "Bevestig mijn e-mailadres",
     link,
-    voetnoot: [
-      "Deze link is 24 uur geldig. Heb je geen account aangemaakt? Dan kun je deze mail negeren.",
-    ],
+    // Ook een inlogpoging met een onbevestigd adres stuurt deze mail (sendOnSignIn).
+    voetnoot: ["Deze link is 24 uur geldig.", "Heb je dit niet aangevraagd? Dan mag je deze mail negeren."],
   });
 }
 

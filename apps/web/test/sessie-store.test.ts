@@ -74,6 +74,26 @@ describe("laad", () => {
     expect(store.geladen).toBe(false);
   });
 
+  test("faalt /api/mij na een eerdere lading (bv. net na inloggen), dan is de sessie weer ongeladen", async () => {
+    const kapot = Object.assign(new Error("kapot"), { status: 500 });
+    let antwoord: () => Promise<Mij> = async () => Promise.reject(nietIngelogd());
+    const { api } = maakApi({ mij: vi.fn(async () => antwoord()) });
+    const store = useSessieStore();
+    store.gebruikApi(api);
+    await store.laad();
+    expect(store.geladen).toBe(true);
+
+    // Inloggen lukte, maar /api/mij faalt: de volgende navigatie moet opnieuw laden.
+    antwoord = async () => Promise.reject(kapot);
+    await expect(store.laad()).rejects.toBe(kapot);
+    expect(store.geladen).toBe(false);
+
+    antwoord = async () => MIJ;
+    await store.laad();
+    expect(store.geladen).toBe(true);
+    expect(store.gebruiker).toEqual(MIJ.gebruiker);
+  });
+
   test("zonder actieve organisatie: geen rol", async () => {
     const { api } = maakApi({
       mij: vi.fn(async () => ({ ...MIJ, organisaties: [], actieveOrganisatieId: null })),

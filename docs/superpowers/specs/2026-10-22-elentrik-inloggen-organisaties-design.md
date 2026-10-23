@@ -1,7 +1,7 @@
 # Elentrik: inloggen en organisaties (ontwerp)
 
 - **Datum:** 2026-10-22
-- **Status:** ter review
+- **Status:** goedgekeurd
 - **Bouwt voort op:**
   - de MVP-spec `docs/superpowers/specs/2026-10-17-elentrik-mvp-design.md` (§4.5, §8 en §10 stap 5);
   - de bestaande app `apps/web`: projecten, bestanden, exports en bedrijfsgegevens.

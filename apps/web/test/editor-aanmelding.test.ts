@@ -4,7 +4,7 @@ import { clear } from "idb-keyval";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { nextTick } from "vue";
-import { opnieuwProberen, vertrekBevestiging, type SessieControle } from "../app/editor/aanmelding";
+import { opnieuwProberen, toonAfgemeld, vertrekBevestiging, type SessieControle } from "../app/editor/aanmelding";
 import { useAutosave, type AutosaveOpties } from "../app/composables/useAutosave";
 import type { Project } from "../app/composables/useProjectenApi";
 import { useEditorStore } from "../app/stores/editor";
@@ -110,5 +110,38 @@ describe("vertrekBevestiging", () => {
 
   test.each(["bezig", "lokaal", "conflict", "fout"] as const)("%s: de gewone vraag", (status) => {
     expect(vertrekBevestiging(status)).toBe("editor.vertrek.bevestiging");
+  });
+});
+
+describe("de melding 'afgemeld' in de editor", () => {
+  test("bij een 401, en ook zodra de sessie geen gebruiker meer heeft", () => {
+    expect(toonAfgemeld({ afgemeld: true, gebruikerId: "an" })).toBe(true);
+    expect(toonAfgemeld({ afgemeld: false, gebruikerId: null })).toBe(true);
+    expect(toonAfgemeld({ afgemeld: false, gebruikerId: "an" })).toBe(false);
+  });
+
+  test("status fout, en 'Opnieuw proberen' vindt geen sessie meer: de melding met 'Opnieuw inloggen' verschijnt", async () => {
+    const store = useEditorStore();
+    const document = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    store.laad({ id: "p1", naam: "Woning", versie: 1, document });
+    const bewaar = vi.fn<Bewaar>(async () => Promise.reject(Object.assign(new Error("400"), { status: 400 })));
+    const autosave = useAutosave({
+      store,
+      bewaar,
+      haal: async () => ({}) as Project,
+      dupliceer: async () => ({ id: "kopie" }),
+      naarProject: () => {},
+      gebruikerId: "an",
+    });
+    store.wijzigProjectgegevens({ naam: "Werk van An" });
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("fout");
+    expect(toonAfgemeld({ afgemeld: autosave.afgemeld.value, gebruikerId: "an" })).toBe(false);
+
+    const s = sessie(null);
+    expect(await opnieuwProberen({ sessie: s, verwacht: "an", nuOpslaan: autosave.nuOpslaan })).toBe("afgemeld");
+    expect(autosave.status.value).toBe("fout");
+    expect(toonAfgemeld({ afgemeld: autosave.afgemeld.value, gebruikerId: s.gebruikerId() })).toBe(true);
   });
 });

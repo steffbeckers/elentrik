@@ -30,6 +30,7 @@ import {
   LAATSTE_EIGENAAR_BOODSCHAP,
   MAX_NAAMLENGTE,
 } from "../organisaties/regels";
+import { basisUrl, vertrouwdeOorsprongen } from "./oorsprong";
 
 const PLAATSHOUDER = "<vervang";
 export const MINIMALE_GEHEIMLENGTE = 32;
@@ -52,11 +53,6 @@ export function leesGeheim(env: Record<string, string | undefined> = process.env
   throw new Error(
     `BETTER_AUTH_SECRET ontbreekt, is nog de plaatshouder of is korter dan ${MINIMALE_GEHEIMLENGTE} tekens; zet een lange willekeurige waarde in apps/web/.env (zie apps/web/.env.example).`,
   );
-}
-
-/** De publieke basis-URL van de app, voor links in mails. */
-function basisUrl(): string {
-  return (process.env.BETTER_AUTH_URL || "http://127.0.0.1:3000").replace(/\/+$/, "");
 }
 
 /** Interne rolnamen naar de namen in mails en UI. */
@@ -93,14 +89,20 @@ function verstuur(soort: MailSoort, mail: Mail, aan: string): void {
     });
 }
 
-/** `wachtendeBedrijfsnaam` mag alleen bij de registratie gezet worden, niet via /update-user. */
+/**
+ * `wachtendeBedrijfsnaam` mag alleen bij de registratie gezet worden, niet via /update-user. Bij
+ * de registratie wordt ze de naam van de organisatie, dus geldt dezelfde regel: 1 tot 80 tekens
+ * na trimmen, anders 400 (en geen account).
+ */
 function alleenBijRegistratie(path: string, body: unknown): void {
-  if (path !== "/update-user") return;
-  if (body && typeof body === "object" && "wachtendeBedrijfsnaam" in body) {
+  if (!body || typeof body !== "object" || !("wachtendeBedrijfsnaam" in body)) return;
+  if (path === "/update-user") {
     throw new APIError("BAD_REQUEST", {
       message: "wachtendeBedrijfsnaam kan alleen bij de registratie gezet worden.",
     });
   }
+  const naam = (body as { wachtendeBedrijfsnaam?: unknown }).wachtendeBedrijfsnaam;
+  if (path === "/sign-up/email" && naam !== undefined && naam !== null) eisGeldigeNaam(naam);
 }
 
 function laatsteEigenaar(): APIError {
@@ -239,6 +241,8 @@ export function maakAuth(db: Db = gebruikDb()) {
   return betterAuth({
     appName: "Elentrik",
     baseURL: basisUrl(),
+    // Lokaal is http://localhost:<poort> dezelfde server als http://127.0.0.1:<poort>.
+    trustedOrigins: vertrouwdeOorsprongen(),
     secret: leesGeheim(),
     telemetry: { enabled: false },
     database: drizzleAdapter(db, {

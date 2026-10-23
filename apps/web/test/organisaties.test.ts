@@ -10,7 +10,7 @@ import { type Auth, maakAuth, zetAuth } from "../server/auth";
 import { type Db, zetDb } from "../server/db";
 import { account, invitation, member, organization, session, user, verification } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
-import { registratieLimiet, vertaalAuthFout } from "../server/organisaties/leden";
+import { registratieLimiet, uitnodigingLimiet, vertaalAuthFout } from "../server/organisaties/leden";
 import { maakLimiet } from "../server/organisaties/limiet";
 import { maakUitnodigingstoken } from "../server/organisaties/uitnodigingstoken";
 import { maakProject } from "../server/projecten/repo";
@@ -211,6 +211,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   registratieLimiet.wis();
+  uitnodigingLimiet.wis();
 });
 
 afterAll(async () => {
@@ -657,6 +658,33 @@ describe("uitnodigingen beheren", () => {
     ]);
     const [rij] = await db.select({ status: invitation.status }).from(invitation).where(eq(invitation.id, id));
     expect(rij!.status).toBe("pending");
+  });
+
+  test("hoogstens 20 uitnodigingen per uur per gebruiker: daarna 429 TE_VEEL_UITNODIGINGEN", async () => {
+    const { eigenaar } = await organisatieMetLid();
+    const statussen: number[] = [];
+    for (let i = 0; i < 20; i += 1) {
+      const antwoord = await stuur("POST", "/api/organisaties/uitnodigingen", eigenaar.cookie, {
+        email: nieuwAdres("gast"),
+        rol: "lid",
+      });
+      statussen.push(antwoord.status);
+    }
+    expect(statussen).toEqual(Array(20).fill(201));
+
+    const gast = nieuwAdres("gast");
+    const teVeel = await stuur("POST", "/api/organisaties/uitnodigingen", eigenaar.cookie, { email: gast, rol: "lid" });
+    expect(teVeel.status).toBe(429);
+    expect(Number(teVeel.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect(await foutcode(teVeel)).toBe("TE_VEEL_UITNODIGINGEN");
+    expect(await db.select().from(invitation).where(eq(invitation.email, gast))).toEqual([]);
+    await new Promise((klaar) => setTimeout(klaar, 0));
+    expect(mails.filter((m) => m.aan === gast)).toEqual([]);
+
+    // De limiet is per gebruiker: een andere eigenaar nodigt nog gewoon uit.
+    const ander = await gebruiker("Ander bedrijf");
+    const vanAnder = await stuur("POST", "/api/organisaties/uitnodigingen", ander.cookie, { email: gast, rol: "lid" });
+    expect(vanAnder.status).toBe(201);
   });
 
   test("een uitnodiging van een andere organisatie intrekken: 404", async () => {

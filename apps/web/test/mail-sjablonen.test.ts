@@ -20,6 +20,14 @@ describe("mailsjablonen", () => {
     expect(mail.aan).toBe("");
   });
 
+  test("bevestigMail: wie niets aanvroeg, mag de mail negeren (ze komt ook bij een inlogpoging)", () => {
+    const mail = bevestigMail({ naam: "Jan", link });
+    const regel = "Heb je dit niet aangevraagd? Dan mag je deze mail negeren.";
+    expect(mail.tekst).toContain(regel);
+    expect(mail.html).toContain(regel);
+    expect(mail.tekst).toContain("24 uur");
+  });
+
   test("magicLinkMail: Nederlands onderwerp, link in tekst en html, vermeldt 15 minuten", () => {
     const mail = magicLinkMail({ link });
     expect(mail.onderwerp).toBe("Je inloglink voor Elentrik");
