@@ -2,7 +2,7 @@
 import { papierMaat, type Papier } from "@elentrik/layout";
 import type { Adres, InstallatieDocument, Partij } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
-import type { Teksten } from "../teksten/nl";
+import { LOCALES, type Taal, type Teksten } from "../teksten/index";
 import { RAND_MM } from "./stijl";
 import { afkorten, breekRegels, tekstRegel, vloer } from "./tekst";
 
@@ -25,10 +25,12 @@ const AANDELEN = [0.25, 0.16, 0.16, 0.25, 0.09, 0.09];
 export type CartoucheGegevens = {
   papier: Papier;
   teksten: Teksten;
+  taal: Taal;
   meta: InstallatieDocument["meta"];
   installateur: Partij;
   logo: string | undefined;
   titel: string;
+  /** Een ISO-datum (`2026-10-19`); de cartouche maakt haar op in de locale van `taal`. */
   datum: string;
   versieLabel: string;
   nummer: number;
@@ -39,6 +41,20 @@ function adresRegels(adres: Adres | undefined): [string, string] {
   if (!adres) return ["", ""];
   const bus = adres.bus ? ` bus ${adres.bus}` : "";
   return [`${adres.straat} ${adres.nummer}${bus}`.trim(), `${adres.postcode} ${adres.gemeente}`.trim()];
+}
+
+/**
+ * Een ISO-datum (`2026-10-19`) in de korte notatie van de taal, bv. `19/10/2026` (nl, en) of `19/10/26` (fr).
+ * De datum is een kalenderdag zonder tijdzone: ze wordt in UTC opgemaakt. Wat geen ISO-datum is, blijft zoals het is.
+ */
+export function formatteerDatum(datum: string, taal: Taal): string {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datum.trim());
+  if (!iso) return datum;
+  const [jaar, maand, dag] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+  const moment = new Date(Date.UTC(jaar, maand - 1, dag));
+  // Een onmogelijke datum (30 februari) schuift door in `Date`: dan is het geen kalenderdag.
+  if (moment.getUTCMonth() !== maand - 1 || moment.getUTCDate() !== dag) return datum;
+  return new Intl.DateTimeFormat(LOCALES[taal], { dateStyle: "short", timeZone: "UTC" }).format(moment);
 }
 
 /** Het label van een handtekeningvak loopt over hoogstens twee regels: het vak is smal. */
@@ -120,7 +136,7 @@ export function cartouche(g: CartoucheGegevens): string {
 
   const titelHtml =
     regel(g.titel, titel.tekstBreedte, "titel", TITEL_MM) +
-    regel(`${t.cartouche.datum}: ${g.datum}`, titel.tekstBreedte) +
+    regel(`${t.cartouche.datum}: ${formatteerDatum(g.datum, g.taal)}`, titel.tekstBreedte) +
     regel(`${t.cartouche.versie}: ${g.versieLabel}`, titel.tekstBreedte) +
     regel(`${t.cartouche.pagina} ${g.nummer} / ${g.totaal}`, titel.tekstBreedte, "paginanummer");
 

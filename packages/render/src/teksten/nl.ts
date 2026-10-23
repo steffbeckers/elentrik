@@ -1,6 +1,6 @@
 import type { NodeType, Ruimte, Toestelsoort } from "@elentrik/model";
 
-/** Alle vaste teksten van de pdf. De taal is Nederlands; de woorden volgen `apps/web/i18n/locales/nl.json`. */
+/** Alle vaste teksten van de pdf. `nl.ts` is het Nederlands; `fr.ts` en `en.ts` hebben exact dezelfde structuur. De termen volgen `docs/vertalingen.md`. */
 export type Teksten = {
   paginatitels: { eendraadschema: string; situatieschema: string; kringenlijst: string; bijlage: string };
   cartouche: {

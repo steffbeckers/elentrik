@@ -431,7 +431,7 @@ describe("maakExport", () => {
       maakPdf: nep1.maakPdf,
       nu: () => new Date(2026, 2, 5, 23, 59),
     });
-    expect(nep1.oproepen[0]!.html).toContain("2026-10-01");
+    expect(nep1.oproepen[0]!.html).toContain("1/10/2026");
 
     const zonderDatum = structuredClone(referentieWoning());
     zonderDatum.meta.datum = "";
@@ -441,7 +441,7 @@ describe("maakExport", () => {
       maakPdf: nep2.maakPdf,
       nu: () => new Date(2026, 2, 5, 23, 59),
     });
-    expect(nep2.oproepen[0]!.html).toContain("2026-03-05");
+    expect(nep2.oproepen[0]!.html).toContain("5/03/2026");
   });
 });
 

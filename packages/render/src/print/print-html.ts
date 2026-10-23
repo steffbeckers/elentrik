@@ -8,7 +8,7 @@ import { kringenlijst, type KringenlijstRij } from "../kringenlijst";
 import { schemaPaginaSvg } from "../schema-svg";
 import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
-import { NL, type Teksten } from "../teksten/nl";
+import { TEKSTEN, type Taal, type Teksten } from "../teksten/index";
 import { cartouche } from "./cartouche";
 import { CEL_MARGE_MM, INSPRINGING_MM, KOP_MARGE_MM, KRINGENLIJST_RIJ_MM, RAND_MM, REGELHOOGTE, stijl } from "./stijl";
 import { breekRegels, tekstRegel, vloer } from "./tekst";
@@ -20,7 +20,7 @@ export type PrintOpties = {
   onderdelen: { eendraadschema: boolean; situatieschema: boolean; kringenlijst: boolean; bijlage: boolean };
   versieLabel: string;
   datum: string;
-  taal: "nl";
+  taal: Taal;
   installateur: Partij;
   /** bestandId → de bestandsnaam waaronder het bestand naast `index.html` aan Gotenberg gegeven wordt. */
   afbeeldingen: Record<string, string>;
@@ -71,6 +71,7 @@ type Context = {
   papier: Papier;
   ruimte: { breedte: number; hoogte: number };
   teksten: Teksten;
+  taal: Taal;
   terugval: (type: NodeType) => string;
 };
 
@@ -163,7 +164,7 @@ function onderwerpLabel(c: Context, nodeId: NodeId): string {
 function bevindingTekst(c: Context, b: Bevinding): string {
   const labels = [...new Set(b.nodeIds.map((id) => onderwerpLabel(c, id)).filter((l) => l !== ""))].join(", ");
   const artikel = artikelVan(c.doc, b.regelId);
-  const bericht = formatteerBericht(b, "nl") + (artikel === "" ? "" : ` (${c.teksten.bijlage.artikel} ${artikel})`);
+  const bericht = formatteerBericht(b, c.taal) + (artikel === "" ? "" : ` (${c.teksten.bijlage.artikel} ${artikel})`);
   return labels === "" ? bericht : `${labels} — ${bericht}`;
 }
 
@@ -271,7 +272,7 @@ export function printHtml(
   if (!onderdelen.eendraadschema && !onderdelen.situatieschema && !onderdelen.kringenlijst && !onderdelen.bijlage) {
     throw new RangeError("Er is geen onderdeel gekozen om af te drukken");
   }
-  const teksten = NL;
+  const teksten = TEKSTEN[opties.taal];
   const papier: Papier = { ...STANDAARD_PAPIER_A4, formaat: opties.papier };
   const c: Context = {
     doc,
@@ -279,6 +280,7 @@ export function printHtml(
     papier,
     ruimte: bruikbaar(papier),
     teksten,
+    taal: opties.taal,
     terugval: (type) => teksten.types[type],
   };
 
@@ -305,6 +307,7 @@ export function printHtml(
       `<section class="pagina">${pagina.inhoud}${cartouche({
         papier,
         teksten,
+        taal: opties.taal,
         meta: doc.meta,
         installateur: opties.installateur,
         logo: opties.logo,
@@ -319,7 +322,7 @@ export function printHtml(
   const titel = [doc.meta.klant.naam, opties.versieLabel].filter((d) => d.trim() !== "").join(" — ");
   const html =
     "<!doctype html>\n" +
-    '<html lang="nl">\n<head>\n<meta charset="utf-8">\n' +
+    `<html lang="${opties.taal}">\n<head>\n<meta charset="utf-8">\n` +
     `<title>${escapeXml(titel)}</title>\n` +
     `<style>\n${stijl(maat.breedte, maat.hoogte)}\n</style>\n</head>\n<body>\n` +
     `${secties.join("\n")}\n</body>\n</html>\n`;

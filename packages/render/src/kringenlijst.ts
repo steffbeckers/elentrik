@@ -1,7 +1,7 @@
 import type { Analyse } from "@elentrik/arei";
 import { beveiligingLabel, leidingLabel } from "@elentrik/layout";
 import type { InstallatieDocument, Node, NodeId } from "@elentrik/model";
-import type { Teksten } from "./teksten/nl";
+import type { Teksten } from "./teksten/index";
 
 /** Eén rij van de kringenlijst: één punt, met de gegevens van zijn kring en keten als tekst. */
 export type KringenlijstRij = {
