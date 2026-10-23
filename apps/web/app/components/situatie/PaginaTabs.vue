@@ -59,11 +59,16 @@ function schaalInstellen(pagina: SituatiePagina): void {
 function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
   return [
     [
-      { label: t("editor.situatie.paginas.hernoemen"), icon: "i-lucide-pencil", onSelect: () => hernoem(pagina) },
+      {
+        label: t("editor.situatie.paginas.hernoemen"),
+        icon: "i-lucide-pencil",
+        disabled: editor.alleenLezen,
+        onSelect: () => hernoem(pagina),
+      },
       {
         label: t("editor.situatie.paginas.schaalInstellen"),
         icon: "i-lucide-ruler",
-        disabled: !pagina.achtergrond,
+        disabled: editor.alleenLezen || !pagina.achtergrond,
         onSelect: () => schaalInstellen(pagina),
       },
     ],
@@ -71,13 +76,13 @@ function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
       {
         label: t("editor.situatie.paginas.naarLinks"),
         icon: "i-lucide-arrow-left",
-        disabled: index === 0,
+        disabled: editor.alleenLezen || index === 0,
         onSelect: () => voerUit(() => situatie.verplaatsPagina(pagina.id, index - 1)),
       },
       {
         label: t("editor.situatie.paginas.naarRechts"),
         icon: "i-lucide-arrow-right",
-        disabled: index === paginas.value.length - 1,
+        disabled: editor.alleenLezen || index === paginas.value.length - 1,
         onSelect: () => voerUit(() => situatie.verplaatsPagina(pagina.id, index + 1)),
       },
     ],
@@ -86,6 +91,7 @@ function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
         label: t("editor.situatie.paginas.verwijderen"),
         icon: "i-lucide-trash-2",
         color: "error",
+        disabled: editor.alleenLezen,
         onSelect: () => verwijder(pagina),
       },
     ],
@@ -125,6 +131,7 @@ function wisSchaal(): void {
             variant="ghost"
             size="sm"
             icon="i-lucide-ellipsis-vertical"
+            :disabled="editor.alleenLezen"
             :aria-label="$t('editor.situatie.paginas.menu', { titel: pagina.titel })"
             :data-testid="`pagina-menu-${index}`"
           />
@@ -137,6 +144,7 @@ function wisSchaal(): void {
       size="sm"
       icon="i-lucide-plus"
       class="shrink-0"
+      :disabled="editor.alleenLezen"
       data-testid="pagina-toevoegen"
       :label="$t('editor.situatie.paginas.toevoegen')"
       @click="emit('toevoegen')"
@@ -150,6 +158,7 @@ function wisSchaal(): void {
         color="neutral"
         variant="link"
         size="sm"
+        :disabled="editor.alleenLezen"
         data-testid="schaal-wissen"
         :label="$t('editor.situatie.schaal.wissen')"
         @click="wisSchaal"

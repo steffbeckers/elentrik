@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { useSessieStore, type Mij, type SessieApi } from "../app/stores/sessie";
 
 const MIJ: Mij = {
-  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test" },
+  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", proefGebruikt: true },
   organisaties: [
-    { id: "o1", naam: "Peeters Elektro", rol: "eigenaar" },
-    { id: "o2", naam: "Janssens BV", rol: "lid" },
+    { id: "o1", naam: "Peeters Elektro", rol: "eigenaar", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
+    { id: "o2", naam: "Janssens BV", rol: "lid", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
   ],
   actieveOrganisatieId: "o1",
+  abonnementenIngeschakeld: false,
 };
 
 function maakApi(overschrijf: Partial<SessieApi> = {}) {
@@ -49,7 +50,7 @@ describe("laad", () => {
     expect(store.geladen).toBe(true);
     expect(store.gebruiker).toEqual(MIJ.gebruiker);
     expect(store.organisaties).toHaveLength(2);
-    expect(store.actieveOrganisatie).toEqual({ id: "o1", naam: "Peeters Elektro", rol: "eigenaar" });
+    expect(store.actieveOrganisatie).toEqual(MIJ.organisaties[0]);
     expect(store.rol).toBe("eigenaar");
   });
 
@@ -256,5 +257,36 @@ describe("afgebroken vertrek", () => {
     store.registreerVoorVertrek(() => false, afgebroken);
     expect(await store.uitloggen()).toBe(false);
     expect(afgebroken).not.toHaveBeenCalled();
+  });
+});
+
+describe("de proefhint bij een nieuw bedrijf", () => {
+  test("alleen met abonnementen aan en een gebruikte proef", async () => {
+    const proefGebruikt = (aan: boolean, gebruikt: boolean): Mij => ({
+      ...MIJ,
+      gebruiker: { ...MIJ.gebruiker, proefGebruikt: gebruikt },
+      abonnementenIngeschakeld: aan,
+    });
+    const store = useSessieStore();
+    store.gebruikApi(maakApi({ mij: vi.fn(async () => proefGebruikt(true, true)) }).api);
+    await store.laad();
+    expect(store.abonnementenIngeschakeld).toBe(true);
+    expect(store.toonGeenProefHint).toBe(true);
+
+    // Abonnementen uit: "zoals vóór plan 7", dus geen hint, ook als de proef gebruikt is.
+    store.gebruikApi(maakApi({ mij: vi.fn(async () => proefGebruikt(false, true)) }).api);
+    await store.laad();
+    expect(store.abonnementenIngeschakeld).toBe(false);
+    expect(store.toonGeenProefHint).toBe(false);
+
+    store.gebruikApi(maakApi({ mij: vi.fn(async () => proefGebruikt(true, false)) }).api);
+    await store.laad();
+    expect(store.toonGeenProefHint).toBe(false);
+  });
+
+  test("zonder sessie: geen hint", () => {
+    const store = useSessieStore();
+    expect(store.abonnementenIngeschakeld).toBe(false);
+    expect(store.toonGeenProefHint).toBe(false);
   });
 });

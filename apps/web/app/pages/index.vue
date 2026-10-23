@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import type { ProjectSamenvatting } from "~/composables/useProjectenApi";
+import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { useSessieStore } from "~/stores/sessie";
 
@@ -8,6 +9,10 @@ const { t } = useI18n();
 const api = useProjectenApi();
 const toast = useToast();
 const sessie = useSessieStore();
+const alleenLezen = useAlleenLezen();
+
+// Zonder schrijfrecht (spec 4.4) zijn aanmaken en dupliceren verborgen; de server weigert ze met 402.
+const kanSchrijven = computed(() => sessie.toegang.schrijven);
 
 // Enkel op de client geladen: de relatieve tijden hangen van het huidige moment af. Een andere
 // actieve organisatie (de organisatiekeuze) laadt de lijst van die organisatie.
@@ -52,8 +57,9 @@ async function voerActieUit(actie: () => Promise<unknown>): Promise<boolean> {
   try {
     await actie();
     return true;
-  } catch {
-    toast.add({ title: t("algemeen.fout"), color: "error" });
+  } catch (fout) {
+    // Een 402 ververst de sessie en meldt alleen-lezen; een andere fout is een generieke fout.
+    if (!(await alleenLezen(fout))) toast.add({ title: t("algemeen.fout"), color: "error" });
     return false;
   }
 }
@@ -90,6 +96,7 @@ async function bevestigVerwijderen() {
 <template>
   <div class="min-h-dvh">
     <AppBovenbalk />
+    <AbonnementBanner />
     <UContainer class="py-8">
       <div class="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <h1 class="text-2xl font-semibold">{{ $t("projecten.titel") }}</h1>
@@ -101,7 +108,7 @@ async function bevestigVerwijderen() {
             variant="outline"
             :label="$t('bedrijf.link')"
           />
-          <UButton icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
+          <UButton v-if="kanSchrijven" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
         </div>
       </div>
 
@@ -138,6 +145,7 @@ async function bevestigVerwijderen() {
               :title="$t('projecten.acties.openen')"
             />
             <UButton
+              v-if="kanSchrijven"
               icon="i-lucide-copy"
               color="neutral"
               variant="ghost"

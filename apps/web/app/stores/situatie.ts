@@ -45,8 +45,9 @@ export const useSituatieStore = defineStore("situatie", () => {
     return editor.document;
   }
 
-  /** Voegt een pagina met plan toe als één undo-stap en maakt haar actief. */
+  /** Voegt een pagina met plan toe als één undo-stap en maakt haar actief; in alleen-lezen gebeurt niets (lege id). */
   function voegPlanPaginaToe(titel: string, achtergrond: Achtergrond): string {
+    if (editor.alleenLezen) return "";
     const doc = vereisDocument();
     const toegevoegd = voegPaginaToe(doc, titel);
     const metPlan = zetAchtergrond(toegevoegd.doc, toegevoegd.id, achtergrond);
@@ -56,22 +57,27 @@ export const useSituatieStore = defineStore("situatie", () => {
   }
 
   function vervangAchtergrond(paginaId: string, achtergrond: Achtergrond): void {
+    if (editor.alleenLezen) return;
     editor.pasToe(zetAchtergrond(vereisDocument(), paginaId, achtergrond));
   }
 
   function hernoem(paginaId: string, titel: string): void {
+    if (editor.alleenLezen) return;
     editor.pasToe(hernoemPagina(vereisDocument(), paginaId, titel));
   }
 
   function verwijderPagina(paginaId: string): void {
+    if (editor.alleenLezen) return;
     editor.pasToe(verwijderPaginaUitDoc(vereisDocument(), paginaId));
   }
 
   function verplaatsPagina(paginaId: string, index: number): void {
+    if (editor.alleenLezen) return;
     editor.pasToe(verplaatsPaginaInDoc(vereisDocument(), paginaId, index));
   }
 
   function zetSchaal(paginaId: string, mmPerPx: number | undefined): void {
+    if (editor.alleenLezen) return;
     editor.pasToe(zetSchaalInDoc(vereisDocument(), paginaId, mmPerPx));
   }
 
@@ -89,6 +95,7 @@ export const useSituatieStore = defineStore("situatie", () => {
    * andere pagina, dan geeft dit de titel van die pagina terug (voor een melding), anders `null`.
    */
   function plaatsNode(nodeId: NodeId, x: number, y: number): string | null {
+    if (editor.alleenLezen) return null;
     const doel = actievePagina.value;
     if (!doel) throw new Error("Er is geen actieve pagina");
     const bestaand = plaatsingVan(nodeId);
@@ -101,6 +108,7 @@ export const useSituatieStore = defineStore("situatie", () => {
   }
 
   function haalVanPlan(nodeId: NodeId): void {
+    if (editor.alleenLezen) return;
     editor.pasToe(verwijderPlaatsing(vereisDocument(), nodeId));
   }
 
@@ -111,6 +119,7 @@ export const useSituatieStore = defineStore("situatie", () => {
   function wijzigGeselecteerde(
     nieuw: (huidig: { x: number; y: number; rotatie: number }, pagina: SituatiePagina) => { x: number; y: number; rotatie: number } | undefined,
   ): void {
+    if (editor.alleenLezen) return;
     const doc = vereisDocument();
     const pagina = actievePagina.value;
     if (!pagina) return;
@@ -130,6 +139,7 @@ export const useSituatieStore = defineStore("situatie", () => {
 
   /** Haalt de geselecteerde nodes van de actieve pagina, in één undo-stap (geen stap als niets past). */
   function haalSelectieVanPlan(): void {
+    if (editor.alleenLezen) return;
     const doc = vereisDocument();
     const pagina = actievePagina.value;
     if (!pagina) return;

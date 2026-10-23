@@ -6,6 +6,8 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
+/** De transactie die `db.transaction(async (tx) => ...)` doorgeeft. */
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 let huidige: Db | undefined;
 

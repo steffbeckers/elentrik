@@ -4,9 +4,18 @@
 // rechtstreeks (ruling E1).
 import { createTransport } from "nodemailer";
 
-export type Mail = { aan: string; onderwerp: string; tekst: string; html: string };
+export type Bijlage = { naam: string; inhoud: Uint8Array; type: string };
 
-export type SmtpBericht = { from: string; to: string; subject: string; text: string; html: string };
+export type Mail = { aan: string; onderwerp: string; tekst: string; html: string; bijlagen?: Bijlage[] };
+
+export type SmtpBericht = {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: { filename: string; content: Buffer; contentType: string }[];
+};
 
 export type MailTransport = { sendMail(m: SmtpBericht): Promise<unknown> };
 
@@ -62,6 +71,11 @@ export function maakVerzender(transport?: MailTransport): Verzender {
         subject: mail.onderwerp,
         text: mail.tekst,
         html: mail.html,
+        ...(mail.bijlagen?.length
+          ? {
+              attachments: mail.bijlagen.map((b) => ({ filename: b.naam, content: Buffer.from(b.inhoud), contentType: b.type })),
+            }
+          : {}),
       });
     },
   };

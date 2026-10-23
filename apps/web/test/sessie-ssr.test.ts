@@ -18,7 +18,7 @@ describe("setCookies", () => {
 });
 
 describe("haalMijOpServer", () => {
-  const MIJ = { gebruiker: { id: "u1", naam: "An", email: "an@x.be" }, organisaties: [], actieveOrganisatieId: null };
+  const MIJ = { gebruiker: { id: "u1", naam: "An", email: "an@x.be", proefGebruikt: false }, organisaties: [], actieveOrganisatieId: null, abonnementenIngeschakeld: false };
 
   test("stuurt de cookie van het verzoek mee en de verlengde sessiecookie door naar de pagina", async () => {
     const headers = new Headers();

@@ -1,13 +1,14 @@
 // Draait één keer vóór alle e2e-specs: zorgt voor een lege, gemigreerde e2e-database,
-// een lege bestandenmap en een lege Mailpit.
+// een lege bestandenmap, een lege Mailpit en een draaiende nep-Stripe. De teardown stopt die weer.
 import { mkdir, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
-import { E2E_BESTANDEN_DIR, E2E_DATABASE_NAAM, MAILPIT_URL, eisE2eDatabase } from "./omgeving";
+import { startNepStripe } from "./hulp/nep-stripe";
+import { E2E_BESTANDEN_DIR, E2E_DATABASE_NAAM, E2E_STRIPE_POORT, MAILPIT_URL, eisE2eDatabase } from "./omgeving";
 
-export default async function globalSetup(): Promise<void> {
+export default async function globalSetup(): Promise<() => Promise<void>> {
   // 1. Veiligheidsnet, vóór er iets gebeurt.
   const url = eisE2eDatabase();
 
@@ -52,4 +53,8 @@ export default async function globalSetup(): Promise<void> {
   if (!antwoord.ok) {
     throw new Error(`Mailpit leegmaken mislukt (${antwoord.status}); draait ze? Start met pnpm db:up.`);
   }
+
+  // 7. De nep-Stripe waar de e2e-server (STRIPE_API_BASIS) mee praat.
+  const nepStripe = await startNepStripe(E2E_STRIPE_POORT);
+  return () => nepStripe.stop();
 }

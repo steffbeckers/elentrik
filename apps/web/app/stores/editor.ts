@@ -86,6 +86,12 @@ export const useEditorStore = defineStore("editor", () => {
    * hoort bij een vorige generatie en mag de staat van daarna niet meer aanraken.
    */
   const laadGeneratie = ref(0);
+  /**
+   * Alleen-lezen: de organisatie van het project mag niet (meer) schrijven. Elke functie die het
+   * document, de naam of de undo-stapel wijzigt doet dan niets; selecteren, navigeren en
+   * exporteren blijven werken. De pagina zet dit (`zetAlleenLezen`), `laad` raakt het niet aan.
+   */
+  const alleenLezen = ref(false);
   /** Na `sluitGroep` (of undo/redo) begint de volgende `pasToe` altijd een nieuwe stap. */
   let groepGesloten = true;
 
@@ -120,8 +126,13 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value++;
   }
 
+  function zetAlleenLezen(waarde: boolean): void {
+    alleenLezen.value = waarde;
+  }
+
   /** Telt een wijziging die buiten de store is gebeurd (bv. een geladen concept), zodat de autosave ze bewaart. */
   function markeerGewijzigd(): void {
+    if (alleenLezen.value) return;
     gewijzigdSindsOpslaan.value++;
   }
 
@@ -157,6 +168,7 @@ export const useEditorStore = defineStore("editor", () => {
    * nieuwe stap. Een resultaat zonder patches verandert niets.
    */
   function pasToe(resultaat: OperatieResultaat, groep?: string): void {
+    if (alleenLezen.value) return;
     vereisDocument();
     if (resultaat.patches.length === 0) return;
 
@@ -184,6 +196,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function ongedaanMaken(): void {
+    if (alleenLezen.value) return;
     const stap = terug.value.at(-1);
     if (!document.value || !stap) return;
     const doc = pasPatchesToe(document.value, stap.inversePatches);
@@ -194,6 +207,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function opnieuw(): void {
+    if (alleenLezen.value) return;
     const stap = vooruit.value.at(-1);
     if (!document.value || !stap) return;
     const doc = pasPatchesToe(document.value, stap.patches);
@@ -205,6 +219,7 @@ export const useEditorStore = defineStore("editor", () => {
 
   /** Voegt `onderdeel` toe op de aanknoping en selecteert de bovenste nieuwe node. */
   function voegToe(aanknoping: Aanknoping): void {
+    if (alleenLezen.value) return;
     const r = voegOnderdeelToe(
       vereisDocument(),
       { soort: aanknoping.soort, nodeId: aanknoping.nodeId },
@@ -217,6 +232,7 @@ export const useEditorStore = defineStore("editor", () => {
 
   /** Op het geselecteerde bord of differentieel, anders op het eerste verdeelbord in pre-order. */
   function voegSjabloonToe(sjabloonId: string): void {
+    if (alleenLezen.value) return;
     const doc = vereisDocument();
     const geselecteerd = selectie.value.find((id) => {
       const type = doc.nodes[id]?.type;
@@ -232,6 +248,7 @@ export const useEditorStore = defineStore("editor", () => {
    * hetzelfde veld op dezelfde nodes vallen samen tot `sluitGroep`.
    */
   function wijzigVeld(nodeIds: NodeId[], sleutel: string, waarde: unknown): void {
+    if (alleenLezen.value) return;
     const doc = vereisDocument();
     if (nodeIds.length === 0) return;
     const resultaten: OperatieResultaat[] = [];
@@ -274,6 +291,7 @@ export const useEditorStore = defineStore("editor", () => {
 
   /** Enter: voegt `onderdeel` toe bij de selectie. Kan het niet, dan gebeurt er niets. */
   function voegToeBijSelectie(): void {
+    if (alleenLezen.value) return;
     const doc = document.value;
     if (!doc) return;
     const aanknoping = aanknopingBijSelectie(doc);
@@ -313,6 +331,7 @@ export const useEditorStore = defineStore("editor", () => {
    * (spec §4.7.2). Een `DocumentFout` gaat door naar de UI; de store blijft dan ongewijzigd.
    */
   function verwijderSelectie(heleTak: boolean): void {
+    if (alleenLezen.value) return;
     const doc = vereisDocument();
     for (const id of selectie.value) {
       const type = doc.nodes[id]?.type;
@@ -354,6 +373,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function zetAfwijking(regelId: string, nodeId: NodeId, motivatie: string): void {
+    if (alleenLezen.value) return;
     pasToe(
       voegAfwijkingToe(vereisDocument(), {
         regelId,
@@ -366,6 +386,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function wisAfwijking(regelId: string, nodeId: NodeId): void {
+    if (alleenLezen.value) return;
     pasToe(verwijderAfwijking(vereisDocument(), regelId, nodeId));
   }
 
@@ -383,6 +404,7 @@ export const useEditorStore = defineStore("editor", () => {
     ean?: string;
     datum?: string;
   }): void {
+    if (alleenLezen.value) return;
     const doc = vereisDocument();
     const wijziging: ProjectWijziging = {};
     if (gegevens.klantNaam !== undefined) wijziging.klantNaam = gegevens.klantNaam;
@@ -420,6 +442,7 @@ export const useEditorStore = defineStore("editor", () => {
     vooruit,
     gewijzigdSindsOpslaan,
     laadGeneratie,
+    alleenLezen,
     analyse,
     bevindingen,
     opmaak,
@@ -427,6 +450,7 @@ export const useEditorStore = defineStore("editor", () => {
     aantalFouten,
     aantalWaarschuwingen,
     laad,
+    zetAlleenLezen,
     markeerGewijzigd,
     pasToe,
     sluitGroep,

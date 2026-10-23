@@ -7,6 +7,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth, zetAuth } from "../server/auth";
+import { zetAbonnementen } from "../server/abonnementen/config";
 import { type Db, zetDb } from "../server/db";
 import { account, invitation, member, organization, session, user, verification } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
@@ -18,6 +19,8 @@ import { maakTestDb } from "./db";
 import { API, AUTH_ROUTE, beveiligdeRoutebestanden, routeUit } from "./routes";
 
 const WACHTWOORD = "lang-genoeg-1";
+// Abonnementen staan uit in deze tests: elke organisatie mag schrijven, zonder proefperiode.
+const UIT = { schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null };
 
 let db: Db;
 let auth: Auth;
@@ -189,6 +192,8 @@ beforeAll(async () => {
   vi.stubEnv("BETTER_AUTH_SECRET", "vitest-geheim-alleen-voor-tests-0123456789abcdef");
   vi.stubEnv("BETTER_AUTH_URL", "http://127.0.0.1:3000");
   zetVerzender(verzamelaar);
+  // Abonnementen uit, ongeacht de omgeving van de ontwikkelaar (STRIPE_GEHEIME_SLEUTEL).
+  zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
   db = await maakTestDb();
   auth = maakAuth(db);
   zetDb(db);
@@ -216,6 +221,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   await new Promise((klaar) => server?.close(klaar));
+  zetAbonnementen(undefined);
   vi.unstubAllEnvs();
 });
 
@@ -230,17 +236,43 @@ describe("GET /api/mij", () => {
 
     const mij = await json(stuur("GET", "/api/mij", eigenaar.cookie));
     expect(mij).toEqual({
-      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email },
+      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, proefGebruikt: true },
       organisaties: expect.arrayContaining([
-        { id: org, naam: "Bedrijf", rol: "eigenaar" },
-        { id: tweede, naam: "Ander bedrijf", rol: "lid" },
+        { id: org, naam: "Bedrijf", rol: "eigenaar", toegang: UIT },
+        { id: tweede, naam: "Ander bedrijf", rol: "lid", toegang: UIT },
       ]),
       actieveOrganisatieId: org,
+      abonnementenIngeschakeld: false,
     });
     expect((mij.organisaties as unknown[]).length).toBe(2);
 
     const vanLid = await json(stuur("GET", "/api/mij", lid.cookie));
     expect(vanLid).toMatchObject({ organisaties: [{ id: org, naam: "Bedrijf", rol: "lid" }], actieveOrganisatieId: org });
+  });
+
+  test("abonnementenIngeschakeld volgt de configuratie, ook voor wie geen actieve organisatie heeft", async () => {
+    const zonder = await gebruiker();
+    expect(await json(stuur("GET", "/api/mij", zonder.cookie))).toMatchObject({ abonnementenIngeschakeld: false });
+    zetAbonnementen({
+      config: {
+        ingeschakeld: true,
+        sleutel: "sk_test_nep",
+        webhookGeheim: null,
+        prijzen: { maand: "price_maand", jaar: "price_jaar" },
+        boekhoudingInbox: null,
+        apiBasis: null,
+      },
+      stripe: null,
+    });
+    try {
+      expect(await json(stuur("GET", "/api/mij", zonder.cookie))).toMatchObject({
+        abonnementenIngeschakeld: true,
+        organisaties: [],
+        actieveOrganisatieId: null,
+      });
+    } finally {
+      zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+    }
   });
 
   test("zonder organisatie: een lege lijst en geen actieve organisatie", async () => {

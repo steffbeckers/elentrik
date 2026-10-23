@@ -11,6 +11,7 @@
 // (ruling E1).
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
+import type { Toegang } from "../../shared/abonnement";
 import type { SessieInfo } from "../sessie/bestemming";
 import { foutStatus } from "../sessie/fouten";
 
@@ -18,13 +19,18 @@ export type Rol = "eigenaar" | "lid";
 
 export type Gebruiker = { id: string; naam: string; email: string };
 
-export type Organisatie = { id: string; naam: string; rol: Rol };
+/** De gebruiker zoals /api/mij hem geeft: ook of zijn gratis proefperiode al gebruikt is. */
+export type SessieGebruiker = Gebruiker & { proefGebruikt?: boolean };
+
+export type Organisatie = { id: string; naam: string; rol: Rol; toegang: Toegang };
 
 /** Het antwoord van GET /api/mij. */
 export type Mij = {
-  gebruiker: Gebruiker;
+  gebruiker: Gebruiker & { proefGebruikt: boolean };
   organisaties: Organisatie[];
   actieveOrganisatieId: string | null;
+  /** Staan abonnementen aan? Uit is "zoals vóór plan 7". */
+  abonnementenIngeschakeld: boolean;
 };
 
 export type SessieApi = {
@@ -42,9 +48,11 @@ export type VoorVertrek = () => boolean | Promise<boolean>;
 const altijdDoor: VoorVertrek = () => true;
 
 export const useSessieStore = defineStore("sessie", () => {
-  const gebruiker = ref<Gebruiker | null>(null);
+  const gebruiker = ref<SessieGebruiker | null>(null);
   const organisaties = ref<Organisatie[]>([]);
   const actieveOrganisatieId = ref<string | null>(null);
+  /** Staan abonnementen aan op de server? */
+  const abonnementenIngeschakeld = ref(false);
   /** Werd /api/mij al (met succes, of met 401) gelezen? */
   const geladen = ref(false);
 
@@ -58,6 +66,14 @@ export const useSessieStore = defineStore("sessie", () => {
     () => organisaties.value.find((o) => o.id === actieveOrganisatieId.value) ?? null,
   );
   const rol = computed<Rol | null>(() => actieveOrganisatie.value?.rol ?? null);
+  /** De toegang van de actieve organisatie; zonder organisatie geen beperking. */
+  const toegang = computed<Toegang>(
+    () => actieveOrganisatie.value?.toegang ?? { schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null },
+  );
+  /** Gebruikte deze gebruiker zijn gratis proefperiode al (voor een eerder eigen bedrijf)? */
+  const proefGebruikt = computed(() => gebruiker.value?.proefGebruikt ?? false);
+  /** Moet het formulier voor een nieuw bedrijf zeggen dat er geen gratis proef is? Alleen met abonnementen aan. */
+  const toonGeenProefHint = computed(() => abonnementenIngeschakeld.value && proefGebruikt.value);
   /** Wat `bestemming` van de sessie nodig heeft: null is niet ingelogd. */
   const sessieInfo = computed<SessieInfo>(() =>
     gebruiker.value ? { actieveOrganisatieId: actieveOrganisatieId.value } : null,
@@ -76,6 +92,7 @@ export const useSessieStore = defineStore("sessie", () => {
     gebruiker.value = null;
     organisaties.value = [];
     actieveOrganisatieId.value = null;
+    abonnementenIngeschakeld.value = false;
   }
 
   /**
@@ -89,6 +106,7 @@ export const useSessieStore = defineStore("sessie", () => {
       gebruiker.value = mij.gebruiker;
       organisaties.value = mij.organisaties;
       actieveOrganisatieId.value = mij.actieveOrganisatieId;
+      abonnementenIngeschakeld.value = mij.abonnementenIngeschakeld;
     } catch (fout) {
       if (foutStatus(fout) !== 401) {
         geladen.value = false;
@@ -151,6 +169,10 @@ export const useSessieStore = defineStore("sessie", () => {
     geladen,
     actieveOrganisatie,
     rol,
+    toegang,
+    proefGebruikt,
+    abonnementenIngeschakeld,
+    toonGeenProefHint,
     sessieInfo,
     gebruikApi,
     laad,

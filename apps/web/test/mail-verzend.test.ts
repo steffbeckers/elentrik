@@ -22,6 +22,26 @@ describe("mailverzender", () => {
     });
   });
 
+  test("bijlagen gaan als attachments (filename, content, contentType) naar het transport", async () => {
+    const sendMail = vi.fn().mockResolvedValue({});
+    const inhoud = new TextEncoder().encode("%PDF-1.7");
+    await maakVerzender({ sendMail }).verstuur({
+      ...mail,
+      bijlagen: [{ naam: "ELK-0001.pdf", inhoud, type: "application/pdf" }],
+    });
+    expect(sendMail.mock.calls[0]![0].attachments).toEqual([
+      { filename: "ELK-0001.pdf", content: Buffer.from(inhoud), contentType: "application/pdf" },
+    ]);
+  });
+
+  test("zonder bijlagen (of een lege lijst) heeft het bericht geen attachments", async () => {
+    const sendMail = vi.fn().mockResolvedValue({});
+    await maakVerzender({ sendMail }).verstuur(mail);
+    await maakVerzender({ sendMail }).verstuur({ ...mail, bijlagen: [] });
+    expect(sendMail.mock.calls[0]![0]).not.toHaveProperty("attachments");
+    expect(sendMail.mock.calls[1]![0]).not.toHaveProperty("attachments");
+  });
+
   test("gebruikt een standaardafzender als SMTP_VAN ontbreekt", async () => {
     vi.stubEnv("SMTP_VAN", "");
     const sendMail = vi.fn().mockResolvedValue({});

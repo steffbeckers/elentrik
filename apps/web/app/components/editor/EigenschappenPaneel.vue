@@ -175,6 +175,7 @@ function plaatshouder(veld: Veld): string | undefined {
               :min="veld.min"
               :step="veld.soort === 'getal' ? (veld.stap ?? 'any') : undefined"
               :placeholder="plaatshouder(veld)"
+              :disabled="store.alleenLezen"
               :data-testid="`veld-${veld.sleutel}`"
               class="w-full"
               :ui="veld.eenheid ? { trailing: 'pointer-events-none' } : undefined"
@@ -192,6 +193,7 @@ function plaatshouder(veld: Veld): string | undefined {
               :model-value="keuzeWaarde(veld)"
               :items="keuzeItems(veld)"
               :placeholder="plaatshouder(veld)"
+              :disabled="store.alleenLezen"
               :data-testid="`veld-${veld.sleutel}`"
               class="w-full"
               @update:model-value="(w: unknown) => kies(veld, w)"
@@ -203,6 +205,7 @@ function plaatshouder(veld: Veld): string | undefined {
             <USwitch
               :model-value="waardeVan(veld) === true"
               :label="veld.label"
+              :disabled="store.alleenLezen"
               :data-testid="`veld-${veld.sleutel}`"
               size="sm"
               @update:model-value="(w: boolean) => kies(veld, w)"

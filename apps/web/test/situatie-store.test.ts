@@ -284,3 +284,66 @@ describe("plaatsingen", () => {
     expect(analyseer(doc(editor)).nietGeplaatst).not.toContain(cd);
   });
 });
+
+describe("alleen-lezen", () => {
+  test("plaatsen en verschuiven doen niets", () => {
+    const { editor, situatie } = opzet();
+    const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [a, b] = punten(editor);
+    situatie.plaatsNode(a!, 100, 200);
+    editor.selectie = [a!];
+    const document = editor.document;
+    const stappen = editor.terug;
+    const teller = editor.gewijzigdSindsOpslaan;
+    editor.zetAlleenLezen(true);
+
+    expect(situatie.plaatsNode(b!, 5, 6)).toBeNull();
+    expect(situatie.plaatsNode(a!, 300, 400)).toBeNull();
+    situatie.schuifSelectie(10, 0);
+    situatie.draaiSelectie(1);
+
+    expect(editor.document).toBe(document);
+    expect(editor.terug).toBe(stappen);
+    expect(editor.gewijzigdSindsOpslaan).toBe(teller);
+    expect(plaatsingen(editor, paginaId)).toEqual([{ nodeId: a, x: 100, y: 200, rotatie: 0 }]);
+  });
+
+  test("van het plan halen, een pagina toevoegen, hernoemen, verplaatsen, verwijderen en schalen doen niets", () => {
+    const { editor, situatie } = opzet();
+    const a = situatie.voegPlanPaginaToe("A", ACHTERGROND);
+    const b = situatie.voegPlanPaginaToe("B", ACHTERGROND);
+    const [punt] = punten(editor);
+    situatie.plaatsNode(punt!, 1, 2);
+    editor.selectie = [punt!];
+    const document = editor.document;
+    const stappen = editor.terug;
+    editor.zetAlleenLezen(true);
+
+    expect(situatie.voegPlanPaginaToe("C", ACHTERGROND)).toBe("");
+    situatie.haalVanPlan(punt!);
+    situatie.haalSelectieVanPlan();
+    situatie.hernoem(a, "Kelder");
+    situatie.verplaatsPagina(b, 0);
+    situatie.verwijderPagina(a);
+    situatie.zetSchaal(a, 12.5);
+    situatie.vervangAchtergrond(a, { ...ACHTERGROND, rasterBestandId: "r2" });
+
+    expect(editor.document).toBe(document);
+    expect(editor.terug).toBe(stappen);
+    expect(situatie.actievePaginaId).toBe(b);
+  });
+
+  test("een pagina kiezen blijft werken en alles herstelt na zetAlleenLezen(false)", () => {
+    const { editor, situatie } = opzet();
+    const a = situatie.voegPlanPaginaToe("A", ACHTERGROND);
+    situatie.voegPlanPaginaToe("B", ACHTERGROND);
+    editor.zetAlleenLezen(true);
+    situatie.actievePaginaId = a;
+    expect(situatie.actievePaginaId).toBe(a);
+
+    editor.zetAlleenLezen(false);
+    const [punt] = punten(editor);
+    situatie.plaatsNode(punt!, 5, 6);
+    expect(plaatsingen(editor, a)).toEqual([{ nodeId: punt, x: 5, y: 6, rotatie: 0 }]);
+  });
+});

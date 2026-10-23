@@ -119,6 +119,7 @@ async function opLogoGekozen(gebeurtenis: Event) {
 <template>
   <div class="min-h-dvh">
     <AppBovenbalk />
+    <AbonnementBanner />
     <UContainer class="max-w-3xl py-8">
       <div class="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div>

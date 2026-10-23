@@ -1,4 +1,5 @@
 import type { Partij } from "@elentrik/model";
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -116,6 +117,11 @@ export const user = pgTable("user", {
    * gebruiker er nog lid van is. Overleeft uitloggen, anders dan de sessie zelf.
    */
   laatsteOrganisatieId: text("laatste_organisatie_id"),
+  /**
+   * Waar zodra de gebruiker zijn eerste eigen bedrijf aanmaakte: alleen dat bedrijf krijgt een
+   * proefperiode (spec 4.1). Alleen de server zet dit (`input: false` in Better Auth).
+   */
+  proefGebruikt: boolean("proef_gebruikt").default(false).notNull(),
 });
 
 export const session = pgTable(
@@ -187,6 +193,16 @@ export const organization = pgTable(
     logo: text("logo"),
     createdAt: timestamp("created_at").notNull(),
     metadata: text("metadata"),
+    /**
+     * Tot wanneer de organisatie gratis mag schrijven. De code zet het bij het aanmaken
+     * (`kenProefperiodeToe`); de default is het vangnet voor een rechtstreekse insert, en geeft
+     * bestaande organisaties bij de migratie 30 dagen vanaf dat moment.
+     */
+    proefEinde: timestamp("proef_einde", { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '30 days'`),
+    /** Altijd schrijfrecht zonder abonnement; alleen via SQL te zetten. */
+    vrijgesteld: boolean("vrijgesteld").notNull().default(false),
   },
   (table) => [uniqueIndex("organization_slug_uidx").on(table.slug)],
 );
@@ -231,3 +247,41 @@ export const invitation = pgTable(
     index("invitation_email_idx").on(table.email),
   ],
 );
+
+// --- Abonnementen (Stripe) ----------------------------------------------------------------------
+
+/** Eén rij per organisatie die ooit naar Stripe Checkout ging (spec 4.1). */
+export const abonnementen = pgTable("abonnementen", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organisatieId: text("organisatie_id")
+    .notNull()
+    .unique()
+    .references(() => organization.id),
+  stripeKlantId: text("stripe_klant_id").notNull().unique(),
+  /** Het abonnement dat Elentrik volgt (het levendigste van de klant). */
+  stripeAbonnementId: text("stripe_abonnement_id").unique(),
+  /** De Stripe-status zoals ze is. */
+  status: text("status"),
+  formule: text("formule", { enum: ["maand", "jaar"] }),
+  periodeEinde: timestamp("periode_einde", { withTimezone: true }),
+  opgezegdOpPeriodeEinde: boolean("opgezegd_op_periode_einde").notNull().default(false),
+  /** Het moment waarop voor het eerst `past_due` werd gezien; gewist bij een andere status. */
+  achterstalligSinds: timestamp("achterstallig_sinds", { withTimezone: true }),
+  /** De laatst geopende Checkout-sessie, om ze te kunnen laten vervallen. */
+  openCheckoutSessie: text("open_checkout_sessie"),
+  aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
+  bijgewerkt: timestamp("bijgewerkt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** De id's van volledig verwerkte Stripe-events. */
+export const stripeEvents = pgTable("stripe_events", {
+  id: text("id").primaryKey(),
+  verwerkt: timestamp("verwerkt", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Welke Stripe-facturen al naar de boekhouding gingen, zodat elke maar één keer vertrekt. */
+export const doorgestuurdeFacturen = pgTable("doorgestuurde_facturen", {
+  stripeFactuurId: text("stripe_factuur_id").primaryKey(),
+  nummer: text("nummer"),
+  verstuurd: timestamp("verstuurd", { withTimezone: true }).notNull().defaultNow(),
+});

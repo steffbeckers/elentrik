@@ -52,7 +52,18 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
   onbewaard: { icoon: "i-lucide-triangle-alert", klasse: "text-warning" },
   conflict: { icoon: "i-lucide-git-compare", klasse: "text-error" },
   fout: { icoon: "i-lucide-cloud-alert", klasse: "text-error" },
+  "alleen-lezen": { icoon: "i-lucide-lock", klasse: "text-warning" },
 };
+
+/**
+ * De statusregel. Is de organisatie alleen-lezen en staat alles op de server, dan zegt ze
+ * "Alleen lezen"; zijn er wijzigingen die niet bewaard konden worden, dan zegt de status zelf het.
+ */
+const weergave = computed(() =>
+  props.status === "opgeslagen" && store.alleenLezen
+    ? { sleutel: "alleenLezen", ...STATUS_STIJL["alleen-lezen"] }
+    : { sleutel: props.status, ...STATUS_STIJL[props.status] },
+);
 </script>
 
 <template>
@@ -70,6 +81,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
       variant="ghost"
       class="min-w-24 max-w-64 truncate font-semibold"
       :title="$t('editor.bovenbalk.projectgegevens')"
+      :disabled="store.alleenLezen"
       data-testid="projectnaam"
       @click="projectgegevensOpen = true"
     >
@@ -94,11 +106,11 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
     <div class="ml-auto flex items-center gap-2">
       <span
         class="flex items-center gap-1 text-sm"
-        :class="STATUS_STIJL[status].klasse"
+        :class="weergave.klasse"
         role="status"
         data-testid="opslagstatus"
       >
-        <UIcon :name="STATUS_STIJL[status].icoon" class="size-4" :class="status === 'bezig' ? 'animate-spin' : ''" />
+        <UIcon :name="weergave.icoon" class="size-4" :class="status === 'bezig' ? 'animate-spin' : ''" />
         <UButton
           v-if="status === 'conflict'"
           size="xs"
@@ -107,7 +119,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
           :label="$t('editor.status.conflict')"
           @click="emit('toonConflict')"
         />
-        <span v-else>{{ $t(`editor.status.${status}`) }}</span>
+        <span v-else>{{ $t(`editor.status.${weergave.sleutel}`) }}</span>
       </span>
       <UButton
         v-if="status === 'fout'"
@@ -142,7 +154,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
         variant="ghost"
         :aria-label="$t('editor.bovenbalk.ongedaanMaken')"
         :title="$t('editor.bovenbalk.ongedaanMaken')"
-        :disabled="store.terug.length === 0"
+        :disabled="store.alleenLezen || store.terug.length === 0"
         data-testid="ongedaan-maken"
         @click="store.ongedaanMaken()"
       />
@@ -152,7 +164,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
         variant="ghost"
         :aria-label="$t('editor.bovenbalk.opnieuw')"
         :title="$t('editor.bovenbalk.opnieuw')"
-        :disabled="store.vooruit.length === 0"
+        :disabled="store.alleenLezen || store.vooruit.length === 0"
         data-testid="opnieuw"
         @click="store.opnieuw()"
       />

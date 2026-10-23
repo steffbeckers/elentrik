@@ -16,6 +16,7 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 import { magicLink, organization } from "better-auth/plugins";
 import { memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { and, eq } from "drizzle-orm";
+import { kenProefperiodeToe } from "../abonnementen/proef";
 import { type Db, gebruikDb } from "../db";
 import * as schema from "../db/schema";
 import { bevestigMail, herstelMail, magicLinkMail, uitnodigingMail } from "../mail/sjablonen";
@@ -96,11 +97,16 @@ function verstuur(soort: MailSoort, mail: Mail, aan: string): void {
  *   anders 400 (en geen account).
  * - `laatsteOrganisatieId` nooit: de server zet het bij het wisselen (`input: false` weigert het
  *   al bij de registratie; dit weigert het ook uitdrukkelijk via /update-user).
+ * - `proefGebruikt` nooit, om dezelfde reden: de server zet het bij het aanmaken van het eerste
+ *   eigen bedrijf.
  */
 function alleenBijRegistratie(path: string, body: unknown): void {
   if (!body || typeof body !== "object") return;
   if ((path === "/update-user" || path === "/sign-up/email") && "laatsteOrganisatieId" in body) {
     throw new APIError("BAD_REQUEST", { message: "laatsteOrganisatieId kan niet gezet worden." });
+  }
+  if ((path === "/update-user" || path === "/sign-up/email") && "proefGebruikt" in body) {
+    throw new APIError("BAD_REQUEST", { message: "proefGebruikt kan niet gezet worden." });
   }
   if (!("wachtendeBedrijfsnaam" in body)) return;
   if (path === "/update-user") {
@@ -289,6 +295,8 @@ export function maakAuth(db: Db = gebruikDb()) {
         wachtendeBedrijfsnaam: { type: "string", required: false, input: true },
         // De laatst gekozen actieve organisatie (spec 2.4); alleen de server zet ze.
         laatsteOrganisatieId: { type: "string", required: false, input: false },
+        // Waar zodra de gebruiker zijn eerste eigen bedrijf aanmaakte (spec 4.1); alleen de server zet het.
+        proefGebruikt: { type: "boolean", required: false, defaultValue: false, input: false },
       },
     },
     session: {
@@ -360,6 +368,11 @@ export function maakAuth(db: Db = gebruikDb()) {
           // Een organisatienaam telt 1 tot 80 tekens na trimmen, ook via Better Auth.
           beforeCreateOrganization: async ({ organization }) => {
             eisGeldigeNaam(organization.name);
+          },
+          // Het eerste bedrijf dat iemand zelf aanmaakt krijgt de proefperiode, elk volgend niet
+          // (spec 4.1). De registratie doet hetzelfde in richtEersteOrganisatieIn.
+          afterCreateOrganization: async ({ organization, user }) => {
+            await kenProefperiodeToe(db, { organisatieId: organization.id, gebruikerId: user.id, nu: new Date() });
           },
           beforeUpdateOrganization: async ({ organization }) => {
             if (organization.name === undefined) return;

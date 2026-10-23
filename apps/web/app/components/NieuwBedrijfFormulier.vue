@@ -51,7 +51,12 @@ async function maak() {
   <div class="space-y-4">
     <UAlert v-if="fout" color="error" variant="subtle" icon="i-lucide-circle-alert" :title="fout" />
     <UForm :state="formulier" :validate="valideer" class="space-y-4" @submit="maak">
-      <UFormField name="naam" :label="$t('geenOrganisatie.nieuw.naam')" required>
+      <UFormField
+        name="naam"
+        :label="$t('geenOrganisatie.nieuw.naam')"
+        :hint="sessie.toonGeenProefHint ? $t('geenOrganisatie.nieuw.geenProef') : undefined"
+        required
+      >
         <UInput
           v-model="formulier.naam"
           autocomplete="organization"
