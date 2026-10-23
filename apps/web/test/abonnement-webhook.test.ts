@@ -9,6 +9,7 @@ import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
 import Stripe from "stripe";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { type AbonnementConfig, zetAbonnementen } from "../server/abonnementen/config";
+import { stuurFactuurDoor } from "../server/abonnementen/boekhouding";
 import { toegangVoor } from "../server/abonnementen/repo";
 import type { StripeAbonnement, StripeFactuur } from "../server/abonnementen/stripe";
 import { type Db, zetDb } from "../server/db";
@@ -43,8 +44,11 @@ let orgB: string;
 let mails: Mail[] = [];
 /** Waar: de verzender gooit een fout die het inboxadres bevat (zoals een SMTP-server kan doen). */
 let mailFaalt = false;
+/** Milliseconden die een verzending duurt, om gelijktijdige leveringen te laten overlappen. */
+let vertraging = 0;
 const verzender: Verzender = {
   async verstuur(mail) {
+    if (vertraging) await new Promise((klaar) => setTimeout(klaar, vertraging));
     if (mailFaalt) throw new Error(`550 geweigerd voor ${mail.aan}`);
     mails.push(mail);
   },
@@ -172,6 +176,7 @@ beforeEach(async () => {
   zetAbonnementen({ config: CONFIG, stripe });
   mails = [];
   mailFaalt = false;
+  vertraging = 0;
   await db.delete(stripeEvents);
   await db.delete(doorgestuurdeFacturen);
   await db.delete(abonnementen);
@@ -402,6 +407,43 @@ describe("doorsturen naar de boekhouding", () => {
     expect(mails[0]!.bijlagen![0]!.naam).toBe("in_1.pdf");
   });
 
+  test("twee gelijktijdige leveringen voor dezelfde factuur (twee event-id's) geven precies één mail", async () => {
+    vertraging = 50;
+    const een = event("invoice.paid", factuurObject("in_1"));
+    const twee = event("invoice.paid", factuurObject("in_1"));
+    const statussen = await Promise.all([lever(een), lever(twee), lever(een)]);
+    expect(statussen).toEqual([200, 200, 200]);
+    expect(mails).toHaveLength(1);
+    expect(await db.select().from(doorgestuurdeFacturen)).toHaveLength(1);
+  });
+
+  test("stuurFactuurDoor gelijktijdig voor dezelfde factuur: één keer verstuurd, de rest overgeslagen", async () => {
+    vertraging = 50;
+    const uitkomsten = await Promise.all([1, 2, 3].map(() => stuurFactuurDoor(db, stripe, INBOX, "in_1")));
+    expect(uitkomsten.filter((u) => u === "verstuurd")).toHaveLength(1);
+    expect(uitkomsten.filter((u) => u === "overgeslagen")).toHaveLength(2);
+    expect(mails).toHaveLength(1);
+  });
+
+  test("een mislukte verzending laat geen claim achter: de volgende poging verstuurt wel", async () => {
+    mailFaalt = true;
+    await expect(stuurFactuurDoor(db, stripe, INBOX, "in_1")).rejects.toThrow();
+    expect(await db.select().from(doorgestuurdeFacturen)).toEqual([]);
+    mailFaalt = false;
+    expect(await stuurFactuurDoor(db, stripe, INBOX, "in_1")).toBe("verstuurd");
+    expect(mails).toHaveLength(1);
+  });
+
+  test("een overgeslagen factuur (bedrag nul, geen inbox) laat geen claim achter die een latere verzending blokkeert", async () => {
+    stripe.facturen.set("in_1", factuur("in_1", { bedragBetaald: 0 }));
+    expect(await stuurFactuurDoor(db, stripe, INBOX, "in_1")).toBe("overgeslagen");
+    expect(await stuurFactuurDoor(db, stripe, null, "in_1")).toBe("overgeslagen");
+    expect(await db.select().from(doorgestuurdeFacturen)).toEqual([]);
+    stripe.facturen.set("in_1", factuur("in_1"));
+    expect(await stuurFactuurDoor(db, stripe, INBOX, "in_1")).toBe("verstuurd");
+    expect(mails).toHaveLength(1);
+  });
+
   test("een mailfout geeft 500, het event staat niet in stripe_events en een nieuwe poging verstuurt wel", async () => {
     const e = event("invoice.paid", factuurObject("in_1"));
     mailFaalt = true;
@@ -442,6 +484,25 @@ describe("onbekend", () => {
     expect(await verwerkt(e.id)).toBe(true);
     expect(aanroepen("abonnementenVanKlant")).toEqual([]);
     expect((await rij()).status).toBeNull();
+  });
+
+  test("invoice.paid voor een onbekende klant geeft 200, geen mail, en het event is verwerkt", async () => {
+    stripe.facturen.set("in_1", factuur("in_1", { klantId: "cus_onbekend" }));
+    const e = event("invoice.paid", factuurObject("in_1", { klant: "cus_onbekend" }));
+    expect(await lever(e)).toBe(200);
+    expect(await verwerkt(e.id)).toBe(true);
+    expect(mails).toEqual([]);
+    expect(aanroepen("haalFactuur")).toEqual([]);
+    expect(await db.select().from(doorgestuurdeFacturen)).toEqual([]);
+  });
+
+  test("invoice.paid zonder klant geeft 200, geen mail, en het event is verwerkt", async () => {
+    stripe.facturen.set("in_1", factuur("in_1"));
+    const e = event("invoice.paid", factuurObject("in_1", { klant: null }));
+    expect(await lever(e)).toBe(200);
+    expect(await verwerkt(e.id)).toBe(true);
+    expect(mails).toEqual([]);
+    expect(stripe.aanroepen).toEqual([]);
   });
 
   test("een event zonder klant geeft 200", async () => {

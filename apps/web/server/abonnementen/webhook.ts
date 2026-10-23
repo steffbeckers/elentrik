@@ -68,17 +68,19 @@ export async function verwerkGebeurtenis(
     return;
   }
 
-  // De klant hoort bij een organisatie, of we doen niets met haar abonnement. Een betaalde factuur
-  // gaat wel altijd naar de boekhouding: het is een betaling op het Stripe-account van de eigenaar.
-  if (g.klantId) {
-    // Een abonnement van een onbekende klant beeindigen we niet: het is niet van Elentrik.
-    if (mislukteEersteBetaling(g) && g.abonnementId && (await klantBekend(db, g.klantId))) {
-      await beeindig(stripe, g.klantId, g.abonnementId);
-    }
-    const resultaat = await synchroniseerKlant(db, stripe, config.prijzen, g.klantId);
-    if (resultaat === "onbekend") console.info("Stripe-webhook: onbekende klant genegeerd", { type: g.type });
-  } else {
+  // Alleen een klant die bij een organisatie hoort, is van Elentrik: voor een onbekende of
+  // ontbrekende klant gebeurt er niets (200, genegeerd), ook geen doorsturen van de factuur.
+  if (!g.klantId) {
     console.info("Stripe-webhook: event zonder klant genegeerd", { type: g.type });
+    return;
+  }
+  if (mislukteEersteBetaling(g) && g.abonnementId && (await klantBekend(db, g.klantId))) {
+    await beeindig(stripe, g.klantId, g.abonnementId);
+  }
+  const resultaat = await synchroniseerKlant(db, stripe, config.prijzen, g.klantId);
+  if (resultaat === "onbekend") {
+    console.info("Stripe-webhook: onbekende klant genegeerd", { type: g.type });
+    return;
   }
 
   if (g.type === "invoice.paid" && g.objectId) {
