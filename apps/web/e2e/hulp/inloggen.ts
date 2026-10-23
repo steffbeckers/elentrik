@@ -13,7 +13,7 @@ export type StorageState = Exclude<BrowserContextOptions["storageState"], string
 
 export type Testgebruiker = { naam: string; email: string; bedrijf: string };
 
-const WACHTWOORD = "e2e-wachtwoord-123";
+export const TESTWACHTWOORD = "e2e-wachtwoord-123";
 /** Zo vaak opnieuw proberen na een 429 van de rate limiter. */
 const MAX_POGINGEN = 5;
 
@@ -49,7 +49,7 @@ export async function maakTestgebruiker(
   const registratie = await postAuth(request, "/sign-up/email", {
     name: gebruiker.naam,
     email: gebruiker.email,
-    password: WACHTWOORD,
+    password: TESTWACHTWOORD,
     wachtendeBedrijfsnaam: gebruiker.bedrijf,
   });
   if (!registratie.ok()) {

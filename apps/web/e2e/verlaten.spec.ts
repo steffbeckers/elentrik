@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { meldAanOpPagina } from "./hulp/aanmelden";
+import { metE2eDatabase } from "./hulp/database";
+import { wachtOpHydratatie } from "./hulp/hydratatie";
+import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from "./hulp/inloggen";
 import { E2E_URL } from "./omgeving";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
@@ -155,4 +158,68 @@ test("na opnieuw inloggen vanuit de editor: een pagina die zegt wat er nu moet",
     "Je bent opnieuw aangemeld. Sluit dit tabblad en klik in de editor op ‘Opnieuw proberen’.",
   );
   await expect(pagina.getByRole("button", { name: "Tabblad sluiten" })).toBeVisible();
+});
+
+// Een echt verlopen sessie: de sessierij verdwijnt op de server (de cookie van de browser blijft
+// staan en is nu een dode verwijzing). Een eigen gebruiker en context, zodat de sessie van de
+// andere tests in dit bestand heel blijft.
+test("de sessie verdwijnt op de server tijdens het tekenen: melding, opnieuw inloggen in een nieuw tabblad, en daarna opgeslagen", async ({
+  browser,
+  playwright,
+}) => {
+  const gebruiker = { naam: "Sessie Tester", email: uniekAdres("sessie"), bedrijf: "Sessie Elektro" };
+  const api = await playwright.request.newContext({ baseURL: E2E_URL });
+  const staat = await maakTestgebruiker(api, gebruiker).finally(() => api.dispose());
+  const context = await browser.newContext({ storageState: staat });
+  try {
+    const page = await context.newPage();
+    const aangemaakt = await context.request.post("/api/projecten", {
+      data: { naam: `${naam} verdwenen sessie`, klantnaam: "Janssens", stroomtype: "2x230V" },
+    });
+    const { id } = (await aangemaakt.json()) as { id: string };
+
+    await page.goto(`/projecten/${id}`);
+    await page.waitForLoadState("networkidle");
+    const canvas = page.getByTestId("schema-canvas");
+    await expect(canvas.locator('[data-testid^="plus-rail-einde-"]')).toHaveCount(1);
+
+    // De sessie verdwijnt uit de database: de volgende bewaring krijgt een 401.
+    const verwijderd = await metE2eDatabase(
+      (sql) => sql`delete from "session" where user_id = (select id from "user" where email = ${gebruiker.email}) returning id`,
+    );
+    expect(verwijderd.length).toBeGreaterThan(0);
+
+    await page.getByRole("button", { name: "Passend maken" }).click();
+    await canvas.locator('[data-testid^="plus-rail-einde-"]').click();
+    const status = page.getByTestId("opslagstatus");
+    await expect(status).toHaveText("Niet opgeslagen: lokaal bewaard", { timeout: 15_000 });
+    const melding = page.getByTestId("afgemeld-melding");
+    await expect(melding).toContainText("Je bent afgemeld");
+
+    // Opnieuw inloggen in een nieuw tabblad van dezelfde browser; het werk hier blijft staan.
+    const [tabblad] = await Promise.all([
+      context.waitForEvent("page"),
+      melding.getByRole("button", { name: "Opnieuw inloggen" }).click(),
+    ]);
+    await expect(tabblad).toHaveURL(/\/inloggen\?terug=%2Fweer-aangemeld$/);
+    await wachtOpHydratatie(tabblad);
+    await meldAanOpPagina(tabblad, gebruiker.email);
+    await expect(tabblad).toHaveURL(/\/weer-aangemeld$/);
+    await expect(tabblad.getByTestId("weer-aangemeld")).toBeVisible();
+    await tabblad.close();
+
+    // Terug in het editortabblad: het terugkeren zelf bewaart al eens, anders "Opnieuw proberen".
+    await page.bringToFront();
+    await expect(async () => {
+      if ((await melding.count()) > 0) await melding.getByRole("button", { name: "Opnieuw proberen" }).click();
+      await expect(status).toHaveText("Opgeslagen", { timeout: 3_000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(melding).toHaveCount(0);
+
+    // De wijziging staat op de server, onder de nieuwe sessie.
+    const project = (await (await context.request.get(`/api/projecten/${id}`)).json()) as Project;
+    expect(project.versie).toBe(2);
+  } finally {
+    await context.close();
+  }
 });

@@ -43,3 +43,12 @@ export async function laatsteMailAan(
 export function linkUit(mail: { tekst: string }): string {
   return linkUitTekst(mail.tekst, E2E_URL);
 }
+
+/** Het aantal mails aan `adres` in Mailpit (eventueel enkel na een tijdstip), zonder te wachten. */
+export async function aantalMailsAan(adres: string, opties: { na?: Date } = {}): Promise<number> {
+  const lijst = await haalJson<{ messages: Bericht[] }>("/api/v1/messages?limit=200");
+  const gezocht = adres.toLowerCase();
+  return lijst.messages
+    .filter((m) => m.To.some((t) => t.Address.toLowerCase() === gezocht))
+    .filter((m) => !opties.na || new Date(m.Created) >= opties.na).length;
+}
