@@ -126,8 +126,11 @@ een tweede Checkout bij een bestaand abonnement geeft een 409 met een doorverwij
    ```
 
    De CLI toont een `whsec_...`-geheim: zet dat in `STRIPE_WEBHOOK_GEHEIM` en herstart de
-   ontwikkelserver. Zorg dat de events dezelfde API-versie hebben als de library (`2026-09-30.endive`);
-   `stripe listen --help` toont de opties daarvoor.
+   ontwikkelserver. De doorgestuurde events worden gerenderd met de standaard-API-versie van je
+   Stripe-account (of met de nieuwste versie als je `stripe listen --latest` gebruikt). Die versie
+   moet `2026-09-30.endive` zijn, de versie van de library in Elentrik: bij een andere versie
+   verschillen de velden waarmee een factuur naar zijn abonnement wijst. Controleer en wijzig de
+   standaardversie van het account in het Stripe-dashboard (Ontwikkelaars, API-versie) voor je test.
 3. Na de terugkeer uit Checkout synchroniseert Elentrik ook zelf (via `/abonnement?terug=...`), dus
    de pagina toont de nieuwe status meteen, ook als de webhook later aankomt.
 
@@ -141,12 +144,27 @@ Doe dit op een testaccount, met `stripe listen` aan en de testsleutels in `.env`
    - je komt terug op `/abonnement` met de status "Je hebt een ... abonnement";
    - controleer dat de factuur met de PDF als bijlage in Mailpit aankomt (of bij de boekhouding,
      als `BOEKHOUDING_INBOX` daarheen wijst) en dat dat precies één mail is.
-2. **Een mislukte betaling:** neem een abonnement met een testkaart die weigert (bijvoorbeeld
-   `4000 0000 0000 0341`, die pas bij de verlenging faalt) en controleer de banner "Je laatste
-   betaling is mislukt". Een mislukte allereerste betaling beëindigt het abonnement meteen.
+2. **Een mislukte betaling (verlenging):** deze moet gebeuren terwijl het bedrijf nog meer dan
+   48 uur proefperiode heeft.
+   - Kies een abonnement en betaal met de testkaart `4000 0000 0000 0341`. Die kaart kan aan een
+     klant gekoppeld worden, maar elke echte afschrijving faalt. Met meer dan 48 uur proef start het
+     abonnement met een proefperiode: de factuur van EUR 0 slaagt en de kaart wordt enkel gekoppeld.
+   - Zonder proefperiode (of met minder dan 48 uur proef) zou de kaart al in Checkout zelf
+     geweigerd worden, omdat daar meteen afgeschreven wordt: dan start het abonnement nooit en kun
+     je de mislukte verlenging niet nabootsen.
+   - Beëindig daarna de proefperiode van dat abonnement in het Stripe-dashboard met "End trial
+     now" (of gebruik een test clock). De eerste echte afschrijving faalt: het abonnement wordt
+     `past_due` en Elentrik toont de banner "Je laatste betaling is mislukt" met de datum waarvoor
+     de betaling geregeld moet zijn.
 3. **Wisselen en opzeggen via het portaal:** kies "Abonnement beheren", wissel tussen maand en jaar,
    en zeg op. Het abonnement blijft actief tot het einde van de periode; de pagina zegt dat het is opgezegd.
-4. **Een verlopen proefperiode:** zet `proef_einde` in het verleden en controleer dat het bedrijf
+4. **Een geweigerde kaart gevolgd door een goede:** betaal in Checkout eerst met de testkaart
+   `4000 0000 0000 0002` (wordt geweigerd) en daarna, in dezelfde Checkout-sessie, met
+   `4242 4242 4242 4242`. Het abonnement moet actief worden en mag niet geannuleerd zijn.
+5. **Een mislukte eerste SEPA-betaling:** betaal een eerste keer met de testrekening van Stripe die
+   de eerste betaling laat mislukken (zie de lijst met SEPA-testrekeningen in de Stripe-documentatie).
+   Het abonnement moet geannuleerd worden en er mag daarna geen factuur meer geïnd worden.
+6. **Een verlopen proefperiode:** zet `proef_einde` in het verleden en controleer dat het bedrijf
    alleen-lezen wordt (zie hieronder).
 
 ### Een proefperiode of vrijstelling met SQL zetten

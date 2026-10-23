@@ -153,6 +153,8 @@ export type Mij = {
   gebruiker: { id: string; naam: string; email: string; proefGebruikt: boolean };
   organisaties: { id: string; naam: string; rol: Rol; toegang: Toegang }[];
   actieveOrganisatieId: string | null;
+  /** Staan abonnementen aan (Stripe is ingesteld)? Uit is "zoals vóór plan 7": geen proef, geen hints. */
+  abonnementenIngeschakeld: boolean;
 };
 
 /**
@@ -185,6 +187,7 @@ export async function mij(event: H3Event): Promise<Mij> {
     gebruiker: { ...sessie.gebruiker, proefGebruikt: eigen?.proefGebruikt ?? false },
     organisaties: rijen.map((r, i) => ({ id: r.id, naam: r.naam, rol: naarRol(r.rol), toegang: toegang[i]! })),
     actieveOrganisatieId: actief,
+    abonnementenIngeschakeld: config.ingeschakeld,
   };
 }
 

@@ -242,11 +242,37 @@ describe("GET /api/mij", () => {
         { id: tweede, naam: "Ander bedrijf", rol: "lid", toegang: UIT },
       ]),
       actieveOrganisatieId: org,
+      abonnementenIngeschakeld: false,
     });
     expect((mij.organisaties as unknown[]).length).toBe(2);
 
     const vanLid = await json(stuur("GET", "/api/mij", lid.cookie));
     expect(vanLid).toMatchObject({ organisaties: [{ id: org, naam: "Bedrijf", rol: "lid" }], actieveOrganisatieId: org });
+  });
+
+  test("abonnementenIngeschakeld volgt de configuratie, ook voor wie geen actieve organisatie heeft", async () => {
+    const zonder = await gebruiker();
+    expect(await json(stuur("GET", "/api/mij", zonder.cookie))).toMatchObject({ abonnementenIngeschakeld: false });
+    zetAbonnementen({
+      config: {
+        ingeschakeld: true,
+        sleutel: "sk_test_nep",
+        webhookGeheim: null,
+        prijzen: { maand: "price_maand", jaar: "price_jaar" },
+        boekhoudingInbox: null,
+        apiBasis: null,
+      },
+      stripe: null,
+    });
+    try {
+      expect(await json(stuur("GET", "/api/mij", zonder.cookie))).toMatchObject({
+        abonnementenIngeschakeld: true,
+        organisaties: [],
+        actieveOrganisatieId: null,
+      });
+    } finally {
+      zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+    }
   });
 
   test("zonder organisatie: een lege lijst en geen actieve organisatie", async () => {

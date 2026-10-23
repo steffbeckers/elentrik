@@ -38,7 +38,7 @@ const banner = computed(() => bannerVoor(sessie.toegang, sessie.rol, nu.value));
       banner.knop
         ? [
             {
-              label: banner.soort === 'betaling' ? $t('abonnement.betalingRegelen') : $t('abonnement.banner.kies'),
+              label: $t(banner.knopSleutel ?? 'abonnement.banner.kies'),
               color: 'neutral',
               variant: 'outline',
               to: '/abonnement',

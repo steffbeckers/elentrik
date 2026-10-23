@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import Stripe from "stripe";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { gebruikAbonnementen, leesAbonnementConfig, zetAbonnementen } from "../server/abonnementen/config";
 import { leesWebhook, maakStripePoort } from "../server/abonnementen/stripe";
 import { maakNepStripe } from "./nep-stripe";
@@ -122,6 +122,21 @@ describe("leesWebhook", () => {
       objectId: "in_1",
       abonnementId: "sub_1",
       reden: "subscription_cycle",
+    });
+  });
+
+  test("een invoice in de oudere vorm (subscription bovenaan) geeft ook het abonnement", () => {
+    const payload = JSON.stringify({
+      id: "evt_oud",
+      object: "event",
+      type: "invoice.paid",
+      data: {
+        object: { id: "in_oud", object: "invoice", customer: "cus_1", subscription: "sub_oud", billing_reason: "subscription_cycle" },
+      },
+    });
+    expect(leesWebhook(payload, ondertekend(payload), "whsec_test")).toMatchObject({
+      objectId: "in_oud",
+      abonnementId: "sub_oud",
     });
   });
 
@@ -344,6 +359,35 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       pdfUrl: "https://pdf.stripe.test/in_1",
       reden: "subscription_create",
     });
+  });
+
+  test("haalFactuur valt terug op het abonnement bovenaan de factuur (oudere vorm)", async () => {
+    antwoorden["/v1/invoices/in_oud"] = {
+      id: "in_oud",
+      object: "invoice",
+      number: "ABC-0002",
+      customer: "cus_1",
+      amount_paid: 1210,
+      invoice_pdf: null,
+      billing_reason: "subscription_cycle",
+      subscription: "sub_oud",
+    };
+    expect(await poort().haalFactuur("in_oud")).toMatchObject({ id: "in_oud", abonnementId: "sub_oud" });
+  });
+
+  test("factuurPdf haalt de PDF op met een time-out van 10 seconden", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const pdf = new Uint8Array([37, 80, 68, 70]);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(pdf));
+    try {
+      const factuur = { id: "in_1", nummer: null, klantId: "cus_1", abonnementId: null, bedragBetaald: 0, pdfUrl: "https://pdf.stripe.test/in_1", reden: null };
+      expect(await poort().factuurPdf(factuur)).toEqual(pdf);
+      expect(timeout).toHaveBeenCalledWith(10_000);
+      expect(fetchSpy.mock.calls[0]![1]?.signal).toBeInstanceOf(AbortSignal);
+    } finally {
+      fetchSpy.mockRestore();
+      timeout.mockRestore();
+    }
   });
 
   test("haalPrijs geeft bedrag, munt en interval", async () => {

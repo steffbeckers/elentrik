@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AbonnementOverzicht, Formule } from "../../shared/abonnement";
 import { beheerAbonnement, kiesFormule, verwerkTerug } from "~/abonnement/acties";
-import { dagenTot, datumTekst, paginaWeergave } from "~/abonnement/weergave";
+import { datumTekst, paginaWeergave, statusAantal } from "~/abonnement/weergave";
 import { useAbonnementApi } from "~/composables/useAbonnementApi";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
@@ -52,14 +52,20 @@ const formuleLabel = (formule: Formule) => t(`abonnement.formules.${formule}`);
 const statusTekst = computed(() => {
   const o = overzicht.value;
   const w = weergave.value;
-  if (!o || !w) return "";
+  if (!o || !w || !w.statusSleutel) return "";
   const einde =
     o.reden === "proef" ? o.proefEinde : o.reden === "betaling-mislukt" ? o.achterstalligTot : o.periodeEinde;
-  return t(w.statusSleutel, {
-    dagen: o.proefEinde ? Math.max(dagenTot(o.proefEinde, nu.value), 0) : 0,
-    datum: einde ? datumTekst(einde) : t("abonnement.datumOnbekend"),
-    formule: o.formule ? formuleLabel(o.formule).toLowerCase() : "",
-  });
+  const dagen = statusAantal(o, nu.value);
+  // Het aantal is ook de meervoudsvorm: "nog 1 dag" / "nog 3 dagen".
+  return t(
+    w.statusSleutel,
+    {
+      dagen,
+      datum: einde ? datumTekst(einde) : t("abonnement.datumOnbekend"),
+      formule: o.formule ? formuleLabel(o.formule).toLowerCase() : "",
+    },
+    dagen,
+  );
 });
 
 const bezig = ref<Formule | "beheer" | null>(null);
@@ -105,7 +111,7 @@ const beheer = () => voerUit("beheer", () => beheerAbonnement({ api, ...doorstur
         {{ status === "pending" || status === "idle" ? $t("abonnement.laden.bezig") : "" }}
       </p>
       <div v-else class="space-y-6">
-        <p class="text-lg" data-testid="abonnement-status">{{ statusTekst }}</p>
+        <p v-if="statusTekst" class="text-lg" data-testid="abonnement-status">{{ statusTekst }}</p>
 
         <UAlert
           v-if="weergave.melding === 'lid'"

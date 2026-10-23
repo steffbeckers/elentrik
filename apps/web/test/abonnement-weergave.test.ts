@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import type { AbonnementOverzicht, Toegang } from "../shared/abonnement";
-import { bannerVoor, datumTekst, jaarKorting, prijsTekst, statusTekstSleutel } from "../app/abonnement/weergave";
+import { bannerVoor, datumTekst, jaarKorting, prijsTekst, statusAantal, statusTekstSleutel } from "../app/abonnement/weergave";
 
 const NU = new Date("2026-11-01T12:00:00.000Z");
 const DAG = 24 * 3600 * 1000;
@@ -63,11 +63,11 @@ describe("bannerVoor", () => {
   test("proef: voor een eigenaar op dag 7 wel en op dag 8 niet", () => {
     const op = (dagen: number, uren = 0) =>
       toegang({ proefEinde: new Date(NU.getTime() + dagen * DAG + uren * 3600_000).toISOString() });
-    expect(bannerVoor(op(7), "eigenaar", NU)).toEqual({ soort: "proef", dagen: 7, knop: true });
-    expect(bannerVoor(op(6, 1), "eigenaar", NU)).toEqual({ soort: "proef", dagen: 7, knop: true });
+    expect(bannerVoor(op(7), "eigenaar", NU)).toEqual({ soort: "proef", dagen: 7, knop: true, knopSleutel: "abonnement.banner.kies" });
+    expect(bannerVoor(op(6, 1), "eigenaar", NU)).toEqual({ soort: "proef", dagen: 7, knop: true, knopSleutel: "abonnement.banner.kies" });
     expect(bannerVoor(op(7, 1), "eigenaar", NU)).toBeNull();
     expect(bannerVoor(op(8), "eigenaar", NU)).toBeNull();
-    expect(bannerVoor(op(1), "eigenaar", NU)).toEqual({ soort: "proef", dagen: 1, knop: true });
+    expect(bannerVoor(op(1), "eigenaar", NU)).toEqual({ soort: "proef", dagen: 1, knop: true, knopSleutel: "abonnement.banner.kies" });
   });
 
   test("proef: nooit voor een lid of zonder rol", () => {
@@ -78,21 +78,34 @@ describe("bannerVoor", () => {
   test("betaling: alleen voor een eigenaar, en alleen met schrijfrecht, met de datum", () => {
     const tot = new Date(NU.getTime() + 10 * DAG).toISOString();
     const t = toegang({ reden: "betaling-mislukt", proefEinde: null, achterstalligTot: tot });
-    expect(bannerVoor(t, "eigenaar", NU)).toEqual({ soort: "betaling", tot, knop: true });
+    expect(bannerVoor(t, "eigenaar", NU)).toEqual({ soort: "betaling", tot, knop: true, knopSleutel: "abonnement.betalingRegelen" });
     expect(bannerVoor(t, "lid", NU)).toBeNull();
     // Zonder bekende einddatum blijft de banner, zonder datum.
-    expect(bannerVoor({ ...t, achterstalligTot: null }, "eigenaar", NU)).toEqual({ soort: "betaling", knop: true });
+    expect(bannerVoor({ ...t, achterstalligTot: null }, "eigenaar", NU)).toEqual({ soort: "betaling", knop: true, knopSleutel: "abonnement.betalingRegelen" });
   });
 
   test("alleen-lezen: een lid zonder knop, een eigenaar met knop", () => {
     const t = toegang({ schrijven: false, reden: "proef-voorbij" });
     expect(bannerVoor(t, "lid", NU)).toEqual({ soort: "alleen-lezen", knop: false });
-    expect(bannerVoor(t, "eigenaar", NU)).toEqual({ soort: "alleen-lezen", knop: true });
+    expect(bannerVoor(t, "eigenaar", NU)).toEqual({
+      soort: "alleen-lezen",
+      knop: true,
+      knopSleutel: "abonnement.banner.kies",
+    });
     // Ook een mislukte betaling zonder schrijfrecht is alleen-lezen.
     expect(bannerVoor(toegang({ schrijven: false, reden: "betaling-mislukt" }), "eigenaar", NU)).toEqual({
       soort: "alleen-lezen",
       knop: true,
+      knopSleutel: "abonnement.betalingRegelen",
     });
+  });
+
+  test("alleen-lezen na een mislukte betaling: de knop zegt Betaling regelen; anders Kies een abonnement", () => {
+    const onbetaald = toegang({ schrijven: false, reden: "betaling-mislukt" });
+    expect(bannerVoor(onbetaald, "eigenaar", NU)?.knopSleutel).toBe("abonnement.betalingRegelen");
+    expect(bannerVoor(onbetaald, "lid", NU)).toEqual({ soort: "alleen-lezen", knop: false });
+    const voorbij = toegang({ schrijven: false, reden: "proef-voorbij" });
+    expect(bannerVoor(voorbij, "eigenaar", NU)?.knopSleutel).toBe("abonnement.banner.kies");
   });
 
   test("uit, vrijgesteld en actief: geen banner", () => {
@@ -133,6 +146,37 @@ describe("statusTekstSleutel", () => {
     expect(statusTekstSleutel(overzicht({ schrijven: false, reden: "proef-voorbij" }))).toBe(
       "abonnement.status.proefVoorbij",
     );
+  });
+});
+
+describe("statusAantal (meervoud van de statusregel)", () => {
+  const nl = JSON.parse(readFileSync(new URL("../i18n/locales/nl.json", import.meta.url), "utf8")) as {
+    abonnement: { status: { proef: string } };
+  };
+
+  test("het aantal resterende dagen, nooit negatief", () => {
+    expect(statusAantal(overzicht({ proefEinde: new Date(NU.getTime() + DAG).toISOString() }), NU)).toBe(1);
+    expect(statusAantal(overzicht({ proefEinde: new Date(NU.getTime() + 3 * DAG).toISOString() }), NU)).toBe(3);
+    expect(statusAantal(overzicht({ proefEinde: new Date(NU.getTime() - DAG).toISOString() }), NU)).toBe(0);
+    expect(statusAantal(overzicht({ proefEinde: null }), NU)).toBe(0);
+  });
+
+  test("de proeftekst heeft een enkelvoud en een meervoud", () => {
+    const [een, meer] = nl.abonnement.status.proef.split("|").map((s) => s.trim());
+    expect(een).toContain("nog {dagen} dag,");
+    expect(meer).toContain("nog {dagen} dagen,");
+  });
+});
+
+describe("de exporttekst in alleen-lezen", () => {
+  test("stelt niet voor te betalen om te exporteren: de laatst opgeslagen versie kan er wel uit", () => {
+    const nl = JSON.parse(readFileSync(new URL("../i18n/locales/nl.json", import.meta.url), "utf8")) as {
+      editor: { export: { geblokkeerd: Record<string, string> } };
+    };
+    const tekst = nl.editor.export.geblokkeerd["alleen-lezen"]!;
+    expect(tekst).toContain("laatst opgeslagen versie");
+    expect(tekst).toContain("alleen lokaal");
+    expect(tekst).not.toMatch(/na het kiezen van een abonnement/);
   });
 });
 

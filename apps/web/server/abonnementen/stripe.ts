@@ -3,7 +3,8 @@
 //
 // De API-versie is vastgepind op die van de geinstalleerde SDK (`Stripe.API_VERSION`). In deze
 // versie staat `current_period_end` op de abonnementsitems en wijst de factuur via
-// `parent.subscription_details.subscription` naar zijn abonnement.
+// `parent.subscription_details.subscription` naar zijn abonnement (oudere vormen met
+// `subscription` bovenaan worden ook gelezen).
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
@@ -55,6 +56,9 @@ export interface StripePoort {
   haalPrijs(id: string): Promise<StripePrijs>;
 }
 
+/** Hoe lang een Stripe-aanroep (of het ophalen van een factuur-PDF) hoogstens duurt. */
+const STRIPE_TIMEOUT_MS = 10_000;
+
 type Id = string | { id: string } | null | undefined;
 
 function idVan(waarde: Id): string | null {
@@ -84,7 +88,8 @@ function naarFactuur(f: Stripe.Invoice): StripeFactuur {
     id: f.id ?? "",
     nummer: f.number,
     klantId: idVan(f.customer) ?? "",
-    abonnementId: idVan(f.parent?.subscription_details?.subscription),
+    // Nieuwe vorm: parent.subscription_details; oudere API-versies: `subscription` bovenaan.
+    abonnementId: idVan(f.parent?.subscription_details?.subscription ?? (f as { subscription?: Id }).subscription),
     bedragBetaald: f.amount_paid,
     pdfUrl: f.invoice_pdf ?? null,
     reden: f.billing_reason ?? null,
@@ -95,6 +100,7 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
   const basis = config.apiBasis;
   const stripe = new Stripe(config.sleutel, {
     apiVersion: Stripe.API_VERSION,
+    timeout: STRIPE_TIMEOUT_MS,
     ...(basis
       ? {
           host: basis.hostname,
@@ -180,7 +186,7 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
 
     async factuurPdf(factuur) {
       if (!factuur.pdfUrl) throw new Error("Deze factuur heeft geen PDF");
-      const antwoord = await fetch(factuur.pdfUrl);
+      const antwoord = await fetch(factuur.pdfUrl, { signal: AbortSignal.timeout(STRIPE_TIMEOUT_MS) });
       if (!antwoord.ok) throw new Error(`De factuur-PDF is niet op te halen (${antwoord.status})`);
       return new Uint8Array(await antwoord.arrayBuffer());
     },
@@ -235,7 +241,7 @@ export function leesWebhook(rauw: string, handtekening: string, geheim: string):
       reden = o.cancellation_details?.reason ?? null;
       break;
     case "invoice":
-      abonnementId = idVan(o.parent?.subscription_details?.subscription);
+      abonnementId = idVan(o.parent?.subscription_details?.subscription ?? o.subscription);
       reden = o.billing_reason ?? null;
       break;
     case "checkout.session":

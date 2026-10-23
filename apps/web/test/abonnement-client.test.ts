@@ -89,7 +89,8 @@ describe("de pagina", () => {
 
   test("abonnementen uit: alleen de melding dat betalen nog niet is ingesteld", () => {
     const w = paginaWeergave(overzicht({ ingeschakeld: false, reden: "uit", schrijven: true, prijzen: null }), "eigenaar");
-    expect(w.statusSleutel).toBe("abonnement.status.uit");
+    // De zin "Betalen is nog niet ingesteld." staat één keer: in de melding, niet ook in de statusregel.
+    expect(w.statusSleutel).toBeNull();
     expect(w.melding).toBe("uit");
     expect(w.kaarten).toEqual([]);
     expect(w.beheer).toBeNull();
@@ -199,6 +200,7 @@ describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
       },
     ],
     actieveOrganisatieId: "o1",
+    abonnementenIngeschakeld: true,
   };
 
   beforeEach(() => {

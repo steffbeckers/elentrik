@@ -29,6 +29,8 @@ export type Mij = {
   gebruiker: Gebruiker & { proefGebruikt: boolean };
   organisaties: Organisatie[];
   actieveOrganisatieId: string | null;
+  /** Staan abonnementen aan? Uit is "zoals vóór plan 7". */
+  abonnementenIngeschakeld: boolean;
 };
 
 export type SessieApi = {
@@ -49,6 +51,8 @@ export const useSessieStore = defineStore("sessie", () => {
   const gebruiker = ref<SessieGebruiker | null>(null);
   const organisaties = ref<Organisatie[]>([]);
   const actieveOrganisatieId = ref<string | null>(null);
+  /** Staan abonnementen aan op de server? */
+  const abonnementenIngeschakeld = ref(false);
   /** Werd /api/mij al (met succes, of met 401) gelezen? */
   const geladen = ref(false);
 
@@ -68,6 +72,8 @@ export const useSessieStore = defineStore("sessie", () => {
   );
   /** Gebruikte deze gebruiker zijn gratis proefperiode al (voor een eerder eigen bedrijf)? */
   const proefGebruikt = computed(() => gebruiker.value?.proefGebruikt ?? false);
+  /** Moet het formulier voor een nieuw bedrijf zeggen dat er geen gratis proef is? Alleen met abonnementen aan. */
+  const toonGeenProefHint = computed(() => abonnementenIngeschakeld.value && proefGebruikt.value);
   /** Wat `bestemming` van de sessie nodig heeft: null is niet ingelogd. */
   const sessieInfo = computed<SessieInfo>(() =>
     gebruiker.value ? { actieveOrganisatieId: actieveOrganisatieId.value } : null,
@@ -86,6 +92,7 @@ export const useSessieStore = defineStore("sessie", () => {
     gebruiker.value = null;
     organisaties.value = [];
     actieveOrganisatieId.value = null;
+    abonnementenIngeschakeld.value = false;
   }
 
   /**
@@ -99,6 +106,7 @@ export const useSessieStore = defineStore("sessie", () => {
       gebruiker.value = mij.gebruiker;
       organisaties.value = mij.organisaties;
       actieveOrganisatieId.value = mij.actieveOrganisatieId;
+      abonnementenIngeschakeld.value = mij.abonnementenIngeschakeld;
     } catch (fout) {
       if (foutStatus(fout) !== 401) {
         geladen.value = false;
@@ -163,6 +171,8 @@ export const useSessieStore = defineStore("sessie", () => {
     rol,
     toegang,
     proefGebruikt,
+    abonnementenIngeschakeld,
+    toonGeenProefHint,
     sessieInfo,
     gebruikApi,
     laad,

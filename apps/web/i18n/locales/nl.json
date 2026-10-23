@@ -280,7 +280,7 @@
         "onbewaard": "Het project kon niet opgeslagen worden. Exporteren kan zodra het opgeslagen is.",
         "conflict": "Het project is intussen elders gewijzigd. Los eerst het conflict op.",
         "fout": "De server weigerde het project op te slaan. Probeer opnieuw op te slaan en exporteer daarna.",
-        "alleen-lezen": "Je bedrijf heeft geen actief abonnement, dus je laatste wijzigingen staan alleen lokaal. Exporteren kan zodra ze opgeslagen zijn, na het kiezen van een abonnement."
+        "alleen-lezen": "Je bedrijf heeft geen actief abonnement, dus je laatste wijzigingen staan alleen lokaal en komen niet in de PDF. Open het project opnieuw om de laatst opgeslagen versie te exporteren."
       },
       "onderdelen": {
         "titel": "Onderdelen",
@@ -587,7 +587,7 @@
     "status": {
       "uit": "Betalen is nog niet ingesteld.",
       "vrijgesteld": "Je bedrijf hoeft niet te betalen voor Elentrik.",
-      "proef": "Gratis proefperiode: nog {dagen} dagen, tot {datum}.",
+      "proef": "Gratis proefperiode: nog {dagen} dag, tot {datum}. | Gratis proefperiode: nog {dagen} dagen, tot {datum}.",
       "actief": "Je hebt een {formule} abonnement. Volgende verlenging op {datum}.",
       "opgezegd": "Je abonnement is opgezegd en loopt nog tot {datum}.",
       "betalingMislukt": "Je laatste betaling is mislukt.",

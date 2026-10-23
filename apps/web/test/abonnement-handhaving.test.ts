@@ -497,6 +497,42 @@ describe("synchroniseerKlant", () => {
     });
   });
 
+  test("overlappende synchronisaties van één klant lopen na elkaar: de laatste Stripe-stand wint", async () => {
+    const organisatieId = await klant("cus_overlap");
+    // A leest vroeg (verouderd: past_due) maar krijgt zijn antwoord pas laat; B leest daarna en ziet active.
+    const verouderd = maakNepStripe();
+    verouderd.abonnementen.set("cus_overlap", [sub("sub_o", "past_due", 5, { klantId: "cus_overlap" })]);
+    const vers = maakNepStripe();
+    vers.abonnementen.set("cus_overlap", [sub("sub_o", "active", 5, { klantId: "cus_overlap" })]);
+    let open!: () => void;
+    const poort = new Promise<void>((klaar) => (open = klaar));
+    const lees = verouderd.abonnementenVanKlant.bind(verouderd);
+    verouderd.abonnementenVanKlant = async (klantId) => {
+      const antwoord = await lees(klantId);
+      await poort;
+      return antwoord;
+    };
+
+    const a = synchroniseerKlant(db, verouderd, PRIJZEN, "cus_overlap", new Date("2026-10-01T10:00:00Z"));
+    await new Promise((klaar) => setTimeout(klaar, 20));
+    const b = synchroniseerKlant(db, vers, PRIJZEN, "cus_overlap", new Date("2026-10-01T10:00:05Z"));
+    await new Promise((klaar) => setTimeout(klaar, 50));
+    open();
+    await Promise.all([a, b]);
+
+    expect(await haalAbonnementRij(db, organisatieId)).toMatchObject({ status: "active", achterstalligSinds: null });
+  });
+
+  test("binnen een bestaande transactie (zoals bij startCheckout) werkt het als savepoint", async () => {
+    const stripe = maakNepStripe();
+    const organisatieId = await klant("cus_tx");
+    stripe.abonnementen.set("cus_tx", [sub("sub_t", "active", 1, { klantId: "cus_tx" })]);
+    await db.transaction(async (tx) => {
+      expect(await synchroniseerKlant(tx as unknown as Db, stripe, PRIJZEN, "cus_tx")).toBe("bijgewerkt");
+    });
+    expect(await haalAbonnementRij(db, organisatieId)).toMatchObject({ status: "active", stripeAbonnementId: "sub_t" });
+  });
+
   test("een dubbel abonnement waarschuwt met alleen de organisatie", async () => {
     const waarschuw = vi.spyOn(console, "warn").mockImplementation(() => {});
     const stripe = maakNepStripe();

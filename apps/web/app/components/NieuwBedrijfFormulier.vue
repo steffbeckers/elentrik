@@ -54,7 +54,7 @@ async function maak() {
       <UFormField
         name="naam"
         :label="$t('geenOrganisatie.nieuw.naam')"
-        :hint="sessie.proefGebruikt ? $t('geenOrganisatie.nieuw.geenProef') : undefined"
+        :hint="sessie.toonGeenProefHint ? $t('geenOrganisatie.nieuw.geenProef') : undefined"
         required
       >
         <UInput

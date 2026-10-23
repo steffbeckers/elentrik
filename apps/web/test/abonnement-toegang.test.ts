@@ -151,6 +151,16 @@ describe("kiesGevolgdAbonnement", () => {
     }
   });
 
+  test("een onbekende status verliest van elke bekende, ook van incomplete_expired", () => {
+    const onbekend = rij("nieuwe_status" as AbonnementStatus, nieuw);
+    const laatste = rij("incomplete_expired", oud);
+    expect(kiesGevolgdAbonnement([onbekend, laatste]).gevolgd).toBe(laatste);
+    expect(kiesGevolgdAbonnement([laatste, onbekend]).gevolgd).toBe(laatste);
+    // Alleen onbekenden: nog steeds het nieuwste.
+    const ouder = rij("raar" as AbonnementStatus, oud);
+    expect(kiesGevolgdAbonnement([ouder, onbekend]).gevolgd).toBe(onbekend);
+  });
+
   test("leeg: niets", () => {
     expect(kiesGevolgdAbonnement([])).toEqual({ gevolgd: null, dubbel: false });
   });

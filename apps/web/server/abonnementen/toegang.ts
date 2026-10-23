@@ -67,6 +67,12 @@ const VOLGORDE: readonly AbonnementStatus[] = [
   "incomplete_expired",
 ];
 
+/** De plaats in de volgorde; een onbekende status (nieuw bij Stripe) komt achter alle bekende. */
+function rang(status: AbonnementStatus): number {
+  const plaats = VOLGORDE.indexOf(status);
+  return plaats === -1 ? VOLGORDE.length : plaats;
+}
+
 const LEVEND: ReadonlySet<AbonnementStatus> = new Set(["active", "trialing", "past_due"]);
 
 /**
@@ -83,7 +89,7 @@ export function kiesGevolgdAbonnement<T extends { status: AbonnementStatus; aang
       gevolgd = kandidaat;
       continue;
     }
-    const verschil = VOLGORDE.indexOf(kandidaat.status) - VOLGORDE.indexOf(gevolgd.status);
+    const verschil = rang(kandidaat.status) - rang(gevolgd.status);
     if (verschil < 0 || (verschil === 0 && kandidaat.aangemaakt.getTime() > gevolgd.aangemaakt.getTime())) {
       gevolgd = kandidaat;
     }

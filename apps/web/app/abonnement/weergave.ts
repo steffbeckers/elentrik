@@ -50,7 +50,12 @@ export type Banner = {
   /** Bij "betaling": tot wanneer de betaling geregeld moet zijn (ISO), als dat bekend is. */
   tot?: string;
   knop: boolean;
+  /** De i18n-sleutel van de knop (alleen met `knop`). */
+  knopSleutel?: "abonnement.banner.kies" | "abonnement.betalingRegelen";
 };
+
+const KIES = "abonnement.banner.kies";
+const REGELEN = "abonnement.betalingRegelen";
 
 /**
  * Welke banner bovenaan de app past bij de toegang van de actieve organisatie, of null.
@@ -60,18 +65,27 @@ export type Banner = {
  */
 export function bannerVoor(toegang: Toegang, rol: Rol | null, nu: Date): Banner | null {
   const eigenaar = rol === "eigenaar";
-  if (!toegang.schrijven) return { soort: "alleen-lezen", knop: eigenaar };
+  if (!toegang.schrijven) {
+    if (!eigenaar) return { soort: "alleen-lezen", knop: false };
+    // Na een mislukte betaling kiest de eigenaar niets nieuws: hij regelt de betaling.
+    return { soort: "alleen-lezen", knop: true, knopSleutel: toegang.reden === "betaling-mislukt" ? REGELEN : KIES };
+  }
   if (!eigenaar) return null;
   if (toegang.reden === "betaling-mislukt") {
     return toegang.achterstalligTot
-      ? { soort: "betaling", tot: toegang.achterstalligTot, knop: true }
-      : { soort: "betaling", knop: true };
+      ? { soort: "betaling", tot: toegang.achterstalligTot, knop: true, knopSleutel: REGELEN }
+      : { soort: "betaling", knop: true, knopSleutel: REGELEN };
   }
   if (toegang.reden === "proef" && toegang.proefEinde !== null) {
     const dagen = dagenTot(toegang.proefEinde, nu);
-    if (dagen >= 1 && dagen <= PROEF_BANNER_DAGEN) return { soort: "proef", dagen, knop: true };
+    if (dagen >= 1 && dagen <= PROEF_BANNER_DAGEN) return { soort: "proef", dagen, knop: true, knopSleutel: KIES };
   }
   return null;
+}
+
+/** Het aantal resterende proefdagen voor de statusregel (ook de meervoudsvorm), nooit negatief. */
+export function statusAantal(o: AbonnementOverzicht, nu: Date): number {
+  return o.proefEinde ? Math.max(dagenTot(o.proefEinde, nu), 0) : 0;
 }
 
 /** De i18n-sleutel voor de statusregel op /abonnement. */
@@ -107,7 +121,8 @@ const LOPEND: ReadonlySet<AbonnementStatus> = new Set([
 ]);
 
 export type PaginaWeergave = {
-  statusSleutel: string;
+  /** De sleutel van de statusregel; null als de melding al zegt wat er te zeggen valt (abonnementen uit). */
+  statusSleutel: string | null;
   /** Wat de pagina in plaats van knoppen zegt: een lid, abonnementen uit, of prijzen die ontbreken. */
   melding: "lid" | "uit" | "prijzen" | null;
   /** De kaarten Maandelijks en Jaarlijks, voor een eigenaar zonder lopend abonnement. */
@@ -119,7 +134,8 @@ export type PaginaWeergave = {
 /** Wat /abonnement toont voor dit overzicht en deze rol. */
 export function paginaWeergave(o: AbonnementOverzicht, rol: Rol | null): PaginaWeergave {
   const weergave: PaginaWeergave = { statusSleutel: statusTekstSleutel(o), melding: null, kaarten: [], beheer: null };
-  if (!o.ingeschakeld) return { ...weergave, melding: "uit" };
+  // "Betalen is nog niet ingesteld." staat één keer: in de melding, niet ook in de statusregel.
+  if (!o.ingeschakeld) return { ...weergave, statusSleutel: null, melding: "uit" };
   if (rol !== "eigenaar") return { ...weergave, melding: "lid" };
   if (o.status !== null && LOPEND.has(o.status)) {
     const betalingRegelen = o.status === "past_due" || o.status === "unpaid";

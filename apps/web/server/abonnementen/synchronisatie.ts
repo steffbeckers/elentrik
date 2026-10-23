@@ -30,13 +30,13 @@ export async function synchroniseerKlant(
     .where(eq(abonnementen.stripeKlantId, klantId));
   if (!bekend) return "onbekend";
 
-  const lijst = await stripe.abonnementenVanKlant(klantId);
-  const { gevolgd, dubbel } = kiesGevolgdAbonnement(lijst);
-
-  // De rij vergrendelen: twee gelijktijdige synchronisaties zetten `achterstalligSinds` niet allebei.
+  // De rij vergrendelen en pas daarna bij Stripe lezen: overlappende synchronisaties van één klant
+  // lopen zo na elkaar en de laatste leest de laatste stand (ook zetten ze `achterstalligSinds`
+  // niet allebei). Binnen een transactie van de aanroeper (startCheckout) is dit een savepoint.
   return db.transaction(async (tx) => {
     const [rij] = await tx.select().from(abonnementen).where(eq(abonnementen.id, bekend.id)).for("update");
     if (!rij) return "onbekend";
+    const { gevolgd, dubbel } = kiesGevolgdAbonnement(await stripe.abonnementenVanKlant(klantId));
     if (dubbel) console.warn("dubbel abonnement", { organisatieId: rij.organisatieId });
 
     const achterstallig = gevolgd?.status === "past_due";
