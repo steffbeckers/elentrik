@@ -7,6 +7,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth, zetAuth } from "../server/auth";
+import { zetAbonnementen } from "../server/abonnementen/config";
 import { type Db, zetDb } from "../server/db";
 import { account, invitation, member, organization, session, user, verification } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
@@ -191,6 +192,8 @@ beforeAll(async () => {
   vi.stubEnv("BETTER_AUTH_SECRET", "vitest-geheim-alleen-voor-tests-0123456789abcdef");
   vi.stubEnv("BETTER_AUTH_URL", "http://127.0.0.1:3000");
   zetVerzender(verzamelaar);
+  // Abonnementen uit, ongeacht de omgeving van de ontwikkelaar (STRIPE_GEHEIME_SLEUTEL).
+  zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
   db = await maakTestDb();
   auth = maakAuth(db);
   zetDb(db);
@@ -218,6 +221,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   await new Promise((klaar) => server?.close(klaar));
+  zetAbonnementen(undefined);
   vi.unstubAllEnvs();
 });
 

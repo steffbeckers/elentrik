@@ -25,6 +25,24 @@ export type ToegangReden =
 
 export type Toegang = { schrijven: boolean; reden: ToegangReden; proefEinde: string | null };
 
+/** Een prijs van Stripe: het bedrag in de kleinste munteenheid (cent). */
+export type Prijs = { bedrag: number; munt: string; interval: "month" | "year" };
+
+/** Wat de client over het abonnement van de actieve organisatie mag weten (geen Stripe-id's). */
+export type AbonnementOverzicht = {
+  ingeschakeld: boolean;
+  schrijven: boolean;
+  reden: ToegangReden;
+  proefEinde: string | null;
+  status: AbonnementStatus | null;
+  formule: Formule | null;
+  periodeEinde: string | null;
+  opgezegd: boolean;
+  heeftKlant: boolean;
+  /** Null als Stripe de prijzen niet geeft (of abonnementen uit zijn). */
+  prijzen: { maand: Prijs; jaar: Prijs } | null;
+};
+
 // Foutcodes in `data.code`.
 export const ABONNEMENT_VEREIST = "ABONNEMENT_VEREIST";
 export const ABONNEMENT_BESTAAT = "ABONNEMENT_BESTAAT";

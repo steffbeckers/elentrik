@@ -19,11 +19,12 @@ import {
 } from "h3";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth, zetAuth } from "../server/auth";
+import { type AbonnementConfig, zetAbonnementen } from "../server/abonnementen/config";
 import { bewaarBedrijf, bewaarLogo, haalBedrijf } from "../server/bedrijf/repo";
 import { maakLokaleOpslag, zetOpslag, type BestandOpslag } from "../server/bestanden/opslag";
 import { bewaarBestand, haalBestand } from "../server/bestanden/repo";
 import { type Db, zetDb } from "../server/db";
-import { bedrijfsinstellingen, bestanden, invitation, member, projecten, session, user } from "../server/db/schema";
+import { abonnementen, bedrijfsinstellingen, bestanden, invitation, member, projecten, session, user } from "../server/db/schema";
 import { maakExport } from "../server/exports/repo";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
 import { registratieLimiet } from "../server/organisaties/leden";
@@ -34,6 +35,7 @@ import { VERWACHTE_GEBRUIKER_HEADER } from "../shared/gebruiker";
 import { ACTIEVE_ORGANISATIE_HEADER } from "../shared/organisatie";
 import type { ExportInvoer } from "../shared/exports";
 import { maakTestDb } from "./db";
+import { maakNepStripe } from "./nep-stripe";
 import { apiPad, beveiligdeRoutebestanden, PUBLIEKE_ROUTES, routeUit } from "./routes";
 
 // Gotenberg draait niet in Vitest: de PDF-dienst geeft een minimale geldige PDF terug.
@@ -43,6 +45,18 @@ vi.mock("../server/pdf/gotenberg", async (origineel) => ({
 }));
 
 const WACHTWOORD = "lang-genoeg-1";
+
+// Abonnementen aan, met de nep-poort: de testorganisaties zitten binnen hun proef, dus de
+// bestaande rijen van de tabel blijven gelijk.
+const INGESCHAKELD: AbonnementConfig = {
+  ingeschakeld: true,
+  sleutel: "sk_test_nep",
+  webhookGeheim: null,
+  prijzen: { maand: "price_maand", jaar: "price_jaar" },
+  boekhoudingInbox: null,
+  apiBasis: null,
+};
+const nepStripe = maakNepStripe();
 
 let db: Db;
 let auth: Auth;
@@ -225,6 +239,7 @@ beforeAll(async () => {
   vi.stubEnv("BETTER_AUTH_SECRET", "vitest-geheim-alleen-voor-tests-0123456789abcdef");
   vi.stubEnv("BETTER_AUTH_URL", "http://127.0.0.1:3000");
   zetVerzender(verzamelaar);
+  zetAbonnementen({ config: INGESCHAKELD, stripe: nepStripe });
   db = await maakTestDb();
   auth = maakAuth(db);
   zetDb(db);
@@ -273,6 +288,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await new Promise((klaar) => server?.close(klaar));
   await rm(map, { recursive: true, force: true });
+  zetAbonnementen(undefined);
   vi.unstubAllEnvs();
 });
 
@@ -300,6 +316,15 @@ type Rij = {
 
 async function projectVerzoek(methode: string, achter = "", extra: Partial<Verzoek> = {}): Promise<Verzoek> {
   return { methode, pad: `/api/projecten/${await projectIn(orgA)}${achter}`, ...extra };
+}
+
+/** Elke testorganisatie krijgt een Stripe-klant (als ze er nog geen heeft); geeft die van A. */
+async function zorgVoorKlanten(): Promise<string> {
+  for (const [org, klant] of [[orgA, "cus_toegang_a"], [orgB, "cus_toegang_b"]] as const) {
+    await db.insert(abonnementen).values({ organisatieId: org, stripeKlantId: klant }).onConflictDoNothing();
+  }
+  const [rij] = await db.select({ klantId: abonnementen.stripeKlantId }).from(abonnementen).where(eq(abonnementen.organisatieId, orgA));
+  return rij!.klantId;
 }
 
 const TABEL: Record<string, Rij> = {
@@ -404,6 +429,40 @@ const TABEL: Record<string, Rij> = {
     zonderOrganisatie: 200,
     andereOrganisatie: 200,
     lid: 200,
+    eigenaar: 200,
+  },
+  "GET /api/abonnement": {
+    // Het overzicht van de actieve organisatie: B ziet zijn eigen overzicht, nooit dat van A.
+    verzoek: async () => ({ methode: "GET", pad: "/api/abonnement" }),
+    andereOrganisatie: 200,
+    lid: 200,
+    eigenaar: 200,
+  },
+  "POST /api/abonnement/checkout": {
+    // Alleen een eigenaar, voor de actieve organisatie: B start een Checkout voor B.
+    verzoek: async () => ({ methode: "POST", pad: "/api/abonnement/checkout", json: { formule: "maand" } }),
+    andereOrganisatie: 200,
+    lid: 403,
+    eigenaar: 200,
+  },
+  "POST /api/abonnement/portaal": {
+    verzoek: async () => {
+      await zorgVoorKlanten();
+      return { methode: "POST", pad: "/api/abonnement/portaal" };
+    },
+    andereOrganisatie: 200,
+    lid: 403,
+    eigenaar: 200,
+  },
+  "POST /api/abonnement/synchroniseer": {
+    // Een sessie van A's klant: A synchroniseert (200), B krijgt 404 omdat de sessie niet van B is.
+    verzoek: async () => {
+      const klantA = await zorgVoorKlanten();
+      nepStripe.checkouts.set("cs_toegang_a", { id: "cs_toegang_a", klantId: klantA, abonnementId: null });
+      return { methode: "POST", pad: "/api/abonnement/synchroniseer", json: { sessie: "cs_toegang_a" } };
+    },
+    andereOrganisatie: 404,
+    lid: 403,
     eigenaar: 200,
   },
   "POST /api/organisaties/actief": {
