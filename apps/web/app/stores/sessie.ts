@@ -64,7 +64,7 @@ export const useSessieStore = defineStore("sessie", () => {
   const rol = computed<Rol | null>(() => actieveOrganisatie.value?.rol ?? null);
   /** De toegang van de actieve organisatie; zonder organisatie geen beperking. */
   const toegang = computed<Toegang>(
-    () => actieveOrganisatie.value?.toegang ?? { schrijven: true, reden: "uit", proefEinde: null },
+    () => actieveOrganisatie.value?.toegang ?? { schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null },
   );
   /** Gebruikte deze gebruiker zijn gratis proefperiode al (voor een eerder eigen bedrijf)? */
   const proefGebruikt = computed(() => gebruiker.value?.proefGebruikt ?? false);

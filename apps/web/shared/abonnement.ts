@@ -23,7 +23,13 @@ export type ToegangReden =
   | "proef-voorbij"
   | "beeindigd";
 
-export type Toegang = { schrijven: boolean; reden: ToegangReden; proefEinde: string | null };
+export type Toegang = {
+  schrijven: boolean;
+  reden: ToegangReden;
+  proefEinde: string | null;
+  /** ISO-tijdstip waarop het schrijfrecht bij een mislukte betaling (`past_due`) vervalt; anders null. */
+  achterstalligTot: string | null;
+};
 
 /** Een prijs van Stripe: het bedrag in de kleinste munteenheid (cent). */
 export type Prijs = { bedrag: number; munt: string; interval: "month" | "year" };
@@ -34,6 +40,8 @@ export type AbonnementOverzicht = {
   schrijven: boolean;
   reden: ToegangReden;
   proefEinde: string | null;
+  /** Zie `Toegang.achterstalligTot`. */
+  achterstalligTot: string | null;
   status: AbonnementStatus | null;
   formule: Formule | null;
   periodeEinde: string | null;

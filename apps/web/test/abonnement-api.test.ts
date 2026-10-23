@@ -481,6 +481,24 @@ describe("GET /api/abonnement", () => {
     const lid = (await (await overzicht(lidA.cookie)).json()) as AbonnementOverzicht;
     expect(lid).toMatchObject({ heeftKlant: false, status: null, formule: null, reden: "proef", schrijven: true });
     expect(lid.proefEinde).not.toBeNull();
+    expect(lid.achterstalligTot).toBeNull();
+  });
+
+  test("past_due: achterstalligTot is achterstalligSinds + 14 dagen", async () => {
+    const sinds = new Date(Date.now() - 2 * 24 * 3600 * 1000);
+    await db.insert(abonnementen).values({
+      organisatieId: eigenaarA.organisatieId,
+      stripeKlantId: "cus_overzicht_achter",
+      status: "past_due",
+      formule: "maand",
+      achterstalligSinds: sinds,
+    });
+    const lid = (await (await overzicht(lidA.cookie)).json()) as AbonnementOverzicht;
+    expect(lid).toMatchObject({
+      reden: "betaling-mislukt",
+      schrijven: true,
+      achterstalligTot: new Date(sinds.getTime() + 14 * 24 * 3600 * 1000).toISOString(),
+    });
   });
 
   test("als Stripe de prijzen niet geeft: prijzen null en toch 200", async () => {
@@ -541,6 +559,7 @@ describe("abonnementen uit", () => {
       schrijven: true,
       reden: "uit",
       proefEinde: null,
+      achterstalligTot: null,
       status: null,
       formule: null,
       periodeEinde: null,

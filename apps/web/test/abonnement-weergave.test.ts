@@ -1,12 +1,19 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import type { AbonnementOverzicht, Toegang } from "../shared/abonnement";
-import { bannerVoor, jaarKorting, prijsTekst, statusTekstSleutel } from "../app/abonnement/weergave";
+import { bannerVoor, datumTekst, jaarKorting, prijsTekst, statusTekstSleutel } from "../app/abonnement/weergave";
 
 const NU = new Date("2026-11-01T12:00:00.000Z");
 const DAG = 24 * 3600 * 1000;
 
 function toegang(wijziging: Partial<Toegang> = {}): Toegang {
-  return { schrijven: true, reden: "proef", proefEinde: new Date(NU.getTime() + 3 * DAG).toISOString(), ...wijziging };
+  return {
+    schrijven: true,
+    reden: "proef",
+    proefEinde: new Date(NU.getTime() + 3 * DAG).toISOString(),
+    achterstalligTot: null,
+    ...wijziging,
+  };
 }
 
 function overzicht(wijziging: Partial<AbonnementOverzicht> = {}): AbonnementOverzicht {
@@ -15,6 +22,7 @@ function overzicht(wijziging: Partial<AbonnementOverzicht> = {}): AbonnementOver
     schrijven: true,
     reden: "proef",
     proefEinde: new Date(NU.getTime() + 3 * DAG).toISOString(),
+    achterstalligTot: null,
     status: null,
     formule: null,
     periodeEinde: null,
@@ -67,10 +75,13 @@ describe("bannerVoor", () => {
     expect(bannerVoor(toegang(), null, NU)).toBeNull();
   });
 
-  test("betaling: alleen voor een eigenaar, en alleen met schrijfrecht", () => {
-    const t = toegang({ reden: "betaling-mislukt", proefEinde: null });
-    expect(bannerVoor(t, "eigenaar", NU)).toEqual({ soort: "betaling", knop: true });
+  test("betaling: alleen voor een eigenaar, en alleen met schrijfrecht, met de datum", () => {
+    const tot = new Date(NU.getTime() + 10 * DAG).toISOString();
+    const t = toegang({ reden: "betaling-mislukt", proefEinde: null, achterstalligTot: tot });
+    expect(bannerVoor(t, "eigenaar", NU)).toEqual({ soort: "betaling", tot, knop: true });
     expect(bannerVoor(t, "lid", NU)).toBeNull();
+    // Zonder bekende einddatum blijft de banner, zonder datum.
+    expect(bannerVoor({ ...t, achterstalligTot: null }, "eigenaar", NU)).toEqual({ soort: "betaling", knop: true });
   });
 
   test("alleen-lezen: een lid zonder knop, een eigenaar met knop", () => {
@@ -85,7 +96,7 @@ describe("bannerVoor", () => {
   });
 
   test("uit, vrijgesteld en actief: geen banner", () => {
-    expect(bannerVoor({ schrijven: true, reden: "uit", proefEinde: null }, "eigenaar", NU)).toBeNull();
+    expect(bannerVoor({ schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null }, "eigenaar", NU)).toBeNull();
     expect(bannerVoor(toegang({ reden: "vrijgesteld" }), "eigenaar", NU)).toBeNull();
     expect(bannerVoor(toegang({ reden: "actief" }), "eigenaar", NU)).toBeNull();
   });
@@ -102,14 +113,46 @@ describe("statusTekstSleutel", () => {
     expect(statusTekstSleutel(overzicht({ reden: "actief", status: "active", opgezegd: true }))).toBe(
       "abonnement.status.opgezegd",
     );
+    expect(
+      statusTekstSleutel(
+        overzicht({ reden: "betaling-mislukt", status: "past_due", achterstalligTot: NU.toISOString() }),
+      ),
+    ).toBe("abonnement.status.betalingMisluktTot");
+    // Zonder schrijfrecht of zonder einddatum geen "vóór {datum}".
     expect(statusTekstSleutel(overzicht({ reden: "betaling-mislukt", status: "past_due" }))).toBe(
       "abonnement.status.betalingMislukt",
     );
+    expect(
+      statusTekstSleutel(
+        overzicht({ schrijven: false, reden: "betaling-mislukt", status: "unpaid", achterstalligTot: NU.toISOString() }),
+      ),
+    ).toBe("abonnement.status.betalingMislukt");
     expect(statusTekstSleutel(overzicht({ schrijven: false, reden: "beeindigd", status: "canceled" }))).toBe(
       "abonnement.status.beeindigd",
     );
     expect(statusTekstSleutel(overzicht({ schrijven: false, reden: "proef-voorbij" }))).toBe(
       "abonnement.status.proefVoorbij",
+    );
+  });
+});
+
+describe("de teksten met de betaaldatum", () => {
+  const nl = JSON.parse(readFileSync(new URL("../i18n/locales/nl.json", import.meta.url), "utf8")) as {
+    abonnement: { banner: { betaling: string }; status: { betalingMisluktTot: string } };
+  };
+  const vul = (tekst: string, datum: string) => tekst.replace("{datum}", datum);
+
+  test("datumTekst geeft een datum in het Nederlands", () => {
+    expect(gewoon(datumTekst("2026-11-14T10:00:00.000Z"))).toBe("14 november 2026");
+  });
+
+  test("de banner en de statusregel gebruiken de zin uit de spec met de datum", () => {
+    const datum = datumTekst("2026-11-14T10:00:00.000Z");
+    expect(vul(nl.abonnement.banner.betaling, datum)).toBe(
+      "Je laatste betaling is mislukt. Regel je betaling vóór 14 november 2026.",
+    );
+    expect(vul(nl.abonnement.status.betalingMisluktTot, datum)).toBe(
+      "Je laatste betaling is mislukt. Regel je betaling vóór 14 november 2026.",
     );
   });
 });

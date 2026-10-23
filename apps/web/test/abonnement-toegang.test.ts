@@ -1,7 +1,7 @@
 // De toegangsbeslissing en de keuze van het gevolgde abonnement: pure functies, geen database.
 import { describe, expect, test } from "vitest";
 import type { AbonnementStatus } from "../shared/abonnement";
-import { ACHTERSTALLIG_DAGEN, bepaalToegang, kiesGevolgdAbonnement, PROEF_DAGEN } from "../server/abonnementen/toegang";
+import { achterstalligTot, ACHTERSTALLIG_DAGEN, bepaalToegang, kiesGevolgdAbonnement, PROEF_DAGEN } from "../server/abonnementen/toegang";
 
 const nu = new Date("2026-11-01T12:00:00Z");
 const DAG = 24 * 3600 * 1000;
@@ -88,6 +88,24 @@ describe("bepaalToegang", () => {
         expect(toegang({ proefEinde, abonnement: met(status) })).toEqual({ schrijven: true, reden: "proef" });
       },
     );
+  });
+});
+
+describe("achterstalligTot", () => {
+  const sinds = new Date("2026-10-01T10:00:00Z");
+
+  test("past_due met een bekend begin: begin + 14 dagen", () => {
+    expect(achterstalligTot({ status: "past_due", achterstalligSinds: sinds })?.toISOString()).toBe(
+      new Date(sinds.getTime() + ACHTERSTALLIG_DAGEN * 24 * 3600 * 1000).toISOString(),
+    );
+  });
+
+  test("anders null: andere status, onbekend begin of geen abonnement", () => {
+    for (const status of ["active", "trialing", "unpaid", "canceled", "incomplete"] as const) {
+      expect(achterstalligTot({ status, achterstalligSinds: sinds })).toBeNull();
+    }
+    expect(achterstalligTot({ status: "past_due", achterstalligSinds: null })).toBeNull();
+    expect(achterstalligTot(null)).toBeNull();
   });
 });
 

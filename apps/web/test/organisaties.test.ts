@@ -20,7 +20,7 @@ import { API, AUTH_ROUTE, beveiligdeRoutebestanden, routeUit } from "./routes";
 
 const WACHTWOORD = "lang-genoeg-1";
 // Abonnementen staan uit in deze tests: elke organisatie mag schrijven, zonder proefperiode.
-const UIT = { schrijven: true, reden: "uit", proefEinde: null };
+const UIT = { schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null };
 
 let db: Db;
 let auth: Auth;

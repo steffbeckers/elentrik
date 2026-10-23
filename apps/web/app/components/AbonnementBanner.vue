@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // De banner onder de bovenbalk: de laatste week van de proefperiode, een mislukte betaling, of
 // alleen-lezen. Welke (of geen) volgt uit de toegang van de actieve organisatie en de rol.
-import { bannerVoor } from "~/abonnement/weergave";
+import { bannerVoor, datumTekst } from "~/abonnement/weergave";
 import { useSessieStore } from "~/stores/sessie";
 
 const sessie = useSessieStore();
@@ -29,7 +29,9 @@ const banner = computed(() => bannerVoor(sessie.toegang, sessie.rol, nu.value));
       banner.soort === 'proef'
         ? $t('abonnement.banner.proef', { n: banner.dagen ?? 0 }, banner.dagen ?? 0)
         : banner.soort === 'betaling'
-          ? $t('abonnement.banner.betaling')
+          ? banner.tot
+            ? $t('abonnement.banner.betaling', { datum: datumTekst(banner.tot) })
+            : $t('abonnement.banner.betalingZonderDatum')
           : $t('abonnement.banner.alleenLezen')
     "
     :actions="

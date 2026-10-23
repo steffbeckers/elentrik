@@ -44,19 +44,29 @@ export function datumTekst(iso: string): string {
   return new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
 }
 
-export type Banner = { soort: "proef" | "betaling" | "alleen-lezen"; dagen?: number; knop: boolean };
+export type Banner = {
+  soort: "proef" | "betaling" | "alleen-lezen";
+  dagen?: number;
+  /** Bij "betaling": tot wanneer de betaling geregeld moet zijn (ISO), als dat bekend is. */
+  tot?: string;
+  knop: boolean;
+};
 
 /**
  * Welke banner bovenaan de app past bij de toegang van de actieve organisatie, of null.
  * - proef: alleen een eigenaar, als de proef nog hoogstens 7 dagen loopt;
- * - betaling: een eigenaar, bij schrijfrecht en een mislukte betaling;
+ * - betaling: een eigenaar, bij schrijfrecht en een mislukte betaling, met de datum waarvoor ze geregeld moet zijn;
  * - alleen-lezen: iedereen zonder schrijfrecht, met een knop voor een eigenaar.
  */
 export function bannerVoor(toegang: Toegang, rol: Rol | null, nu: Date): Banner | null {
   const eigenaar = rol === "eigenaar";
   if (!toegang.schrijven) return { soort: "alleen-lezen", knop: eigenaar };
   if (!eigenaar) return null;
-  if (toegang.reden === "betaling-mislukt") return { soort: "betaling", knop: true };
+  if (toegang.reden === "betaling-mislukt") {
+    return toegang.achterstalligTot
+      ? { soort: "betaling", tot: toegang.achterstalligTot, knop: true }
+      : { soort: "betaling", knop: true };
+  }
   if (toegang.reden === "proef" && toegang.proefEinde !== null) {
     const dagen = dagenTot(toegang.proefEinde, nu);
     if (dagen >= 1 && dagen <= PROEF_BANNER_DAGEN) return { soort: "proef", dagen, knop: true };
@@ -73,7 +83,10 @@ export function statusTekstSleutel(o: AbonnementOverzicht): string {
     case "actief":
       return o.opgezegd ? "abonnement.status.opgezegd" : "abonnement.status.actief";
     case "betaling-mislukt":
-      return "abonnement.status.betalingMislukt";
+      // Met schrijfrecht en een bekende einddatum: "... vóór {datum}"; anders alleen de mededeling.
+      return o.schrijven && o.achterstalligTot
+        ? "abonnement.status.betalingMisluktTot"
+        : "abonnement.status.betalingMislukt";
     case "proef":
       return "abonnement.status.proef";
     case "beeindigd":

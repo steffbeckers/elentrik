@@ -7,7 +7,7 @@ import type { Db } from "../db";
 import { abonnementen, organization } from "../db/schema";
 import type { AbonnementStatus, Toegang } from "../../shared/abonnement";
 import type { AbonnementConfig } from "./config";
-import { bepaalToegang } from "./toegang";
+import { achterstalligTot, bepaalToegang } from "./toegang";
 
 export type AbonnementRij = typeof abonnementen.$inferSelect;
 
@@ -45,20 +45,26 @@ export async function toegangVoor(
   config: AbonnementConfig,
   nu: Date = new Date(),
 ): Promise<Toegang> {
-  if (!config.ingeschakeld) return { schrijven: true, reden: "uit", proefEinde: null };
+  if (!config.ingeschakeld) return { schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null };
   const [org] = await db
     .select({ proefEinde: organization.proefEinde, vrijgesteld: organization.vrijgesteld })
     .from(organization)
     .where(eq(organization.id, organisatieId));
-  if (!org) return { schrijven: false, reden: "proef-voorbij", proefEinde: null };
+  if (!org) return { schrijven: false, reden: "proef-voorbij", proefEinde: null, achterstalligTot: null };
   const rij = await haalAbonnementRij(db, organisatieId);
   const status = leesStatus(rij?.status);
+  const abonnement = status ? { status, achterstalligSinds: rij?.achterstalligSinds ?? null } : null;
   const { schrijven, reden } = bepaalToegang({
     nu,
     ingeschakeld: true,
     proefEinde: org.proefEinde,
     vrijgesteld: org.vrijgesteld,
-    abonnement: status ? { status, achterstalligSinds: rij?.achterstalligSinds ?? null } : null,
+    abonnement,
   });
-  return { schrijven, reden, proefEinde: org.proefEinde.toISOString() };
+  return {
+    schrijven,
+    reden,
+    proefEinde: org.proefEinde.toISOString(),
+    achterstalligTot: achterstalligTot(abonnement)?.toISOString() ?? null,
+  };
 }

@@ -584,6 +584,7 @@
       "actief": "Je hebt een {formule} abonnement. Volgende verlenging op {datum}.",
       "opgezegd": "Je abonnement is opgezegd en loopt nog tot {datum}.",
       "betalingMislukt": "Je laatste betaling is mislukt.",
+      "betalingMisluktTot": "Je laatste betaling is mislukt. Regel je betaling vóór {datum}.",
       "beeindigd": "Je abonnement is beëindigd.",
       "proefVoorbij": "Dit bedrijf heeft geen lopende gratis proefperiode. Kies een abonnement om projecten te bewerken."
     },
@@ -606,7 +607,8 @@
     "banner": {
       "proef": "Nog {n} dag gratis. | Nog {n} dagen gratis.",
       "kies": "Kies een abonnement",
-      "betaling": "Je laatste betaling is mislukt. Regel je betaling snel, anders kan je bedrijf straks geen projecten meer bewerken.",
+      "betaling": "Je laatste betaling is mislukt. Regel je betaling vóór {datum}.",
+      "betalingZonderDatum": "Je laatste betaling is mislukt. Regel je betaling snel, anders kan je bedrijf straks geen projecten meer bewerken.",
       "alleenLezen": "Je bedrijf heeft geen actief abonnement. Je kan projecten bekijken en exporteren, maar niet bewerken."
     }
   },

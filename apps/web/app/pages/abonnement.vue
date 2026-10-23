@@ -53,7 +53,8 @@ const statusTekst = computed(() => {
   const o = overzicht.value;
   const w = weergave.value;
   if (!o || !w) return "";
-  const einde = o.reden === "proef" ? o.proefEinde : o.periodeEinde;
+  const einde =
+    o.reden === "proef" ? o.proefEinde : o.reden === "betaling-mislukt" ? o.achterstalligTot : o.periodeEinde;
   return t(w.statusSleutel, {
     dagen: o.proefEinde ? Math.max(dagenTot(o.proefEinde, nu.value), 0) : 0,
     datum: einde ? datumTekst(einde) : t("abonnement.datumOnbekend"),

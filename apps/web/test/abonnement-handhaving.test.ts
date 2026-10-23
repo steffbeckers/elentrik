@@ -290,7 +290,7 @@ describe("alleen-lezen zonder schrijfrecht", () => {
 describe("GET /api/mij", () => {
   type MijAntwoord = {
     gebruiker: { proefGebruikt: boolean };
-    organisaties: { id: string; toegang: { schrijven: boolean; reden: string; proefEinde: string | null } }[];
+    organisaties: { id: string; toegang: { schrijven: boolean; reden: string; proefEinde: string | null; achterstalligTot: string | null } }[];
   };
 
   test("geeft per organisatie de toegang en of de proefperiode gebruikt is", async () => {
@@ -304,14 +304,38 @@ describe("GET /api/mij", () => {
       schrijven: false,
       reden: "proef-voorbij",
       proefEinde: einde.toISOString(),
+      achterstalligTot: null,
     });
     expect(body.gebruiker.proefGebruikt).toBe(true);
+  });
+
+  test("een past_due-organisatie krijgt achterstalligTot: achterstalligSinds + 14 dagen", async () => {
+    schakelIn();
+    const sinds = new Date(Date.now() - 3 * DAG_MS);
+    await db.insert(abonnementen).values({
+      organisatieId: eigenaar.organisatieId,
+      stripeKlantId: "cus_mij_achter",
+      status: "past_due",
+      achterstalligSinds: sinds,
+    });
+    const body = (await (await stuur({ methode: "GET", pad: "/api/mij" }, eigenaar.cookie)).json()) as MijAntwoord;
+    await db.delete(abonnementen).where(eq(abonnementen.organisatieId, eigenaar.organisatieId));
+    expect(body.organisaties.find((o) => o.id === eigenaar.organisatieId)?.toegang).toMatchObject({
+      schrijven: true,
+      reden: "betaling-mislukt",
+      achterstalligTot: new Date(sinds.getTime() + 14 * DAG_MS).toISOString(),
+    });
   });
 
   test("met abonnementen uit mag elke organisatie schrijven", async () => {
     zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
     const body = (await (await stuur({ methode: "GET", pad: "/api/mij" }, eigenaar.cookie)).json()) as MijAntwoord;
-    expect(body.organisaties[0]?.toegang).toEqual({ schrijven: true, reden: "uit", proefEinde: null });
+    expect(body.organisaties[0]?.toegang).toEqual({
+      schrijven: true,
+      reden: "uit",
+      proefEinde: null,
+      achterstalligTot: null,
+    });
   });
 
   test("bevat nergens een Stripe-id", async () => {
@@ -346,6 +370,32 @@ describe("toegangVoor", () => {
     const toegang = await toegangVoor(db, organisatieId, INGESCHAKELD);
     expect(toegang).toMatchObject({ schrijven: false, reden: "proef-voorbij" });
     expect((await haalAbonnementRij(db, organisatieId))?.stripeKlantId).toBe("cus_rommel");
+  });
+
+  test("achterstalligTot: alleen bij past_due met achterstalligSinds, dan sinds + 14 dagen", async () => {
+    const nu = new Date("2026-10-23T12:00:00Z");
+    const sinds = new Date("2026-10-20T08:00:00Z");
+    const organisatieId = await maakTestOrganisatie(db);
+    await zetProefEinde(organisatieId, new Date(nu.getTime() - DAG_MS));
+    expect((await toegangVoor(db, organisatieId, INGESCHAKELD, nu)).achterstalligTot).toBeNull();
+
+    await db.insert(abonnementen).values({
+      organisatieId,
+      stripeKlantId: "cus_tot",
+      status: "past_due",
+      achterstalligSinds: sinds,
+    });
+    expect(await toegangVoor(db, organisatieId, INGESCHAKELD, nu)).toMatchObject({
+      schrijven: true,
+      reden: "betaling-mislukt",
+      achterstalligTot: new Date(sinds.getTime() + 14 * DAG_MS).toISOString(),
+    });
+
+    for (const status of ["unpaid", "active", "canceled"]) {
+      await db.update(abonnementen).set({ status }).where(eq(abonnementen.organisatieId, organisatieId));
+      expect((await toegangVoor(db, organisatieId, INGESCHAKELD, nu)).achterstalligTot).toBeNull();
+    }
+    expect((await toegangVoor(db, "bestaat-niet", INGESCHAKELD, nu)).achterstalligTot).toBeNull();
   });
 
   test("een onbekende organisatie krijgt nooit schrijfrecht", async () => {

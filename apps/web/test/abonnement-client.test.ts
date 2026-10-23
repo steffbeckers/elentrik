@@ -21,6 +21,7 @@ function overzicht(wijziging: Partial<AbonnementOverzicht> = {}): AbonnementOver
     schrijven: false,
     reden: "proef-voorbij",
     proefEinde: NU.toISOString(),
+    achterstalligTot: null,
     status: null,
     formule: null,
     periodeEinde: null,
@@ -194,7 +195,7 @@ describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
         id: "o1",
         naam: "Peeters",
         rol: "eigenaar",
-        toegang: { schrijven: false, reden: "proef-voorbij", proefEinde: NU.toISOString() },
+        toegang: { schrijven: false, reden: "proef-voorbij", proefEinde: NU.toISOString(), achterstalligTot: null },
       },
     ],
     actieveOrganisatieId: "o1",
@@ -241,7 +242,7 @@ describe("de sessie-store", () => {
 
   test("zonder organisatie: schrijven, reden uit en geen proef", () => {
     const sessie = useSessieStore();
-    expect(sessie.toegang).toEqual({ schrijven: true, reden: "uit", proefEinde: null });
+    expect(sessie.toegang).toEqual({ schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null });
     expect(sessie.proefGebruikt).toBe(false);
   });
 });

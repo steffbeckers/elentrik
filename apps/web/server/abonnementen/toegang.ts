@@ -46,6 +46,15 @@ export function bepaalToegang(i: ToegangInvoer): { schrijven: boolean; reden: To
   return { schrijven: false, reden: "proef-voorbij" };
 }
 
+/**
+ * Tot wanneer een organisatie met een mislukte betaling (`past_due`) nog mag schrijven: de eerste
+ * `past_due` plus `ACHTERSTALLIG_DAGEN`. Null bij een andere status of zonder bekend begin.
+ */
+export function achterstalligTot(abonnement: ToegangInvoer["abonnement"]): Date | null {
+  if (abonnement?.status !== "past_due" || !abonnement.achterstalligSinds) return null;
+  return new Date(abonnement.achterstalligSinds.getTime() + ACHTERSTALLIG_DAGEN * DAG_MS);
+}
+
 /** Van levendigst naar minst levendig. */
 const VOLGORDE: readonly AbonnementStatus[] = [
   "active",
