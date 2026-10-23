@@ -13,6 +13,7 @@ import {
 } from "../app/composables/concepten";
 import { useAutosave, waarschuwBijVerlaten, type AutosaveOpties } from "../app/composables/useAutosave";
 import { ConflictFout, type Project } from "../app/composables/useProjectenApi";
+import { vertrekBevestiging } from "../app/editor/aanmelding";
 import { useEditorStore } from "../app/stores/editor";
 
 const KOPIE_DOC_ID = "kopie-document-id";
@@ -985,6 +986,71 @@ describe("useAutosave: foutsoorten", () => {
       await autosave.nuOpslaan();
       expect(autosave.status.value).toBe("fout");
       expect(autosave.alleenLezen.value).toBe(false);
+    });
+
+    test("een kapot conceptarchief bij de 402: onbewaard (niet alleen-lezen), zonder nieuwe poging", async () => {
+      const concepten = {
+        bewaarConcept: vi.fn(async () => {
+          throw new Error("IndexedDB kapot");
+        }),
+        wisConcept: vi.fn(async () => {}),
+      };
+      const { store, bewaar, autosave } = opzet({ concepten });
+      bewaar.mockRejectedValue(abonnementVereist());
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.alleenLezen.value).toBe(true);
+      expect(autosave.status.value).toBe("onbewaard");
+      expect(vertrekBevestiging(autosave.status.value)).toBe("editor.vertrek.bevestigingOnbewaard");
+      expect(await autosave.wachtOpConcept()).toBe(false);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await leeg();
+      expect(bewaar).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    test("een conceptschrijfactie die later mislukt, zet alleen-lezen om in onbewaard, en herstelt weer", async () => {
+      let kapot = false;
+      const concepten = {
+        bewaarConcept: vi.fn(async () => {
+          if (kapot) throw new Error("IndexedDB kapot");
+        }),
+        wisConcept: vi.fn(async () => {}),
+      };
+      const { store, bewaar, autosave } = opzet({ concepten });
+      bewaar.mockRejectedValue(abonnementVereist());
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.status.value).toBe("alleen-lezen");
+
+      kapot = true;
+      wijzig(store, "b");
+      await leeg();
+      expect(autosave.status.value).toBe("onbewaard");
+      expect(autosave.alleenLezen.value).toBe(true);
+      expect(vertrekBevestiging(autosave.status.value)).toBe("editor.vertrek.bevestigingOnbewaard");
+
+      kapot = false;
+      wijzig(store, "c");
+      await leeg();
+      expect(autosave.status.value).toBe("alleen-lezen");
+      expect(bewaar).toHaveBeenCalledTimes(1);
+    });
+
+    test("een netwerkfout bij opnieuw proberen in alleen-lezen: geen timer, status blijft alleen-lezen", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValueOnce(abonnementVereist());
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      bewaar.mockRejectedValueOnce(new TypeError("netwerk"));
+      await autosave.nuOpslaan();
+      expect(autosave.status.value).toBe("alleen-lezen");
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(bewaar).toHaveBeenCalledTimes(2);
     });
 
     test("laadServerversie haalt de status terug naar opgeslagen", async () => {

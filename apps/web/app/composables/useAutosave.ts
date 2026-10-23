@@ -26,6 +26,7 @@ import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./use
  *   autosave meer; `nuOpslaan()` probeert het handmatig opnieuw.
  * - `alleen-lezen`: de server antwoordde 402 `ABONNEMENT_VEREIST`: de organisatie mag niet meer schrijven.
  *   Het werk staat in het concept; zoals bij `afgemeld` volgt geen nieuwe poging tot `nuOpslaan()`.
+ *   Lukt het concept niet (of niet meer), dan is de status `onbewaard`; `alleenLezen` blijft dan true.
  */
 export type AutosaveStatus = "opgeslagen" | "bezig" | "lokaal" | "onbewaard" | "conflict" | "fout" | "alleen-lezen";
 
@@ -162,7 +163,19 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return conceptGelukt ? "lokaal" : "onbewaard";
   }
 
+  /**
+   * De status na een 402: `alleen-lezen` zolang het werk in het concept staat, anders `onbewaard`
+   * (het geheugen is dan de enige kopie). Nooit meer beloven dan er is.
+   */
+  function alleenLezenStatus(): AutosaveStatus {
+    return conceptGelukt ? "alleen-lezen" : "onbewaard";
+  }
+
   function werkOfflineStatusBij(): void {
+    if (alleenLezen.value) {
+      if (status.value === "alleen-lezen" || status.value === "onbewaard") status.value = alleenLezenStatus();
+      return;
+    }
     if (status.value === "lokaal" || status.value === "onbewaard") status.value = offlineStatus();
   }
 
@@ -287,6 +300,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           // De sessie is verlopen: het werk staat in het concept. Opnieuw proberen heeft pas zin
           // na opnieuw inloggen, dus geen nieuwe poging tot `nuOpslaan()`.
           afgemeld.value = true;
+          alleenLezen.value = false;
           status.value = offlineStatus();
           wisTimer();
         } else if (httpCode === BETALING_VEREIST && foutCode(e) === ABONNEMENT_VEREIST) {
@@ -294,7 +308,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           // heeft pas zin na een abonnement, dus geen nieuwe poging tot `nuOpslaan()`.
           alleenLezen.value = true;
           afgemeld.value = false;
-          status.value = "alleen-lezen";
+          status.value = alleenLezenStatus();
           wisTimer();
         } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
           // De server weigert dit document; opnieuw proberen verandert daar niets aan. De server
@@ -306,8 +320,9 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           wisTimer();
         } else {
           // Netwerk, 5xx, 408 of 429: later opnieuw; maar na een 401 alleen via `nuOpslaan()`.
-          status.value = offlineStatus();
-          if (!afgemeld.value) plan(herprobeerMs);
+          // In alleen-lezen weten we niet of het abonnement intussen terug is: geen timer, de status blijft.
+          status.value = alleenLezen.value ? alleenLezenStatus() : offlineStatus();
+          if (!afgemeld.value && !alleenLezen.value) plan(herprobeerMs);
         }
       }
     });

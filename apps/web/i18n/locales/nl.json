@@ -87,7 +87,8 @@
       "opnieuwProberen": "Opnieuw proberen"
     },
     "alleenLezen": {
-      "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard."
+      "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
+      "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen."
     },
     "onderdelenPaneel": {
       "titel": "Onderdelen",

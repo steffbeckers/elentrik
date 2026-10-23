@@ -94,10 +94,15 @@ watch(alleenLezen, (waarde) => {
 
 // Een 402 bij het bewaren: de sessie opnieuw lezen (de banner en de schrijfrechten volgen) en uitleggen
 // dat het werk lokaal bewaard blijft.
-watch(autosave.alleenLezen, (geweigerd) => {
+watch(autosave.alleenLezen, async (geweigerd) => {
   if (!geweigerd) return;
   void sessie.laad().catch(() => {});
-  toast.add({ title: t("editor.alleenLezen.bewaardLokaal"), color: "warning" });
+  // Alleen beloven dat het werk lokaal bewaard blijft als het concept er echt staat.
+  const bewaard = await autosave.wachtOpConcept().catch(() => false);
+  toast.add({
+    title: t(bewaard ? "editor.alleenLezen.bewaardLokaal" : "editor.alleenLezen.nietBewaard"),
+    color: bewaard ? "warning" : "error",
+  });
 });
 
 /**

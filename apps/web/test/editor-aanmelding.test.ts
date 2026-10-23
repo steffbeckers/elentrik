@@ -108,7 +108,7 @@ describe("vertrekBevestiging", () => {
     expect(vertrekBevestiging("onbewaard")).toBe("editor.vertrek.bevestigingOnbewaard");
   });
 
-  test.each(["bezig", "lokaal", "conflict", "fout"] as const)("%s: de gewone vraag", (status) => {
+  test.each(["bezig", "lokaal", "conflict", "fout", "alleen-lezen"] as const)("%s: de gewone vraag", (status) => {
     expect(vertrekBevestiging(status)).toBe("editor.vertrek.bevestiging");
   });
 });
