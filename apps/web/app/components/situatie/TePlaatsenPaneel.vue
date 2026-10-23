@@ -81,11 +81,15 @@ function sleepStart(event: DragEvent, nodeId: NodeId): void {
         <li v-for="item in groep.items" :key="item.nodeId">
           <button
             type="button"
-            draggable="true"
+            :draggable="!editor.alleenLezen"
+            :disabled="editor.alleenLezen"
             :data-testid="item.testId"
             :aria-pressed="gekozen === item.nodeId"
-            class="flex w-full cursor-grab items-center gap-2 rounded-md px-2 py-1 text-left text-sm active:cursor-grabbing"
-            :class="gekozen === item.nodeId ? 'bg-primary/10 text-primary ring-1 ring-primary' : 'hover:bg-elevated'"
+            class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            :class="[
+              editor.alleenLezen ? '' : 'cursor-grab active:cursor-grabbing',
+              gekozen === item.nodeId ? 'bg-primary/10 text-primary ring-1 ring-primary' : 'hover:bg-elevated',
+            ]"
             @click="kies(item.nodeId)"
             @dragstart="sleepStart($event, item.nodeId)"
           >

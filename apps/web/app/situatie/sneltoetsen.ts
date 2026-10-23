@@ -23,6 +23,8 @@ export type SituatieToets = {
   doelIsInvoer: boolean;
   /** Het doel is een knop: Enter en spatie blijven bij de knop, de rest werkt gewoon. */
   doelIsKnop: boolean;
+  /** De editor is alleen-lezen: draaien, schuiven, van het plan halen, ongedaan maken en opnieuw geven `null`. */
+  alleenLezen?: boolean;
 };
 
 /** Eenheidsrichting per pijltjestoets. */
@@ -37,12 +39,15 @@ export function situatieSneltoets(toets: SituatieToets): SituatieActie | null {
   const key = toets.key.length === 1 ? toets.key.toLowerCase() : toets.key;
 
   if (toets.ctrlKey || toets.metaKey) {
+    if (toets.alleenLezen) return null;
     if (key === "z") return toets.shiftKey ? { soort: "opnieuw" } : { soort: "ongedaan" };
     if (key === "y" && !toets.shiftKey) return { soort: "opnieuw" };
     return null;
   }
   if (toets.doelIsInvoer) return null;
   if (toets.doelIsKnop && (key === "Enter" || key === " ")) return null;
+
+  if (toets.alleenLezen) return key === "Escape" ? { soort: "annuleer" } : null;
 
   if (key === "r") return { soort: "draai", richting: toets.shiftKey ? -1 : 1 };
   if (key === "Delete" || key === "Backspace") return { soort: "haalVanPlan" };

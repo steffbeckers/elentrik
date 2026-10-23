@@ -169,7 +169,8 @@ function pointerDown(event: PointerEvent): void {
   breekVerschuivingAf();
   const element = (event.target as Element).closest<SVGGElement>("[data-node-id]");
   const nodeId = element?.getAttribute("data-node-id") ?? null;
-  const opSymbool = !ruimteIngedrukt.value && modus.value === "normaal" && event.isPrimary;
+  // Zonder schrijfrecht verschuift een symbool niet: slepen erop pant het plan.
+  const opSymbool = !ruimteIngedrukt.value && modus.value === "normaal" && event.isPrimary && !editor.alleenLezen;
   // Pannen: op lege ruimte, met de spatie ingedrukt, of tijdens plaatsen en meten. Twee vingers pinchen.
   canvas.pointerDown(event, !(opSymbool && element !== null));
   if (!opSymbool || !element || nodeId === null || canvas.pincht()) return;
@@ -233,7 +234,7 @@ function pointerAfgebroken(event: PointerEvent): void {
 
 function plaatsOp(nodeId: NodeId, punt: Positie): void {
   const doc = editor.document;
-  if (!achtergrond.value || !doc || !Object.hasOwn(doc.nodes, nodeId)) return;
+  if (editor.alleenLezen || !achtergrond.value || !doc || !Object.hasOwn(doc.nodes, nodeId)) return;
   const { x, y } = binnenRaster(punt);
   const uitkomst: { van: string | null } = { van: null };
   if (!voerUit(() => (uitkomst.van = situatie.plaatsNode(nodeId, x, y)))) return;
@@ -242,11 +243,12 @@ function plaatsOp(nodeId: NodeId, punt: Positie): void {
 }
 
 function slepenBoven(event: DragEvent): void {
-  if (!achtergrond.value || !event.dataTransfer?.types.includes(NODE_SLEEP_TYPE)) return;
+  if (editor.alleenLezen || !achtergrond.value || !event.dataTransfer?.types.includes(NODE_SLEEP_TYPE)) return;
   event.preventDefault();
 }
 
 function neerzetten(event: DragEvent): void {
+  if (editor.alleenLezen) return;
   const nodeId = event.dataTransfer?.getData(NODE_SLEEP_TYPE);
   if (!nodeId) return;
   event.preventDefault();
@@ -345,6 +347,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     metaKey: event.metaKey,
     doelIsInvoer: soort === "invoer",
     doelIsKnop: soort === "knop",
+    alleenLezen: editor.alleenLezen,
   });
   if (!actie) return;
   // Zonder zichtbaar plan wijzigt niets de plaatsingen; ongedaan maken en opnieuw blijven werken.
@@ -446,7 +449,7 @@ const werkbalk = computed(() => {
           @error="planFout = true"
         />
         <!-- v-html is hier veilig: `situatieLaagSvg` escapet alle documenttekst. -->
-        <g class="laag" :class="{ verschuifbaar: modus === 'normaal' }" v-html="laagSvg" />
+        <g class="laag" :class="{ verschuifbaar: modus === 'normaal' && !editor.alleenLezen }" v-html="laagSvg" />
         <g class="pointer-events-none">
           <rect
             v-for="k in selectieKaders"
@@ -507,7 +510,7 @@ const werkbalk = computed(() => {
     </div>
 
     <div
-      v-if="werkbalk && !planOntbreekt"
+      v-if="werkbalk && !planOntbreekt && !editor.alleenLezen"
       role="toolbar"
       data-testid="plan-werkbalk"
       :aria-label="$t('editor.situatie.canvas.werkbalk')"
@@ -558,6 +561,7 @@ const werkbalk = computed(() => {
         <UButton
           icon="i-lucide-image-up"
           :label="$t('editor.situatie.canvas.planOpnieuwKiezen')"
+          :disabled="editor.alleenLezen"
           @click="pagina && emit('vervangPlan', pagina.id)"
         />
       </div>

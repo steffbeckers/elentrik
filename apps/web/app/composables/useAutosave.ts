@@ -9,6 +9,8 @@ import {
   type Concept,
   type ConceptPlek,
 } from "./concepten";
+import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
+import { foutCode } from "../sessie/fouten";
 import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./useProjectenApi";
 
 /**
@@ -22,8 +24,10 @@ import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./use
  *   tot `laadServerversie` of `bewaarAlsKopie` het oplost.
  * - `fout`: de server weigert het document (4xx, bv. 422 of 404). Geen automatische nieuwe poging en geen
  *   autosave meer; `nuOpslaan()` probeert het handmatig opnieuw.
+ * - `alleen-lezen`: de server antwoordde 402 `ABONNEMENT_VEREIST`: de organisatie mag niet meer schrijven.
+ *   Het werk staat in het concept; zoals bij `afgemeld` volgt geen nieuwe poging tot `nuOpslaan()`.
  */
-export type AutosaveStatus = "opgeslagen" | "bezig" | "lokaal" | "onbewaard" | "conflict" | "fout";
+export type AutosaveStatus = "opgeslagen" | "bezig" | "lokaal" | "onbewaard" | "conflict" | "fout" | "alleen-lezen";
 
 /** De leden van de editor-store die de autosave gebruikt. */
 export type AutosaveStore = {
@@ -69,6 +73,11 @@ export type Autosave = {
    * niets meer naar de server tot `nuOpslaan()`. Een geslaagd bewaar zet dit terug op false.
    */
   afgemeld: Ref<boolean>;
+  /**
+   * De server antwoordde 402 `ABONNEMENT_VEREIST`. Het werk staat in het concept; er gaat niets
+   * meer naar de server tot `nuOpslaan()` (na een abonnement). Een geslaagd bewaar zet dit terug op false.
+   */
+  alleenLezen: Ref<boolean>;
   nuOpslaan(): Promise<void>;
   laadServerversie(): Promise<void>;
   bewaarAlsKopie(): Promise<void>;
@@ -94,6 +103,9 @@ const TIJDELIJK = new Set([408, 429]);
 
 /** Geen (geldige) sessie meer. */
 const AFGEMELD = 401;
+
+/** De organisatie mag niet (meer) schrijven; samen met de code `ABONNEMENT_VEREIST`. */
+const BETALING_VEREIST = 402;
 
 /**
  * Voor `beforeunload` en het navigeren in de app: zolang niet alles op de server staat, vragen we
@@ -127,6 +139,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const conflict = ref<{ huidigeVersie: number } | null>(null);
   const fout = ref<{ status: number } | null>(null);
   const afgemeld = ref(false);
+  const alleenLezen = ref(false);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   /** Het bewaar (of de kopie) dat nu loopt; er is er nooit meer dan één tegelijk. */
@@ -204,9 +217,9 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return store.gewijzigdSindsOpslaan !== bewaardeTeller;
   }
 
-  /** Bewaart de autosave vanzelf? Niet bij een conflict, een fout of na een 401 (afgemeld). */
+  /** Bewaart de autosave vanzelf? Niet bij een conflict, een fout, na een 401 (afgemeld) of een 402 (alleen-lezen). */
   function automatisch(): boolean {
-    return !conflict.value && !fout.value && !afgemeld.value;
+    return !conflict.value && !fout.value && !afgemeld.value && !alleenLezen.value;
   }
 
   /** Wijzigingen die tijdens een bewaar binnenkwamen krijgen hier hun eigen, gedebouncete bewaar. */
@@ -249,6 +262,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         store.versie = resultaat.versie;
         bewaardeTeller = teller;
         afgemeld.value = false;
+        alleenLezen.value = false;
         if (store.gewijzigdSindsOpslaan === teller) {
           conceptGelukt = true;
           status.value = "opgeslagen";
@@ -275,11 +289,19 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           afgemeld.value = true;
           status.value = offlineStatus();
           wisTimer();
+        } else if (httpCode === BETALING_VEREIST && foutCode(e) === ABONNEMENT_VEREIST) {
+          // De organisatie mag niet meer schrijven: het werk staat in het concept. Opnieuw proberen
+          // heeft pas zin na een abonnement, dus geen nieuwe poging tot `nuOpslaan()`.
+          alleenLezen.value = true;
+          afgemeld.value = false;
+          status.value = "alleen-lezen";
+          wisTimer();
         } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
           // De server weigert dit document; opnieuw proberen verandert daar niets aan. De server
           // antwoordde met een sessie: afgemeld vervalt, zodat er maar een melding tegelijk staat.
           fout.value = { status: httpCode };
           afgemeld.value = false;
+          alleenLezen.value = false;
           status.value = "fout";
           wisTimer();
         } else {
@@ -300,6 +322,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       conflict.value = null;
       fout.value = null;
       afgemeld.value = false;
+      alleenLezen.value = false;
       status.value = "opgeslagen";
       return;
     }
@@ -344,6 +367,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     conflict.value = null;
     fout.value = null;
     afgemeld.value = false;
+    alleenLezen.value = false;
     status.value = "opgeslagen";
     await wisConceptVeilig(id);
   }
@@ -372,6 +396,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       } while (store.gewijzigdSindsOpslaan !== teller);
       bewaardeTeller = store.gewijzigdSindsOpslaan;
       afgemeld.value = false;
+      alleenLezen.value = false;
       await wisConceptVeilig(id);
       await naarProject(kopie.id);
     });
@@ -389,7 +414,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     stopWatch();
     wisTimer();
     // In-app navigeren binnen de vertraging mag de serverbewaring niet overslaan.
-    if (conflict.value || fout.value || store.document === null || !onbewaard()) return;
+    if (conflict.value || fout.value || alleenLezen.value || store.document === null || !onbewaard()) return;
     // De generatie van nu: is er na het wachten opnieuw geladen (de volgende pagina, ook van
     // hetzelfde project), dan is die staat niet van ons en gaat er niets naar de server.
     const generatie = store.laadGeneratie;
@@ -418,6 +443,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     conflict,
     fout,
     afgemeld,
+    alleenLezen,
     nuOpslaan,
     laadServerversie,
     bewaarAlsKopie,

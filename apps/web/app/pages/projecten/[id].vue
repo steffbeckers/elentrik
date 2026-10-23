@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NodeId } from "@elentrik/model";
+import AbonnementBanner from "~/components/AbonnementBanner.vue";
 import BevindingenPaneel from "~/components/editor/BevindingenPaneel.vue";
 import ConceptDialoog from "~/components/editor/ConceptDialoog.vue";
 import ConflictDialoog from "~/components/editor/ConflictDialoog.vue";
@@ -15,6 +16,7 @@ import PlanToevoegenDialoog from "~/components/situatie/PlanToevoegenDialoog.vue
 import SchaalDialoog from "~/components/situatie/SchaalDialoog.vue";
 import TePlaatsenPaneel from "~/components/situatie/TePlaatsenPaneel.vue";
 import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
+import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
 import { httpStatus } from "~/composables/useProjectenApi";
 import { useNodeTekst } from "~/composables/useNodeTekst";
@@ -39,6 +41,7 @@ const store = useEditorStore();
 const situatie = useSituatieStore();
 const sessie = useSessieStore();
 const herstelSessie = useSessieHerstel();
+const behandelSchrijfweigering = useAlleenLezen();
 
 // Dit venster hoort bij wie het opende: zijn concepten, en elke bewaring zegt voor wie ze is,
 // zodat de server ze weigert als intussen een ander ingelogd is (401 ANDERE_GEBRUIKER). Zonder
@@ -67,6 +70,49 @@ const autosave = useAutosave({
   gebruikerId,
 });
 
+// --- Alleen-lezen ---------------------------------------------------------------
+
+/** De organisatie van het project; de pagina kan bij een andere dan de actieve organisatie horen. */
+const projectOrganisatieId = ref<string | null>(null);
+
+/** Mag de organisatie van dit project schrijven? Onbekend (nog niet geladen of niet in de sessie) is ja: de server beslist. */
+const organisatieSchrijft = computed(() => {
+  const organisatie = sessie.organisaties.find((o) => o.id === projectOrganisatieId.value);
+  return organisatie ? organisatie.toegang.schrijven : true;
+});
+
+/**
+ * De editor is alleen-lezen als de organisatie niet (meer) mag schrijven volgens de sessie, of als
+ * het bewaren een 402 gaf (de sessie kan dan nog achterlopen).
+ */
+const alleenLezen = computed(() => !organisatieSchrijft.value || autosave.alleenLezen.value);
+watch(alleenLezen, (waarde) => store.zetAlleenLezen(waarde), { immediate: true, flush: "sync" });
+// Plaatsen en meten wijzigen straks het document: bij alleen-lezen stoppen ze.
+watch(alleenLezen, (waarde) => {
+  if (waarde) stopPlaatsenEnMeten();
+});
+
+// Een 402 bij het bewaren: de sessie opnieuw lezen (de banner en de schrijfrechten volgen) en uitleggen
+// dat het werk lokaal bewaard blijft.
+watch(autosave.alleenLezen, (geweigerd) => {
+  if (!geweigerd) return;
+  void sessie.laad().catch(() => {});
+  toast.add({ title: t("editor.alleenLezen.bewaardLokaal"), color: "warning" });
+});
+
+/**
+ * Terug in dit tabblad na een 402: heeft de organisatie intussen weer schrijfrecht (bv. na betalen in
+ * een ander tabblad), dan wordt het lokaal bewaarde werk alsnog opgeslagen. Anders blijft het lokaal.
+ */
+async function hervatNaAbonnement(): Promise<void> {
+  try {
+    await sessie.laad();
+  } catch {
+    return;
+  }
+  if (organisatieSchrijft.value) await autosave.nuOpslaan().catch(() => {});
+}
+
 // --- Laden en het lokale concept -------------------------------------------
 
 const concept = ref<AangebodenConcept | null>(null);
@@ -85,11 +131,15 @@ async function laad(): Promise<void> {
     return;
   }
   await werkInOrganisatieVan(project.organisatieId);
+  projectOrganisatieId.value = project.organisatieId;
+  // Meteen goed vóór het document er is: de watcher draait ook, maar dit laat geen gat.
+  store.zetAlleenLezen(alleenLezen.value);
   store.laad({ id: project.id, naam: project.naam, versie: project.versie, document: project.document });
   // Een kapot conceptarchief mag het openen niet tegenhouden. Pas na de conceptcontrole is de pagina klaar.
   // Elk concept van het project telt, los van de klok: het bestaat alleen zolang er onbewaard werk is.
   // Alleen de eigen concepten van de gebruiker, en één keer de oude zonder gebruiker.
-  concept.value = await nieuwsteConcept(project.id, gebruikerId).catch(() => null);
+  // Alleen-lezen: het concept blijft in het archief staan en wordt aangeboden zodra er weer geschreven mag worden.
+  concept.value = store.alleenLezen ? null : await nieuwsteConcept(project.id, gebruikerId).catch(() => null);
   conceptOpen.value = concept.value !== null;
   laadstatus.value = "klaar";
 }
@@ -119,7 +169,8 @@ async function werkInOrganisatieVan(organisatieId: string): Promise<void> {
 async function laadConcept(): Promise<void> {
   const aangeboden = concept.value;
   concept.value = null;
-  if (!aangeboden || store.projectId !== id) return;
+  // Intussen alleen-lezen geworden: het concept blijft staan voor later.
+  if (!aangeboden || store.projectId !== id || store.alleenLezen) return;
   const c = aangeboden.concept;
   store.laad({ id, naam: c.naam, versie: c.versie, document: c.document });
   // Het concept staat nog niet op de server: als wijziging tellen, zodat de autosave het bewaart.
@@ -149,8 +200,9 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
   conflictBezig.value = true;
   try {
     await actie();
-  } catch {
-    toast.add({ title: t("algemeen.fout"), color: "error" });
+  } catch (fout) {
+    // Een kopie maken kan 402 geven: dan alleen-lezen, geen generieke fout.
+    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: t("algemeen.fout"), color: "error" });
   } finally {
     conflictBezig.value = false;
   }
@@ -234,6 +286,7 @@ function opnieuwInloggen(): void {
  */
 function bijFocus(): void {
   if (autosave.afgemeld.value) void opnieuwProberen();
+  else if (autosave.alleenLezen.value) void hervatNaAbonnement();
   else void sessie.laad().catch(() => {});
 }
 
@@ -374,6 +427,7 @@ onBeforeUnmount(() => {
         @toon-bevindingen="toonBevindingen"
         @exporteren="exportOpen = true"
       />
+      <AbonnementBanner />
       <div class="grid min-h-0 flex-1 grid-cols-[14rem_minmax(0,1fr)_20rem]">
         <template v-if="store.tabblad === 'eendraadschema'">
           <OnderdelenPaneel class="overflow-y-auto border-r border-default" />
@@ -418,6 +472,7 @@ onBeforeUnmount(() => {
               <p class="text-sm text-muted">{{ $t("editor.situatie.leeg.beschrijving") }}</p>
               <UButton
                 icon="i-lucide-image-up"
+                :disabled="store.alleenLezen"
                 data-testid="plan-toevoegen-leeg"
                 :label="$t('editor.situatie.leeg.planToevoegen')"
                 @click="planToevoegen"

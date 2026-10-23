@@ -54,6 +54,7 @@ function voegSjabloonToe(id: string): void {
             :color="store.onderdeel === onderdeel ? 'primary' : 'neutral'"
             :variant="store.onderdeel === onderdeel ? 'soft' : 'ghost'"
             :aria-pressed="store.onderdeel === onderdeel"
+            :disabled="store.alleenLezen"
             :data-testid="`onderdeel-${onderdeel}`"
             class="justify-between"
             @click="store.onderdeel = onderdeel"
@@ -74,6 +75,7 @@ function voegSjabloonToe(id: string): void {
               :items="toestelsoorten"
               size="sm"
               class="w-full"
+              :disabled="store.alleenLezen"
               data-testid="toestelsoort"
               @update:model-value="store.onderdeel = 'toestel'"
             />
@@ -96,6 +98,7 @@ function voegSjabloonToe(id: string): void {
           icon="i-lucide-layout-template"
           class="justify-start"
           :label="sjabloonNaam(sjabloon.id, sjabloon.naam)"
+          :disabled="store.alleenLezen"
           @click="voegSjabloonToe(sjabloon.id)"
         />
       </div>

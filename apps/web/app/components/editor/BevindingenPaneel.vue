@@ -106,6 +106,7 @@ function verwijderAfwijking(b: Bevinding): void {
               color="neutral"
               variant="link"
               :label="$t('editor.bevindingen.verwijderen')"
+              :disabled="store.alleenLezen"
               @click="verwijderAfwijking(b)"
             />
             <UButton
@@ -114,6 +115,7 @@ function verwijderAfwijking(b: Bevinding): void {
               color="neutral"
               variant="link"
               :label="$t('editor.bevindingen.motiveren')"
+              :disabled="store.alleenLezen"
               @click="teMotiveren = b"
             />
           </div>

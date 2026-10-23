@@ -24,6 +24,11 @@ export type Toets = {
   doelIsKnop?: boolean;
   /** De toets blijft ingedrukt (`event.repeat`): verwijderen en toevoegen gebeuren dan niet nog eens. */
   herhaald?: boolean;
+  /**
+   * De editor is alleen-lezen (geen abonnement): alles wat het document wijzigt (toevoegen,
+   * verwijderen, ongedaan maken, opnieuw) geeft `null`. Kiezen, navigeren en de selectie wissen blijven.
+   */
+  alleenLezen?: boolean;
 };
 
 /** Elementen waarin toetsen voor de widget zelf zijn (menu's, dialogen, lijsten, tabbladen). */
@@ -98,6 +103,7 @@ export function sneltoets(toets: Toets): Actie | null {
   const key = toets.key.length === 1 ? toets.key.toLowerCase() : toets.key;
 
   if (modifier) {
+    if (toets.alleenLezen) return null;
     if (key === "z") return toets.shiftKey ? { soort: "opnieuw" } : { soort: "ongedaan" };
     if (key === "y" && !toets.shiftKey) return { soort: "opnieuw" };
     return null;
@@ -105,9 +111,9 @@ export function sneltoets(toets: Toets): Actie | null {
   if (toets.doelIsInvoer) return null;
   if (toets.doelIsKnop && (key === "Enter" || key === " ")) return null;
 
-  if (key === "Enter") return toets.herhaald ? null : { soort: "toevoegen" };
+  if (key === "Enter") return toets.herhaald || toets.alleenLezen ? null : { soort: "toevoegen" };
   if (key === "Delete" || key === "Backspace") {
-    return toets.herhaald ? null : { soort: "verwijder", heleTak: toets.shiftKey };
+    return toets.herhaald || toets.alleenLezen ? null : { soort: "verwijder", heleTak: toets.shiftKey };
   }
   if (key === "Escape") return { soort: "wisSelectie" };
 

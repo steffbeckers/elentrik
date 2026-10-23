@@ -140,6 +140,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     doelIsInvoer: soort === "invoer",
     doelIsKnop: soort === "knop",
     herhaald: event.repeat,
+    alleenLezen: store.alleenLezen,
   });
   if (!actie) return;
   event.preventDefault();
@@ -198,6 +199,8 @@ const markeringen = computed(() => {
 });
 
 const plusknoppen = computed(() => {
+  // Zonder schrijfrecht kan er niets toegevoegd worden: geen plusknoppen.
+  if (store.alleenLezen) return [];
   const doc = store.document;
   const opmaak = store.opmaak;
   if (!doc || !opmaak) return [];

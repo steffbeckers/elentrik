@@ -82,7 +82,12 @@
       "onbewaard": "Niet opgeslagen",
       "conflict": "Conflict",
       "fout": "Opslaan mislukt",
+      "alleen-lezen": "Niet opgeslagen: alleen lezen, je werk blijft lokaal bewaard",
+      "alleenLezen": "Alleen lezen",
       "opnieuwProberen": "Opnieuw proberen"
+    },
+    "alleenLezen": {
+      "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard."
     },
     "onderdelenPaneel": {
       "titel": "Onderdelen",
@@ -273,7 +278,8 @@
         "lokaal": "Het project staat niet op de server: het opslaan mislukte en het werk is enkel lokaal bewaard. Exporteren kan zodra het opgeslagen is.",
         "onbewaard": "Het project kon niet opgeslagen worden. Exporteren kan zodra het opgeslagen is.",
         "conflict": "Het project is intussen elders gewijzigd. Los eerst het conflict op.",
-        "fout": "De server weigerde het project op te slaan. Probeer opnieuw op te slaan en exporteer daarna."
+        "fout": "De server weigerde het project op te slaan. Probeer opnieuw op te slaan en exporteer daarna.",
+        "alleen-lezen": "Je bedrijf heeft geen actief abonnement, dus je laatste wijzigingen staan alleen lokaal. Exporteren kan zodra ze opgeslagen zijn, na het kiezen van een abonnement."
       },
       "onderdelen": {
         "titel": "Onderdelen",
