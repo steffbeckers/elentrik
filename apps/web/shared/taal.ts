@@ -5,8 +5,11 @@ import { LOCALES, type Taal } from "@elentrik/arei";
 
 export { LOCALES, type Taal };
 
-/** De ondersteunde talen; `nl` is de standaard. */
-export const TALEN = ["nl", "fr", "en"] as const satisfies readonly Taal[];
+/**
+ * De ondersteunde talen; `nl` is de standaard en staat eerst. Afgeleid uit `LOCALES`
+ * (`Record<Taal, string>`), zodat de lijst altijd elke `Taal` bevat en niets anders.
+ */
+export const TALEN: readonly Taal[] = Object.freeze(Object.keys(LOCALES) as Taal[]);
 
 /** De taal van de interface bij de registratie, als header van het verzoek. */
 export const TAAL_HEADER = "x-elentrik-taal";

@@ -27,6 +27,7 @@ import {
   vertrekBevestiging,
   type SessieControle,
 } from "~/editor/aanmelding";
+import { vertaalFout } from "~/fouten";
 import { useEditorStore } from "~/stores/editor";
 import { useSessieStore } from "~/stores/sessie";
 import { useSituatieStore } from "~/stores/situatie";
@@ -207,7 +208,7 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
     await actie();
   } catch (fout) {
     // Een kopie maken kan 402 geven: dan alleen-lezen, geen generieke fout.
-    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: t("algemeen.fout"), color: "error" });
+    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
   } finally {
     conflictBezig.value = false;
   }
@@ -224,8 +225,8 @@ const sessieControle: SessieControle = {
  */
 async function opnieuwProberen(): Promise<void> {
   await probeerOpnieuw({ sessie: sessieControle, verwacht: gebruikerId, nuOpslaan: autosave.nuOpslaan }).catch(
-    () => {
-      toast.add({ title: t("algemeen.fout"), color: "error" });
+    (fout: unknown) => {
+      toast.add({ title: vertaalFout(fout, t), color: "error" });
     },
   );
 }

@@ -3,6 +3,7 @@ import type { TableColumn } from "@nuxt/ui";
 import type { ProjectSamenvatting } from "~/composables/useProjectenApi";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
 
 const { t } = useI18n();
@@ -59,7 +60,7 @@ async function voerActieUit(actie: () => Promise<unknown>): Promise<boolean> {
     return true;
   } catch (fout) {
     // Een 402 ververst de sessie en meldt alleen-lezen; een andere fout is een generieke fout.
-    if (!(await alleenLezen(fout))) toast.add({ title: t("algemeen.fout"), color: "error" });
+    if (!(await alleenLezen(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
     return false;
   }
 }

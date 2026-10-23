@@ -10,6 +10,7 @@ import {
 } from "~/instellingen/formulier";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
 
 const { t } = useI18n();
@@ -72,7 +73,7 @@ async function bewaar() {
     toast.add({ title: t("bedrijf.bewaard"), color: "success" });
   } catch (fout) {
     if (await andereOrganisatie(fout)) return;
-    toast.add({ title: t("algemeen.fout"), color: "error" });
+    toast.add({ title: vertaalFout(fout, t), color: "error" });
   } finally {
     bezig.value = false;
   }

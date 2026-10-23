@@ -7,6 +7,10 @@
 // De API komt van buitenaf (`gebruikApi`): de Nuxt-plugin `sessie` geeft ze, met de cookies van
 // het verzoek tijdens SSR. Zo is de store zonder Nuxt te testen.
 //
+// De taal van het account wint van de cookie en de browser: na elke `laad()` met een gebruiker zet
+// de store de taal van de interface op `gebruiker.taal` (via `zetLocale` van de API; de i18n-module
+// past dan ook de cookie aan). Tijdens SSR gebeurt dat al vóór het renderen, dus zonder flits.
+//
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
 import { defineStore } from "pinia";
@@ -20,8 +24,8 @@ export type Rol = "eigenaar" | "lid";
 
 export type Gebruiker = { id: string; naam: string; email: string };
 
-/** De gebruiker zoals /api/mij hem geeft: ook of zijn gratis proefperiode al gebruikt is. */
-export type SessieGebruiker = Gebruiker & { proefGebruikt?: boolean };
+/** De gebruiker zoals /api/mij hem geeft: ook of zijn gratis proefperiode al gebruikt is, en zijn taal. */
+export type SessieGebruiker = Gebruiker & { proefGebruikt?: boolean; taal?: Taal };
 
 export type Organisatie = { id: string; naam: string; rol: Rol; toegang: Toegang };
 
@@ -41,6 +45,8 @@ export type SessieApi = {
   wisselActief(organisatieId: string): Promise<void>;
   /** Better Auth: de sessie beëindigen. */
   uitloggen(): Promise<void>;
+  /** De taal van de interface zetten (i18n en de cookie); zonder deze functie blijft ze zoals ze is. */
+  zetLocale?(taal: Taal): void | Promise<void>;
 };
 
 /** Mag de actie (wisselen, uitloggen) doorgaan? false stopt ze. */
@@ -97,6 +103,19 @@ export const useSessieStore = defineStore("sessie", () => {
   }
 
   /**
+   * De interface in de taal van het account. Lukt dat niet (bv. de berichten laden niet), dan blijft
+   * ze in de huidige taal: de sessie is daarom niet minder geladen.
+   */
+  async function volgTaal(taal: Taal | undefined): Promise<void> {
+    if (!taal || !api?.zetLocale) return;
+    try {
+      await api.zetLocale(taal);
+    } catch {
+      // De interface blijft in de huidige taal.
+    }
+  }
+
+  /**
    * Leest /api/mij opnieuw. Een 401 betekent niet ingelogd; elke andere fout gaat door en laat
    * de sessie ongeladen (ook na een eerdere lading, bv. net na inloggen), zodat de volgende
    * navigatie opnieuw probeert.
@@ -108,6 +127,7 @@ export const useSessieStore = defineStore("sessie", () => {
       organisaties.value = mij.organisaties;
       actieveOrganisatieId.value = mij.actieveOrganisatieId;
       abonnementenIngeschakeld.value = mij.abonnementenIngeschakeld;
+      await volgTaal(mij.gebruiker.taal);
     } catch (fout) {
       if (foutStatus(fout) !== 401) {
         geladen.value = false;

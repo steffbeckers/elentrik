@@ -1,0 +1,698 @@
+{
+  "app": {
+    "naam": "Elentrik"
+  },
+  "algemeen": {
+    "annuleren": "Cancel",
+    "fout": "Something went wrong. Please try again."
+  },
+  "editor": {
+    "canvas": {
+      "passendMaken": "Fit to window",
+      "voegToe": "Add {onderdeel}",
+      "verwijderenMislukt": {
+        "ROOT_NIET_WIJZIGBAAR": "The supply connection and the meter cannot be deleted.",
+        "NIET_TOEGELATEN_KIND": "This component cannot be deleted without the branch above it. Shift+Delete deletes the whole branch.",
+        "andere": "Deleting did not work."
+      },
+      "takVerwijderen": {
+        "titel": "Delete whole branch",
+        "beschrijving": "This deletes {aantal} components. You can undo it.",
+        "bevestigen": "Delete"
+      }
+    },
+    "onderdelen": {
+      "contactdoos": "Socket",
+      "lichtpunt": "Light point",
+      "schakelaar": "Switch",
+      "toestel": "Appliance",
+      "leiding": "Cable",
+      "differentieel": "Residual current device (RCD)",
+      "zekering": "Fuse",
+      "onderbord": "Sub-board"
+    },
+    "types": {
+      "aansluiting": "Supply connection",
+      "teller": "Meter",
+      "differentieel": "Residual current device (RCD)",
+      "automaat": "Circuit breaker",
+      "zekering": "Fuse",
+      "verdeelbord": "Distribution board",
+      "leiding": "Cable",
+      "contactdoos": "Socket",
+      "lichtpunt": "Light point",
+      "schakelaar": "Switch",
+      "toestel": "Appliance"
+    },
+    "pagina": {
+      "laden": "Loading project…",
+      "nietGevonden": {
+        "titel": "Project not found",
+        "beschrijving": "This project does not exist or has been deleted.",
+        "terug": "Back to projects"
+      },
+      "ladenMislukt": {
+        "titel": "Could not load project",
+        "beschrijving": "The project could not be loaded. Please try again.",
+        "opnieuw": "Try again"
+      }
+    },
+    "bovenbalk": {
+      "projecten": "To projects",
+      "projectgegevens": "Edit project details",
+      "tabbladen": {
+        "eendraadschema": "Single-line diagram",
+        "situatieschema": "Layout plan",
+        "kringenlijst": "Circuit list"
+      },
+      "bevindingen": "{fouten} and {waarschuwingen}",
+      "aantalFouten": "{n} error | {n} errors",
+      "aantalWaarschuwingen": "{n} warning | {n} warnings",
+      "ongedaanMaken": "Undo (Ctrl+Z)",
+      "opnieuw": "Redo (Ctrl+Y)",
+      "exporteren": "Export"
+    },
+    "kringenlijst": {
+      "titel": "Circuit list"
+    },
+    "status": {
+      "opgeslagen": "Saved",
+      "bezig": "Saving…",
+      "lokaal": "Not saved: kept locally",
+      "onbewaard": "Not saved",
+      "conflict": "Conflict",
+      "fout": "Saving failed",
+      "alleen-lezen": "Not saved: read-only, your work is kept locally",
+      "alleenLezen": "Read-only",
+      "opnieuwProberen": "Try again"
+    },
+    "alleenLezen": {
+      "bewaardLokaal": "Your company has no active subscription. Your latest changes have not been saved, but they are kept locally.",
+      "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory."
+    },
+    "onderdelenPaneel": {
+      "titel": "Components",
+      "toestelsoort": "Appliance type",
+      "sjablonen": "Templates",
+      "geenSneltoets": "—"
+    },
+    "sjablonen": {
+      "kring-stopcontacten": "Socket circuit",
+      "kring-verlichting": "Lighting circuit",
+      "kookplaat": "Hob",
+      "wasmachine": "Washing machine",
+      "badkamer": "Bathroom"
+    },
+    "eigenschappen": {
+      "titel": "Properties",
+      "leeg": "Select a component on the diagram.",
+      "gemengd": "{aantal} components selected",
+      "zelfdeType": "{aantal} × {type}",
+      "verschillend": "—",
+      "geen": "None",
+      "ongeldig": "Invalid value"
+    },
+    "bevindingen": {
+      "titel": "Findings",
+      "leeg": "No findings.",
+      "ernst": {
+        "fout": "Errors",
+        "waarschuwing": "Warnings",
+        "info": "Information"
+      },
+      "afgeweken": "Deviation: {motivatie}",
+      "motiveren": "Justify a deviation",
+      "verwijderen": "Remove deviation"
+    },
+    "afwijking": {
+      "titel": "Justify a deviation",
+      "motivatie": "Justification",
+      "hulp": "Why is this deviation acceptable? At least 10 characters.",
+      "bewaren": "Save deviation"
+    },
+    "projectgegevens": {
+      "titel": "Project details",
+      "naam": "Name",
+      "stroomtype": "Current type",
+      "bewaren": "Save",
+      "klant": {
+        "titel": "Customer",
+        "naam": "Name",
+        "adresHulp": "The customer's address is optional."
+      },
+      "werf": {
+        "titel": "Site",
+        "ean": "EAN code"
+      },
+      "datum": {
+        "titel": "Date",
+        "label": "Project date"
+      },
+      "adres": {
+        "straat": "Street",
+        "nummer": "Number",
+        "bus": "Box",
+        "postcode": "Postcode",
+        "gemeente": "Town",
+        "land": "Country"
+      },
+      "fouten": {
+        "naamVerplicht": "Give the project a name.",
+        "adresVerplicht": "Required for an address.",
+        "datumVerplicht": "Choose a date."
+      }
+    },
+    "concept": {
+      "titel": "Local draft found",
+      "beschrijving": "This device has a draft of this project with changes that are not on the server yet ({tijd}).",
+      "laden": "Load draft",
+      "verwerpen": "Discard"
+    },
+    "verlaten": {
+      "bevestiging": "Your changes are not on the server yet. Do you still want to leave the editor?"
+    },
+    "conflict": {
+      "titel": "Conflict",
+      "beschrijving": "The project has been changed in the meantime, for example in another window. Your changes have not been saved on the server, but they are still kept locally.",
+      "serverversie": "Load server version",
+      "serverversieUitleg": "Your local changes will be lost.",
+      "kopie": "Save my version as a copy",
+      "kopieUitleg": "Your version becomes a new project; the original stays unchanged."
+    },
+    "fouten": {
+      "NIET_TOEGELATEN_KIND": "That component cannot go here.",
+      "ONGELDIG_SCHEMA": "That value is not valid.",
+      "ONBEKENDE_NODE": "That component no longer exists.",
+      "ROOT_NIET_WIJZIGBAAR": "The supply connection and the meter cannot be changed.",
+      "andere": "That did not work."
+    },
+    "situatie": {
+      "tePlaatsen": {
+        "titel": "To place",
+        "uitleg": "Drag a point onto the plan, or select it and click on the plan.",
+        "allesGeplaatst": "All points are on a plan",
+        "kring": "Circuit {label}",
+        "zonderKring": "Without circuit",
+        "verdeelborden": "Distribution boards"
+      },
+      "paginas": {
+        "titel": "Pages",
+        "toevoegen": "Add page",
+        "menu": "Menu for {titel}",
+        "hernoemen": "Rename",
+        "schaalInstellen": "Set scale",
+        "naarLinks": "Move left",
+        "naarRechts": "Move right",
+        "verwijderen": "Delete"
+      },
+      "leeg": {
+        "titel": "No plan yet",
+        "beschrijving": "Add a plan to place the points on.",
+        "planToevoegen": "Add plan"
+      },
+      "hernoemen": {
+        "titel": "Rename page",
+        "veld": "Title",
+        "verplicht": "Enter a title.",
+        "bewaren": "Rename"
+      },
+      "schaal": {
+        "tekst": "Scale: 1 px = {waarde} mm",
+        "wissen": "Clear scale",
+        "titel": "Set scale",
+        "beschrijving": "The measured line is {px} pixels long. Enter the real distance.",
+        "veld": "Real distance (mm)",
+        "ongeldig": "Enter a distance greater than 0.",
+        "bevestigen": "Set scale"
+      },
+      "verwijderen": {
+        "titel": "Delete page",
+        "beschrijving": "“{titel}” has {aantal} placed point. It goes back to To place. You can undo this. | “{titel}” has {aantal} placed points. They go back to To place. You can undo this.",
+        "bevestigen": "Delete"
+      },
+      "hint": {
+        "plaatsen": "Click on the plan to place {label}.",
+        "meten": "Click two points on the plan.",
+        "annuleren": "Cancel"
+      },
+      "verplaatst": "{label} moved from {van} to {naar}",
+      "canvas": {
+        "planNietGevonden": "Plan not found",
+        "planOpnieuwKiezen": "Choose plan again",
+        "werkbalk": "Selection on the plan",
+        "draaiLinks": "Rotate anticlockwise (Shift+R)",
+        "draaiRechts": "Rotate clockwise (R)",
+        "vanPlanHalen": "Remove from plan"
+      },
+      "toevoegen": {
+        "titel": "Add plan",
+        "titelVervangen": "Choose plan again",
+        "beschrijving": "Choose a PDF, PNG or JPG of the plan (50 MB maximum).",
+        "kiezen": "Choose a file",
+        "slepen": "or drag it here",
+        "ander": "Choose another file",
+        "paginaKiezen": "Choose the page of the plan",
+        "pagina": "Page {nr}",
+        "standaardTitel": "Page {nummer}",
+        "voorbeeldLaadt": "Loading preview…",
+        "pdfLaadt": "Opening PDF…",
+        "bezigRenderen": "Preparing plan…",
+        "bezigOpladen": "Uploading plan…",
+        "toevoegen": "Add",
+        "vervangen": "Replace",
+        "fout": {
+          "onbekendType": "This file type is not accepted.",
+          "teGroot": "This file is larger than 50 MB.",
+          "tePixels": "This plan is too large (more than 8,000 pixels).",
+          "mislukt": "The plan could not be uploaded. Please try again.",
+          "onleesbaar": "This file could not be read."
+        }
+      }
+    },
+    "export": {
+      "titel": "Export as PDF",
+      "beschrijving": "The PDF is made from the saved project and kept as a version.",
+      "opslaan": "Saving the project first…",
+      "geblokkeerd": {
+        "titel": "Export is not possible right now",
+        "bezig": "The project is still being saved. You can export as soon as everything is saved.",
+        "lokaal": "The project is not on the server: saving failed and the work is only kept locally. You can export as soon as it is saved.",
+        "onbewaard": "The project could not be saved. You can export as soon as it is saved.",
+        "conflict": "The project has been changed elsewhere in the meantime. Resolve the conflict first.",
+        "fout": "The server refused to save the project. Try saving again, then export.",
+        "alleen-lezen": "Your company has no active subscription, so your latest changes are only kept locally and will not be in the PDF. Reopen the project to export the last saved version."
+      },
+      "onderdelen": {
+        "titel": "Contents",
+        "eendraadschema": "Single-line diagram",
+        "situatieschema": "Layout plan",
+        "kringenlijst": "Circuit list",
+        "bijlage": "Appendix with findings",
+        "geen": "Choose at least one part.",
+        "zonderPlan": "Layout plan pages without a plan are listed in the appendix."
+      },
+      "bijlageVerplicht": "There is {n} unresolved error; the appendix is required. | There are {n} unresolved errors; the appendix is required.",
+      "papier": "Paper",
+      "versie": "Version",
+      "versieOngeldig": "Enter a version of 1 to 40 characters.",
+      "start": "Export",
+      "bevestiging": "There is {n} unresolved error. The PDF lists it in the appendix. Export anyway? | There are {n} unresolved errors. The PDF lists them in the appendix. Export anyway?",
+      "tochExporteren": "Export anyway",
+      "bezig": "Creating the PDF…",
+      "klaar": "Version {versie} has been exported.",
+      "mislukt": "The PDF could not be created. Please try again.",
+      "sluiten": "Close",
+      "eerdere": {
+        "titel": "Previous exports",
+        "geen": "No exports yet.",
+        "ladenMislukt": "The previous exports could not be loaded.",
+        "versie": "Version",
+        "datum": "Date",
+        "fouten": "Errors",
+        "aantalFouten": "no errors | {n} error | {n} errors",
+        "downloaden": "Download"
+      }
+    },
+    "afgemeld": {
+      "melding": "You have been signed out. Sign in again to save.",
+      "opnieuwInloggen": "Sign in again"
+    },
+    "vertrek": {
+      "bevestiging": "Some changes are not on the server yet. They stay kept locally for this account. Continue anyway?",
+      "bevestigingOnbewaard": "Your changes could not be kept locally either and will be lost. Continue anyway?"
+    },
+    "organisatieGewisseld": "You are now working in {organisatie}.",
+    "andereGebruiker": {
+      "melding": "You are now signed in as {naam}. These changes belong to {oorspronkelijk} and stay kept locally for that account."
+    }
+  },
+  "bedrijf": {
+    "titel": "Company details",
+    "beschrijving": "These details appear as the installer in the title block of the PDF.",
+    "terug": "To projects",
+    "link": "Company details",
+    "laden": {
+      "fout": {
+        "titel": "Could not load company details",
+        "beschrijving": "The details could not be loaded. Please try again.",
+        "opnieuw": "Try again"
+      }
+    },
+    "velden": {
+      "naam": "Name",
+      "ondernemingsnummer": "Company number",
+      "telefoon": "Phone",
+      "email": "Email"
+    },
+    "adres": {
+      "titel": "Address",
+      "straat": "Street",
+      "nummer": "Number",
+      "bus": "Box",
+      "postcode": "Postcode",
+      "gemeente": "Town",
+      "land": "Country"
+    },
+    "fouten": {
+      "naamVerplicht": "Give your company a name.",
+      "adresVerplicht": "Required for an address."
+    },
+    "logo": {
+      "titel": "Logo",
+      "beschrijving": "PNG or JPEG, 2 MB maximum.",
+      "voorbeeldAlt": "Logo preview",
+      "kies": "Choose logo",
+      "vervang": "Replace logo",
+      "geen": "No logo yet",
+      "fout": {
+        "onbekendType": "This file type is not accepted.",
+        "teGroot": "This logo is larger than 2 MB.",
+        "mislukt": "The logo could not be uploaded. Please try again."
+      },
+      "bewaard": "Logo uploaded."
+    },
+    "bewaren": "Save",
+    "bewaard": "Company details saved.",
+    "alleenLezen": "Only an owner can change the company details."
+  },
+  "projecten": {
+    "titel": "Projects",
+    "nieuw": "New project",
+    "leeg": "No projects yet. Create your first project.",
+    "laden": {
+      "fout": {
+        "titel": "Could not load projects",
+        "beschrijving": "The list could not be loaded. Please try again.",
+        "opnieuw": "Try again"
+      }
+    },
+    "kolommen": {
+      "naam": "Name",
+      "klant": "Customer",
+      "gewijzigd": "Modified",
+      "acties": "Actions"
+    },
+    "acties": {
+      "openen": "Open",
+      "dupliceren": "Duplicate",
+      "verwijderen": "Delete"
+    },
+    "verwijderen": {
+      "titel": "Delete project",
+      "bevestiging": "Are you sure you want to delete “{naam}”?"
+    },
+    "nieuwDialoog": {
+      "titel": "New project",
+      "naam": "Name",
+      "naamVerplicht": "Give the project a name.",
+      "klant": "Customer",
+      "stroomtype": "Current type",
+      "aanmaken": "Create"
+    },
+    "stroomtypes": {
+      "2x230V": "2 × 230 V (single phase)",
+      "3x230V": "3 × 230 V (three phase)",
+      "3N400V": "3N × 400 V (three phase with neutral)"
+    }
+  },
+  "rollen": {
+    "eigenaar": "Owner",
+    "lid": "Member"
+  },
+  "rollenInZin": {
+    "eigenaar": "owner",
+    "lid": "member"
+  },
+  "auth": {
+    "naam": "Name",
+    "email": "Email address",
+    "wachtwoord": "Password",
+    "wachtwoordHulp": "At least 10 characters.",
+    "bedrijfsnaam": "Your company name or your own name",
+    "fouten": {
+      "naamVerplicht": "Enter your name.",
+      "emailOngeldig": "Enter a valid email address.",
+      "wachtwoordVerplicht": "Enter your password.",
+      "wachtwoordTeKort": "A password has at least 10 characters.",
+      "wachtwoordTeLang": "A password has at most 128 characters.",
+      "bedrijfsnaam": "The company name has 1 to 80 characters.",
+      "teVeel": "Too many attempts. Wait a moment and try again."
+    }
+  },
+  "inloggen": {
+    "titel": "Sign in",
+    "knop": "Sign in",
+    "of": "or",
+    "inloglink": "Send me a sign-in link",
+    "inloglinkVerstuurd": "If this address is known, you will receive a link.",
+    "inloglinkUitleg": "A sign-in link confirms your address. A password you have not confirmed yet then stops working.",
+    "ongeldig": "The email address or password is incorrect.",
+    "onbevestigd": {
+      "titel": "Your email address has not been confirmed yet",
+      "beschrijving": "Confirm your address with the link in the email we sent you. Then you can sign in.",
+      "opnieuw": "Send confirmation email again",
+      "verstuurd": "If this address is known, you will receive a new confirmation email."
+    },
+    "linkOngeldig": "This link has expired or has already been used. Request a new one.",
+    "accountGemaakt": "Your account has been created. Sign in with your email address and password.",
+    "wachtwoordGewijzigd": "Your password has been changed. Sign in with your new password.",
+    "wachtwoordVergeten": "Forgot your password?",
+    "geenAccount": "No account yet?",
+    "registreren": "Sign up"
+  },
+  "registreren": {
+    "titel": "Create account",
+    "knop": "Create account",
+    "bevestig": "Confirm your email address with the link we sent you.",
+    "alAccount": "Already have an account?",
+    "inloggen": "Sign in"
+  },
+  "wachtwoordVergeten": {
+    "titel": "Forgot password",
+    "uitleg": "Enter your email address. You will receive a link to choose a new password.",
+    "knop": "Send link",
+    "verstuurd": "If this address is known, you will receive a link.",
+    "terug": "Back to sign in"
+  },
+  "wachtwoordHerstellen": {
+    "titel": "Choose a new password",
+    "nieuw": "New password",
+    "knop": "Change password",
+    "ongeldig": "This link has expired or has already been used. Request a new one.",
+    "nieuweLink": "Request a new link"
+  },
+  "uitnodiging": {
+    "titel": "Invitation",
+    "laden": "Loading invitation…",
+    "uitleg": "You have been invited to {organisatie} as {rol}.",
+    "voor": "The invitation is for {email}.",
+    "aanvaarden": "Accept",
+    "anderAdres": "You are signed in as {email}. Sign out and sign in with the address of the invitation, or create an account with it.",
+    "uitloggen": "Sign out",
+    "nietIngelogd": "Already have an account with this address? Then sign in. Otherwise, create an account below.",
+    "inloggen": "Sign in",
+    "registreren": {
+      "titel": "Create account",
+      "knop": "Create account and accept"
+    },
+    "accountBestaat": "An account with this address already exists. Sign in to accept the invitation.",
+    "onbevestigd": "Confirm your email address first, then try again.",
+    "nietVoorJou": "This invitation is for a different address.",
+    "ongeldig": {
+      "titel": "This invitation is no longer valid",
+      "beschrijving": "It has expired, has already been used or has been withdrawn. Ask the person who invited you for a new invitation."
+    },
+    "ladenMislukt": "The invitation could not be loaded. Please try again.",
+    "opnieuw": "Try again",
+    "naarStart": "Go to start"
+  },
+  "organisatie": {
+    "titel": "My organisation",
+    "terug": "To projects",
+    "rolUitleg": "You are {rol} of {organisatie}.",
+    "naam": {
+      "veld": "Company name",
+      "bewaren": "Save name",
+      "bewaard": "The name has been saved."
+    },
+    "leden": {
+      "titel": "Members",
+      "jij": "you",
+      "rolVan": "Role of {naam}",
+      "rolGewijzigd": "The role has been changed.",
+      "verwijderen": "Remove",
+      "verwijderenVan": "Remove {naam}",
+      "verwijderenTitel": "Remove member",
+      "verwijderenBevestiging": "Do you want to remove {naam} from {organisatie}?",
+      "verwijderd": "{naam} has been removed.",
+      "ladenMislukt": "The members could not be loaded."
+    },
+    "uitnodigingen": {
+      "titel": "Pending invitations",
+      "leeg": "No pending invitations.",
+      "verlooptOp": "Expires on {datum}",
+      "intrekken": "Withdraw",
+      "intrekkenVan": "Withdraw invitation for {email}",
+      "ingetrokken": "The invitation has been withdrawn.",
+      "ladenMislukt": "The invitations could not be loaded."
+    },
+    "uitnodigen": {
+      "titel": "Invite someone",
+      "email": "Email address",
+      "rol": "Role",
+      "knop": "Invite",
+      "verstuurd": "The invitation has been sent to {email}.",
+      "alLid": "This address is already a member.",
+      "alUitgenodigd": "This address has already been invited."
+    },
+    "verlaten": {
+      "knop": "Leave organisation",
+      "titel": "Leave organisation",
+      "bevestiging": "Do you want to leave {organisatie}? You will no longer see its projects.",
+      "bevestigen": "Leave"
+    },
+    "laatsteEigenaar": "At least one owner must remain.",
+    "alleenEigenaar": "Only an owner can do this.",
+    "laden": "Loading…",
+    "andereOrganisatie": {
+      "melding": "Your active organisation has changed to {organisatie} in the meantime. Check your change and try again.",
+      "zonderNaam": "Your active organisation has changed in the meantime. Check your change and try again."
+    }
+  },
+  "geenOrganisatie": {
+    "titel": "You do not belong to a company yet",
+    "titelBijkomend": "Create a new company",
+    "terug": "To projects",
+    "nieuw": {
+      "titel": "Create a new company",
+      "naam": "Your company name or your own name",
+      "geenProef": "This company has no free trial; you choose a subscription straight away.",
+      "knop": "Create company"
+    },
+    "uitnodiging": {
+      "titel": "Ask a colleague for an invitation",
+      "uitleg": "An owner of the company can invite you via My organisation. You will then receive an email with a link."
+    }
+  },
+  "abonnement": {
+    "titel": "Subscription",
+    "laden": {
+      "bezig": "Loading…",
+      "fout": {
+        "titel": "The subscription could not be loaded",
+        "beschrijving": "Please try again.",
+        "opnieuw": "Try again"
+      }
+    },
+    "status": {
+      "uit": "Payment has not been set up yet.",
+      "vrijgesteld": "Your company does not have to pay for Elentrik.",
+      "proef": "Free trial: {dagen} day left, until {datum}. | Free trial: {dagen} days left, until {datum}.",
+      "actief": "You have a {formule} subscription. Next renewal on {datum}.",
+      "opgezegd": "Your subscription has been cancelled and runs until {datum}.",
+      "betalingMislukt": "Your last payment failed.",
+      "betalingMisluktTot": "Your last payment failed. Sort out your payment before {datum}.",
+      "beeindigd": "Your subscription has ended.",
+      "proefVoorbij": "This company has no ongoing free trial. Choose a subscription to edit projects."
+    },
+    "datumOnbekend": "a later date",
+    "formules": {
+      "maand": "Monthly",
+      "jaar": "Yearly"
+    },
+    "per": {
+      "maand": "per month",
+      "jaar": "per year"
+    },
+    "exclBtw": "excl. VAT ({incl} incl. 21% VAT)",
+    "korting": "−{percentage}%",
+    "kies": "Choose",
+    "beheren": "Manage subscription",
+    "betalingRegelen": "Sort out payment",
+    "lid": "Ask an owner of your company to arrange the subscription.",
+    "prijzenOntbreken": "Prices could not be loaded",
+    "banner": {
+      "proef": "{n} free day left. | {n} free days left.",
+      "kies": "Choose a subscription",
+      "betaling": "Your last payment failed. Sort out your payment before {datum}.",
+      "betalingZonderDatum": "Your last payment failed. Sort out your payment soon, or your company will no longer be able to edit projects.",
+      "alleenLezen": "Your company has no active subscription. You can view and export projects, but not edit them."
+    }
+  },
+  "menu": {
+    "nieuwBedrijf": "Create a new company",
+    "gebruiker": "User menu",
+    "mijnOrganisatie": "My organisation",
+    "bedrijfsgegevens": "Company details",
+    "abonnement": "Subscription",
+    "uitloggen": "Sign out",
+    "wisselenMislukt": "Switching organisation did not work.",
+    "uitloggenMislukt": "Signing out did not work.",
+    "organisatieKeuzeMet": "Choose organisation: {organisatie}"
+  },
+  "fout": {
+    "algemeen": {
+      "titel": "Something went wrong",
+      "beschrijving": "Elentrik could not load your session or this page right now. Please try again."
+    },
+    "nietGevonden": {
+      "titel": "Page not found",
+      "beschrijving": "This page does not exist."
+    },
+    "naarStart": "Go to start",
+    "opnieuw": "Try again"
+  },
+  "weerAangemeld": {
+    "titel": "Signed in again",
+    "tekst": "You are signed in again. Close this tab and click ‘Try again’ in the editor.",
+    "sluiten": "Close tab"
+  },
+  "taal": {
+    "kiezen": "Choose language",
+    "label": "Language",
+    "bewarenMislukt": "Your language choice could not be saved to your account. It stays changed on this device."
+  },
+  "fouten": {
+    "onbekend": "Something went wrong. Please try again.",
+    "NIET_AANGEMELD": "You are no longer signed in. Sign in again.",
+    "ANDERE_GEBRUIKER": "Someone else has signed in in the meantime. Reload the page.",
+    "ANDERE_ORGANISATIE": "Your active organisation has changed in the meantime. Check your change and try again.",
+    "ALLEEN_EIGENAAR": "Only an owner can do this.",
+    "NIET_TOEGELATEN": "This is not allowed.",
+    "VERZOEK_VAN_ANDERE_SITE": "This request did not come from Elentrik and was refused. Reload the page.",
+    "NIET_GEVONDEN": "This does not exist (any more), or you do not have access to it.",
+    "ONGELDIGE_INVOER": "Some details are not valid. Check them and try again.",
+    "ONGELDIGE_NAAM": "The name has 1 to 80 characters.",
+    "ONGELDIGE_TAAL": "This language is not supported.",
+    "IF_MATCH_VEREIST": "The project version is missing. Reload the project.",
+    "PROJECT_GEWIJZIGD": "The project has been changed elsewhere in the meantime.",
+    "ONGELDIG_DOCUMENT": "The project contains invalid data and could not be saved.",
+    "BESTAND_TE_GROOT": "This file is too large.",
+    "BESTANDSTYPE_NIET_TOEGELATEN": "This file type is not accepted.",
+    "RASTER_TE_GROOT": "This plan is too large (more than 8,000 pixels).",
+    "ONBEREIKBAAR": "The PDF service cannot be reached. Try again shortly.",
+    "TIMEOUT": "The PDF service did not respond in time. Try again shortly.",
+    "MISLUKT": "The PDF could not be created. Please try again.",
+    "ABONNEMENT_VEREIST": "Your company has no active subscription. You can view and export projects, but not edit them.",
+    "ABONNEMENT_BESTAAT": "This company already has a subscription.",
+    "GEEN_KLANT": "This company has no payment details yet. Choose a subscription first.",
+    "ABONNEMENTEN_UIT": "Payment has not been set up yet.",
+    "LAATSTE_EIGENAAR": "At least one owner must remain.",
+    "AL_LID": "This address is already a member.",
+    "AL_UITGENODIGD": "This address has already been invited.",
+    "UITNODIGING_VERVALLEN": "This invitation is no longer valid.",
+    "UITNODIGING_ANDER_ADRES": "This invitation is for a different address.",
+    "EMAIL_NIET_BEVESTIGD": "Confirm your email address first, then try again.",
+    "ACCOUNT_BESTAAT": "An account with this address already exists. Sign in to accept the invitation.",
+    "TE_VEEL_UITNODIGINGEN": "Too many invitations. Try again later.",
+    "TE_VEEL_POGINGEN": "Too many attempts. Wait a moment and try again.",
+    "INVALID_EMAIL_OR_PASSWORD": "The email address or password is incorrect.",
+    "EMAIL_NOT_VERIFIED": "Your email address has not been confirmed yet.",
+    "INVALID_TOKEN": "This link has expired or has already been used. Request a new one.",
+    "TOKEN_EXPIRED": "This link has expired. Request a new one.",
+    "PASSWORD_TOO_SHORT": "A password has at least 10 characters.",
+    "PASSWORD_TOO_LONG": "A password has at most 128 characters.",
+    "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "An account with this address already exists.",
+    "INVALID_EMAIL": "Enter a valid email address."
+  }
+}

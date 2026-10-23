@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vertaalFout } from "~/fouten";
 import { foutStatus } from "~/sessie/fouten";
 import { wachtwoordFout } from "~/sessie/invoer";
 
@@ -42,12 +43,12 @@ async function herstel() {
     if (error) {
       const status = foutStatus(error);
       if (status === 400) ongeldig.value = true;
-      else fout.value = status === 429 ? t("auth.fouten.teVeel") : t("algemeen.fout");
+      else fout.value = vertaalFout(error, t);
       return;
     }
     await navigateTo("/inloggen?melding=wachtwoord-gewijzigd", { replace: true });
-  } catch {
-    fout.value = t("algemeen.fout");
+  } catch (e) {
+    fout.value = vertaalFout(e, t);
   } finally {
     bezig.value = false;
   }

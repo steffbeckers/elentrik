@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { foutStatus } from "~/sessie/fouten";
+import { vertaalFout } from "~/fouten";
 import { isBedrijfsnaam, isEmail, isNaam, wachtwoordFout } from "~/sessie/invoer";
+import { TAAL_HEADER } from "../../shared/taal";
 
 const { t } = useI18n();
+const { taal } = useTaal();
 
 useHead({ title: () => `${t("registreren.titel")} · ${t("app.naam")}` });
 
@@ -35,14 +37,16 @@ async function registreer() {
       password: formulier.wachtwoord,
       wachtendeBedrijfsnaam: formulier.bedrijfsnaam.trim(),
       callbackURL: "/",
+      // De taal van de interface wordt die van het account (en van de bevestigingsmail).
+      fetchOptions: { headers: { [TAAL_HEADER]: taal.value } },
     });
     if (error) {
-      fout.value = foutStatus(error) === 429 ? t("auth.fouten.teVeel") : t("algemeen.fout");
+      fout.value = vertaalFout(error, t);
       return;
     }
     verstuurd.value = true;
-  } catch {
-    fout.value = t("algemeen.fout");
+  } catch (e) {
+    fout.value = vertaalFout(e, t);
   } finally {
     bezig.value = false;
   }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Het kader van de inlog-, registratie- en uitnodigingspagina's: de naam van de app en een kaart
-// met de titel, gecentreerd, ook op een smal scherm.
+// met de titel, gecentreerd, ook op een smal scherm. Onder de kaart de taalkiezer.
 defineProps<{ titel: string }>();
 </script>
 
@@ -18,5 +18,6 @@ defineProps<{ titel: string }>();
         <slot name="voet" />
       </template>
     </UCard>
+    <TaalKiezer class="mt-4" />
   </main>
 </template>

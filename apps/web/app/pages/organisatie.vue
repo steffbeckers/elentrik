@@ -2,6 +2,7 @@
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useOrganisatieApi } from "~/composables/useOrganisatieApi";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { vertaalFout } from "~/fouten";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isBedrijfsnaam, isEmail } from "~/sessie/invoer";
 import { useSessieStore, type Rol } from "~/stores/sessie";
@@ -67,8 +68,7 @@ function foutTekst(fout: unknown): string {
   if (code === "ALLEEN_EIGENAAR" || foutStatus(fout) === 403) return t("organisatie.alleenEigenaar");
   if (code === "AL_LID") return t("organisatie.uitnodigen.alLid");
   if (code === "AL_UITGENODIGD") return t("organisatie.uitnodigen.alUitgenodigd");
-  if (foutStatus(fout) === 429) return t("auth.fouten.teVeel");
-  return t("algemeen.fout");
+  return vertaalFout(fout, t);
 }
 
 /** Wisselde een ander tabblad de organisatie (409 ANDERE_ORGANISATIE), dan meldt die dat zelf. */

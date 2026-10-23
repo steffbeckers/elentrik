@@ -160,6 +160,31 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | ongedaan maken | annuler | undo |
 | opnieuw | rétablir | redo |
 
+## Interface
+
+| NL | FR | EN |
+|---|---|---|
+| onderbord | tableau divisionnaire | sub-board |
+| onderdeel (in de editor) | élément | component |
+| sjabloon | modèle | template |
+| concept (lokaal) | brouillon | draft |
+| eigenschappen | propriétés | properties |
+| alleen lezen | lecture seule | read-only |
+| inloggen / uitloggen | se connecter / se déconnecter | sign in / sign out |
+| registreren | s'inscrire | sign up |
+| inloglink | lien de connexion | sign-in link |
+| bedrijf | entreprise | company |
+| bedrijfsgegevens | données de l'entreprise | company details |
+| ondernemingsnummer | numéro d'entreprise | company number |
+| bus (in een adres) | boîte | box |
+| gemeente | commune | town |
+| cartouche | cartouche | title block |
+| maandelijks / jaarlijks (formule) | mensuel / annuel | monthly / yearly |
+| btw | TVA | VAT |
+| taal | langue | language |
+
+De namen van de talen staan altijd in hun eigen taal: "Nederlands", "Français", "English". In de Franse interface staat een vaste spatie vóór `:`, `?`, `!` en `;`, en binnen « ».
+
 ## Opvolgpunt
 
 Laat het Frans vóór de lancering nalezen door iemand met Frans als moedertaal.

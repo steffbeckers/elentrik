@@ -2,7 +2,8 @@
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useExportsApi } from "~/composables/useExportsApi";
 import { ConflictFout } from "~/composables/useProjectenApi";
-import { magExporteren, onopgelosteFouten, serverBoodschap, volgendVersieLabel } from "~/editor/export";
+import { magExporteren, onopgelosteFouten, volgendVersieLabel } from "~/editor/export";
+import { bekendeFoutcode, vertaalFout } from "~/fouten";
 import { useEditorStore } from "~/stores/editor";
 import type { ExportInfo, ExportOnderdelen, Papierformaat } from "../../../shared/exports";
 
@@ -154,7 +155,8 @@ async function exporteer(): Promise<void> {
       emit("conflict", fout.huidigeVersie);
       return;
     }
-    toast.add({ title: serverBoodschap(fout) ?? t("editor.export.mislukt"), color: "error" });
+    // Met een code (bv. de PDF-dienst onbereikbaar) de vertaling ervan; anders de algemene exportfout.
+    toast.add({ title: bekendeFoutcode(fout) ? vertaalFout(fout, t) : t("editor.export.mislukt"), color: "error" });
   } finally {
     exportLoopt = false;
     if (deze === opening) fase.value = "formulier";

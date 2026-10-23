@@ -1,0 +1,698 @@
+{
+  "app": {
+    "naam": "Elentrik"
+  },
+  "algemeen": {
+    "annuleren": "Annuler",
+    "fout": "Une erreur s'est produite. Veuillez réessayer."
+  },
+  "editor": {
+    "canvas": {
+      "passendMaken": "Ajuster à la fenêtre",
+      "voegToe": "Ajouter : {onderdeel}",
+      "verwijderenMislukt": {
+        "ROOT_NIET_WIJZIGBAAR": "Le raccordement et le compteur ne peuvent pas être supprimés.",
+        "NIET_TOEGELATEN_KIND": "Cet élément ne peut pas être supprimé sans la branche au-dessus. Maj+Suppr supprime toute la branche.",
+        "andere": "La suppression n'a pas abouti."
+      },
+      "takVerwijderen": {
+        "titel": "Supprimer toute la branche",
+        "beschrijving": "Cette action supprime {aantal} éléments. Vous pouvez l'annuler.",
+        "bevestigen": "Supprimer"
+      }
+    },
+    "onderdelen": {
+      "contactdoos": "Prise de courant",
+      "lichtpunt": "Point lumineux",
+      "schakelaar": "Interrupteur",
+      "toestel": "Appareil",
+      "leiding": "Câble",
+      "differentieel": "Interrupteur différentiel",
+      "zekering": "Fusible",
+      "onderbord": "Tableau divisionnaire"
+    },
+    "types": {
+      "aansluiting": "Raccordement",
+      "teller": "Compteur",
+      "differentieel": "Interrupteur différentiel",
+      "automaat": "Disjoncteur",
+      "zekering": "Fusible",
+      "verdeelbord": "Tableau de distribution",
+      "leiding": "Câble",
+      "contactdoos": "Prise de courant",
+      "lichtpunt": "Point lumineux",
+      "schakelaar": "Interrupteur",
+      "toestel": "Appareil"
+    },
+    "pagina": {
+      "laden": "Chargement du projet…",
+      "nietGevonden": {
+        "titel": "Projet introuvable",
+        "beschrijving": "Ce projet n'existe pas ou a été supprimé.",
+        "terug": "Retour aux projets"
+      },
+      "ladenMislukt": {
+        "titel": "Échec du chargement du projet",
+        "beschrijving": "Le projet n'a pas pu être chargé. Veuillez réessayer.",
+        "opnieuw": "Réessayer"
+      }
+    },
+    "bovenbalk": {
+      "projecten": "Vers les projets",
+      "projectgegevens": "Modifier les données du projet",
+      "tabbladen": {
+        "eendraadschema": "Schéma unifilaire",
+        "situatieschema": "Plan de position",
+        "kringenlijst": "Liste des circuits"
+      },
+      "bevindingen": "{fouten} et {waarschuwingen}",
+      "aantalFouten": "{n} erreur | {n} erreurs",
+      "aantalWaarschuwingen": "{n} avertissement | {n} avertissements",
+      "ongedaanMaken": "Annuler (Ctrl+Z)",
+      "opnieuw": "Rétablir (Ctrl+Y)",
+      "exporteren": "Exporter"
+    },
+    "kringenlijst": {
+      "titel": "Liste des circuits"
+    },
+    "status": {
+      "opgeslagen": "Enregistré",
+      "bezig": "Enregistrement…",
+      "lokaal": "Non enregistré : conservé localement",
+      "onbewaard": "Non enregistré",
+      "conflict": "Conflit",
+      "fout": "Échec de l'enregistrement",
+      "alleen-lezen": "Non enregistré : lecture seule, votre travail reste conservé localement",
+      "alleenLezen": "Lecture seule",
+      "opnieuwProberen": "Réessayer"
+    },
+    "alleenLezen": {
+      "bewaardLokaal": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
+      "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire."
+    },
+    "onderdelenPaneel": {
+      "titel": "Éléments",
+      "toestelsoort": "Type d'appareil",
+      "sjablonen": "Modèles",
+      "geenSneltoets": "—"
+    },
+    "sjablonen": {
+      "kring-stopcontacten": "Circuit de prises",
+      "kring-verlichting": "Circuit d'éclairage",
+      "kookplaat": "Plaque de cuisson",
+      "wasmachine": "Lave-linge",
+      "badkamer": "Salle de bain"
+    },
+    "eigenschappen": {
+      "titel": "Propriétés",
+      "leeg": "Sélectionnez un élément sur le schéma.",
+      "gemengd": "{aantal} éléments sélectionnés",
+      "zelfdeType": "{aantal} × {type}",
+      "verschillend": "—",
+      "geen": "Aucun",
+      "ongeldig": "Valeur non valide"
+    },
+    "bevindingen": {
+      "titel": "Constats",
+      "leeg": "Aucun constat.",
+      "ernst": {
+        "fout": "Erreurs",
+        "waarschuwing": "Avertissements",
+        "info": "Infos"
+      },
+      "afgeweken": "Dérogation : {motivatie}",
+      "motiveren": "Justifier une dérogation",
+      "verwijderen": "Supprimer la dérogation"
+    },
+    "afwijking": {
+      "titel": "Justifier une dérogation",
+      "motivatie": "Motivation",
+      "hulp": "Pourquoi cette dérogation est-elle acceptable ? Au moins 10 caractères.",
+      "bewaren": "Enregistrer la dérogation"
+    },
+    "projectgegevens": {
+      "titel": "Données du projet",
+      "naam": "Nom",
+      "stroomtype": "Type de courant",
+      "bewaren": "Enregistrer",
+      "klant": {
+        "titel": "Client",
+        "naam": "Nom",
+        "adresHulp": "L'adresse du client est facultative."
+      },
+      "werf": {
+        "titel": "Chantier",
+        "ean": "Code EAN"
+      },
+      "datum": {
+        "titel": "Date",
+        "label": "Date du projet"
+      },
+      "adres": {
+        "straat": "Rue",
+        "nummer": "Numéro",
+        "bus": "Boîte",
+        "postcode": "Code postal",
+        "gemeente": "Commune",
+        "land": "Pays"
+      },
+      "fouten": {
+        "naamVerplicht": "Donnez un nom au projet.",
+        "adresVerplicht": "Obligatoire pour une adresse.",
+        "datumVerplicht": "Choisissez une date."
+      }
+    },
+    "concept": {
+      "titel": "Brouillon local trouvé",
+      "beschrijving": "Cet appareil contient un brouillon de ce projet avec des modifications qui ne sont pas encore sur le serveur ({tijd}).",
+      "laden": "Charger le brouillon",
+      "verwerpen": "Ignorer"
+    },
+    "verlaten": {
+      "bevestiging": "Vos modifications ne sont pas encore sur le serveur. Voulez-vous quand même quitter l'éditeur ?"
+    },
+    "conflict": {
+      "titel": "Conflit",
+      "beschrijving": "Le projet a été modifié entre-temps, par exemple dans une autre fenêtre. Vos modifications n'ont pas été enregistrées sur le serveur, mais restent conservées localement.",
+      "serverversie": "Charger la version du serveur",
+      "serverversieUitleg": "Vos modifications locales seront perdues.",
+      "kopie": "Enregistrer ma version comme copie",
+      "kopieUitleg": "Votre version devient un nouveau projet ; l'original reste inchangé."
+    },
+    "fouten": {
+      "NIET_TOEGELATEN_KIND": "Cet élément ne peut pas être placé ici.",
+      "ONGELDIG_SCHEMA": "Cette valeur n'est pas valide.",
+      "ONBEKENDE_NODE": "Cet élément n'existe plus.",
+      "ROOT_NIET_WIJZIGBAAR": "Le raccordement et le compteur ne peuvent pas être modifiés.",
+      "andere": "L'opération n'a pas abouti."
+    },
+    "situatie": {
+      "tePlaatsen": {
+        "titel": "À placer",
+        "uitleg": "Faites glisser un point sur le plan, ou sélectionnez-le puis cliquez sur le plan.",
+        "allesGeplaatst": "Tous les points sont placés sur un plan",
+        "kring": "Circuit {label}",
+        "zonderKring": "Sans circuit",
+        "verdeelborden": "Tableaux de distribution"
+      },
+      "paginas": {
+        "titel": "Pages",
+        "toevoegen": "Ajouter une page",
+        "menu": "Menu de {titel}",
+        "hernoemen": "Renommer",
+        "schaalInstellen": "Définir l'échelle",
+        "naarLinks": "Vers la gauche",
+        "naarRechts": "Vers la droite",
+        "verwijderen": "Supprimer"
+      },
+      "leeg": {
+        "titel": "Pas encore de plan",
+        "beschrijving": "Ajoutez un plan pour y placer les points.",
+        "planToevoegen": "Ajouter un plan"
+      },
+      "hernoemen": {
+        "titel": "Renommer la page",
+        "veld": "Titre",
+        "verplicht": "Saisissez un titre.",
+        "bewaren": "Renommer"
+      },
+      "schaal": {
+        "tekst": "Échelle : 1 px = {waarde} mm",
+        "wissen": "Effacer l'échelle",
+        "titel": "Définir l'échelle",
+        "beschrijving": "La ligne mesurée fait {px} pixels. Saisissez la distance réelle.",
+        "veld": "Distance réelle (mm)",
+        "ongeldig": "Saisissez une distance supérieure à 0.",
+        "bevestigen": "Définir l'échelle"
+      },
+      "verwijderen": {
+        "titel": "Supprimer la page",
+        "beschrijving": "« {titel} » contient {aantal} point placé. Il retourne dans À placer. Vous pouvez l'annuler. | « {titel} » contient {aantal} points placés. Ils retournent dans À placer. Vous pouvez l'annuler.",
+        "bevestigen": "Supprimer"
+      },
+      "hint": {
+        "plaatsen": "Cliquez sur le plan pour placer {label}.",
+        "meten": "Cliquez sur deux points du plan.",
+        "annuleren": "Annuler"
+      },
+      "verplaatst": "{label} déplacé de {van} vers {naar}",
+      "canvas": {
+        "planNietGevonden": "Plan introuvable",
+        "planOpnieuwKiezen": "Choisir à nouveau le plan",
+        "werkbalk": "Sélection sur le plan",
+        "draaiLinks": "Pivoter vers la gauche (Maj+R)",
+        "draaiRechts": "Pivoter vers la droite (R)",
+        "vanPlanHalen": "Retirer du plan"
+      },
+      "toevoegen": {
+        "titel": "Ajouter un plan",
+        "titelVervangen": "Choisir à nouveau le plan",
+        "beschrijving": "Choisissez un PDF, PNG ou JPG du plan (50 MB maximum).",
+        "kiezen": "Choisir un fichier",
+        "slepen": "ou faites-le glisser ici",
+        "ander": "Choisir un autre fichier",
+        "paginaKiezen": "Choisissez la page du plan",
+        "pagina": "Page {nr}",
+        "standaardTitel": "Page {nummer}",
+        "voorbeeldLaadt": "Chargement de l'aperçu…",
+        "pdfLaadt": "Ouverture du PDF…",
+        "bezigRenderen": "Préparation du plan…",
+        "bezigOpladen": "Envoi du plan…",
+        "toevoegen": "Ajouter",
+        "vervangen": "Remplacer",
+        "fout": {
+          "onbekendType": "Ce type de fichier n'est pas accepté.",
+          "teGroot": "Ce fichier dépasse 50 MB.",
+          "tePixels": "Ce plan est trop grand (plus de 8.000 pixels).",
+          "mislukt": "Le plan n'a pas pu être envoyé. Veuillez réessayer.",
+          "onleesbaar": "Ce fichier n'a pas pu être lu."
+        }
+      }
+    },
+    "export": {
+      "titel": "Exporter en PDF",
+      "beschrijving": "Le PDF est généré à partir du projet enregistré et conservé comme version.",
+      "opslaan": "Le projet est d'abord enregistré…",
+      "geblokkeerd": {
+        "titel": "Exportation impossible pour le moment",
+        "bezig": "Le projet est encore en cours d'enregistrement. Vous pourrez exporter dès que tout sera enregistré.",
+        "lokaal": "Le projet n'est pas sur le serveur : l'enregistrement a échoué et le travail n'est conservé que localement. Vous pourrez exporter dès qu'il sera enregistré.",
+        "onbewaard": "Le projet n'a pas pu être enregistré. Vous pourrez exporter dès qu'il sera enregistré.",
+        "conflict": "Le projet a été modifié ailleurs entre-temps. Résolvez d'abord le conflit.",
+        "fout": "Le serveur a refusé d'enregistrer le projet. Réessayez de l'enregistrer, puis exportez.",
+        "alleen-lezen": "Votre entreprise n'a pas d'abonnement actif : vos dernières modifications ne sont conservées que localement et ne figureront pas dans le PDF. Rouvrez le projet pour exporter la dernière version enregistrée."
+      },
+      "onderdelen": {
+        "titel": "Contenu",
+        "eendraadschema": "Schéma unifilaire",
+        "situatieschema": "Plan de position",
+        "kringenlijst": "Liste des circuits",
+        "bijlage": "Annexe avec les constats",
+        "geen": "Choisissez au moins un élément.",
+        "zonderPlan": "Les pages du plan de position sans plan sont mentionnées dans l'annexe."
+      },
+      "bijlageVerplicht": "Il y a {n} erreur non résolue ; l'annexe est obligatoirement jointe. | Il y a {n} erreurs non résolues ; l'annexe est obligatoirement jointe.",
+      "papier": "Papier",
+      "versie": "Version",
+      "versieOngeldig": "Indiquez une version de 1 à 40 caractères.",
+      "start": "Exporter",
+      "bevestiging": "Il y a {n} erreur non résolue. Le PDF la mentionne dans l'annexe. Exporter quand même ? | Il y a {n} erreurs non résolues. Le PDF les mentionne dans l'annexe. Exporter quand même ?",
+      "tochExporteren": "Exporter quand même",
+      "bezig": "Création du PDF…",
+      "klaar": "La version {versie} a été exportée.",
+      "mislukt": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
+      "sluiten": "Fermer",
+      "eerdere": {
+        "titel": "Exportations précédentes",
+        "geen": "Pas encore d'exportation.",
+        "ladenMislukt": "Les exportations précédentes n'ont pas pu être chargées.",
+        "versie": "Version",
+        "datum": "Date",
+        "fouten": "Erreurs",
+        "aantalFouten": "aucune erreur | {n} erreur | {n} erreurs",
+        "downloaden": "Télécharger"
+      }
+    },
+    "afgemeld": {
+      "melding": "Vous avez été déconnecté. Reconnectez-vous pour enregistrer.",
+      "opnieuwInloggen": "Se reconnecter"
+    },
+    "vertrek": {
+      "bevestiging": "Certaines modifications ne sont pas encore sur le serveur. Elles restent conservées localement pour ce compte. Continuer quand même ?",
+      "bevestigingOnbewaard": "Vos modifications n'ont pas non plus pu être conservées localement et seront perdues. Continuer quand même ?"
+    },
+    "organisatieGewisseld": "Vous travaillez maintenant dans {organisatie}.",
+    "andereGebruiker": {
+      "melding": "Vous êtes maintenant connecté en tant que {naam}. Ces modifications appartiennent à {oorspronkelijk} et restent conservées localement pour ce compte."
+    }
+  },
+  "bedrijf": {
+    "titel": "Données de l'entreprise",
+    "beschrijving": "Ces données figurent comme installateur dans le cartouche du PDF.",
+    "terug": "Vers les projets",
+    "link": "Données de l'entreprise",
+    "laden": {
+      "fout": {
+        "titel": "Échec du chargement des données de l'entreprise",
+        "beschrijving": "Les données n'ont pas pu être chargées. Veuillez réessayer.",
+        "opnieuw": "Réessayer"
+      }
+    },
+    "velden": {
+      "naam": "Nom",
+      "ondernemingsnummer": "Numéro d'entreprise",
+      "telefoon": "Téléphone",
+      "email": "E-mail"
+    },
+    "adres": {
+      "titel": "Adresse",
+      "straat": "Rue",
+      "nummer": "Numéro",
+      "bus": "Boîte",
+      "postcode": "Code postal",
+      "gemeente": "Commune",
+      "land": "Pays"
+    },
+    "fouten": {
+      "naamVerplicht": "Donnez un nom à votre entreprise.",
+      "adresVerplicht": "Obligatoire pour une adresse."
+    },
+    "logo": {
+      "titel": "Logo",
+      "beschrijving": "PNG ou JPEG, 2 MB maximum.",
+      "voorbeeldAlt": "Aperçu du logo",
+      "kies": "Choisir un logo",
+      "vervang": "Remplacer le logo",
+      "geen": "Pas encore de logo",
+      "fout": {
+        "onbekendType": "Ce type de fichier n'est pas accepté.",
+        "teGroot": "Ce logo dépasse 2 MB.",
+        "mislukt": "Le logo n'a pas pu être envoyé. Veuillez réessayer."
+      },
+      "bewaard": "Logo envoyé."
+    },
+    "bewaren": "Enregistrer",
+    "bewaard": "Données de l'entreprise enregistrées.",
+    "alleenLezen": "Seul un propriétaire peut modifier les données de l'entreprise."
+  },
+  "projecten": {
+    "titel": "Projets",
+    "nieuw": "Nouveau projet",
+    "leeg": "Pas encore de projet. Créez votre premier projet.",
+    "laden": {
+      "fout": {
+        "titel": "Échec du chargement des projets",
+        "beschrijving": "La liste n'a pas pu être chargée. Veuillez réessayer.",
+        "opnieuw": "Réessayer"
+      }
+    },
+    "kolommen": {
+      "naam": "Nom",
+      "klant": "Client",
+      "gewijzigd": "Modifié",
+      "acties": "Actions"
+    },
+    "acties": {
+      "openen": "Ouvrir",
+      "dupliceren": "Dupliquer",
+      "verwijderen": "Supprimer"
+    },
+    "verwijderen": {
+      "titel": "Supprimer le projet",
+      "bevestiging": "Voulez-vous vraiment supprimer « {naam} » ?"
+    },
+    "nieuwDialoog": {
+      "titel": "Nouveau projet",
+      "naam": "Nom",
+      "naamVerplicht": "Donnez un nom au projet.",
+      "klant": "Client",
+      "stroomtype": "Type de courant",
+      "aanmaken": "Créer"
+    },
+    "stroomtypes": {
+      "2x230V": "2 × 230 V (monophasé)",
+      "3x230V": "3 × 230 V (triphasé)",
+      "3N400V": "3N × 400 V (triphasé avec neutre)"
+    }
+  },
+  "rollen": {
+    "eigenaar": "Propriétaire",
+    "lid": "Membre"
+  },
+  "rollenInZin": {
+    "eigenaar": "propriétaire",
+    "lid": "membre"
+  },
+  "auth": {
+    "naam": "Nom",
+    "email": "Adresse e-mail",
+    "wachtwoord": "Mot de passe",
+    "wachtwoordHulp": "Au moins 10 caractères.",
+    "bedrijfsnaam": "Nom de votre entreprise ou votre propre nom",
+    "fouten": {
+      "naamVerplicht": "Saisissez votre nom.",
+      "emailOngeldig": "Saisissez une adresse e-mail valide.",
+      "wachtwoordVerplicht": "Saisissez votre mot de passe.",
+      "wachtwoordTeKort": "Un mot de passe compte au moins 10 caractères.",
+      "wachtwoordTeLang": "Un mot de passe compte au maximum 128 caractères.",
+      "bedrijfsnaam": "Le nom de l'entreprise compte de 1 à 80 caractères.",
+      "teVeel": "Trop de tentatives. Patientez un instant et réessayez."
+    }
+  },
+  "inloggen": {
+    "titel": "Connexion",
+    "knop": "Se connecter",
+    "of": "ou",
+    "inloglink": "M'envoyer un lien de connexion",
+    "inloglinkVerstuurd": "Si cette adresse est connue, vous recevrez un lien.",
+    "inloglinkUitleg": "Un lien de connexion confirme votre adresse. Un mot de passe que vous n'avez pas encore confirmé n'est alors plus valable.",
+    "ongeldig": "L'adresse e-mail ou le mot de passe est incorrect.",
+    "onbevestigd": {
+      "titel": "Votre adresse e-mail n'est pas encore confirmée",
+      "beschrijving": "Confirmez votre adresse via le lien de l'e-mail que nous vous avons envoyé. Vous pourrez ensuite vous connecter.",
+      "opnieuw": "Renvoyer l'e-mail de confirmation",
+      "verstuurd": "Si cette adresse est connue, vous recevrez un nouvel e-mail de confirmation."
+    },
+    "linkOngeldig": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
+    "accountGemaakt": "Votre compte a été créé. Connectez-vous avec votre adresse e-mail et votre mot de passe.",
+    "wachtwoordGewijzigd": "Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe.",
+    "wachtwoordVergeten": "Mot de passe oublié ?",
+    "geenAccount": "Pas encore de compte ?",
+    "registreren": "S'inscrire"
+  },
+  "registreren": {
+    "titel": "Créer un compte",
+    "knop": "Créer un compte",
+    "bevestig": "Confirmez votre adresse e-mail via le lien que nous vous avons envoyé.",
+    "alAccount": "Vous avez déjà un compte ?",
+    "inloggen": "Se connecter"
+  },
+  "wachtwoordVergeten": {
+    "titel": "Mot de passe oublié",
+    "uitleg": "Saisissez votre adresse e-mail. Vous recevrez un lien pour choisir un nouveau mot de passe.",
+    "knop": "Envoyer le lien",
+    "verstuurd": "Si cette adresse est connue, vous recevrez un lien.",
+    "terug": "Retour à la connexion"
+  },
+  "wachtwoordHerstellen": {
+    "titel": "Choisir un nouveau mot de passe",
+    "nieuw": "Nouveau mot de passe",
+    "knop": "Modifier le mot de passe",
+    "ongeldig": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
+    "nieuweLink": "Demander un nouveau lien"
+  },
+  "uitnodiging": {
+    "titel": "Invitation",
+    "laden": "Chargement de l'invitation…",
+    "uitleg": "Vous êtes invité à rejoindre {organisatie} en tant que {rol}.",
+    "voor": "L'invitation est destinée à {email}.",
+    "aanvaarden": "Accepter",
+    "anderAdres": "Vous êtes connecté en tant que {email}. Déconnectez-vous et connectez-vous avec l'adresse de l'invitation, ou créez un compte avec celle-ci.",
+    "uitloggen": "Se déconnecter",
+    "nietIngelogd": "Vous avez déjà un compte avec cette adresse ? Connectez-vous. Sinon, créez un compte ci-dessous.",
+    "inloggen": "Se connecter",
+    "registreren": {
+      "titel": "Créer un compte",
+      "knop": "Créer un compte et accepter"
+    },
+    "accountBestaat": "Un compte existe déjà avec cette adresse. Connectez-vous pour accepter l'invitation.",
+    "onbevestigd": "Confirmez d'abord votre adresse e-mail, puis réessayez.",
+    "nietVoorJou": "Cette invitation est destinée à une autre adresse.",
+    "ongeldig": {
+      "titel": "Cette invitation n'est plus valable",
+      "beschrijving": "Elle a expiré, a déjà été utilisée ou a été retirée. Demandez une nouvelle invitation à la personne qui vous a invité."
+    },
+    "ladenMislukt": "L'invitation n'a pas pu être chargée. Veuillez réessayer.",
+    "opnieuw": "Réessayer",
+    "naarStart": "Vers l'accueil"
+  },
+  "organisatie": {
+    "titel": "Mon organisation",
+    "terug": "Vers les projets",
+    "rolUitleg": "Vous êtes {rol} de {organisatie}.",
+    "naam": {
+      "veld": "Nom de l'entreprise",
+      "bewaren": "Enregistrer le nom",
+      "bewaard": "Le nom a été enregistré."
+    },
+    "leden": {
+      "titel": "Membres",
+      "jij": "vous",
+      "rolVan": "Rôle de {naam}",
+      "rolGewijzigd": "Le rôle a été modifié.",
+      "verwijderen": "Retirer",
+      "verwijderenVan": "Retirer {naam}",
+      "verwijderenTitel": "Retirer un membre",
+      "verwijderenBevestiging": "Voulez-vous retirer {naam} de {organisatie} ?",
+      "verwijderd": "{naam} a été retiré.",
+      "ladenMislukt": "Les membres n'ont pas pu être chargés."
+    },
+    "uitnodigingen": {
+      "titel": "Invitations en attente",
+      "leeg": "Aucune invitation en attente.",
+      "verlooptOp": "Expire le {datum}",
+      "intrekken": "Retirer",
+      "intrekkenVan": "Retirer l'invitation de {email}",
+      "ingetrokken": "L'invitation a été retirée.",
+      "ladenMislukt": "Les invitations n'ont pas pu être chargées."
+    },
+    "uitnodigen": {
+      "titel": "Inviter quelqu'un",
+      "email": "Adresse e-mail",
+      "rol": "Rôle",
+      "knop": "Inviter",
+      "verstuurd": "L'invitation a été envoyée à {email}.",
+      "alLid": "Cette adresse est déjà membre.",
+      "alUitgenodigd": "Cette adresse a déjà été invitée."
+    },
+    "verlaten": {
+      "knop": "Quitter l'organisation",
+      "titel": "Quitter l'organisation",
+      "bevestiging": "Voulez-vous quitter {organisatie} ? Vous ne verrez alors plus ses projets.",
+      "bevestigen": "Quitter"
+    },
+    "laatsteEigenaar": "Il doit rester au moins un propriétaire.",
+    "alleenEigenaar": "Seul un propriétaire peut effectuer cette action.",
+    "laden": "Chargement…",
+    "andereOrganisatie": {
+      "melding": "Votre organisation active a été remplacée entre-temps par {organisatie}. Vérifiez votre modification et réessayez.",
+      "zonderNaam": "Votre organisation active a été modifiée entre-temps. Vérifiez votre modification et réessayez."
+    }
+  },
+  "geenOrganisatie": {
+    "titel": "Vous ne faites encore partie d'aucune entreprise",
+    "titelBijkomend": "Créer une nouvelle entreprise",
+    "terug": "Vers les projets",
+    "nieuw": {
+      "titel": "Créez une nouvelle entreprise",
+      "naam": "Nom de votre entreprise ou votre propre nom",
+      "geenProef": "Cette entreprise n'a pas de période d'essai gratuite ; vous choisissez directement un abonnement.",
+      "knop": "Créer l'entreprise"
+    },
+    "uitnodiging": {
+      "titel": "Demandez une invitation à un collègue",
+      "uitleg": "Un propriétaire de l'entreprise peut vous inviter via Mon organisation. Vous recevrez alors un e-mail avec un lien."
+    }
+  },
+  "abonnement": {
+    "titel": "Abonnement",
+    "laden": {
+      "bezig": "Chargement…",
+      "fout": {
+        "titel": "L'abonnement n'a pas pu être chargé",
+        "beschrijving": "Veuillez réessayer.",
+        "opnieuw": "Réessayer"
+      }
+    },
+    "status": {
+      "uit": "Le paiement n'est pas encore configuré.",
+      "vrijgesteld": "Votre entreprise ne doit pas payer pour Elentrik.",
+      "proef": "Période d'essai gratuite : encore {dagen} jour, jusqu'au {datum}. | Période d'essai gratuite : encore {dagen} jours, jusqu'au {datum}.",
+      "actief": "Vous avez un abonnement {formule}. Prochain renouvellement le {datum}.",
+      "opgezegd": "Votre abonnement a été résilié et court encore jusqu'au {datum}.",
+      "betalingMislukt": "Votre dernier paiement a échoué.",
+      "betalingMisluktTot": "Votre dernier paiement a échoué. Réglez votre paiement avant le {datum}.",
+      "beeindigd": "Votre abonnement a pris fin.",
+      "proefVoorbij": "Cette entreprise n'a pas de période d'essai gratuite en cours. Choisissez un abonnement pour modifier des projets."
+    },
+    "datumOnbekend": "une date ultérieure",
+    "formules": {
+      "maand": "Mensuel",
+      "jaar": "Annuel"
+    },
+    "per": {
+      "maand": "par mois",
+      "jaar": "par an"
+    },
+    "exclBtw": "hors TVA ({incl} TVA 21 % comprise)",
+    "korting": "−{percentage} %",
+    "kies": "Choisir",
+    "beheren": "Gérer l'abonnement",
+    "betalingRegelen": "Régler le paiement",
+    "lid": "Demandez à un propriétaire de votre entreprise de gérer l'abonnement.",
+    "prijzenOntbreken": "Les prix n'ont pas pu être chargés",
+    "banner": {
+      "proef": "Encore {n} jour gratuit. | Encore {n} jours gratuits.",
+      "kies": "Choisir un abonnement",
+      "betaling": "Votre dernier paiement a échoué. Réglez votre paiement avant le {datum}.",
+      "betalingZonderDatum": "Votre dernier paiement a échoué. Réglez rapidement votre paiement, sinon votre entreprise ne pourra bientôt plus modifier de projets.",
+      "alleenLezen": "Votre entreprise n'a pas d'abonnement actif. Vous pouvez consulter et exporter des projets, mais pas les modifier."
+    }
+  },
+  "menu": {
+    "nieuwBedrijf": "Créer une nouvelle entreprise",
+    "gebruiker": "Menu utilisateur",
+    "mijnOrganisatie": "Mon organisation",
+    "bedrijfsgegevens": "Données de l'entreprise",
+    "abonnement": "Abonnement",
+    "uitloggen": "Se déconnecter",
+    "wisselenMislukt": "Le changement d'organisation n'a pas abouti.",
+    "uitloggenMislukt": "La déconnexion n'a pas abouti.",
+    "organisatieKeuzeMet": "Choisir une organisation : {organisatie}"
+  },
+  "fout": {
+    "algemeen": {
+      "titel": "Une erreur s'est produite",
+      "beschrijving": "Elentrik n'a pas pu charger votre session ou cette page pour le moment. Veuillez réessayer."
+    },
+    "nietGevonden": {
+      "titel": "Page introuvable",
+      "beschrijving": "Cette page n'existe pas."
+    },
+    "naarStart": "Vers l'accueil",
+    "opnieuw": "Réessayer"
+  },
+  "weerAangemeld": {
+    "titel": "Reconnecté",
+    "tekst": "Vous êtes reconnecté. Fermez cet onglet et cliquez sur « Réessayer » dans l'éditeur.",
+    "sluiten": "Fermer l'onglet"
+  },
+  "taal": {
+    "kiezen": "Choisir la langue",
+    "label": "Langue",
+    "bewarenMislukt": "Votre choix de langue n'a pas pu être enregistré sur votre compte. Il reste appliqué sur cet appareil."
+  },
+  "fouten": {
+    "onbekend": "Une erreur s'est produite. Veuillez réessayer.",
+    "NIET_AANGEMELD": "Vous n'êtes plus connecté. Reconnectez-vous.",
+    "ANDERE_GEBRUIKER": "Vous êtes entre-temps connecté avec un autre compte. Rechargez la page.",
+    "ANDERE_ORGANISATIE": "Votre organisation active a été modifiée entre-temps. Vérifiez votre modification et réessayez.",
+    "ALLEEN_EIGENAAR": "Seul un propriétaire peut effectuer cette action.",
+    "NIET_TOEGELATEN": "Cette action n'est pas autorisée.",
+    "VERZOEK_VAN_ANDERE_SITE": "Cette demande ne provenait pas d'Elentrik et a été refusée. Rechargez la page.",
+    "NIET_GEVONDEN": "Cet élément n'existe pas (ou plus), ou vous n'y avez pas accès.",
+    "ONGELDIGE_INVOER": "Certaines données ne sont pas valides. Vérifiez-les et réessayez.",
+    "ONGELDIGE_NAAM": "Le nom compte de 1 à 80 caractères.",
+    "ONGELDIGE_TAAL": "Cette langue n'est pas prise en charge.",
+    "IF_MATCH_VEREIST": "La version du projet est manquante. Rechargez le projet.",
+    "PROJECT_GEWIJZIGD": "Le projet a été modifié ailleurs entre-temps.",
+    "ONGELDIG_DOCUMENT": "Le projet contient des données non valides et n'a pas pu être enregistré.",
+    "BESTAND_TE_GROOT": "Ce fichier est trop volumineux.",
+    "BESTANDSTYPE_NIET_TOEGELATEN": "Ce type de fichier n'est pas accepté.",
+    "RASTER_TE_GROOT": "Ce plan est trop grand (plus de 8.000 pixels).",
+    "ONBEREIKBAAR": "Le service PDF est injoignable. Réessayez dans quelques instants.",
+    "TIMEOUT": "Le service PDF n'a pas répondu à temps. Réessayez dans quelques instants.",
+    "MISLUKT": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
+    "ABONNEMENT_VEREIST": "Votre entreprise n'a pas d'abonnement actif. Vous pouvez consulter et exporter des projets, mais pas les modifier.",
+    "ABONNEMENT_BESTAAT": "Cette entreprise a déjà un abonnement.",
+    "GEEN_KLANT": "Cette entreprise n'a pas encore de données de paiement. Choisissez d'abord un abonnement.",
+    "ABONNEMENTEN_UIT": "Le paiement n'est pas encore configuré.",
+    "LAATSTE_EIGENAAR": "Il doit rester au moins un propriétaire.",
+    "AL_LID": "Cette adresse est déjà membre.",
+    "AL_UITGENODIGD": "Cette adresse a déjà été invitée.",
+    "UITNODIGING_VERVALLEN": "Cette invitation n'est plus valable.",
+    "UITNODIGING_ANDER_ADRES": "Cette invitation est destinée à une autre adresse.",
+    "EMAIL_NIET_BEVESTIGD": "Confirmez d'abord votre adresse e-mail, puis réessayez.",
+    "ACCOUNT_BESTAAT": "Un compte existe déjà avec cette adresse. Connectez-vous pour accepter l'invitation.",
+    "TE_VEEL_UITNODIGINGEN": "Trop d'invitations. Réessayez plus tard.",
+    "TE_VEEL_POGINGEN": "Trop de tentatives. Patientez un instant et réessayez.",
+    "INVALID_EMAIL_OR_PASSWORD": "L'adresse e-mail ou le mot de passe est incorrect.",
+    "EMAIL_NOT_VERIFIED": "Votre adresse e-mail n'est pas encore confirmée.",
+    "INVALID_TOKEN": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
+    "TOKEN_EXPIRED": "Ce lien a expiré. Demandez-en un nouveau.",
+    "PASSWORD_TOO_SHORT": "Un mot de passe compte au moins 10 caractères.",
+    "PASSWORD_TOO_LONG": "Un mot de passe compte au maximum 128 caractères.",
+    "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Un compte existe déjà avec cette adresse.",
+    "INVALID_EMAIL": "Saisissez une adresse e-mail valide."
+  }
+}

@@ -32,7 +32,9 @@ export default defineConfig({
     baseURL: E2E_URL,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // De bestaande specs lezen Nederlandse teksten: de browser vraagt dus Nederlands (Accept-Language),
+  // ongeacht de taal van het toestel. Een spec die een andere taal test, zet zelf een andere locale.
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], locale: "nl-BE" } }],
   webServer: {
     command: `pnpm exec nuxt dev --port ${E2E_POORT} --host 127.0.0.1`,
     url: E2E_URL,

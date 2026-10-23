@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vertaalFout } from "~/fouten";
 import { terugZonderFout, veiligTerug } from "~/sessie/bestemming";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isEmail } from "~/sessie/invoer";
@@ -46,7 +47,7 @@ function valideer(waarden: typeof formulier) {
 }
 
 function foutMelding(fout: unknown): Melding {
-  return { kleur: "error", tekst: foutStatus(fout) === 429 ? t("auth.fouten.teVeel") : t("algemeen.fout") };
+  return { kleur: "error", tekst: vertaalFout(fout, t) };
 }
 
 async function inloggen() {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { foutStatus } from "~/sessie/fouten";
+import { vertaalFout } from "~/fouten";
 import { isEmail } from "~/sessie/invoer";
 
 const { t } = useI18n();
@@ -25,10 +25,10 @@ async function verstuur() {
       redirectTo: "/wachtwoord-herstellen",
     });
     melding.value = error
-      ? { kleur: "error", tekst: foutStatus(error) === 429 ? t("auth.fouten.teVeel") : t("algemeen.fout") }
+      ? { kleur: "error", tekst: vertaalFout(error, t) }
       : { kleur: "info", tekst: t("wachtwoordVergeten.verstuurd") };
-  } catch {
-    melding.value = { kleur: "error", tekst: t("algemeen.fout") };
+  } catch (fout) {
+    melding.value = { kleur: "error", tekst: vertaalFout(fout, t) };
   } finally {
     bezig.value = false;
   }

@@ -5,6 +5,7 @@ import { datumTekst, paginaWeergave, statusAantal } from "~/abonnement/weergave"
 import { useAbonnementApi } from "~/composables/useAbonnementApi";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
 
 const { t } = useI18n();
@@ -77,7 +78,7 @@ async function voerUit(soort: Formule | "beheer", actie: () => Promise<unknown>)
     await actie();
   } catch (fout) {
     if (await andereOrganisatie(fout)) return;
-    toast.add({ title: t("algemeen.fout"), color: "error" });
+    toast.add({ title: vertaalFout(fout, t), color: "error" });
   } finally {
     bezig.value = null;
   }
