@@ -51,7 +51,7 @@ const WACHTWOORD = "lang-genoeg-1";
 const INGESCHAKELD: AbonnementConfig = {
   ingeschakeld: true,
   sleutel: "sk_test_nep",
-  webhookGeheim: null,
+  webhookGeheim: "whsec_toegang_test",
   prijzen: { maand: "price_maand", jaar: "price_jaar" },
   boekhoudingInbox: null,
   apiBasis: null,
@@ -581,6 +581,17 @@ const TABEL: Record<string, Rij> = {
     andereOrganisatie: 201,
     lid: 201,
     eigenaar: 201,
+  },
+  "POST /api/stripe/webhook": {
+    // Publiek: Stripe heeft geen sessie. Zonder handtekening geeft elke actor 400 (de handtekening
+    // is de enige toegangscontrole); de inhoud staat in test/abonnement-webhook.test.ts.
+    publiek: true,
+    verzoek: async () => ({ methode: "POST", pad: "/api/stripe/webhook", json: { id: "evt_toegang" } }),
+    zonderSessie: 400,
+    zonderOrganisatie: 400,
+    andereOrganisatie: 400,
+    lid: 400,
+    eigenaar: 400,
   },
 };
 
