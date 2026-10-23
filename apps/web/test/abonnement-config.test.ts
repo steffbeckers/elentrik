@@ -16,6 +16,20 @@ const VOLLEDIG = {
 
 afterEach(() => zetAbonnementen(undefined));
 
+/** Voert uit en geeft de gegooide fout terug; faalt als er niets gegooid wordt. */
+function vang(f: () => unknown): unknown {
+  let gegooid = false;
+  let fout: unknown;
+  try {
+    f();
+  } catch (e) {
+    gegooid = true;
+    fout = e;
+  }
+  if (!gegooid) expect.fail("verwachtte een fout, maar er werd niets gegooid");
+  return fout;
+}
+
 describe("leesAbonnementConfig", () => {
   test("zonder sleutel zijn abonnementen uit", () => {
     expect(leesAbonnementConfig({})).toEqual({ ingeschakeld: false });
@@ -64,14 +78,11 @@ describe("leesAbonnementConfig", () => {
       { ...VOLLEDIG, STRIPE_API_BASIS: "http://example.com" },
     ];
     for (const env of gevallen) {
-      try {
-        leesAbonnementConfig(env);
-        expect.unreachable();
-      } catch (fout) {
-        expect(String(fout)).not.toContain("sk_test_geheim");
-        expect(String(fout)).not.toContain("sk_live_geheim");
-        expect(String(fout)).not.toContain("whsec_test");
-      }
+      expect(() => leesAbonnementConfig(env)).toThrow();
+      const fout = vang(() => leesAbonnementConfig(env));
+      expect(String(fout)).not.toContain("sk_test_geheim");
+      expect(String(fout)).not.toContain("sk_live_geheim");
+      expect(String(fout)).not.toContain("whsec_test");
     }
   });
 });
@@ -154,15 +165,50 @@ describe("leesWebhook", () => {
     });
   });
 
-  test("een verkeerd geheim gooit, zonder het geheim te noemen", () => {
-    const payload = JSON.stringify({ id: "evt_5", object: "event", type: "ping", data: { object: {} } });
-    try {
-      leesWebhook(payload, ondertekend(payload, "whsec_ander"), "whsec_test");
-      expect.unreachable();
-    } catch (fout) {
-      expect(String(fout)).not.toContain("whsec_test");
-      expect(String(fout)).not.toContain("whsec_ander");
+  const ping = () => JSON.stringify({ id: "evt_5", object: "event", type: "ping", data: { object: {} } });
+
+  test("een correct getekende payload wordt wel geaccepteerd (controle op de testhulp)", () => {
+    const payload = ping();
+    expect(leesWebhook(payload, ondertekend(payload), "whsec_test").id).toBe("evt_5");
+  });
+
+  test("een verkeerd geheim gooit", () => {
+    const payload = ping();
+    expect(() => leesWebhook(payload, ondertekend(payload, "whsec_ander"), "whsec_test")).toThrow(
+      "Ongeldige Stripe-handtekening",
+    );
+  });
+
+  test("de fout noemt geen geheim", () => {
+    const payload = ping();
+    const fout = vang(() => leesWebhook(payload, ondertekend(payload, "whsec_ander"), "whsec_test"));
+    expect(String(fout)).not.toContain("whsec_test");
+    expect(String(fout)).not.toContain("whsec_ander");
+  });
+
+  test("een gewijzigde payload gooit", () => {
+    const payload = ping();
+    const header = ondertekend(payload);
+    expect(() => leesWebhook(payload.replace("ping", "pong"), header, "whsec_test")).toThrow(
+      "Ongeldige Stripe-handtekening",
+    );
+  });
+
+  test("een ontbrekende of onleesbare handtekening gooit", () => {
+    const payload = ping();
+    for (const header of ["", "onzin", "t=abc,v1=", "v1=deadbeef"]) {
+      expect(() => leesWebhook(payload, header, "whsec_test")).toThrow("Ongeldige Stripe-handtekening");
     }
+    expect(() => leesWebhook(payload, undefined as unknown as string, "whsec_test")).toThrow(
+      "Ongeldige Stripe-handtekening",
+    );
+  });
+
+  test("een te oude tijdstempel (buiten de standaardtolerantie) gooit", () => {
+    const payload = ping();
+    const oud = Math.floor(Date.now() / 1000) - 3600;
+    const header = Stripe.webhooks.generateTestHeaderString({ payload, secret: "whsec_test", timestamp: oud });
+    expect(() => leesWebhook(payload, header, "whsec_test")).toThrow("Ongeldige Stripe-handtekening");
   });
 });
 
