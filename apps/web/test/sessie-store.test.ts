@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { useSessieStore, type Mij, type SessieApi } from "../app/stores/sessie";
 
 const MIJ: Mij = {
-  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test" },
+  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", proefGebruikt: true },
   organisaties: [
-    { id: "o1", naam: "Peeters Elektro", rol: "eigenaar" },
-    { id: "o2", naam: "Janssens BV", rol: "lid" },
+    { id: "o1", naam: "Peeters Elektro", rol: "eigenaar", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null } },
+    { id: "o2", naam: "Janssens BV", rol: "lid", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null } },
   ],
   actieveOrganisatieId: "o1",
 };
@@ -49,7 +49,7 @@ describe("laad", () => {
     expect(store.geladen).toBe(true);
     expect(store.gebruiker).toEqual(MIJ.gebruiker);
     expect(store.organisaties).toHaveLength(2);
-    expect(store.actieveOrganisatie).toEqual({ id: "o1", naam: "Peeters Elektro", rol: "eigenaar" });
+    expect(store.actieveOrganisatie).toEqual(MIJ.organisaties[0]);
     expect(store.rol).toBe("eigenaar");
   });
 

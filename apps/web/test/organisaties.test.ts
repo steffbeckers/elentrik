@@ -18,6 +18,8 @@ import { maakTestDb } from "./db";
 import { API, AUTH_ROUTE, beveiligdeRoutebestanden, routeUit } from "./routes";
 
 const WACHTWOORD = "lang-genoeg-1";
+// Abonnementen staan uit in deze tests: elke organisatie mag schrijven, zonder proefperiode.
+const UIT = { schrijven: true, reden: "uit", proefEinde: null };
 
 let db: Db;
 let auth: Auth;
@@ -230,10 +232,10 @@ describe("GET /api/mij", () => {
 
     const mij = await json(stuur("GET", "/api/mij", eigenaar.cookie));
     expect(mij).toEqual({
-      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email },
+      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, proefGebruikt: true },
       organisaties: expect.arrayContaining([
-        { id: org, naam: "Bedrijf", rol: "eigenaar" },
-        { id: tweede, naam: "Ander bedrijf", rol: "lid" },
+        { id: org, naam: "Bedrijf", rol: "eigenaar", toegang: UIT },
+        { id: tweede, naam: "Ander bedrijf", rol: "lid", toegang: UIT },
       ]),
       actieveOrganisatieId: org,
     });

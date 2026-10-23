@@ -11,6 +11,7 @@
 // (ruling E1).
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
+import type { Toegang } from "../../shared/abonnement";
 import type { SessieInfo } from "../sessie/bestemming";
 import { foutStatus } from "../sessie/fouten";
 
@@ -18,11 +19,11 @@ export type Rol = "eigenaar" | "lid";
 
 export type Gebruiker = { id: string; naam: string; email: string };
 
-export type Organisatie = { id: string; naam: string; rol: Rol };
+export type Organisatie = { id: string; naam: string; rol: Rol; toegang: Toegang };
 
 /** Het antwoord van GET /api/mij. */
 export type Mij = {
-  gebruiker: Gebruiker;
+  gebruiker: Gebruiker & { proefGebruikt: boolean };
   organisaties: Organisatie[];
   actieveOrganisatieId: string | null;
 };

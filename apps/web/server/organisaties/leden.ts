@@ -22,6 +22,9 @@ import {
   type H3Event,
 } from "h3";
 import { z } from "zod";
+import { gebruikAbonnementen } from "../abonnementen/config";
+import { toegangVoor } from "../abonnementen/repo";
+import type { Toegang } from "../../shared/abonnement";
 import { gebruikAuth } from "../auth";
 import { gebruikDb } from "../db";
 import { account, invitation, member, organization, session, user } from "../db/schema";
@@ -147,8 +150,8 @@ async function vindLid(organisatieId: string, id: string): Promise<Lid> {
 // --- De gebruiker en zijn organisaties -------------------------------------------------------
 
 export type Mij = {
-  gebruiker: { id: string; naam: string; email: string };
-  organisaties: { id: string; naam: string; rol: Rol }[];
+  gebruiker: { id: string; naam: string; email: string; proefGebruikt: boolean };
+  organisaties: { id: string; naam: string; rol: Rol; toegang: Toegang }[];
   actieveOrganisatieId: string | null;
 };
 
@@ -175,9 +178,12 @@ export async function mij(event: H3Event): Promise<Mij> {
       .where(and(eq(session.id, sessie.sessieId), eq(session.activeOrganizationId, actief)));
     actief = await kiesActieveOrganisatie(sessie.sessieId, sessie.gebruiker.id);
   }
+  const [eigen] = await db.select({ proefGebruikt: user.proefGebruikt }).from(user).where(eq(user.id, sessie.gebruiker.id));
+  const { config } = gebruikAbonnementen();
+  const toegang = await Promise.all(rijen.map((r) => toegangVoor(db, r.id, config)));
   return {
-    gebruiker: sessie.gebruiker,
-    organisaties: rijen.map((r) => ({ id: r.id, naam: r.naam, rol: naarRol(r.rol) })),
+    gebruiker: { ...sessie.gebruiker, proefGebruikt: eigen?.proefGebruikt ?? false },
+    organisaties: rijen.map((r, i) => ({ id: r.id, naam: r.naam, rol: naarRol(r.rol), toegang: toegang[i]! })),
     actieveOrganisatieId: actief,
   };
 }
