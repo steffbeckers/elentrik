@@ -14,3 +14,15 @@ export async function metE2eDatabase<T>(werk: (sql: Sql) => Promise<T>): Promise
     await sql.end();
   }
 }
+
+/** Zet het einde van de proefperiode van een organisatie, bv. gisteren voor een verlopen proef. */
+export async function zetProefEinde(organisatieId: string, datum: Date): Promise<void> {
+  await metE2eDatabase(
+    (sql) => sql`update organization set proef_einde = ${datum.toISOString()} where id = ${organisatieId}`,
+  );
+}
+
+/** Maakt een organisatie vrijgesteld: altijd schrijfrecht, ook zonder abonnement of proef. */
+export async function zetVrijgesteld(organisatieId: string): Promise<void> {
+  await metE2eDatabase((sql) => sql`update organization set vrijgesteld = true where id = ${organisatieId}`);
+}

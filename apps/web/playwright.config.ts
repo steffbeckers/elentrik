@@ -5,6 +5,11 @@ import {
   E2E_BUILD_DIR,
   E2E_DATABASE_URL,
   E2E_POORT,
+  E2E_STRIPE_PRIJS_JAAR,
+  E2E_STRIPE_PRIJS_MAAND,
+  E2E_STRIPE_SLEUTEL,
+  E2E_STRIPE_URL,
+  E2E_STRIPE_WEBHOOK_GEHEIM,
   E2E_URL,
 } from "./e2e/omgeving";
 
@@ -44,6 +49,18 @@ export default defineConfig({
       SMTP_HOST: "127.0.0.1",
       SMTP_PORT: "1025",
       SMTP_VAN: "Elentrik <noreply@elentrik.local>",
+      // Leeg, zodat een SMTP-login uit .env de lokale Mailpit niet in de weg zit.
+      SMTP_GEBRUIKER: "",
+      SMTP_WACHTWOORD: "",
+      SMTP_BEVEILIGD: "",
+      // Abonnementen aan, tegen de nep-Stripe van global-setup. Vaste testwaarden, nooit uit .env.
+      STRIPE_GEHEIME_SLEUTEL: E2E_STRIPE_SLEUTEL,
+      STRIPE_WEBHOOK_GEHEIM: E2E_STRIPE_WEBHOOK_GEHEIM,
+      STRIPE_PRIJS_MAAND: E2E_STRIPE_PRIJS_MAAND,
+      STRIPE_PRIJS_JAAR: E2E_STRIPE_PRIJS_JAAR,
+      STRIPE_API_BASIS: E2E_STRIPE_URL,
+      // Geen boekhoudmail in e2e, ook niet als .env een adres heeft.
+      BOEKHOUDING_INBOX: "",
     },
     timeout: 120_000,
   },

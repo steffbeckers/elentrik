@@ -2,6 +2,7 @@
 // (met "Bedrijf Alfa") komt uit `storageState`, gebruiker B (met "Bedrijf Beta") wordt in
 // `beforeAll` aangemaakt; niemand logt per test in, zodat de rate limiter nooit in de weg zit.
 import { expect, test, type APIRequestContext, type Browser } from "@playwright/test";
+import { zetVrijgesteld } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres, type StorageState } from "./hulp/inloggen";
 import { E2E_URL } from "./omgeving";
@@ -92,6 +93,11 @@ test("een gebruiker met twee organisaties wisselt via de organisatiekeuze, en de
     await page.getByTestId("organisatie-nieuw-naam").fill(bedrijfTweede);
     await page.getByTestId("organisatie-nieuw-knop").click();
     await expect(page.getByTestId("organisatie-keuze")).toContainText(bedrijfTweede);
+    // Een tweede eigen bedrijf heeft geen gratis proef (alleen het eerste heeft er een). Dit
+    // bestand test het wisselen, niet de abonnementen: dat bedrijf mag daarom schrijven.
+    const tweedeBedrijfId = (await leesMij(page.request)).organisaties.find((o) => o.naam === bedrijfTweede)!.id;
+    await zetVrijgesteld(tweedeBedrijfId);
+    await ga(page, "/");
     await expect(page.getByText("Nog geen projecten. Maak je eerste project aan.")).toBeVisible();
     await expect(page.getByText(naamAlfa)).toHaveCount(0);
 

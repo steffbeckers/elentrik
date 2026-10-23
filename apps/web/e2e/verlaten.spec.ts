@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { meldAanOpPagina } from "./hulp/aanmelden";
-import { metE2eDatabase } from "./hulp/database";
+import { metE2eDatabase, zetVrijgesteld } from "./hulp/database";
 import { wachtOpHydratatie } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from "./hulp/inloggen";
 import { E2E_URL } from "./omgeving";
@@ -133,6 +133,9 @@ test("een project van een andere eigen organisatie openen maakt die organisatie 
   });
   expect(aangemaakt.ok()).toBe(true);
   const tweede = (await aangemaakt.json()) as { id: string };
+  // Een tweede eigen bedrijf heeft geen gratis proef; deze test gaat over het openen van een
+  // project in een ander bedrijf, niet over abonnementen, dus dat bedrijf mag schrijven.
+  await zetVrijgesteld(tweede.id);
   expect((await request.post("/api/organisaties/actief", { data: { organisatieId: tweede.id } })).ok()).toBe(true);
   const project = await request.post("/api/projecten", {
     data: { naam: `${naam} tweede`, klantnaam: "Janssens", stroomtype: "2x230V" },

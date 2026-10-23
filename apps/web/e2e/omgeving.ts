@@ -16,6 +16,16 @@ export const E2E_URL = `http://127.0.0.1:${E2E_POORT}`;
 export const E2E_AUTH_SECRET = "e2e-geheim-alleen-voor-tests-niet-voor-gebruik-elders";
 export const MAILPIT_URL = "http://127.0.0.1:8025";
 
+// De nep-Stripe (hulp/nep-stripe.ts) en de vaste testwaarden waarmee de e2e-server draait. Het zijn
+// geen echte sleutels: de server wijst met `STRIPE_API_BASIS` naar de nep-Stripe, en dat mag
+// alleen met een `sk_test_`-sleutel en een lokale host.
+export const E2E_STRIPE_POORT = 3199;
+export const E2E_STRIPE_URL = `http://127.0.0.1:${E2E_STRIPE_POORT}`;
+export const E2E_STRIPE_SLEUTEL = "sk_test_e2e";
+export const E2E_STRIPE_WEBHOOK_GEHEIM = "whsec_e2e";
+export const E2E_STRIPE_PRIJS_MAAND = "price_e2e_maand";
+export const E2E_STRIPE_PRIJS_JAAR = "price_e2e_jaar";
+
 /**
  * Veiligheidsnet: stopt tenzij de URL wijst naar de lokale Postgres (127.0.0.1 of localhost,
  * poort 5432) en naar de database `elentrik_e2e`.
