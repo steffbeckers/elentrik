@@ -1,7 +1,7 @@
 # Elentrik: abonnementen met Stripe (ontwerp)
 
 - **Datum:** 2026-10-23
-- **Status:** ter review
+- **Status:** goedgekeurd
 - **Bouwt voort op:**
   - de MVP-spec `docs/superpowers/specs/2026-10-17-elentrik-mvp-design.md` (§8 "Abonnement" en §10 stap 8);
   - plan 6 `docs/superpowers/specs/2026-10-22-elentrik-inloggen-organisaties-design.md`: organisaties, rollen eigenaar en lid, `defineBeveiligdeHandler`, `vereisLid` en `vereisProjecttoegang`, en de header `x-elentrik-organisatie` (R10).
