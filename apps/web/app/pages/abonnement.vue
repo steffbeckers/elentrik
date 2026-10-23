@@ -15,6 +15,7 @@ const route = useRoute();
 const router = useRouter();
 const api = useAbonnementApi();
 const andereOrganisatie = useAndereOrganisatie();
+const { taal } = useTaal();
 
 useHead({ title: () => `${t("abonnement.titel")} · ${t("app.naam")}` });
 
@@ -45,7 +46,7 @@ watch(error, useSessieHerstel());
 const nu = ref(new Date());
 onMounted(() => (nu.value = new Date()));
 
-const weergave = computed(() => (overzicht.value ? paginaWeergave(overzicht.value, sessie.rol) : null));
+const weergave = computed(() => (overzicht.value ? paginaWeergave(overzicht.value, sessie.rol, taal.value) : null));
 
 const formuleLabel = (formule: Formule) => t(`abonnement.formules.${formule}`);
 
@@ -62,7 +63,7 @@ const statusTekst = computed(() => {
     w.statusSleutel,
     {
       dagen,
-      datum: einde ? datumTekst(einde) : t("abonnement.datumOnbekend"),
+      datum: einde ? datumTekst(einde, taal.value) : t("abonnement.datumOnbekend"),
       formule: o.formule ? formuleLabel(o.formule).toLowerCase() : "",
     },
     dagen,

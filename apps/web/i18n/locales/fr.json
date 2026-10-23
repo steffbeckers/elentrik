@@ -58,7 +58,7 @@
       }
     },
     "bovenbalk": {
-      "projecten": "Vers les projets",
+      "projecten": "Retour aux projets",
       "projectgegevens": "Modifier les données du projet",
       "tabbladen": {
         "eendraadschema": "Schéma unifilaire",
@@ -134,6 +134,10 @@
       "titel": "Données du projet",
       "naam": "Nom",
       "stroomtype": "Type de courant",
+      "dossierTaal": {
+        "label": "Langue du dossier",
+        "hulp": "La langue du PDF lors de l'exportation."
+      },
       "bewaren": "Enregistrer",
       "klant": {
         "titel": "Client",
@@ -247,7 +251,7 @@
       "toevoegen": {
         "titel": "Ajouter un plan",
         "titelVervangen": "Choisir à nouveau le plan",
-        "beschrijving": "Choisissez un PDF, PNG ou JPG du plan (50 MB maximum).",
+        "beschrijving": "Choisissez un PDF, PNG ou JPG du plan (50 Mo maximum).",
         "kiezen": "Choisir un fichier",
         "slepen": "ou faites-le glisser ici",
         "ander": "Choisir un autre fichier",
@@ -262,8 +266,8 @@
         "vervangen": "Remplacer",
         "fout": {
           "onbekendType": "Ce type de fichier n'est pas accepté.",
-          "teGroot": "Ce fichier dépasse 50 MB.",
-          "tePixels": "Ce plan est trop grand (plus de 8.000 pixels).",
+          "teGroot": "Ce fichier dépasse 50 Mo.",
+          "tePixels": "Ce plan est trop grand (plus de 8 000 pixels).",
           "mislukt": "Le plan n'a pas pu être envoyé. Veuillez réessayer.",
           "onleesbaar": "Ce fichier n'a pas pu être lu."
         }
@@ -272,6 +276,7 @@
     "export": {
       "titel": "Exporter en PDF",
       "beschrijving": "Le PDF est généré à partir du projet enregistré et conservé comme version.",
+      "dossierTaal": "Langue du dossier : {taal}",
       "opslaan": "Le projet est d'abord enregistré…",
       "geblokkeerd": {
         "titel": "Exportation impossible pour le moment",
@@ -329,7 +334,7 @@
   "bedrijf": {
     "titel": "Données de l'entreprise",
     "beschrijving": "Ces données figurent comme installateur dans le cartouche du PDF.",
-    "terug": "Vers les projets",
+    "terug": "Retour aux projets",
     "link": "Données de l'entreprise",
     "laden": {
       "fout": {
@@ -359,14 +364,14 @@
     },
     "logo": {
       "titel": "Logo",
-      "beschrijving": "PNG ou JPEG, 2 MB maximum.",
+      "beschrijving": "PNG ou JPEG, 2 Mo maximum.",
       "voorbeeldAlt": "Aperçu du logo",
       "kies": "Choisir un logo",
       "vervang": "Remplacer le logo",
       "geen": "Pas encore de logo",
       "fout": {
         "onbekendType": "Ce type de fichier n'est pas accepté.",
-        "teGroot": "Ce logo dépasse 2 MB.",
+        "teGroot": "Ce logo dépasse 2 Mo.",
         "mislukt": "Le logo n'a pas pu être envoyé. Veuillez réessayer."
       },
       "bewaard": "Logo envoyé."
@@ -415,6 +420,107 @@
       "3N400V": "3N × 400 V (triphasé avec neutre)"
     }
   },
+  "velden": {
+    "label": {
+      "label": "Libellé"
+    },
+    "ruimte": {
+      "label": "Pièce"
+    },
+    "gevoeligheid_mA": {
+      "label": "Sensibilité"
+    },
+    "nominaal_A": {
+      "label": "Courant nominal"
+    },
+    "polen": {
+      "label": "Pôles"
+    },
+    "klasse": {
+      "label": "Type"
+    },
+    "curve": {
+      "label": "Courbe"
+    },
+    "kortsluitvermogen_kA": {
+      "label": "Pouvoir de coupure"
+    },
+    "naam": {
+      "label": "Nom"
+    },
+    "kabeltype": {
+      "label": "Type de câble"
+    },
+    "doorsnede_mm2": {
+      "label": "Section"
+    },
+    "aantalGeleiders": {
+      "label": "Nombre de conducteurs"
+    },
+    "plaatsing": {
+      "label": "Pose",
+      "opties": {
+        "inbouw": "Encastré",
+        "opbouw": "Apparent",
+        "buis": "Sous tube",
+        "grond": "Enterré"
+      }
+    },
+    "aantal": {
+      "label": "Nombre"
+    },
+    "randaarde": {
+      "label": "Contact de terre"
+    },
+    "kinderbeveiliging": {
+      "label": "Sécurité enfants"
+    },
+    "waterdicht": {
+      "label": "Étanche"
+    },
+    "vermogen_W": {
+      "label": "Puissance"
+    },
+    "soort": {
+      "label": "Sorte",
+      "opties": {
+        "standaard": "Standard",
+        "led": "LED",
+        "tl": "Tube fluorescent",
+        "spot": "Spot",
+        "noodverlichting": "Éclairage de secours",
+        "enkel": "Simple",
+        "dubbel": "Double",
+        "wissel": "Va-et-vient",
+        "kruis": "Permutateur",
+        "dimmer": "Variateur",
+        "drukknop": "Bouton-poussoir",
+        "wasmachine": "Lave-linge",
+        "droogkast": "Sèche-linge",
+        "vaatwasser": "Lave-vaisselle",
+        "kookplaat": "Plaque de cuisson",
+        "oven": "Four",
+        "boiler": "Chauffe-eau",
+        "warmtepomp": "Pompe à chaleur",
+        "laadpaal": "Borne de recharge",
+        "omvormer": "Onduleur",
+        "andere": "Autre"
+      }
+    }
+  },
+  "ruimtes": {
+    "badkamer": "Salle de bain",
+    "keuken": "Cuisine",
+    "wasplaats": "Buanderie",
+    "slaapkamer": "Chambre",
+    "leefruimte": "Pièce de vie",
+    "garage": "Garage",
+    "kelder": "Cave",
+    "zolder": "Grenier",
+    "buiten": "Extérieur",
+    "technisch": "Local technique",
+    "andere": "Autre"
+  },
   "rollen": {
     "eigenaar": "Propriétaire",
     "lid": "Membre"
@@ -433,9 +539,9 @@
       "naamVerplicht": "Saisissez votre nom.",
       "emailOngeldig": "Saisissez une adresse e-mail valide.",
       "wachtwoordVerplicht": "Saisissez votre mot de passe.",
-      "wachtwoordTeKort": "Un mot de passe compte au moins 10 caractères.",
-      "wachtwoordTeLang": "Un mot de passe compte au maximum 128 caractères.",
-      "bedrijfsnaam": "Le nom de l'entreprise compte de 1 à 80 caractères.",
+      "wachtwoordTeKort": "Un mot de passe doit contenir au moins 10 caractères.",
+      "wachtwoordTeLang": "Un mot de passe doit contenir au maximum 128 caractères.",
+      "bedrijfsnaam": "Le nom de l'entreprise doit contenir de 1 à 80 caractères.",
       "teVeel": "Trop de tentatives. Patientez un instant et réessayez."
     }
   },
@@ -496,7 +602,6 @@
       "knop": "Créer un compte et accepter"
     },
     "accountBestaat": "Un compte existe déjà avec cette adresse. Connectez-vous pour accepter l'invitation.",
-    "onbevestigd": "Confirmez d'abord votre adresse e-mail, puis réessayez.",
     "nietVoorJou": "Cette invitation est destinée à une autre adresse.",
     "ongeldig": {
       "titel": "Cette invitation n'est plus valable",
@@ -508,7 +613,7 @@
   },
   "organisatie": {
     "titel": "Mon organisation",
-    "terug": "Vers les projets",
+    "terug": "Retour aux projets",
     "rolUitleg": "Vous êtes {rol} de {organisatie}.",
     "naam": {
       "veld": "Nom de l'entreprise",
@@ -541,9 +646,7 @@
       "email": "Adresse e-mail",
       "rol": "Rôle",
       "knop": "Inviter",
-      "verstuurd": "L'invitation a été envoyée à {email}.",
-      "alLid": "Cette adresse est déjà membre.",
-      "alUitgenodigd": "Cette adresse a déjà été invitée."
+      "verstuurd": "L'invitation a été envoyée à {email}."
     },
     "verlaten": {
       "knop": "Quitter l'organisation",
@@ -551,7 +654,6 @@
       "bevestiging": "Voulez-vous quitter {organisatie} ? Vous ne verrez alors plus ses projets.",
       "bevestigen": "Quitter"
     },
-    "laatsteEigenaar": "Il doit rester au moins un propriétaire.",
     "alleenEigenaar": "Seul un propriétaire peut effectuer cette action.",
     "laden": "Chargement…",
     "andereOrganisatie": {
@@ -562,7 +664,7 @@
   "geenOrganisatie": {
     "titel": "Vous ne faites encore partie d'aucune entreprise",
     "titelBijkomend": "Créer une nouvelle entreprise",
-    "terug": "Vers les projets",
+    "terug": "Retour aux projets",
     "nieuw": {
       "titel": "Créez une nouvelle entreprise",
       "naam": "Nom de votre entreprise ou votre propre nom",
@@ -650,7 +752,8 @@
   "taal": {
     "kiezen": "Choisir la langue",
     "label": "Langue",
-    "bewarenMislukt": "Votre choix de langue n'a pas pu être enregistré sur votre compte. Il reste appliqué sur cet appareil."
+    "bewarenMislukt": "Votre choix de langue n'a pas pu être enregistré sur votre compte. Il reste appliqué sur cet appareil.",
+    "wisselenMislukt": "La langue n'a pas pu être changée. Réessayez."
   },
   "fouten": {
     "onbekend": "Une erreur s'est produite. Veuillez réessayer.",
@@ -662,14 +765,14 @@
     "VERZOEK_VAN_ANDERE_SITE": "Cette demande ne provenait pas d'Elentrik et a été refusée. Rechargez la page.",
     "NIET_GEVONDEN": "Cet élément n'existe pas (ou plus), ou vous n'y avez pas accès.",
     "ONGELDIGE_INVOER": "Certaines données ne sont pas valides. Vérifiez-les et réessayez.",
-    "ONGELDIGE_NAAM": "Le nom compte de 1 à 80 caractères.",
+    "ONGELDIGE_NAAM": "Le nom doit contenir de 1 à 80 caractères.",
     "ONGELDIGE_TAAL": "Cette langue n'est pas prise en charge.",
     "IF_MATCH_VEREIST": "La version du projet est manquante. Rechargez le projet.",
     "PROJECT_GEWIJZIGD": "Le projet a été modifié ailleurs entre-temps.",
     "ONGELDIG_DOCUMENT": "Le projet contient des données non valides et n'a pas pu être enregistré.",
     "BESTAND_TE_GROOT": "Ce fichier est trop volumineux.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "Ce type de fichier n'est pas accepté.",
-    "RASTER_TE_GROOT": "Ce plan est trop grand (plus de 8.000 pixels).",
+    "RASTER_TE_GROOT": "Ce plan est trop grand (plus de 8 000 pixels).",
     "ONBEREIKBAAR": "Le service PDF est injoignable. Réessayez dans quelques instants.",
     "TIMEOUT": "Le service PDF n'a pas répondu à temps. Réessayez dans quelques instants.",
     "MISLUKT": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
@@ -678,8 +781,8 @@
     "GEEN_KLANT": "Cette entreprise n'a pas encore de données de paiement. Choisissez d'abord un abonnement.",
     "ABONNEMENTEN_UIT": "Le paiement n'est pas encore configuré.",
     "LAATSTE_EIGENAAR": "Il doit rester au moins un propriétaire.",
-    "AL_LID": "Cette adresse est déjà membre.",
-    "AL_UITGENODIGD": "Cette adresse a déjà été invitée.",
+    "AL_LID": "Une personne avec cette adresse est déjà membre.",
+    "AL_UITGENODIGD": "Une personne avec cette adresse est déjà invitée.",
     "UITNODIGING_VERVALLEN": "Cette invitation n'est plus valable.",
     "UITNODIGING_ANDER_ADRES": "Cette invitation est destinée à une autre adresse.",
     "EMAIL_NIET_BEVESTIGD": "Confirmez d'abord votre adresse e-mail, puis réessayez.",
@@ -690,8 +793,8 @@
     "EMAIL_NOT_VERIFIED": "Votre adresse e-mail n'est pas encore confirmée.",
     "INVALID_TOKEN": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
     "TOKEN_EXPIRED": "Ce lien a expiré. Demandez-en un nouveau.",
-    "PASSWORD_TOO_SHORT": "Un mot de passe compte au moins 10 caractères.",
-    "PASSWORD_TOO_LONG": "Un mot de passe compte au maximum 128 caractères.",
+    "PASSWORD_TOO_SHORT": "Un mot de passe doit contenir au moins 10 caractères.",
+    "PASSWORD_TOO_LONG": "Un mot de passe doit contenir au maximum 128 caractères.",
     "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Un compte existe déjà avec cette adresse.",
     "INVALID_EMAIL": "Saisissez une adresse e-mail valide."
   }

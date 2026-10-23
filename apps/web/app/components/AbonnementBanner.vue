@@ -5,6 +5,7 @@ import { bannerVoor, datumTekst } from "~/abonnement/weergave";
 import { useSessieStore } from "~/stores/sessie";
 
 const sessie = useSessieStore();
+const { taal } = useTaal();
 
 // Het aantal dagen hangt van het huidige moment af; elke minuut bijwerken is ruim genoeg.
 const nu = ref(new Date());
@@ -30,7 +31,7 @@ const banner = computed(() => bannerVoor(sessie.toegang, sessie.rol, nu.value));
         ? $t('abonnement.banner.proef', { n: banner.dagen ?? 0 }, banner.dagen ?? 0)
         : banner.soort === 'betaling'
           ? banner.tot
-            ? $t('abonnement.banner.betaling', { datum: datumTekst(banner.tot) })
+            ? $t('abonnement.banner.betaling', { datum: datumTekst(banner.tot, taal) })
             : $t('abonnement.banner.betalingZonderDatum')
           : $t('abonnement.banner.alleenLezen')
     "

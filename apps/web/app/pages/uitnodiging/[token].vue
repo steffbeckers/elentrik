@@ -58,7 +58,7 @@ function verwerkFout(fout: unknown): void {
   const status = foutStatus(fout);
   if (status === 410) nietMeerGeldig.value = true;
   else if (foutCode(fout) === "ACCOUNT_BESTAAT") accountBestaat.value = true;
-  else if (status === 403 && !foutCode(fout)) melding.value = t("uitnodiging.onbevestigd");
+  else if (status === 403 && !foutCode(fout)) melding.value = t("fouten.EMAIL_NIET_BEVESTIGD");
   else melding.value = vertaalFout(fout, t);
 }
 

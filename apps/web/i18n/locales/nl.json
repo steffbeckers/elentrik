@@ -134,6 +134,10 @@
       "titel": "Projectgegevens",
       "naam": "Naam",
       "stroomtype": "Stroomtype",
+      "dossierTaal": {
+        "label": "Dossiertaal",
+        "hulp": "De taal van de PDF bij het exporteren."
+      },
       "bewaren": "Bewaren",
       "klant": {
         "titel": "Klant",
@@ -272,6 +276,7 @@
     "export": {
       "titel": "Exporteren als PDF",
       "beschrijving": "De PDF komt uit het opgeslagen project en wordt als versie bewaard.",
+      "dossierTaal": "Dossiertaal: {taal}",
       "opslaan": "Het project wordt eerst opgeslagen…",
       "geblokkeerd": {
         "titel": "Exporteren kan nu niet",
@@ -415,6 +420,107 @@
       "3N400V": "3N × 400 V (drie fasen en nul)"
     }
   },
+  "velden": {
+    "label": {
+      "label": "Label"
+    },
+    "ruimte": {
+      "label": "Ruimte"
+    },
+    "gevoeligheid_mA": {
+      "label": "Gevoeligheid"
+    },
+    "nominaal_A": {
+      "label": "Nominale stroom"
+    },
+    "polen": {
+      "label": "Polen"
+    },
+    "klasse": {
+      "label": "Type"
+    },
+    "curve": {
+      "label": "Curve"
+    },
+    "kortsluitvermogen_kA": {
+      "label": "Kortsluitvermogen"
+    },
+    "naam": {
+      "label": "Naam"
+    },
+    "kabeltype": {
+      "label": "Kabeltype"
+    },
+    "doorsnede_mm2": {
+      "label": "Doorsnede"
+    },
+    "aantalGeleiders": {
+      "label": "Aantal geleiders"
+    },
+    "plaatsing": {
+      "label": "Plaatsing",
+      "opties": {
+        "inbouw": "Inbouw",
+        "opbouw": "Opbouw",
+        "buis": "In buis",
+        "grond": "In de grond"
+      }
+    },
+    "aantal": {
+      "label": "Aantal"
+    },
+    "randaarde": {
+      "label": "Randaarde"
+    },
+    "kinderbeveiliging": {
+      "label": "Kinderbeveiliging"
+    },
+    "waterdicht": {
+      "label": "Waterdicht"
+    },
+    "vermogen_W": {
+      "label": "Vermogen"
+    },
+    "soort": {
+      "label": "Soort",
+      "opties": {
+        "standaard": "Standaard",
+        "led": "LED",
+        "tl": "TL",
+        "spot": "Spot",
+        "noodverlichting": "Noodverlichting",
+        "enkel": "Enkel",
+        "dubbel": "Dubbel",
+        "wissel": "Wissel",
+        "kruis": "Kruis",
+        "dimmer": "Dimmer",
+        "drukknop": "Drukknop",
+        "wasmachine": "Wasmachine",
+        "droogkast": "Droogkast",
+        "vaatwasser": "Vaatwasser",
+        "kookplaat": "Kookplaat",
+        "oven": "Oven",
+        "boiler": "Boiler",
+        "warmtepomp": "Warmtepomp",
+        "laadpaal": "Laadpaal",
+        "omvormer": "Omvormer",
+        "andere": "Andere"
+      }
+    }
+  },
+  "ruimtes": {
+    "badkamer": "Badkamer",
+    "keuken": "Keuken",
+    "wasplaats": "Wasplaats",
+    "slaapkamer": "Slaapkamer",
+    "leefruimte": "Leefruimte",
+    "garage": "Garage",
+    "kelder": "Kelder",
+    "zolder": "Zolder",
+    "buiten": "Buiten",
+    "technisch": "Technische ruimte",
+    "andere": "Andere"
+  },
   "rollen": {
     "eigenaar": "Eigenaar",
     "lid": "Lid"
@@ -496,7 +602,6 @@
       "knop": "Account aanmaken en aanvaarden"
     },
     "accountBestaat": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
-    "onbevestigd": "Bevestig eerst je e-mailadres en probeer het dan opnieuw.",
     "nietVoorJou": "Deze uitnodiging is voor een ander adres.",
     "ongeldig": {
       "titel": "Deze uitnodiging is niet meer geldig",
@@ -541,9 +646,7 @@
       "email": "E-mailadres",
       "rol": "Rol",
       "knop": "Uitnodigen",
-      "verstuurd": "De uitnodiging is verstuurd naar {email}.",
-      "alLid": "Dit adres is al lid.",
-      "alUitgenodigd": "Dit adres is al uitgenodigd."
+      "verstuurd": "De uitnodiging is verstuurd naar {email}."
     },
     "verlaten": {
       "knop": "Organisatie verlaten",
@@ -551,7 +654,6 @@
       "bevestiging": "Wil je {organisatie} verlaten? Je ziet de projecten ervan dan niet meer.",
       "bevestigen": "Verlaten"
     },
-    "laatsteEigenaar": "Er moet minstens één eigenaar blijven.",
     "alleenEigenaar": "Alleen een eigenaar mag dit.",
     "laden": "Laden…",
     "andereOrganisatie": {
@@ -650,7 +752,8 @@
   "taal": {
     "kiezen": "Taal kiezen",
     "label": "Taal",
-    "bewarenMislukt": "Je taalkeuze kon niet op je account bewaard worden. Op dit toestel blijft ze gewijzigd."
+    "bewarenMislukt": "Je taalkeuze kon niet op je account bewaard worden. Op dit toestel blijft ze gewijzigd.",
+    "wisselenMislukt": "De taal kon niet gewisseld worden. Probeer het opnieuw."
   },
   "fouten": {
     "onbekend": "Er ging iets mis. Probeer het opnieuw.",

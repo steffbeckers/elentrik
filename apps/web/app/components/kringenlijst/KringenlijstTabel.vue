@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { NL, kringenlijst, type KringenlijstRij } from "@elentrik/render";
+import { TEKSTEN, kringenlijst, type KringenlijstRij, type Teksten } from "@elentrik/render";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { volgendeRij } from "~/editor/rijnavigatie";
 import { useEditorStore } from "~/stores/editor";
 
 // Alleen-lezen: dezelfde rijen en kolomkoppen als de kringenlijst in de PDF.
-// De kolomkoppen, "Geen kringen" en de celteksten komen bewust uit `NL` van @elentrik/render en niet
-// uit nl.json: het tabblad moet woord voor woord de formulering van de PDF tonen (ruling plan 5).
+// De kolomkoppen, "Geen kringen" en de celteksten komen bewust uit `TEKSTEN` van @elentrik/render en
+// niet uit de vertaalbestanden: het tabblad moet woord voor woord de formulering van de PDF tonen
+// (ruling plan 5). De taal is die van de interface (plan 8), zoals de bevindingen: geen scherm met
+// twee talen. De PDF zelf volgt de dossiertaal.
 const store = useEditorStore();
+const { taal } = useTaal();
+const teksten = computed<Teksten>(() => TEKSTEN[taal.value]);
 
-type Kolom = keyof KringenlijstRij & keyof typeof NL.kolommen;
+type Kolom = keyof KringenlijstRij & keyof Teksten["kolommen"];
 const KOLOMMEN = ["kring", "punt", "type", "ruimte", "beveiliging", "differentieel", "leiding"] as const satisfies readonly Kolom[];
 
 const rijen = computed<KringenlijstRij[]>(() =>
-  store.document && store.analyse ? kringenlijst(store.document, store.analyse, NL) : [],
+  store.document && store.analyse ? kringenlijst(store.document, store.analyse, teksten.value) : [],
 );
 
 const container = ref<HTMLElement | null>(null);
@@ -79,7 +83,7 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
     data-testid="kringenlijst"
   >
     <p v-if="rijen.length === 0" class="p-6 text-center text-sm text-muted" data-testid="kringenlijst-leeg">
-      {{ NL.geenKringen }}
+      {{ teksten.geenKringen }}
     </p>
     <table v-else role="grid" class="w-full border-separate border-spacing-0 text-left text-sm">
       <thead>
@@ -90,7 +94,7 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
             scope="col"
             class="sticky top-0 z-10 border-b border-default bg-elevated px-3 py-2 font-semibold"
           >
-            {{ NL.kolommen[kolom] }}
+            {{ teksten.kolommen[kolom] }}
           </th>
         </tr>
       </thead>

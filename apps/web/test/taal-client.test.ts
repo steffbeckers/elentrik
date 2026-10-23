@@ -33,13 +33,30 @@ describe("taalKeuzes", () => {
     keuzes[2]!.onSelect();
     expect(kies).toHaveBeenCalledWith("en");
   });
+
+  test("een wissel die toch faalt, geeft geen onafgehandelde rejection", async () => {
+    const onafgehandeld = vi.fn();
+    process.on("unhandledRejection", onafgehandeld);
+    try {
+      taalKeuzes("nl", () => Promise.reject(new Error("kapot")))[1]!.onSelect();
+      await new Promise((klaar) => setTimeout(klaar, 10));
+      expect(onafgehandeld).not.toHaveBeenCalled();
+    } finally {
+      process.off("unhandledRejection", onafgehandeld);
+    }
+  });
 });
 
-function maakWissel(opties: { aangemeld?: boolean; bewaar?: () => Promise<unknown> } = {}) {
+function maakWissel(
+  opties: { aangemeld?: boolean; bewaar?: () => Promise<unknown>; zetLocale?: (taal: Taal) => Promise<void> } = {},
+) {
   let locale: Taal = "nl";
-  const zetLocale = vi.fn(async (taal: Taal) => {
-    locale = taal;
-  });
+  const zetLocale = vi.fn(
+    opties.zetLocale ??
+      (async (taal: Taal) => {
+        locale = taal;
+      }),
+  );
   const bewaar = vi.fn(opties.bewaar ?? (async () => ({})));
   const bijFout = vi.fn();
   const bijBewaard = vi.fn();
@@ -86,8 +103,17 @@ describe("zetTaal", () => {
     const { wissel, bijFout, bijBewaard, locale } = maakWissel({ bewaar: async () => Promise.reject(kapot) });
     await expect(wissel.zetTaal("fr")).resolves.toBeUndefined();
     expect(locale()).toBe("fr");
-    expect(bijFout).toHaveBeenCalledWith(kapot);
+    expect(bijFout).toHaveBeenCalledWith(kapot, "bewaren");
     expect(bijBewaard).not.toHaveBeenCalled();
+  });
+
+  test("lukt het wisselen van de locale niet, dan geen fout naar boven, wel een melding, en niets bewaard", async () => {
+    const kapot = new Error("berichten niet geladen");
+    const { wissel, bijFout, bewaar, locale } = maakWissel({ zetLocale: async () => Promise.reject(kapot) });
+    await expect(wissel.zetTaal("fr")).resolves.toBeUndefined();
+    expect(locale()).toBe("nl");
+    expect(bijFout).toHaveBeenCalledWith(kapot, "wisselen");
+    expect(bewaar).not.toHaveBeenCalled();
   });
 
   test("dezelfde taal opnieuw kiezen bewaart opnieuw (zo herstelt een mislukte poging)", async () => {

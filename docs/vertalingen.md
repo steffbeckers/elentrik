@@ -108,6 +108,35 @@ Dit zijn ook de teksten van `types` in de pdf. Een kolomkop of tabelcel is smal;
 | technisch | local technique | technical room |
 | andere | autre | other |
 
+## Eigenschappen (`velden`)
+
+De veldnamen en keuzes van het paneel Eigenschappen (`velden.*` in de vertaalbestanden). Eenheden (`mA`, `A`, `kA`, `mm²`, `W`), de polen (1 tot 4), het type van een differentieel (AC, A, F, B) en de curve van een automaat (B, C, D) blijven in elke taal dezelfde.
+
+| NL | FR | EN |
+|---|---|---|
+| label | libellé | label |
+| ruimte (veld) | pièce | room |
+| kortsluitvermogen | pouvoir de coupure | breaking capacity |
+| aantal geleiders | nombre de conducteurs | number of conductors |
+| plaatsing | pose | installation method |
+| inbouw / opbouw | encastré / apparent | flush-mounted / surface-mounted |
+| in buis / in de grond | sous tube / enterré | in conduit / underground |
+| aantal | nombre | quantity |
+| randaarde | contact de terre | earth contact |
+| kinderbeveiliging | sécurité enfants | child protection |
+| waterdicht | étanche | waterproof |
+| vermogen | puissance | power |
+| soort | sorte | kind |
+| standaard | standard | standard |
+| TL | tube fluorescent | fluorescent tube |
+| spot | spot | spotlight |
+| noodverlichting | éclairage de secours | emergency lighting |
+| enkel / dubbel | simple / double | single / double |
+| wissel | va-et-vient | two-way |
+| kruis | permutateur | intermediate |
+| dimmer | variateur | dimmer |
+| drukknop | bouton-poussoir | push button |
+
 ## Pdf (dossier)
 
 | NL | FR | EN |

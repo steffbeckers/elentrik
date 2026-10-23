@@ -138,8 +138,13 @@ function keuzeWaarde(veld: Veld): string | number | undefined {
   return w as string | number;
 }
 
+/** Een optie met een vertaalsleutel wordt vertaald; een getal of symbool (polen, curve B) toont zichzelf. */
+function optieLabel(optie: NonNullable<Veld["opties"]>[number]): string {
+  return optie.labelSleutel ? t(optie.labelSleutel) : String(optie.waarde);
+}
+
 function keuzeItems(veld: Veld): { value: string | number; label: string }[] {
-  const items = (veld.opties ?? []).map((o) => ({ value: o.waarde, label: o.label }));
+  const items = (veld.opties ?? []).map((o) => ({ value: o.waarde, label: optieLabel(o) }));
   return veld.optioneel ? [{ value: GEEN, label: t("editor.eigenschappen.geen") }, ...items] : items;
 }
 
@@ -165,7 +170,7 @@ function plaatshouder(veld: Veld): string | undefined {
         <template v-for="veld in velden" :key="veld.sleutel">
           <UFormField
             v-if="veld.soort === 'tekst' || veld.soort === 'getal'"
-            :label="veld.label"
+            :label="$t(veld.labelSleutel)"
             :error="ongeldig[veld.sleutel] ? $t('editor.eigenschappen.ongeldig') : undefined"
             size="sm"
           >
@@ -188,7 +193,7 @@ function plaatshouder(veld: Veld): string | undefined {
             </UInput>
           </UFormField>
 
-          <UFormField v-else-if="veld.soort === 'keuze'" :label="veld.label" size="sm">
+          <UFormField v-else-if="veld.soort === 'keuze'" :label="$t(veld.labelSleutel)" size="sm">
             <USelect
               :model-value="keuzeWaarde(veld)"
               :items="keuzeItems(veld)"
@@ -204,7 +209,7 @@ function plaatshouder(veld: Veld): string | undefined {
           <div v-else class="flex items-center justify-between gap-2">
             <USwitch
               :model-value="waardeVan(veld) === true"
-              :label="veld.label"
+              :label="$t(veld.labelSleutel)"
               :disabled="store.alleenLezen"
               :data-testid="`veld-${veld.sleutel}`"
               size="sm"

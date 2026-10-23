@@ -11,6 +11,7 @@ const api = useProjectenApi();
 const toast = useToast();
 const sessie = useSessieStore();
 const alleenLezen = useAlleenLezen();
+const { taal } = useTaal();
 
 // Zonder schrijfrecht (spec 4.4) zijn aanmaken en dupliceren verborgen; de server weigert ze met 402.
 const kanSchrijven = computed(() => sessie.toegang.schrijven);
@@ -133,7 +134,7 @@ async function bevestigVerwijderen() {
           <span class="sr-only">{{ $t("projecten.kolommen.acties") }}</span>
         </template>
         <template #gewijzigd-cell="{ row }">
-          {{ relatieveTijd(row.original.gewijzigd, nu) }}
+          {{ relatieveTijd(row.original.gewijzigd, taal, nu) }}
         </template>
         <template #acties-cell="{ row }">
           <div class="flex justify-end gap-1">

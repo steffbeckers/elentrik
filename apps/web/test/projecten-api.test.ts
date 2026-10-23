@@ -105,6 +105,14 @@ describe("relatieveTijd", () => {
     ["2026-10-18T09:00:00Z", "3 uur geleden"],
     ["2026-10-17T12:00:00Z", "gisteren"],
   ])("%s", (iso, verwacht) => {
-    expect(relatieveTijd(iso, nu)).toBe(verwacht);
+    expect(relatieveTijd(iso, "nl", nu)).toBe(verwacht);
+  });
+
+  test("volgt de taal: fr-BE en en-GB", () => {
+    expect(relatieveTijd("2026-10-17T12:00:00Z", "fr", nu)).toBe("hier");
+    expect(relatieveTijd("2026-10-18T09:00:00Z", "fr", nu)).toBe(
+      new Intl.RelativeTimeFormat("fr-BE", { numeric: "auto", style: "short" }).format(-3, "hour"),
+    );
+    expect(relatieveTijd("2026-10-17T12:00:00Z", "en", nu)).toBe("yesterday");
   });
 });

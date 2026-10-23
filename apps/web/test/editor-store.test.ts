@@ -536,6 +536,44 @@ describe("afwijkingen en projectgegevens", () => {
       expect(store.terug).toHaveLength(0);
     });
   });
+
+  describe("wijzigProjectgegevens met de dossiertaal", () => {
+    test("een andere dossiertaal is één undo-stap, en undo brengt het document terug zonder dossiertaal", () => {
+      const store = laadNieuw();
+      expect(doc(store).meta.dossierTaal).toBeUndefined();
+
+      store.wijzigProjectgegevens({ dossierTaal: "fr" });
+      expect(doc(store).meta.dossierTaal).toBe("fr");
+      expect(store.terug).toHaveLength(1);
+      expect(store.gewijzigdSindsOpslaan).toBe(1);
+
+      store.ongedaanMaken();
+      expect(doc(store).meta.dossierTaal).toBeUndefined();
+    });
+
+    test("dezelfde dossiertaal nog eens geeft geen stap", () => {
+      const store = laadNieuw();
+      store.wijzigProjectgegevens({ dossierTaal: "fr" });
+      store.wijzigProjectgegevens({ dossierTaal: "fr" });
+      expect(store.terug).toHaveLength(1);
+      expect(store.gewijzigdSindsOpslaan).toBe(1);
+    });
+
+    test("nl op een document zonder dossiertaal geeft geen stap (afwezig = nl)", () => {
+      const store = laadNieuw();
+      store.wijzigProjectgegevens({ dossierTaal: "nl" });
+      expect(store.terug).toHaveLength(0);
+      expect(store.gewijzigdSindsOpslaan).toBe(0);
+    });
+
+    test("samen met de klant is het nog altijd één stap", () => {
+      const store = laadNieuw();
+      store.wijzigProjectgegevens({ klantNaam: "Peeters", dossierTaal: "en" });
+      expect(doc(store).meta.dossierTaal).toBe("en");
+      expect(doc(store).meta.klant.naam).toBe("Peeters");
+      expect(store.terug).toHaveLength(1);
+    });
+  });
 });
 
 describe("markeerGewijzigd", () => {

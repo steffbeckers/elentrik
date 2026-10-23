@@ -18,12 +18,12 @@ export function useTaal(): { taal: Readonly<Ref<Taal>>; zetTaal(taal: Taal): Pro
     aangemeld: () => sessie.gebruiker !== null,
     // `pad as string`: zonder getypeerde route-inferentie (die loopt hier vast op de diepte).
     bewaar: (pad, opties) => $fetch<{ taal: Taal }>(pad as string, opties),
-    bijFout: (fout) =>
-      toast.add({
-        title: t("taal.bewarenMislukt"),
-        description: vertaalFout(fout, t),
-        color: "warning",
-      }),
+    bijFout: (fout, soort) =>
+      toast.add(
+        soort === "wisselen"
+          ? { title: t("taal.wisselenMislukt"), color: "error" }
+          : { title: t("taal.bewarenMislukt"), description: vertaalFout(fout, t), color: "warning" },
+      ),
     bijBewaard: (nieuw) => {
       if (sessie.gebruiker) sessie.gebruiker.taal = nieuw;
     },

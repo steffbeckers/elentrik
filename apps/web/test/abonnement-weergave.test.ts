@@ -38,16 +38,23 @@ const gewoon = (tekst: string) => tekst.replace(/\s/g, " ");
 
 describe("prijsTekst", () => {
   test("het bedrag excl. btw en ter info incl. 21 % btw, in nl-BE", () => {
-    const prijs = prijsTekst({ bedrag: 3000, munt: "eur", interval: "month" });
+    const prijs = prijsTekst({ bedrag: 3000, munt: "eur", interval: "month" }, "nl");
     const formaat = new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" });
     expect(prijs).toEqual({ excl: formaat.format(30), incl: formaat.format(36.3) });
     expect(gewoon(prijs.excl)).toBe("€ 30,00");
     expect(gewoon(prijs.incl)).toBe("€ 36,30");
   });
 
+  test("volgt de taal: fr-BE en en-GB", () => {
+    const p = { bedrag: 3000, munt: "eur", interval: "month" as const };
+    expect(prijsTekst(p, "fr").excl).toBe(new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(30));
+    expect(gewoon(prijsTekst(p, "fr").excl)).toBe("30,00 €");
+    expect(prijsTekst(p, "en").excl).toBe("€30.00");
+  });
+
   test("incl. btw rondt af op een cent", () => {
     // 999 × 1,21 = 1208,79 cent
-    expect(gewoon(prijsTekst({ bedrag: 999, munt: "EUR", interval: "year" }).incl)).toBe("€ 12,09");
+    expect(gewoon(prijsTekst({ bedrag: 999, munt: "EUR", interval: "year" }, "nl").incl)).toBe("€ 12,09");
   });
 });
 
@@ -186,12 +193,14 @@ describe("de teksten met de betaaldatum", () => {
   };
   const vul = (tekst: string, datum: string) => tekst.replace("{datum}", datum);
 
-  test("datumTekst geeft een datum in het Nederlands", () => {
-    expect(gewoon(datumTekst("2026-11-14T10:00:00.000Z"))).toBe("14 november 2026");
+  test("datumTekst geeft een datum in de taal: nl-BE, fr-BE en en-GB", () => {
+    expect(gewoon(datumTekst("2026-11-14T10:00:00.000Z", "nl"))).toBe("14 november 2026");
+    expect(gewoon(datumTekst("2026-11-14T10:00:00.000Z", "fr"))).toBe("14 novembre 2026");
+    expect(gewoon(datumTekst("2026-11-14T10:00:00.000Z", "en"))).toBe("14 November 2026");
   });
 
   test("de banner en de statusregel gebruiken de zin uit de spec met de datum", () => {
-    const datum = datumTekst("2026-11-14T10:00:00.000Z");
+    const datum = datumTekst("2026-11-14T10:00:00.000Z", "nl");
     expect(vul(nl.abonnement.banner.betaling, datum)).toBe(
       "Je laatste betaling is mislukt. Regel je betaling vóór 14 november 2026.",
     );

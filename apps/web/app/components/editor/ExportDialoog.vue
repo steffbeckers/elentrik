@@ -4,8 +4,10 @@ import { useExportsApi } from "~/composables/useExportsApi";
 import { ConflictFout } from "~/composables/useProjectenApi";
 import { magExporteren, onopgelosteFouten, volgendVersieLabel } from "~/editor/export";
 import { bekendeFoutcode, vertaalFout } from "~/fouten";
+import { TAALNAMEN } from "~/sessie/taal";
 import { useEditorStore } from "~/stores/editor";
 import type { ExportInfo, ExportOnderdelen, Papierformaat } from "../../../shared/exports";
+import { LOCALES } from "../../../shared/taal";
 
 const open = defineModel<boolean>("open", { default: false });
 const props = defineProps<{
@@ -22,7 +24,8 @@ const emit = defineEmits<{
 const store = useEditorStore();
 const api = useExportsApi();
 const toast = useToast();
-const { t, locale } = useI18n();
+const { t } = useI18n();
+const { taal } = useTaal();
 
 /**
  * - `opslaan`: bij het openen wordt eerst bewaard en de lijst geladen.
@@ -163,8 +166,11 @@ async function exporteer(): Promise<void> {
   }
 }
 
+/** De taal van de PDF: de dossiertaal van het project (zonder taal: nl), in haar eigen naam. */
+const dossierTaalNaam = computed(() => TAALNAMEN[store.document?.meta.dossierTaal ?? "nl"]);
+
 const datumFormaat = computed(
-  () => new Intl.DateTimeFormat(locale.value, { dateStyle: "medium", timeStyle: "short" }),
+  () => new Intl.DateTimeFormat(LOCALES[taal.value], { dateStyle: "medium", timeStyle: "short" }),
 );
 </script>
 
@@ -224,6 +230,9 @@ const datumFormaat = computed(
         </div>
 
         <div v-else class="space-y-4">
+          <p class="text-sm" data-testid="export-dossiertaal">
+            {{ $t("editor.export.dossierTaal", { taal: dossierTaalNaam }) }}
+          </p>
           <fieldset class="space-y-2">
             <legend class="mb-2 text-sm font-medium">{{ $t("editor.export.onderdelen.titel") }}</legend>
             <template v-for="onderdeel in ONDERDELEN" :key="onderdeel">
