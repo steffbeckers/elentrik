@@ -50,7 +50,7 @@ export type Context = { gebruiker: Gebruiker; organisatieId: string; rol: Rol };
 const SESSIE_SLEUTEL = "elentrikSessie";
 
 function nietGevonden(): never {
-  throw createError({ statusCode: 404, statusMessage: "Niet gevonden" });
+  throw createError({ statusCode: 404, statusMessage: "Niet gevonden", data: { code: "NIET_GEVONDEN" } });
 }
 
 /** `owner` (ook in een lijst als `owner,member`) is eigenaar; elke andere rol is lid. */
@@ -132,7 +132,9 @@ export async function vereisSessie(event: H3Event): Promise<Sessie> {
     returnHeaders: true,
   });
   for (const cookie of headers?.getSetCookie() ?? []) appendResponseHeader(event, "set-cookie", cookie);
-  if (!response) throw createError({ statusCode: 401, statusMessage: "Niet ingelogd" });
+  if (!response) {
+    throw createError({ statusCode: 401, statusMessage: "Niet ingelogd", data: { code: "NIET_AANGEMELD" } });
+  }
 
   const { user, session: huidig } = response;
   const actieveOrganisatieId =
@@ -206,7 +208,7 @@ export async function vereisLid(
 
   const rol = naarRol(lidmaatschap.rol);
   if (opties.rol === "eigenaar" && rol !== "eigenaar") {
-    throw createError({ statusCode: 403, statusMessage: "Alleen een eigenaar mag dit" });
+    throw createError({ statusCode: 403, statusMessage: "Alleen een eigenaar mag dit", data: { code: "ALLEEN_EIGENAAR" } });
   }
   return { gebruiker, organisatieId, rol };
 }
@@ -251,7 +253,13 @@ export function eisEigenSite(event: H3Event): void {
   const oorsprong = getRequestHeader(event, "origin");
   const vreemd =
     site === "cross-site" || (oorsprong !== undefined && !vertrouwdeOorsprongen().includes(oorsprong));
-  if (vreemd) throw createError({ statusCode: 403, statusMessage: "Verzoek van een andere site" });
+  if (vreemd) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Verzoek van een andere site",
+      data: { code: "VERZOEK_VAN_ANDERE_SITE" },
+    });
+  }
 }
 
 /**

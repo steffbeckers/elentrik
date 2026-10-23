@@ -10,6 +10,7 @@
 // (ruling E1).
 import Stripe from "stripe";
 import type { AbonnementStatus } from "../../shared/abonnement";
+import type { Taal } from "../../shared/taal";
 import type { AbonnementConfig } from "./config";
 
 export type StripeAbonnement = {
@@ -45,10 +46,12 @@ export interface StripePoort {
     trialEinde: Date | null;
     succesUrl: string;
     annuleerUrl: string;
+    /** De taal van de gebruiker; Stripe kent nl, fr en en. */
+    locale: Taal;
   }): Promise<{ id: string; url: string }>;
   haalCheckout(id: string): Promise<StripeCheckout | null>;
   laatCheckoutVervallen(id: string): Promise<void>;
-  maakPortaal(i: { klantId: string; terugUrl: string }): Promise<{ url: string }>;
+  maakPortaal(i: { klantId: string; terugUrl: string; locale: Taal }): Promise<{ url: string }>;
   abonnementenVanKlant(klantId: string): Promise<StripeAbonnement[]>;
   beeindigAbonnement(id: string): Promise<void>;
   haalFactuur(id: string): Promise<StripeFactuur | null>;
@@ -136,6 +139,7 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
         },
         success_url: i.succesUrl,
         cancel_url: i.annuleerUrl,
+        locale: i.locale,
       });
       if (!sessie.url) throw new Error("Stripe gaf geen Checkout-URL");
       return { id: sessie.id, url: sessie.url };
@@ -162,7 +166,11 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
     },
 
     async maakPortaal(i) {
-      const sessie = await stripe.billingPortal.sessions.create({ customer: i.klantId, return_url: i.terugUrl });
+      const sessie = await stripe.billingPortal.sessions.create({
+        customer: i.klantId,
+        return_url: i.terugUrl,
+        locale: i.locale,
+      });
       return { url: sessie.url };
     },
 

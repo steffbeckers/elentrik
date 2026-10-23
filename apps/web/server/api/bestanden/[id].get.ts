@@ -13,11 +13,13 @@ export default defineBeveiligdeHandler(async (event) => {
   const db = gebruikDb();
   const bestand = await haalBestand(db, bestandId(event));
   if (!bestand?.organisatieId) {
-    throw createError({ statusCode: 404, statusMessage: "Bestand niet gevonden" });
+    throw createError({ statusCode: 404, statusMessage: "Bestand niet gevonden", data: { code: "BESTAND_NIET_GEVONDEN" } });
   }
   await vereisLid(event, { organisatieId: bestand.organisatieId });
   const stroom = await gebruikOpslag().lees(bestand.sleutel);
-  if (!stroom) throw createError({ statusCode: 404, statusMessage: "Bestand niet gevonden" });
+  if (!stroom) {
+    throw createError({ statusCode: 404, statusMessage: "Bestand niet gevonden", data: { code: "BESTAND_NIET_GEVONDEN" } });
+  }
   // Een export-PDF wordt gedownload onder "<projectnaam> - <versieLabel>.pdf".
   const download = bestand.soort === "export" ? await exportBestandsnaam(db, bestand.id) : undefined;
   setResponseHeaders(event, bestandHeaders(bestand.mime, download !== undefined ? { download } : {}));

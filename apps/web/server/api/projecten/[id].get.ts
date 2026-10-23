@@ -8,6 +8,8 @@ import { defineBeveiligdeHandler, vereisProjecttoegang } from "../../utils/toega
 export default defineBeveiligdeHandler(async (event) => {
   const { project: toegang } = await vereisProjecttoegang(event, projectId(event));
   const project = await haalProject(gebruikDb(), toegang.organisatieId, toegang.id);
-  if (!project) throw createError({ statusCode: 404, statusMessage: "Project niet gevonden" });
+  if (!project) {
+    throw createError({ statusCode: 404, statusMessage: "Project niet gevonden", data: { code: "PROJECT_NIET_GEVONDEN" } });
+  }
   return project;
 });

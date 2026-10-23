@@ -19,7 +19,8 @@ import { and, eq } from "drizzle-orm";
 import { kenProefperiodeToe } from "../abonnementen/proef";
 import { type Db, gebruikDb } from "../db";
 import * as schema from "../db/schema";
-import { bevestigMail, herstelMail, magicLinkMail, uitnodigingMail } from "../mail/sjablonen";
+import { leesGebruikerstaal } from "../gebruikers/taal";
+import { bevestigMail, herstelMail, magicLinkMail, rolNaamInMail, uitnodigingMail } from "../mail/sjablonen";
 import { gebruikVerzender, type Mail } from "../mail/verzend";
 import { richtEersteOrganisatieIn } from "../organisaties/registratie";
 import { maakUitnodigingstoken } from "../organisaties/uitnodigingstoken";
@@ -31,7 +32,7 @@ import {
   LAATSTE_EIGENAAR_BOODSCHAP,
   MAX_NAAMLENGTE,
 } from "../organisaties/regels";
-import { isTaal, TAAL_HEADER } from "../../shared/taal";
+import { isTaal, TAAL_HEADER, type Taal } from "../../shared/taal";
 import { basisUrl, vertrouwdeOorsprongen } from "./oorsprong";
 
 const PLAATSHOUDER = "<vervang";
@@ -57,14 +58,23 @@ export function leesGeheim(env: Record<string, string | undefined> = process.env
   );
 }
 
-/** Interne rolnamen naar de namen in mails en UI. */
-const ROLNAMEN: Record<string, string> = { owner: "eigenaar", member: "lid" };
+/** De interne rollen; in mails krijgen ze een naam per taal (`rolNaamInMail`). */
+const ROLLEN = new Set(["owner", "member"]);
 
 function eisGeldigeRol(rol: string): void {
   const rollen = rol.split(",").map((r) => r.trim());
-  if (rollen.some((r) => !Object.hasOwn(ROLNAMEN, r))) {
+  if (rollen.some((r) => !ROLLEN.has(r))) {
     throw new APIError("BAD_REQUEST", { message: "Onbekende rol; alleen eigenaar en lid bestaan." });
   }
+}
+
+/**
+ * De taal voor een mail: `taal` van de gebruiker zoals Better Auth ze geeft, anders uit de
+ * database, anders nl. Een mislukte opzoeking breekt de mail niet af.
+ */
+async function mailtaal(db: Db, gebruiker: { id: string; taal?: unknown }): Promise<Taal> {
+  if (isTaal(gebruiker.taal)) return gebruiker.taal;
+  return leesGebruikerstaal(db, gebruiker.id).catch(() => "nl" as const);
 }
 
 export type MailSoort = "bevestiging" | "magic-link" | "herstel" | "uitnodiging";
@@ -337,7 +347,8 @@ export function maakAuth(db: Db = gebruikDb()) {
       // Na een wachtwoordherstel gelden de bestaande sessies niet meer.
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
-        verstuur("herstel", herstelMail({ naam: user.name, link: url }), user.email);
+        const taal = await mailtaal(db, user);
+        verstuur("herstel", herstelMail({ naam: user.name, link: url, taal }), user.email);
       },
     },
     emailVerification: {
@@ -347,7 +358,8 @@ export function maakAuth(db: Db = gebruikDb()) {
       autoSignInAfterVerification: true,
       expiresIn: 24 * 3600,
       sendVerificationEmail: async ({ user, url }) => {
-        verstuur("bevestiging", bevestigMail({ naam: user.name, link: url }), user.email);
+        const taal = await mailtaal(db, user);
+        verstuur("bevestiging", bevestigMail({ naam: user.name, link: url, taal }), user.email);
       },
     },
     plugins: [
@@ -359,7 +371,8 @@ export function maakAuth(db: Db = gebruikDb()) {
         sendMagicLink: async ({ email, url }, ctx) => {
           const gevonden = await ctx?.context.internalAdapter.findUserByEmail(email);
           if (!gevonden?.user) return;
-          verstuur("magic-link", magicLinkMail({ link: url }), gevonden.user.email);
+          const taal = await mailtaal(db, gevonden.user);
+          verstuur("magic-link", magicLinkMail({ link: url, taal }), gevonden.user.email);
         },
       }),
       organization({
@@ -405,13 +418,16 @@ export function maakAuth(db: Db = gebruikDb()) {
         // eigenaar zien, de token staat alleen in deze mail (de database kent alleen de hash).
         sendInvitationEmail: async ({ id, email, role, organization, inviter, invitation }) => {
           const token = await maakUitnodigingstoken(db, id, new Date(invitation.expiresAt));
+          // De genodigde heeft nog geen account en dus geen taal: de mail volgt wie uitnodigt.
+          const taal = await mailtaal(db, inviter.user);
           verstuur(
             "uitnodiging",
             uitnodigingMail({
               uitnodiger: inviter.user.name,
               organisatie: organization.name,
-              rol: ROLNAMEN[role] ?? role,
+              rol: rolNaamInMail(role, taal),
               link: `${basisUrl()}/uitnodiging/${token}`,
+              taal,
             }),
             email,
           );

@@ -330,3 +330,97 @@ describe("taal van een export", () => {
     expect(html).toContain('<html lang="nl">');
   });
 });
+
+describe("mails in de taal van de gebruiker", () => {
+  const wacht = () => new Promise((klaar) => setTimeout(klaar, 0));
+  const mailsVoor = (adres: string) => mails.filter((m) => m.aan === adres);
+
+  test("een fr-gebruiker die zich registreert krijgt een Franse bevestigingsmail", async () => {
+    const adres = "bevestig-fr@voorbeeld.be";
+    await auth.api.signUpEmail({
+      body: { name: "Camille", email: adres, password: WACHTWOORD },
+      headers: authHeaders({ [TAAL_HEADER]: "fr" }),
+    });
+    await wacht();
+    const [mail] = mailsVoor(adres);
+    expect(mail!.onderwerp).toBe("Confirmez votre adresse e-mail pour Elentrik");
+    expect(mail!.tekst).toContain("Bonjour Camille,");
+    expect(mail!.html).toContain('<html lang="fr">');
+  });
+
+  test("een en-gebruiker krijgt een Engelse bevestigingsmail, zonder header een Nederlandse", async () => {
+    await auth.api.signUpEmail({
+      body: { name: "Sam", email: "bevestig-en@voorbeeld.be", password: WACHTWOORD },
+      headers: authHeaders({ [TAAL_HEADER]: "en" }),
+    });
+    await auth.api.signUpEmail({
+      body: { name: "Sanne", email: "bevestig-nl@voorbeeld.be", password: WACHTWOORD },
+      headers: authHeaders(),
+    });
+    await wacht();
+    expect(mailsVoor("bevestig-en@voorbeeld.be")[0]!.onderwerp).toBe("Confirm your email address for Elentrik");
+    expect(mailsVoor("bevestig-nl@voorbeeld.be")[0]!.onderwerp).toBe("Bevestig je e-mailadres bij Elentrik");
+  });
+
+  test("een onbevestigde inlogpoging stuurt de bevestiging opnieuw in de taal van de gebruiker", async () => {
+    const adres = "opnieuw-fr@voorbeeld.be";
+    await auth.api.signUpEmail({
+      body: { name: "Luc", email: adres, password: WACHTWOORD },
+      headers: authHeaders({ [TAAL_HEADER]: "fr" }),
+    });
+    await wacht();
+    await auth.api
+      .signInEmail({ body: { email: adres, password: WACHTWOORD }, headers: authHeaders() })
+      .catch(() => undefined);
+    await wacht();
+    const lijst = mailsVoor(adres);
+    expect(lijst.length).toBeGreaterThanOrEqual(2);
+    for (const mail of lijst) expect(mail.onderwerp).toBe("Confirmez votre adresse e-mail pour Elentrik");
+  });
+
+  test("de inloglink en het wachtwoordherstel volgen de taal van de gebruiker", async () => {
+    // `frans` is bevestigd en heeft taal fr.
+    await auth.api.signInMagicLink({ body: { email: frans.email }, headers: authHeaders() });
+    await auth.api.requestPasswordReset({
+      body: { email: frans.email, redirectTo: "/wachtwoord-herstellen" },
+      headers: authHeaders(),
+    });
+    await wacht();
+    const onderwerpen = mailsVoor(frans.email).map((m) => m.onderwerp);
+    expect(onderwerpen).toContain("Votre lien de connexion pour Elentrik");
+    expect(onderwerpen).toContain("Définissez un nouveau mot de passe pour Elentrik");
+
+    await auth.api.signInMagicLink({ body: { email: nederlands.email }, headers: authHeaders() });
+    await wacht();
+    expect(mailsVoor(nederlands.email).map((m) => m.onderwerp)).toContain("Je inloglink voor Elentrik");
+  });
+
+  test("een en-eigenaar die een nieuw adres uitnodigt, verstuurt een Engelse uitnodiging", async () => {
+    const eigenaar = await gebruiker("eigenaar-en@voorbeeld.be", "en");
+    const [lid] = await db.select({ org: member.organizationId }).from(member).where(eq(member.userId, eigenaar.id));
+    const gast = "gast-en@voorbeeld.be";
+    await auth.api.createInvitation({
+      body: { email: gast, role: "member", organizationId: lid!.org },
+      headers: new Headers({ cookie: eigenaar.cookie, "user-agent": "vitest" }),
+    });
+    await wacht();
+    const [mail] = mailsVoor(gast);
+    expect(mail!.onderwerp).toMatch(/ invites you to join Bedrijf eigenaar-en@voorbeeld\.be on Elentrik$/);
+    expect(mail!.tekst).toContain("with the role of member.");
+    expect(mail!.html).toContain('<html lang="en">');
+  });
+
+  test("de uitnodiging volgt de taal van wie uitnodigt, niet die van de genodigde", async () => {
+    const [lid] = await db.select({ org: member.organizationId }).from(member).where(eq(member.userId, frans.id));
+    const gast = "gast-fr@voorbeeld.be";
+    await auth.api.createInvitation({
+      body: { email: gast, role: "owner", organizationId: lid!.org },
+      headers: new Headers({ cookie: frans.cookie, "user-agent": "vitest" }),
+    });
+    await wacht();
+    const [mail] = mailsVoor(gast);
+    expect(mail!.onderwerp).toContain("vous invite à rejoindre");
+    expect(mail!.tekst).toContain("avec le rôle propriétaire.");
+    expect(mail!.html).toContain('<html lang="fr">');
+  });
+});

@@ -15,9 +15,12 @@ import {
   type Formule,
   type Prijs,
 } from "../../shared/abonnement";
+import type { Foutcode } from "../../shared/foutcodes";
+import type { Taal } from "../../shared/taal";
 import { basisUrl } from "../auth/oorsprong";
 import { gebruikDb, type Db } from "../db";
 import { abonnementen, organization } from "../db/schema";
+import { leesGebruikerstaal } from "../gebruikers/taal";
 import { leesBody } from "../utils/projecten";
 import { vereisLid } from "../utils/toegang";
 import { gebruikAbonnementen, type AbonnementConfig } from "./config";
@@ -44,8 +47,9 @@ const BLOKKEERT_CHECKOUT: ReadonlySet<AbonnementStatus> = new Set([
 
 type Ingeschakeld = { config: Extract<AbonnementConfig, { ingeschakeld: true }>; stripe: StripePoort };
 
-function fout(statusCode: number, statusMessage: string, code?: string) {
-  return createError({ statusCode, statusMessage, ...(code ? { data: { code } } : {}) });
+/** Een h3-fout met altijd een code uit FOUTCODES (test/foutcodes.test.ts dwingt het af). */
+function fout(statusCode: number, statusMessage: string, code: Foutcode) {
+  return createError({ statusCode, statusMessage, data: { code } });
 }
 
 /** De configuratie en Stripe-poort, of 409 `ABONNEMENTEN_UIT`. */
@@ -148,7 +152,7 @@ export async function startCheckout(
   db: Db,
   stripe: StripePoort,
   prijzen: { maand: string; jaar: string },
-  i: { organisatieId: string; formule: Formule; eigenaarEmail: string },
+  i: { organisatieId: string; formule: Formule; eigenaarEmail: string; locale: Taal },
   nu: Date = new Date(),
 ): Promise<{ url: string }> {
   const basis = basisUrl();
@@ -158,7 +162,7 @@ export async function startCheckout(
       .select({ naam: organization.name, proefEinde: organization.proefEinde })
       .from(organization)
       .where(eq(organization.id, i.organisatieId));
-    if (!org) throw fout(404, "Niet gevonden");
+    if (!org) throw fout(404, "Niet gevonden", "NIET_GEVONDEN");
     const leesRij = async () =>
       (await tx.select().from(abonnementen).where(eq(abonnementen.organisatieId, i.organisatieId)))[0];
     const blokkeert = (r: Awaited<ReturnType<typeof leesRij>>) => {
@@ -199,6 +203,7 @@ export async function startCheckout(
       trialEinde: trialEindeVoor(org.proefEinde, nu),
       succesUrl: `${basis}/abonnement?terug={CHECKOUT_SESSION_ID}`,
       annuleerUrl: `${basis}/abonnement`,
+      locale: i.locale,
     });
     await tx
       .update(abonnementen)
@@ -210,15 +215,17 @@ export async function startCheckout(
   return resultaat;
 }
 
-/** `POST /api/abonnement/checkout`: alleen een eigenaar. */
+/** `POST /api/abonnement/checkout`: alleen een eigenaar. Stripe toont Checkout in zijn taal. */
 export async function checkoutRoute(event: H3Event): Promise<{ url: string }> {
   const { organisatieId, gebruiker } = await vereisLid(event, { rol: "eigenaar" });
   const { config, stripe } = eisIngeschakeld();
   const { formule } = await leesBody(event, CheckoutSchema);
-  return startCheckout(gebruikDb(), stripe, config.prijzen, {
+  const db = gebruikDb();
+  return startCheckout(db, stripe, config.prijzen, {
     organisatieId,
     formule,
     eigenaarEmail: gebruiker.email,
+    locale: await leesGebruikerstaal(db, gebruiker.id),
   });
 }
 
@@ -226,11 +233,16 @@ export async function checkoutRoute(event: H3Event): Promise<{ url: string }> {
 
 /** `POST /api/abonnement/portaal`: alleen een eigenaar; 409 `GEEN_KLANT` zonder klant. */
 export async function portaalRoute(event: H3Event): Promise<{ url: string }> {
-  const { organisatieId } = await vereisLid(event, { rol: "eigenaar" });
+  const { organisatieId, gebruiker } = await vereisLid(event, { rol: "eigenaar" });
   const { stripe } = eisIngeschakeld();
-  const rij = await haalAbonnementRij(gebruikDb(), organisatieId);
+  const db = gebruikDb();
+  const rij = await haalAbonnementRij(db, organisatieId);
   if (!rij) throw fout(409, "Er is nog geen klant bij Stripe", GEEN_KLANT);
-  return stripe.maakPortaal({ klantId: rij.stripeKlantId, terugUrl: `${basisUrl()}/abonnement` });
+  return stripe.maakPortaal({
+    klantId: rij.stripeKlantId,
+    terugUrl: `${basisUrl()}/abonnement`,
+    locale: await leesGebruikerstaal(db, gebruiker.id),
+  });
 }
 
 const SynchroniseerSchema = z.object({ sessie: z.string().min(1) });
@@ -247,7 +259,7 @@ export async function synchroniseerRoute(event: H3Event): Promise<AbonnementOver
   const db = gebruikDb();
   const rij = await haalAbonnementRij(db, organisatieId);
   const checkout = await stand.stripe.haalCheckout(sessie);
-  if (!rij || !checkout || checkout.klantId !== rij.stripeKlantId) throw fout(404, "Niet gevonden");
+  if (!rij || !checkout || checkout.klantId !== rij.stripeKlantId) throw fout(404, "Niet gevonden", "NIET_GEVONDEN");
   await synchroniseerKlant(db, stand.stripe, stand.config.prijzen, rij.stripeKlantId);
   return maakOverzicht(db, organisatieId, stand);
 }

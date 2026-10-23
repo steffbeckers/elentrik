@@ -15,7 +15,9 @@ const MULTIPART_OVERHEAD_BYTES = 1024 * 1024;
 /** Een id dat geen uuid is, kan nooit een bestaand bestand zijn: 404. */
 export function bestandId(event: H3Event): string {
   const id = IdSchema.safeParse(getRouterParam(event, "id"));
-  if (!id.success) throw createError({ statusCode: 404, statusMessage: "Bestand niet gevonden" });
+  if (!id.success) {
+    throw createError({ statusCode: 404, statusMessage: "Bestand niet gevonden", data: { code: "BESTAND_NIET_GEVONDEN" } });
+  }
   return id.data;
 }
 
@@ -24,7 +26,7 @@ export function controleerUploadGrootte(event: H3Event, maxBytes: number = MAX_U
   const waarde = getHeader(event, "content-length")?.trim();
   if (waarde === undefined || !/^\d+$/.test(waarde)) return;
   if (Number(waarde) > maxBytes + MULTIPART_OVERHEAD_BYTES) {
-    throw createError({ statusCode: 413, statusMessage: "Bestand te groot" });
+    throw createError({ statusCode: 413, statusMessage: "Bestand te groot", data: { code: "BESTAND_TE_GROOT" } });
   }
 }
 
@@ -38,7 +40,7 @@ export async function leesPlanUpload(
   const soortDeel = delen?.find((deel) => deel.name === "soort");
   const soort = SoortSchema.safeParse(soortDeel?.data.toString("utf8"));
   if (!bestand || !soort.success) {
-    throw createError({ statusCode: 400, statusMessage: "Ongeldige invoer" });
+    throw createError({ statusCode: 400, statusMessage: "Ongeldige invoer", data: { code: "ONGELDIGE_INVOER" } });
   }
   return {
     soort: soort.data,
@@ -51,7 +53,9 @@ export async function leesLogoUpload(event: H3Event): Promise<Uint8Array> {
   controleerUploadGrootte(event, MAX_LOGO_BYTES);
   const delen = await readMultipartFormData(event);
   const bestand = delen?.find((deel) => deel.name === "bestand");
-  if (!bestand) throw createError({ statusCode: 400, statusMessage: "Ongeldige invoer" });
+  if (!bestand) {
+    throw createError({ statusCode: 400, statusMessage: "Ongeldige invoer", data: { code: "ONGELDIGE_INVOER" } });
+  }
   return new Uint8Array(bestand.data.buffer, bestand.data.byteOffset, bestand.data.byteLength);
 }
 
@@ -63,13 +67,17 @@ export async function metBestandFouten<T>(actie: () => Promise<T>): Promise<T> {
     if (!(fout instanceof BestandFout)) throw fout;
     switch (fout.code) {
       case "NIET_GEVONDEN":
-        throw createError({ statusCode: 404, statusMessage: "Project niet gevonden" });
+        throw createError({ statusCode: 404, statusMessage: "Project niet gevonden", data: { code: "PROJECT_NIET_GEVONDEN" } });
       case "TE_GROOT":
-        throw createError({ statusCode: 413, statusMessage: "Bestand te groot" });
+        throw createError({ statusCode: 413, statusMessage: "Bestand te groot", data: { code: "BESTAND_TE_GROOT" } });
       case "ONGELDIG_TYPE":
-        throw createError({ statusCode: 415, statusMessage: "Bestandstype niet toegelaten" });
+        throw createError({
+          statusCode: 415,
+          statusMessage: "Bestandstype niet toegelaten",
+          data: { code: "BESTANDSTYPE_NIET_TOEGELATEN" },
+        });
       case "RASTER_TE_GROOT":
-        throw createError({ statusCode: 422, statusMessage: "Raster te groot" });
+        throw createError({ statusCode: 422, statusMessage: "Raster te groot", data: { code: "RASTER_TE_GROOT" } });
     }
   }
 }

@@ -10,7 +10,7 @@ import { isGeweigerdAuthPad } from "../../auth/toegelaten";
 export default defineEventHandler((event) => {
   const verzoek = toWebRequest(event);
   if (isGeweigerdAuthPad(new URL(verzoek.url).pathname)) {
-    throw createError({ statusCode: 404, statusMessage: "Niet gevonden" });
+    throw createError({ statusCode: 404, statusMessage: "Niet gevonden", data: { code: "NIET_GEVONDEN" } });
   }
   return gebruikAuth().handler(metSocketIp(verzoek, getRequestIP(event)));
 });
