@@ -141,7 +141,8 @@ export function trialEindeVoor(proefEinde: Date, nu: Date): Date | null {
 /**
  * Start een Checkout-sessie voor de organisatie. Alles gebeurt achter een advisory lock per
  * organisatie, zodat twee gelijktijdige klikken één klant en hoogstens één open sessie geven:
- * de rij lezen, de klant maken, de vorige sessie laten vervallen, de nieuwe maken en bewaren.
+ * de rij lezen, een voltooide vorige sessie synchroniseren, de klant maken, de vorige sessie
+ * laten vervallen, de nieuwe maken en bewaren.
  */
 export async function startCheckout(
   db: Db,
@@ -151,18 +152,38 @@ export async function startCheckout(
   nu: Date = new Date(),
 ): Promise<{ url: string }> {
   const basis = basisUrl();
-  return db.transaction(async (tx) => {
+  const resultaat = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"abonnement:" + i.organisatieId}))`);
     const [org] = await tx
       .select({ naam: organization.name, proefEinde: organization.proefEinde })
       .from(organization)
       .where(eq(organization.id, i.organisatieId));
     if (!org) throw fout(404, "Niet gevonden");
-    const [rij] = await tx.select().from(abonnementen).where(eq(abonnementen.organisatieId, i.organisatieId));
+    const leesRij = async () =>
+      (await tx.select().from(abonnementen).where(eq(abonnementen.organisatieId, i.organisatieId)))[0];
+    const blokkeert = (r: Awaited<ReturnType<typeof leesRij>>) => {
+      const status = leesStatus(r?.status);
+      return status !== null && BLOKKEERT_CHECKOUT.has(status);
+    };
 
-    const status = leesStatus(rij?.status);
-    if (status && BLOKKEERT_CHECKOUT.has(status)) {
-      throw fout(409, "Deze organisatie heeft al een abonnement", ABONNEMENT_BESTAAT);
+    let rij = await leesRij();
+    if (blokkeert(rij)) return "bestaat";
+
+    if (rij?.openCheckoutSessie) {
+      // De rij loopt achter tot de webhook of /synchroniseer komt. Is de vorige sessie al
+      // voltooid, dan eerst de toestand van Stripe ophalen: expire werkt niet meer op een
+      // voltooide sessie, en een tweede sessie zou dubbel laten betalen. `tx` in plaats van `db`:
+      // de synchronisatie loopt dan als savepoint in dezelfde transactie, zonder tweede
+      // verbinding die op deze transactie moet wachten.
+      const vorige = await stripe.haalCheckout(rij.openCheckoutSessie);
+      if (vorige?.abonnementId) {
+        await synchroniseerKlant(tx, stripe, prijzen, rij.stripeKlantId, nu);
+        rij = await leesRij();
+        // Geen throw: dat zou de synchronisatie terugdraaien.
+        if (blokkeert(rij)) return "bestaat";
+      } else if (vorige) {
+        await stripe.laatCheckoutVervallen(rij.openCheckoutSessie);
+      }
     }
 
     let klantId = rij?.stripeKlantId;
@@ -170,7 +191,6 @@ export async function startCheckout(
       klantId = (await stripe.maakKlant({ organisatieId: i.organisatieId, email: i.eigenaarEmail, naam: org.naam })).id;
       await tx.insert(abonnementen).values({ organisatieId: i.organisatieId, stripeKlantId: klantId });
     }
-    if (rij?.openCheckoutSessie) await stripe.laatCheckoutVervallen(rij.openCheckoutSessie);
 
     const sessie = await stripe.maakCheckout({
       klantId,
@@ -186,6 +206,8 @@ export async function startCheckout(
       .where(eq(abonnementen.organisatieId, i.organisatieId));
     return { url: sessie.url };
   });
+  if (resultaat === "bestaat") throw fout(409, "Deze organisatie heeft al een abonnement", ABONNEMENT_BESTAAT);
+  return resultaat;
 }
 
 /** `POST /api/abonnement/checkout`: alleen een eigenaar. */

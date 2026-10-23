@@ -292,6 +292,55 @@ describe("checkout", () => {
     expect(rij?.openCheckoutSessie).toBe("cs_nep_2");
   });
 
+  test("een voltooide vorige sessie: synchroniseren en 409, zonder tweede sessie", async () => {
+    // De eigenaar rondt Checkout af, maar de rij loopt nog achter (geen webhook, geen synchroniseer).
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    const klantId = stripe.checkouts.get("cs_nep_1")!.klantId!;
+    stripe.checkouts.set("cs_nep_1", { id: "cs_nep_1", klantId, abonnementId: "sub_betaald" });
+    stripe.abonnementen.set(klantId, [
+      {
+        id: "sub_betaald",
+        klantId,
+        status: "active",
+        prijsId: "price_maand",
+        periodeEinde: new Date(Date.now() + 30 * DAG_MS),
+        opgezegdOpPeriodeEinde: false,
+        aangemaakt: new Date(),
+      },
+    ]);
+    const [voor] = await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId));
+    expect(voor?.status).toBeNull();
+
+    const antwoord = await checkout(eigenaarA.cookie);
+    expect(antwoord.status).toBe(409);
+    expect(((await antwoord.json()) as Fout).data?.code).toBe("ABONNEMENT_BESTAAT");
+    expect(aanroepen("maakCheckout")).toHaveLength(1);
+    expect(aanroepen("laatCheckoutVervallen")).toEqual([]);
+    // De synchronisatie blijft bewaard, ook al antwoordde het verzoek met een fout.
+    const [na] = await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId));
+    expect(na).toMatchObject({ status: "active", stripeAbonnementId: "sub_betaald", formule: "maand" });
+  });
+
+  test("een vorige sessie zonder abonnement: vervallen en een nieuwe sessie", async () => {
+    await checkout(eigenaarA.cookie);
+    expect(stripe.checkouts.get("cs_nep_1")!.abonnementId).toBeNull();
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    expect(aanroepen("abonnementenVanKlant")).toEqual([]);
+    expect(aanroepen("laatCheckoutVervallen").map((a) => a.invoer)).toEqual(["cs_nep_1"]);
+    expect(aanroepen("maakCheckout")).toHaveLength(2);
+  });
+
+  test("een voltooide sessie waarvan het abonnement al beeindigd is, laat een nieuwe checkout toe", async () => {
+    await checkout(eigenaarA.cookie);
+    const klantId = stripe.checkouts.get("cs_nep_1")!.klantId!;
+    stripe.checkouts.set("cs_nep_1", { id: "cs_nep_1", klantId, abonnementId: "sub_oud" });
+    stripe.abonnementen.set(klantId, [
+      { id: "sub_oud", klantId, status: "canceled", prijsId: "price_maand", periodeEinde: null, opgezegdOpPeriodeEinde: false, aangemaakt: new Date() },
+    ]);
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    expect(aanroepen("maakCheckout")).toHaveLength(2);
+  });
+
   describe("trial-marge", () => {
     async function trialEindeBij(proefEinde: Date): Promise<Date | null> {
       await zetProefEinde(eigenaarA.organisatieId, proefEinde);
