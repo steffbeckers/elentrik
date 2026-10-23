@@ -44,7 +44,7 @@ function adresRegels(adres: Adres | undefined): [string, string] {
 }
 
 /**
- * Een ISO-datum (`2026-10-19`) in de korte notatie van de taal, bv. `19/10/2026` (nl, en) of `19/10/26` (fr).
+ * Een ISO-datum (`2026-10-19`) als dag/maand/jaar met een jaar van vier cijfers, bv. `19/10/2026` (in elke taal; een dag onder de 10 heeft één cijfer: `5/03/2026`).
  * De datum is een kalenderdag zonder tijdzone: ze wordt in UTC opgemaakt. Wat geen ISO-datum is, blijft zoals het is.
  */
 export function formatteerDatum(datum: string, taal: Taal): string {
@@ -54,7 +54,7 @@ export function formatteerDatum(datum: string, taal: Taal): string {
   const moment = new Date(Date.UTC(jaar, maand - 1, dag));
   // Een onmogelijke datum (30 februari) schuift door in `Date`: dan is het geen kalenderdag.
   if (moment.getUTCMonth() !== maand - 1 || moment.getUTCDate() !== dag) return datum;
-  return new Intl.DateTimeFormat(LOCALES[taal], { dateStyle: "short", timeZone: "UTC" }).format(moment);
+  return new Intl.DateTimeFormat(LOCALES[taal], { day: "numeric", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(moment);
 }
 
 /** Het label van een handtekeningvak loopt over hoogstens twee regels: het vak is smal. */

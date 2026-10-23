@@ -36,7 +36,7 @@ export const NL: Readonly<Record<string, string>> = {
   "waarde.kelder": "kelder",
   "waarde.zolder": "zolder",
   "waarde.buiten": "buiten",
-  "waarde.technisch": "technische ruimte",
+  "waarde.technisch": "technisch",
   "waarde.wasmachine": "wasmachine",
   "waarde.droogkast": "droogkast",
   "waarde.vaatwasser": "vaatwasser",

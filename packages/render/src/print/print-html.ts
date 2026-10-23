@@ -9,7 +9,7 @@ import { schemaPaginaSvg } from "../schema-svg";
 import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
 import { TEKSTEN, type Taal, type Teksten } from "../teksten/index";
-import { cartouche } from "./cartouche";
+import { cartouche, formatteerDatum } from "./cartouche";
 import { CEL_MARGE_MM, INSPRINGING_MM, KOP_MARGE_MM, KRINGENLIJST_RIJ_MM, RAND_MM, REGELHOOGTE, stijl } from "./stijl";
 import { breekRegels, tekstRegel, vloer } from "./tekst";
 
@@ -206,7 +206,7 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
       const onderwerp = bevinding ? bevindingTekst(c, bevinding) : onderwerpLabel(c, a.nodeId) || "—";
       tekst(onderwerp, "afwijking", volleBreedte);
       tekst(`${t.bijlage.motivatie}: ${a.motivatie}`, "motivatie", ingesprongen);
-      tekst(`${t.bijlage.door}: ${a.door} — ${t.cartouche.datum}: ${a.datum}`, "door", ingesprongen);
+      tekst(`${t.bijlage.door}: ${a.door} — ${t.cartouche.datum}: ${formatteerDatum(a.datum, c.taal)}`, "door", ingesprongen);
     }
   }
   if (overgeslagen.length > 0) {

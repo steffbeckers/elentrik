@@ -95,6 +95,33 @@ describe("vertaalde parameterwaarden", () => {
     expect(formatteerBericht(maak({ reden: "wasmachine", max: 30 }), "fr")).toContain("(lave-linge)");
   });
 
+  test("alleen opsommingsparameters worden vertaald: een label dat gelijk is aan een enumwaarde blijft staan", async () => {
+    const punt = (parameters: Bevinding["parameters"]): Bevinding => ({
+      regelId: "R1",
+      ernst: "info",
+      nodeIds: [],
+      berichtSleutel: "arei.situatie.niet-geplaatst.punt",
+      parameters,
+      afgeweken: false,
+    });
+    const kring = (label: string): Bevinding => ({
+      ...punt({}),
+      berichtSleutel: "arei.kring.max-contactdozen.overschreden",
+      parameters: { kring: label, aantal: 9, max: 8 },
+    });
+    for (const taal of TALEN) {
+      for (const label of ["oven", "keuken", "technisch", "andere"]) {
+        expect(formatteerBericht(punt({ label }), taal), `${taal} ${label}`).toContain(` ${label} `);
+        expect(formatteerBericht(kring(label), taal), `${taal} kring ${label}`).toContain(` ${label} `);
+      }
+    }
+    // Het Nederlands blijft voor elke ruimte en toestelsoort ongewijzigd: de waarde is al Nederlands.
+    const { RuimteSchema, ToestelsoortSchema } = await import("@elentrik/model");
+    for (const waarde of [...RuimteSchema.options, ...ToestelsoortSchema.options]) {
+      expect(formatteerBericht(maak({ reden: waarde, max: 30 }), "nl")).toContain(`(${waarde})`);
+    }
+  });
+
   test("een onbekende tekst blijft zoals ze is", () => {
     expect(formatteerBericht(maak({ reden: "Mijn bureau", max: 30 }), "en")).toContain("(Mijn bureau)");
   });

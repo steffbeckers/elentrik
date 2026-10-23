@@ -15,7 +15,7 @@ De vertalingen zijn eigen werk (clean room). Ze nemen geen tekst of terminologie
   - technische labels op het schema, zoals `XVB 3G2,5`, met een decimale komma. Die labels worden nooit vertaald, zodat een keurder de tekening in elke taal hetzelfde leest.
 - **Niet vertaald:** wat de gebruiker zelf typt (projectnamen, klantgegevens, eigen ruimtenamen, de motivatie van een afwijking).
 - **Plaatshouders en meervoudsvormen:** `{naam}` en `|` staan per sleutel identiek in elke taal.
-- **Datums in de pdf:** korte notatie van de locale van de dossiertaal: `19/10/2026` (nl), `19/10/26` (fr) en `19/10/2026` (en).
+- **Datums in de pdf:** dag/maand/jaar in de locale van de dossiertaal, met een jaar van vier cijfers in elke taal: `19/10/2026` (nl, fr en en). Een dag onder de 10 heeft één cijfer (`5/03/2026`). Dit geldt voor de cartouche en voor de datum van een afwijking.
 - **Hoofdletters:** de benaming van een toesteltype in de pdf staat in een lopende zin of tussen haakjes in kleine letters ("Toestel (wasmachine)"); een ruimte en een type staan op zichzelf met een hoofdletter.
 
 ## Kernbegrippen

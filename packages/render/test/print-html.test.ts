@@ -485,7 +485,7 @@ describe("printHtml", () => {
         `${NL.bijlage.afwijkingen} (1)`,
         bericht,
         `${NL.bijlage.motivatie}: Wordt later geplaatst door de klant.`,
-        `${NL.bijlage.door}: Jan Peeters — ${NL.cartouche.datum}: 2026-10-02`,
+        `${NL.bijlage.door}: Jan Peeters — ${NL.cartouche.datum}: 2/10/2026`,
       ]),
     );
   });
@@ -735,10 +735,10 @@ describe("talen", () => {
 
   test("de cartouchedatum staat per taal in de locale van de taal (geen ISO meer)", () => {
     const doc = metGegevens(referentieAppartement());
-    const verwacht = { nl: "19/10/2026", fr: "19/10/26", en: "19/10/2026" } as const;
+    const verwacht = { nl: "19/10/2026", fr: "19/10/2026", en: "19/10/2026" } as const;
     for (const taal of talen) {
       // Dezelfde datum, vast in UTC, zoals de cartouche haar opmaakt.
-      const formaat = new Intl.DateTimeFormat(LOCALES[taal], { dateStyle: "short", timeZone: "UTC" });
+      const formaat = new Intl.DateTimeFormat(LOCALES[taal], { day: "numeric", month: "2-digit", year: "numeric", timeZone: "UTC" });
       expect(formaat.format(new Date(Date.UTC(2026, 9, 19)))).toBe(verwacht[taal]);
       const uit = printHtml(doc, analyseer(doc), [], opties({ taal }));
       const teksten = regels(paginas(uit.html)[0]!).map((r) => r.tekst);
@@ -748,9 +748,26 @@ describe("talen", () => {
   });
 
   test("een dag met één cijfer volgt de notatie van de locale", () => {
-    expect(formatteerDatum("2026-03-05", "nl")).toBe("5/03/2026");
-    expect(formatteerDatum("2026-03-05", "fr")).toBe("5/03/26");
-    expect(formatteerDatum("2026-03-05", "en")).toBe("05/03/2026");
+    for (const taal of talen) expect(formatteerDatum("2026-03-05", taal)).toBe("5/03/2026");
+  });
+
+  test("de datum van een afwijking in de bijlage volgt de taal, niet ISO", () => {
+    for (const taal of talen) {
+      const doc = metGegevens(referentieAppartement());
+      const analyse = analyseer(doc);
+      doc.afwijkingen.push({
+        regelId: "arei.situatie.niet-geplaatst",
+        nodeId: analyse.kringen[0]!.puntIds[0]!,
+        motivatie: "x",
+        door: "Jan",
+        datum: "2026-03-05",
+      });
+      const bevindingen = controleer(doc, haalRegelset(doc.regelset));
+      const { html } = printHtml(doc, analyse, bevindingen, opties({ taal, onderdelen: alleenOnderdeel("bijlage") }));
+      const t = TEKSTEN[taal];
+      expect(regels(html).map((r) => r.tekst)).toContain(`${t.bijlage.door}: Jan — ${t.cartouche.datum}: 5/03/2026`);
+      expect(html).not.toContain("2026-03-05");
+    }
   });
 
   test("een onmogelijke datum blijft zoals ze is", () => {
