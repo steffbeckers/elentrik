@@ -1,7 +1,8 @@
 // Expliciete imports, geen Nuxt-auto-imports (ruling E1). Een concept is het lokale,
 // nog niet naar de server bewaarde werk van één editorvenster, bewaard in IndexedDB.
 // Elk venster (elke autosave-instantie) heeft een eigen sleutel, zodat het ene venster
-// nooit het concept van een ander wist.
+// nooit het concept van een ander wist. Concepten horen bij de ingelogde gebruiker (spec 5b.2):
+// een gebruiker krijgt alleen zijn eigen concepten aangeboden, ook na uitloggen blijven ze staan.
 import type { InstallatieDocument } from "@elentrik/model";
 import { createStore, del, getMany, keys, set, type UseStore } from "idb-keyval";
 
@@ -17,21 +18,41 @@ export type Concept = {
 /** Een concept dat bij het openen wordt aangeboden, met de sleutel waaronder het staat. */
 export type AangebodenConcept = { sleutel: string; concept: Concept };
 
-function sleutel(projectId: string, instantieId: string): string {
-  return `concept:${projectId}:${instantieId}`;
+/** Waar een concept staat: van welke gebruiker, voor welk project, uit welk venster. */
+export type ConceptPlek = { gebruikerId: string; projectId: string; instantieId: string };
+
+/**
+ * `concept:u:<gebruikerId>:<projectId>:<instantieId>`. Het voorvoegsel `u:` onderscheidt de sleutel
+ * van de oude sleutels zonder gebruiker (`concept:<projectId>` en `concept:<projectId>:<instantieId>`):
+ * een project-id is nooit `u`.
+ */
+function sleutel({ gebruikerId, projectId, instantieId }: ConceptPlek): string {
+  return `${voorvoegsel(gebruikerId, projectId)}${instantieId}`;
 }
 
-/** Een concept van vóór de sleutels per venster, onder `concept:${projectId}`, telt ook mee. */
-function hoortBijProject(s: IDBValidKey, projectId: string): s is string {
+/** Zonder gebruiker gooit dit: een concept zonder eigenaar bestaat nooit. */
+function voorvoegsel(gebruikerId: string, projectId: string): string {
+  if (!gebruikerId) throw new Error("Een concept hoort bij een gebruiker (gebruikerId ontbreekt).");
+  return `concept:u:${gebruikerId}:${projectId}:`;
+}
+
+/** Een oude sleutel van het project, zonder gebruiker: van vóór het inloggen. */
+function isOudeSleutel(s: IDBValidKey, projectId: string): s is string {
   return typeof s === "string" && (s === `concept:${projectId}` || s.startsWith(`concept:${projectId}:`));
 }
 
-export function bewaarConcept(projectId: string, instantieId: string, concept: Concept): Promise<void> {
-  return set(sleutel(projectId, instantieId), concept);
+/** De sleutel waaronder een oud concept voortaan van de gebruiker is; het venster blijft hetzelfde. */
+function eigenSleutelVoorOud(oud: string, gebruikerId: string, projectId: string): string {
+  const instantieId = oud === `concept:${projectId}` ? "oud" : oud.slice(`concept:${projectId}:`.length);
+  return sleutel({ gebruikerId, projectId, instantieId });
 }
 
-export function wisConcept(projectId: string, instantieId: string): Promise<void> {
-  return del(sleutel(projectId, instantieId));
+export async function bewaarConcept(plek: ConceptPlek, concept: Concept): Promise<void> {
+  await set(sleutel(plek), concept);
+}
+
+export async function wisConcept(plek: ConceptPlek): Promise<void> {
+  await del(sleutel(plek));
 }
 
 /**
@@ -84,11 +105,51 @@ export function maakInstantieId(willekeur: Willekeur | null = globalThis.crypto 
 }
 
 /**
- * Het nieuwste concept (op `tijd`) van het project, uit alle vensters, los van de klok van de server:
- * een concept bestaat alleen zolang er onbewaard werk is.
+ * Neemt de oude concepten van het project (zonder gebruiker in de sleutel) over voor `gebruikerId`:
+ * ze komen onder zijn eigen sleutel en de oude sleutel verdwijnt. Zo krijgt alleen de eerste
+ * ingelogde gebruiker die het project opent ze aangeboden (spec 5b.2), en gaat er niets verloren.
+ * Alles in één transactie: twee vensters tegelijk nemen een oud concept nooit allebei over.
  */
-export async function nieuwsteConcept(projectId: string): Promise<AangebodenConcept | null> {
-  const sleutels = (await keys()).filter((s): s is string => hoortBijProject(s, projectId));
+async function neemOudeConceptenOver(projectId: string, gebruikerId: string): Promise<void> {
+  voorvoegsel(gebruikerId, projectId);
+  return archief()(
+    "readwrite",
+    (winkel) =>
+      new Promise<void>((klaar, fout) => {
+        const verzoek = winkel.getAllKeys();
+        verzoek.onsuccess = () => {
+          for (const oud of verzoek.result.filter((s) => isOudeSleutel(s, projectId))) {
+            const nieuw = eigenSleutelVoorOud(oud, gebruikerId, projectId);
+            const oudVerzoek = winkel.get(oud);
+            const nieuwVerzoek = winkel.get(nieuw);
+            nieuwVerzoek.onsuccess = () => {
+              const oudConcept = oudVerzoek.result as Concept | undefined;
+              // Staat er al een concept onder die sleutel, dan krijgt het oude een eigen, nieuw
+              // venster: geen van beide gaat verloren.
+              const doel =
+                nieuwVerzoek.result === undefined
+                  ? nieuw
+                  : sleutel({ gebruikerId, projectId, instantieId: maakInstantieId() });
+              if (oudConcept) winkel.put(oudConcept, doel);
+              winkel.delete(oud);
+            };
+          }
+        };
+        winkel.transaction.oncomplete = () => klaar();
+        winkel.transaction.onabort = () => fout(winkel.transaction.error);
+      }),
+  );
+}
+
+/**
+ * Het nieuwste concept (op `tijd`) van de gebruiker voor het project, uit al zijn vensters, los
+ * van de klok van de server: een concept bestaat alleen zolang er onbewaard werk is. Oude concepten
+ * zonder gebruiker worden eerst van deze gebruiker (`neemOudeConceptenOver`).
+ */
+export async function nieuwsteConcept(projectId: string, gebruikerId: string): Promise<AangebodenConcept | null> {
+  await neemOudeConceptenOver(projectId, gebruikerId);
+  const eigen = voorvoegsel(gebruikerId, projectId);
+  const sleutels = (await keys()).filter((s): s is string => typeof s === "string" && s.startsWith(eigen));
   const concepten = await getMany<Concept | undefined>(sleutels);
   let nieuwste: AangebodenConcept | null = null;
   for (const [i, s] of sleutels.entries()) {

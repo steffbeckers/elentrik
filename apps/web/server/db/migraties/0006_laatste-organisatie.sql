@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "laatste_organisatie_id" text;

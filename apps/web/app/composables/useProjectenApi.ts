@@ -2,7 +2,10 @@
 // rechtstreeks (ruling E1). `useProjectenApi` is de Nuxt-ingang; `maakProjectenApi`
 // krijgt de fetch-functie van buitenaf en is zo zonder Nuxt te testen.
 import type { InstallatieDocument, Stroomtype } from "@elentrik/model";
+import { VERWACHTE_GEBRUIKER_HEADER } from "../../shared/gebruiker";
 import type { Project, ProjectSamenvatting } from "../../shared/projecten";
+import { voorOrganisatie } from "../sessie/organisatie";
+import { useSessieStore } from "../stores/sessie";
 
 export type { Project, ProjectSamenvatting };
 
@@ -45,12 +48,33 @@ export function httpStatus(fout: unknown): number | undefined {
   return typeof waarde === "number" ? waarde : undefined;
 }
 
-export function maakProjectenApi(haal: ProjectenFetch) {
+export type ProjectenApiOpties = {
+  /**
+   * De gebruiker voor wie de editor bewaart. Bewaren en dupliceren sturen hem mee; is de sessie
+   * intussen van een ander (die in een ander tabblad inlogde), dan weigert de server met een 401.
+   */
+  gebruikerId?: string;
+  /**
+   * De actieve organisatie zoals de pagina die kent. Een nieuw project (dat in de actieve
+   * organisatie komt) stuurt ze mee; wisselde een ander tabblad intussen, dan weigert de server
+   * met 409 ANDERE_ORGANISATIE. De routes van een bestaand project gaan op lidmaatschap.
+   */
+  actieveOrganisatieId?: () => string | null;
+};
+
+export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOpties = {}) {
+  const voorGebruiker: Record<string, string> = opties.gebruikerId
+    ? { [VERWACHTE_GEBRUIKER_HEADER]: opties.gebruikerId }
+    : {};
   return {
     lijst: () => haal("/api/projecten") as Promise<ProjectSamenvatting[]>,
 
     maak: (invoer: NieuwProject) =>
-      haal("/api/projecten", { method: "POST", body: invoer }) as Promise<{
+      haal("/api/projecten", {
+        method: "POST",
+        body: invoer,
+        ...voorOrganisatie(opties.actieveOrganisatieId?.()),
+      }) as Promise<{
         id: string;
         versie: number;
       }>,
@@ -61,7 +85,7 @@ export function maakProjectenApi(haal: ProjectenFetch) {
       try {
         return (await haal(`/api/projecten/${id}`, {
           method: "PUT",
-          headers: { "If-Match": String(versie) },
+          headers: { "If-Match": String(versie), ...voorGebruiker },
           body: invoer,
         })) as { versie: number };
       } catch (fout) {
@@ -72,7 +96,10 @@ export function maakProjectenApi(haal: ProjectenFetch) {
     },
 
     dupliceer: (id: string) =>
-      haal(`/api/projecten/${id}/dupliceer`, { method: "POST" }) as Promise<{ id: string }>,
+      haal(`/api/projecten/${id}/dupliceer`, {
+        method: "POST",
+        ...(opties.gebruikerId ? { headers: voorGebruiker } : {}),
+      }) as Promise<{ id: string }>,
 
     verwijder: async (id: string): Promise<void> => {
       await haal(`/api/projecten/${id}`, { method: "DELETE" });
@@ -82,6 +109,10 @@ export function maakProjectenApi(haal: ProjectenFetch) {
 
 export type ProjectenApi = ReturnType<typeof maakProjectenApi>;
 
-export function useProjectenApi(): ProjectenApi {
-  return maakProjectenApi($fetch as unknown as ProjectenFetch);
+export function useProjectenApi(opties: ProjectenApiOpties = {}): ProjectenApi {
+  const sessie = useSessieStore();
+  return maakProjectenApi($fetch as unknown as ProjectenFetch, {
+    actieveOrganisatieId: () => sessie.actieveOrganisatieId,
+    ...opties,
+  });
 }

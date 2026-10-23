@@ -9,6 +9,7 @@ import {
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test } from "vitest";
 import { MAX_STAPPEN, useEditorStore } from "../app/stores/editor";
+import { useSessieStore } from "../app/stores/sessie";
 
 type Store = ReturnType<typeof useEditorStore>;
 
@@ -367,6 +368,7 @@ describe("voegSjabloonToe", () => {
 
 describe("afwijkingen en projectgegevens", () => {
   test("zetAfwijking maakt de bevinding afgeweken, wisAfwijking haalt ze weg", () => {
+    useSessieStore().gebruiker = { id: "u1", naam: "An Peeters", email: "an@example.test" };
     const store = laadNieuw();
     nieuweKring(store);
     stapel(store, 9);
@@ -376,12 +378,51 @@ describe("afwijkingen en projectgegevens", () => {
     store.zetAfwijking(fout.regelId, fout.nodeIds[0]!, "Bewust zo ontworpen door de klant");
     expect(store.aantalFouten).toBe(voor - 1);
     const afwijking = doc(store).afwijkingen[0]!;
-    expect(afwijking).toMatchObject({ regelId: fout.regelId, door: "lokaal" });
+    // `door` is de naam van de ingelogde gebruiker.
+    expect(afwijking).toMatchObject({ regelId: fout.regelId, door: "An Peeters" });
     expect(afwijking.datum).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     store.wisAfwijking(fout.regelId, fout.nodeIds[0]!);
     expect(store.aantalFouten).toBe(voor);
     expect(doc(store).afwijkingen).toEqual([]);
+  });
+
+  test("zetAfwijking na een verlopen sessie: de naam van wie het project opende", () => {
+    const sessie = useSessieStore();
+    sessie.gebruiker = { id: "u1", naam: "An Peeters", email: "an@example.test" };
+    const store = laadNieuw();
+    nieuweKring(store);
+    stapel(store, 9);
+    const fout = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
+    // De sessie verliep: de sessie-store is leeg, de editor werkt lokaal verder.
+    sessie.gebruiker = null;
+    store.zetAfwijking(fout.regelId, fout.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    expect(doc(store).afwijkingen[0]).toMatchObject({ door: "An Peeters" });
+  });
+
+  test("zetAfwijking: een andere gebruiker die intussen inlogde, neemt de naam van het venster niet over", () => {
+    const sessie = useSessieStore();
+    sessie.gebruiker = { id: "u1", naam: "An Peeters", email: "an@example.test" };
+    const store = useEditorStore();
+    store.nieuwVenster();
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
+    nieuweKring(store);
+    stapel(store, 9);
+    sessie.gebruiker = { id: "u2", naam: "Bart Claes", email: "bart@example.test" };
+    // Ook een nieuwe laad in hetzelfde venster (de serverversie) verandert dat niet.
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 2, document: doc(store) });
+    const fout = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
+    store.zetAfwijking(fout.regelId, fout.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    expect(doc(store).afwijkingen[0]).toMatchObject({ door: "An Peeters" });
+
+    // Een nieuw venster van Bart: dan wel Bart.
+    store.nieuwVenster();
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 3, document: startDocument() });
+    nieuweKring(store);
+    stapel(store, 9);
+    const andere = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
+    store.zetAfwijking(andere.regelId, andere.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    expect(doc(store).afwijkingen[0]).toMatchObject({ door: "Bart Claes" });
   });
 
   test("een te korte motivatie gooit en laat de store ongewijzigd", () => {

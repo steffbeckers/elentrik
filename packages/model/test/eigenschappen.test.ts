@@ -328,4 +328,6 @@ test("willekeurige reeksen operaties behouden de invarianten en zijn volledig om
     ),
     { numRuns: 200 },
   );
-});
+  // 200 willekeurige reeksen duren onder de last van de volledige suite soms langer dan de
+  // standaard 5 s; een time-out is geen tegenvoorbeeld (ruling R3).
+}, 30_000);

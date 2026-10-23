@@ -305,6 +305,18 @@
         "aantalFouten": "geen fouten | {n} fout | {n} fouten",
         "downloaden": "Downloaden"
       }
+    },
+    "afgemeld": {
+      "melding": "Je bent afgemeld. Log opnieuw in om op te slaan.",
+      "opnieuwInloggen": "Opnieuw inloggen"
+    },
+    "vertrek": {
+      "bevestiging": "Er zijn wijzigingen die nog niet op de server staan. Ze blijven lokaal bewaard voor dit account. Toch doorgaan?",
+      "bevestigingOnbewaard": "Je wijzigingen konden ook lokaal niet bewaard worden en gaan verloren. Toch doorgaan?"
+    },
+    "organisatieGewisseld": "Je werkt nu in {organisatie}.",
+    "andereGebruiker": {
+      "melding": "Je bent nu aangemeld als {naam}. Deze wijzigingen horen bij {oorspronkelijk} en blijven lokaal bewaard voor dat account."
     }
   },
   "bedrijf": {
@@ -353,7 +365,8 @@
       "bewaard": "Logo opgeladen."
     },
     "bewaren": "Bewaren",
-    "bewaard": "Bedrijfsgegevens bewaard."
+    "bewaard": "Bedrijfsgegevens bewaard.",
+    "alleenLezen": "Alleen een eigenaar kan de bedrijfsgegevens wijzigen."
   },
   "projecten": {
     "titel": "Projecten",
@@ -394,5 +407,190 @@
       "3x230V": "3 × 230 V (drie fasen)",
       "3N400V": "3N × 400 V (drie fasen en nul)"
     }
+  },
+  "rollen": {
+    "eigenaar": "Eigenaar",
+    "lid": "Lid"
+  },
+  "rollenInZin": {
+    "eigenaar": "eigenaar",
+    "lid": "lid"
+  },
+  "auth": {
+    "naam": "Naam",
+    "email": "E-mailadres",
+    "wachtwoord": "Wachtwoord",
+    "wachtwoordHulp": "Minstens 10 tekens.",
+    "bedrijfsnaam": "Naam van je bedrijf",
+    "fouten": {
+      "naamVerplicht": "Vul je naam in.",
+      "emailOngeldig": "Vul een geldig e-mailadres in.",
+      "wachtwoordVerplicht": "Vul je wachtwoord in.",
+      "wachtwoordTeKort": "Een wachtwoord telt minstens 10 tekens.",
+      "wachtwoordTeLang": "Een wachtwoord telt hoogstens 128 tekens.",
+      "bedrijfsnaam": "De naam van het bedrijf telt 1 tot 80 tekens.",
+      "teVeel": "Te veel pogingen. Wacht even en probeer het opnieuw."
+    }
+  },
+  "inloggen": {
+    "titel": "Inloggen",
+    "knop": "Inloggen",
+    "of": "of",
+    "inloglink": "Stuur me een inloglink",
+    "inloglinkVerstuurd": "Als dit adres bekend is, ontvang je een link.",
+    "inloglinkUitleg": "Met een inloglink bevestig je je adres. Een wachtwoord dat je nog niet bevestigde, vervalt dan.",
+    "ongeldig": "Het e-mailadres of het wachtwoord klopt niet.",
+    "onbevestigd": {
+      "titel": "Je e-mailadres is nog niet bevestigd",
+      "beschrijving": "Bevestig je adres via de link in de mail die we stuurden. Daarna kun je inloggen.",
+      "opnieuw": "Bevestigingsmail opnieuw sturen",
+      "verstuurd": "Als dit adres bekend is, ontvang je een nieuwe bevestigingsmail."
+    },
+    "linkOngeldig": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",
+    "accountGemaakt": "Je account is aangemaakt. Log in met je e-mailadres en wachtwoord.",
+    "wachtwoordGewijzigd": "Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.",
+    "wachtwoordVergeten": "Wachtwoord vergeten?",
+    "geenAccount": "Nog geen account?",
+    "registreren": "Registreren"
+  },
+  "registreren": {
+    "titel": "Account aanmaken",
+    "knop": "Account aanmaken",
+    "bevestig": "Bevestig je e-mailadres via de link die we stuurden.",
+    "alAccount": "Al een account?",
+    "inloggen": "Inloggen"
+  },
+  "wachtwoordVergeten": {
+    "titel": "Wachtwoord vergeten",
+    "uitleg": "Vul je e-mailadres in. Je krijgt een link om een nieuw wachtwoord te kiezen.",
+    "knop": "Link versturen",
+    "verstuurd": "Als dit adres bekend is, ontvang je een link.",
+    "terug": "Terug naar inloggen"
+  },
+  "wachtwoordHerstellen": {
+    "titel": "Nieuw wachtwoord kiezen",
+    "nieuw": "Nieuw wachtwoord",
+    "knop": "Wachtwoord wijzigen",
+    "ongeldig": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",
+    "nieuweLink": "Nieuwe link aanvragen"
+  },
+  "uitnodiging": {
+    "titel": "Uitnodiging",
+    "laden": "Uitnodiging laden…",
+    "uitleg": "Je bent uitgenodigd voor {organisatie} als {rol}.",
+    "voor": "De uitnodiging is voor {email}.",
+    "aanvaarden": "Aanvaarden",
+    "anderAdres": "Je bent ingelogd als {email}. Log uit en log in met het adres van de uitnodiging, of maak er een account mee aan.",
+    "uitloggen": "Uitloggen",
+    "nietIngelogd": "Heb je al een account met dit adres? Log dan in. Anders maak je hieronder een account aan.",
+    "inloggen": "Inloggen",
+    "registreren": {
+      "titel": "Account aanmaken",
+      "knop": "Account aanmaken en aanvaarden"
+    },
+    "accountBestaat": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
+    "onbevestigd": "Bevestig eerst je e-mailadres en probeer het dan opnieuw.",
+    "nietVoorJou": "Deze uitnodiging is voor een ander adres.",
+    "ongeldig": {
+      "titel": "Deze uitnodiging is niet meer geldig",
+      "beschrijving": "Ze is verlopen, al gebruikt of ingetrokken. Vraag wie je uitnodigde om een nieuwe uitnodiging."
+    },
+    "ladenMislukt": "De uitnodiging kon niet geladen worden. Probeer het opnieuw.",
+    "opnieuw": "Opnieuw proberen",
+    "naarStart": "Naar de start"
+  },
+  "organisatie": {
+    "titel": "Mijn organisatie",
+    "terug": "Naar de projecten",
+    "rolUitleg": "Je bent {rol} van {organisatie}.",
+    "naam": {
+      "veld": "Naam van het bedrijf",
+      "bewaren": "Naam bewaren",
+      "bewaard": "De naam is bewaard."
+    },
+    "leden": {
+      "titel": "Leden",
+      "jij": "jij",
+      "rolVan": "Rol van {naam}",
+      "rolGewijzigd": "De rol is gewijzigd.",
+      "verwijderen": "Verwijderen",
+      "verwijderenVan": "{naam} verwijderen",
+      "verwijderenTitel": "Lid verwijderen",
+      "verwijderenBevestiging": "Wil je {naam} uit {organisatie} verwijderen?",
+      "verwijderd": "{naam} is verwijderd.",
+      "ladenMislukt": "De leden konden niet geladen worden."
+    },
+    "uitnodigingen": {
+      "titel": "Openstaande uitnodigingen",
+      "leeg": "Geen openstaande uitnodigingen.",
+      "verlooptOp": "Verloopt op {datum}",
+      "intrekken": "Intrekken",
+      "intrekkenVan": "Uitnodiging voor {email} intrekken",
+      "ingetrokken": "De uitnodiging is ingetrokken.",
+      "ladenMislukt": "De uitnodigingen konden niet geladen worden."
+    },
+    "uitnodigen": {
+      "titel": "Iemand uitnodigen",
+      "email": "E-mailadres",
+      "rol": "Rol",
+      "knop": "Uitnodigen",
+      "verstuurd": "De uitnodiging is verstuurd naar {email}.",
+      "alLid": "Dit adres is al lid.",
+      "alUitgenodigd": "Dit adres is al uitgenodigd."
+    },
+    "verlaten": {
+      "knop": "Organisatie verlaten",
+      "titel": "Organisatie verlaten",
+      "bevestiging": "Wil je {organisatie} verlaten? Je ziet de projecten ervan dan niet meer.",
+      "bevestigen": "Verlaten"
+    },
+    "laatsteEigenaar": "Er moet minstens één eigenaar blijven.",
+    "alleenEigenaar": "Alleen een eigenaar mag dit.",
+    "laden": "Laden…",
+    "andereOrganisatie": {
+      "melding": "Je actieve organisatie werd intussen gewijzigd naar {organisatie}. Kijk je wijziging na en probeer opnieuw.",
+      "zonderNaam": "Je actieve organisatie werd intussen gewijzigd. Kijk je wijziging na en probeer opnieuw."
+    }
+  },
+  "geenOrganisatie": {
+    "titel": "Je hoort nog bij geen bedrijf",
+    "titelBijkomend": "Nieuw bedrijf aanmaken",
+    "terug": "Naar de projecten",
+    "nieuw": {
+      "titel": "Maak een nieuw bedrijf aan",
+      "naam": "Naam van het bedrijf",
+      "knop": "Bedrijf aanmaken"
+    },
+    "uitnodiging": {
+      "titel": "Vraag een collega om een uitnodiging",
+      "uitleg": "Een eigenaar van het bedrijf kan je uitnodigen via Mijn organisatie. Je krijgt dan een mail met een link."
+    }
+  },
+  "menu": {
+    "nieuwBedrijf": "Nieuw bedrijf aanmaken",
+    "gebruiker": "Gebruikersmenu",
+    "mijnOrganisatie": "Mijn organisatie",
+    "bedrijfsgegevens": "Bedrijfsgegevens",
+    "uitloggen": "Uitloggen",
+    "wisselenMislukt": "Wisselen van organisatie is niet gelukt.",
+    "uitloggenMislukt": "Uitloggen is niet gelukt.",
+    "organisatieKeuzeMet": "Organisatie kiezen: {organisatie}"
+  },
+  "fout": {
+    "algemeen": {
+      "titel": "Er ging iets mis",
+      "beschrijving": "Elentrik kon je sessie of deze pagina nu niet laden. Probeer het opnieuw."
+    },
+    "nietGevonden": {
+      "titel": "Pagina niet gevonden",
+      "beschrijving": "Deze pagina bestaat niet."
+    },
+    "naarStart": "Naar de start",
+    "opnieuw": "Opnieuw proberen"
+  },
+  "weerAangemeld": {
+    "titel": "Opnieuw aangemeld",
+    "tekst": "Je bent opnieuw aangemeld. Sluit dit tabblad en klik in de editor op ‘Opnieuw proberen’.",
+    "sluiten": "Tabblad sluiten"
   }
 }

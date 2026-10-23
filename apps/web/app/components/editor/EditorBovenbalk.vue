@@ -3,12 +3,33 @@ import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.v
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useEditorStore, type Tabblad } from "~/stores/editor";
 
-defineProps<{ status: AutosaveStatus }>();
-const emit = defineEmits<{ opnieuwProberen: []; toonConflict: []; toonBevindingen: []; exporteren: [] }>();
+/**
+ * `afgemeld`: de sessie is verlopen (401 bij het opslaan); het werk staat lokaal in het concept.
+ * `andereGebruiker`: nu is een ander ingelogd dan wie dit venster opende (`oorspronkelijk`).
+ */
+const props = defineProps<{
+  status: AutosaveStatus;
+  afgemeld?: boolean;
+  andereGebruiker?: { naam: string; oorspronkelijk: string } | null;
+}>();
+const emit = defineEmits<{
+  opnieuwProberen: [];
+  opnieuwInloggen: [];
+  toonConflict: [];
+  toonBevindingen: [];
+  exporteren: [];
+}>();
 
 const store = useEditorStore();
 const { t } = useI18n();
 const projectgegevensOpen = ref(false);
+
+/** De melding over de aanmelding, of null: eerst een andere gebruiker, dan een verlopen sessie. */
+const aanmeldingMelding = computed(() => {
+  if (props.andereGebruiker) return t("editor.andereGebruiker.melding", props.andereGebruiker);
+  if (props.afgemeld) return t("editor.afgemeld.melding");
+  return null;
+});
 
 /** "1 fout en 3 waarschuwingen": enkelvoud en meervoud via de pluralisatie van vue-i18n. */
 const bevindingenTekst = computed(() =>
@@ -47,7 +68,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
     <UButton
       color="neutral"
       variant="ghost"
-      class="max-w-64 truncate font-semibold"
+      class="min-w-24 max-w-64 truncate font-semibold"
       :title="$t('editor.bovenbalk.projectgegevens')"
       data-testid="projectnaam"
       @click="projectgegevensOpen = true"
@@ -143,8 +164,42 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
         data-testid="exporteren"
         @click="emit('exporteren')"
       />
+
+      <USeparator orientation="vertical" class="h-6" />
+      <OrganisatieKeuze compact />
+      <GebruikerMenu compact />
     </div>
 
     <ProjectgegevensDialoog v-model:open="projectgegevensOpen" />
   </header>
+  <UAlert
+    v-if="aanmeldingMelding"
+    color="warning"
+    variant="subtle"
+    icon="i-lucide-log-in"
+    orientation="horizontal"
+    class="rounded-none border-b border-default py-2"
+    :title="aanmeldingMelding"
+    data-testid="afgemeld-melding"
+  >
+    <template #actions>
+      <UButton
+        size="xs"
+        color="warning"
+        icon="i-lucide-external-link"
+        :label="$t('editor.afgemeld.opnieuwInloggen')"
+        data-testid="opnieuw-inloggen"
+        @click="emit('opnieuwInloggen')"
+      />
+      <UButton
+        size="xs"
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-rotate-cw"
+        :label="$t('editor.status.opnieuwProberen')"
+        data-testid="afgemeld-opnieuw-proberen"
+        @click="emit('opnieuwProberen')"
+      />
+    </template>
+  </UAlert>
 </template>

@@ -1,5 +1,9 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
+import { gebruikTestgebruiker } from "./hulp/inloggen";
+
+// Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
+gebruikTestgebruiker(test, { voorvoegsel: "situatie" });
 
 // Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
 const naam = `Test Situatie ${Date.now()}`;

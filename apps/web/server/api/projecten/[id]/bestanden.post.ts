@@ -1,12 +1,21 @@
+import { setResponseStatus } from "h3";
 import { bewaarBestand } from "../../../bestanden/repo";
 import { gebruikOpslag } from "../../../bestanden/opslag";
 import { gebruikDb } from "../../../db";
+import { leesPlanUpload, metBestandFouten } from "../../../utils/bestanden";
+import { projectId } from "../../../utils/projecten";
+import { defineBeveiligdeHandler, vereisProjecttoegang } from "../../../utils/toegang";
 
-export default defineEventHandler(async (event) => {
-  const id = projectId(event);
+export default defineBeveiligdeHandler(async (event) => {
+  const { project } = await vereisProjecttoegang(event, projectId(event));
   const { soort, data } = await leesPlanUpload(event);
   const info = await metBestandFouten(() =>
-    bewaarBestand(gebruikDb(), gebruikOpslag(), { projectId: id, soort, data }),
+    bewaarBestand(gebruikDb(), gebruikOpslag(), {
+      organisatieId: project.organisatieId,
+      projectId: project.id,
+      soort,
+      data,
+    }),
   );
   setResponseStatus(event, 201);
   return info;

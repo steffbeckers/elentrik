@@ -16,7 +16,7 @@ import {
   leesPlanUpload,
   metBestandFouten,
 } from "../server/utils/bestanden";
-import { maakTestDb } from "./db";
+import { maakTestDb, maakTestOrganisatie } from "./db";
 
 const GRENS = "----elentrik";
 
@@ -133,7 +133,8 @@ describe("leesPlanUpload", () => {
     try {
       const map = join(ouder, "a", "b");
       const db = await maakTestDb();
-      const { id: projectId } = await maakProject(db, { naam: "Woning", klantnaam: "Peeters", stroomtype: "3N400V" });
+      const organisatieId = await maakTestOrganisatie(db);
+      const { id: projectId } = await maakProject(db, organisatieId, { naam: "Woning", klantnaam: "Peeters", stroomtype: "3N400V" });
       const png = new Uint8Array(33);
       png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1]);
       const { body, headers } = multipart([
@@ -142,7 +143,7 @@ describe("leesPlanUpload", () => {
       ]);
 
       const upload = await leesPlanUpload(maakEvent({ body, headers }));
-      const info = await bewaarBestand(db, maakLokaleOpslag(map), { projectId, ...upload });
+      const info = await bewaarBestand(db, maakLokaleOpslag(map), { organisatieId, projectId, ...upload });
 
       expect(info.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect((await haalBestand(db, info.id))?.sleutel).toBe(`${projectId}/${info.id}`);

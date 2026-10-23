@@ -7,6 +7,7 @@ import {
   maakInstantieId,
   wisConcept as wisConceptEcht,
   type Concept,
+  type ConceptPlek,
 } from "./concepten";
 import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./useProjectenApi";
 
@@ -14,7 +15,8 @@ import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./use
  * - `opgeslagen`: de server heeft de laatste wijziging.
  * - `bezig`: er is een wijziging die nog naar de server moet (wacht op de vertraging) of ze is onderweg.
  * - `lokaal`: bewaren op de server lukt niet (netwerk, 5xx, 408 of 429), maar het concept staat in IndexedDB.
- *   Er volgt een nieuwe poging.
+ *   Er volgt een nieuwe poging. Na een 401 (de sessie is verlopen) ook `lokaal`, maar met `afgemeld`:
+ *   dan volgt geen nieuwe poging tot `nuOpslaan()`, na opnieuw inloggen.
  * - `onbewaard`: idem, maar ook het concept kon niet bewaard worden: de wijziging bestaat alleen in het geheugen.
  * - `conflict`: de server heeft een nieuwere versie (409). Er wordt niets overschreven en niets meer verstuurd
  *   tot `laadServerversie` of `bewaarAlsKopie` het oplost.
@@ -48,9 +50,11 @@ export type AutosaveOpties = {
   herprobeerMs?: number;
   /** Het conceptarchief; standaard IndexedDB via `concepten.ts`. Injecteerbaar voor tests. */
   concepten?: {
-    bewaarConcept: (projectId: string, instantieId: string, concept: Concept) => Promise<void>;
-    wisConcept: (projectId: string, instantieId: string) => Promise<void>;
+    bewaarConcept: (plek: ConceptPlek, concept: Concept) => Promise<void>;
+    wisConcept: (plek: ConceptPlek) => Promise<void>;
   };
+  /** De ingelogde gebruiker die dit venster opende: zijn concepten zijn alleen van hem. */
+  gebruikerId: string;
   /** Het id van dit editorvenster, voor de sleutel van het concept; standaard een nieuwe UUID. */
   instantieId?: string;
 };
@@ -60,6 +64,11 @@ export type Autosave = {
   conflict: Ref<{ huidigeVersie: number } | null>;
   /** Gezet bij status `fout`: de HTTP-status waarmee de server het bewaren weigerde. */
   fout: Ref<{ status: number } | null>;
+  /**
+   * De server antwoordde 401: de sessie is verlopen. Het werk staat in het concept; er gaat
+   * niets meer naar de server tot `nuOpslaan()`. Een geslaagd bewaar zet dit terug op false.
+   */
+  afgemeld: Ref<boolean>;
   nuOpslaan(): Promise<void>;
   laadServerversie(): Promise<void>;
   bewaarAlsKopie(): Promise<void>;
@@ -82,6 +91,9 @@ export type Autosave = {
 
 /** 4xx-statussen die tijdelijk zijn (time-out, te veel verzoeken): die volgen het pad van een 5xx. */
 const TIJDELIJK = new Set([408, 429]);
+
+/** Geen (geldige) sessie meer. */
+const AFGEMELD = 401;
 
 /**
  * Voor `beforeunload` en het navigeren in de app: zolang niet alles op de server staat, vragen we
@@ -106,10 +118,15 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const concepten = opties.concepten ?? { bewaarConcept: bewaarConceptEcht, wisConcept: wisConceptEcht };
   // Elk venster schrijft en wist alleen zijn eigen concept.
   const instantieId = opties.instantieId ?? maakInstantieId();
+  const { gebruikerId } = opties;
+  // Nooit een concept zonder eigenaar: zonder gebruiker geen autosave.
+  if (!gebruikerId) throw new Error("De autosave heeft een ingelogde gebruiker nodig (gebruikerId).");
+  const plekVan = (projectId: string): ConceptPlek => ({ gebruikerId, projectId, instantieId });
 
   const status = ref<AutosaveStatus>("opgeslagen");
   const conflict = ref<{ huidigeVersie: number } | null>(null);
   const fout = ref<{ status: number } | null>(null);
+  const afgemeld = ref(false);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   /** Het bewaar (of de kopie) dat nu loopt; er is er nooit meer dan één tegelijk. */
@@ -148,7 +165,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       // Vanaf hier loopt ze: een volgende wijziging krijgt een eigen schrijfactie.
       if (wachtendConcept === teSchrijven) wachtendConcept = null;
       try {
-        await concepten.bewaarConcept(teSchrijven.id, instantieId, teSchrijven.concept);
+        await concepten.bewaarConcept(plekVan(teSchrijven.id), teSchrijven.concept);
         conceptGelukt = true;
       } catch {
         conceptGelukt = false;
@@ -164,7 +181,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   function wisConceptVeilig(id: string): Promise<void> {
     // De wachtende schrijfactie gaat nog vóór de wis; wat erna komt, hoort achter de wis.
     wachtendConcept = null;
-    const volgende = conceptKetting.then(() => concepten.wisConcept(id, instantieId)).catch(() => {});
+    const volgende = conceptKetting.then(() => concepten.wisConcept(plekVan(id))).catch(() => {});
     conceptKetting = volgende;
     return volgende;
   }
@@ -187,9 +204,14 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return store.gewijzigdSindsOpslaan !== bewaardeTeller;
   }
 
+  /** Bewaart de autosave vanzelf? Niet bij een conflict, een fout of na een 401 (afgemeld). */
+  function automatisch(): boolean {
+    return !conflict.value && !fout.value && !afgemeld.value;
+  }
+
   /** Wijzigingen die tijdens een bewaar binnenkwamen krijgen hier hun eigen, gedebouncete bewaar. */
   function herplan(): void {
-    if (!gestopt && !conflict.value && !fout.value && onbewaard() && timer === undefined) plan(vertragingMs);
+    if (!gestopt && automatisch() && onbewaard() && timer === undefined) plan(vertragingMs);
   }
 
   /** Voert `werk` uit als het ene lopende bewaar; daarna volgt zo nodig een nieuw bewaar. */
@@ -226,6 +248,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         if (store.laadGeneratie !== generatie) return;
         store.versie = resultaat.versie;
         bewaardeTeller = teller;
+        afgemeld.value = false;
         if (store.gewijzigdSindsOpslaan === teller) {
           conceptGelukt = true;
           status.value = "opgeslagen";
@@ -246,15 +269,23 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           conflict.value = { huidigeVersie: e.huidigeVersie };
           status.value = "conflict";
           wisTimer();
+        } else if (httpCode === AFGEMELD) {
+          // De sessie is verlopen: het werk staat in het concept. Opnieuw proberen heeft pas zin
+          // na opnieuw inloggen, dus geen nieuwe poging tot `nuOpslaan()`.
+          afgemeld.value = true;
+          status.value = offlineStatus();
+          wisTimer();
         } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
-          // De server weigert dit document; opnieuw proberen verandert daar niets aan.
+          // De server weigert dit document; opnieuw proberen verandert daar niets aan. De server
+          // antwoordde met een sessie: afgemeld vervalt, zodat er maar een melding tegelijk staat.
           fout.value = { status: httpCode };
+          afgemeld.value = false;
           status.value = "fout";
           wisTimer();
         } else {
-          // Netwerk, 5xx, 408 of 429: later opnieuw.
+          // Netwerk, 5xx, 408 of 429: later opnieuw; maar na een 401 alleen via `nuOpslaan()`.
           status.value = offlineStatus();
-          plan(herprobeerMs);
+          if (!afgemeld.value) plan(herprobeerMs);
         }
       }
     });
@@ -268,6 +299,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       wisTimer();
       conflict.value = null;
       fout.value = null;
+      afgemeld.value = false;
       status.value = "opgeslagen";
       return;
     }
@@ -276,8 +308,8 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     if (id !== null && document !== null) {
       schrijfConcept(id, { document, versie: store.versie, naam: store.naam, tijd: Date.now() });
     }
-    // Bij een conflict of fout blijft het concept staan, maar gaat er niets naar de server.
-    if (conflict.value || fout.value) return;
+    // Bij een conflict, een fout of afgemeld blijft het concept staan, maar gaat er niets naar de server.
+    if (!automatisch()) return;
     if (status.value !== "lokaal" && status.value !== "onbewaard") status.value = "bezig";
     // Loopt er een bewaar, dan plant dat zelf een nieuw bewaar als het klaar is.
     if (!lopend) plan(vertragingMs);
@@ -311,6 +343,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     conceptGelukt = true;
     conflict.value = null;
     fout.value = null;
+    afgemeld.value = false;
     status.value = "opgeslagen";
     await wisConceptVeilig(id);
   }
@@ -338,6 +371,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         // Kwam er tijdens het bewaar nog een wijziging bij, dan gaat die ook naar de kopie.
       } while (store.gewijzigdSindsOpslaan !== teller);
       bewaardeTeller = store.gewijzigdSindsOpslaan;
+      afgemeld.value = false;
       await wisConceptVeilig(id);
       await naarProject(kopie.id);
     });
@@ -383,6 +417,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     status,
     conflict,
     fout,
+    afgemeld,
     nuOpslaan,
     laadServerversie,
     bewaarAlsKopie,

@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { gebruikTestgebruiker } from "./hulp/inloggen";
+
+// Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
+gebruikTestgebruiker(test, { voorvoegsel: "projectgegevens" });
 
 // Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
 const naam = `Test Projectgegevens ${Date.now()}`;

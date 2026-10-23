@@ -18,15 +18,35 @@ import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
 import { httpStatus } from "~/composables/useProjectenApi";
 import { useNodeTekst } from "~/composables/useNodeTekst";
+import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import {
+  opnieuwProberen as probeerOpnieuw,
+  toonAfgemeld,
+  vertrekBevestiging,
+  type SessieControle,
+} from "~/editor/aanmelding";
 import { useEditorStore } from "~/stores/editor";
+import { useSessieStore } from "~/stores/sessie";
 import { useSituatieStore } from "~/stores/situatie";
+
+// Zonder ingelogde gebruiker start de editor niet (concepten en bewaren horen bij een gebruiker).
+definePageMeta({ middleware: ["editor-gebruiker"] });
 
 const route = useRoute();
 // Een ander id geeft een nieuwe pagina-instantie (NuxtPage sleutelt op het pad).
 const id = String(route.params.id);
-const api = useProjectenApi();
 const store = useEditorStore();
 const situatie = useSituatieStore();
+const sessie = useSessieStore();
+const herstelSessie = useSessieHerstel();
+
+// Dit venster hoort bij wie het opende: zijn concepten, en elke bewaring zegt voor wie ze is,
+// zodat de server ze weigert als intussen een ander ingelogd is (401 ANDERE_GEBRUIKER). Zonder
+// gebruiker (de middleware laat dat niet toe) gooit `useAutosave`: nooit een concept zonder eigenaar.
+const gebruikerId = sessie.gebruiker?.id ?? "";
+const oorspronkelijkeNaam = sessie.gebruiker?.naam ?? "";
+const api = useProjectenApi({ gebruikerId });
+store.nieuwVenster();
 const { nodeTekst } = useNodeTekst();
 const { t } = useI18n();
 const toast = useToast();
@@ -44,6 +64,7 @@ const autosave = useAutosave({
   naarProject: async (kopieId) => {
     await navigateTo(`/projecten/${kopieId}`);
   },
+  gebruikerId,
 });
 
 // --- Laden en het lokale concept -------------------------------------------
@@ -57,15 +78,42 @@ async function laad(): Promise<void> {
   try {
     project = await api.haal(id);
   } catch (fout) {
-    laadstatus.value = httpStatus(fout) === 404 ? "nietGevonden" : "fout";
+    const status = httpStatus(fout);
+    laadstatus.value = status === 404 ? "nietGevonden" : "fout";
+    // Geen sessie meer: naar /inloggen, met deze pagina als terugkeer-URL.
+    if (status === 401) await herstelSessie(fout);
     return;
   }
+  await werkInOrganisatieVan(project.organisatieId);
   store.laad({ id: project.id, naam: project.naam, versie: project.versie, document: project.document });
   // Een kapot conceptarchief mag het openen niet tegenhouden. Pas na de conceptcontrole is de pagina klaar.
   // Elk concept van het project telt, los van de klok: het bestaat alleen zolang er onbewaard werk is.
-  concept.value = await nieuwsteConcept(project.id).catch(() => null);
+  // Alleen de eigen concepten van de gebruiker, en één keer de oude zonder gebruiker.
+  concept.value = await nieuwsteConcept(project.id, gebruikerId).catch(() => null);
   conceptOpen.value = concept.value !== null;
   laadstatus.value = "klaar";
+}
+
+/** Tijdens het openen: er wordt niets verlaten, dus `voorVertrek` vraagt niets. */
+let bijOpenen = false;
+
+/**
+ * Een project van een andere organisatie waarvan de gebruiker lid is (een bladwijzer, een tweede
+ * tabblad): die organisatie wordt actief, met een korte melding (spec 5b.1). Lukt het wisselen
+ * niet, dan werkt de editor toch: de server geeft toegang op lidmaatschap.
+ */
+async function werkInOrganisatieVan(organisatieId: string): Promise<void> {
+  if (organisatieId === sessie.actieveOrganisatieId) return;
+  bijOpenen = true;
+  try {
+    if (!(await sessie.wissel(organisatieId))) return;
+    const organisatie = sessie.actieveOrganisatie?.naam;
+    if (organisatie) toast.add({ title: t("editor.organisatieGewisseld", { organisatie }) });
+  } catch {
+    toast.add({ title: t("menu.wisselenMislukt"), color: "error" });
+  } finally {
+    bijOpenen = false;
+  }
 }
 
 async function laadConcept(): Promise<void> {
@@ -108,10 +156,21 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
   }
 }
 
+const sessieControle: SessieControle = {
+  laad: () => sessie.laad(),
+  gebruikerId: () => sessie.gebruiker?.id ?? null,
+};
+
+/**
+ * Eerst de sessie opnieuw lezen: is nu een ander ingelogd, dan gaat er niets naar de server en
+ * zegt de melding bij wie het werk hoort (`andereGebruiker`).
+ */
 async function opnieuwProberen(): Promise<void> {
-  await autosave.nuOpslaan().catch(() => {
-    toast.add({ title: t("algemeen.fout"), color: "error" });
-  });
+  await probeerOpnieuw({ sessie: sessieControle, verwacht: gebruikerId, nuOpslaan: autosave.nuOpslaan }).catch(
+    () => {
+      toast.add({ title: t("algemeen.fout"), color: "error" });
+    },
+  );
 }
 
 function toonBevindingen(): void {
@@ -122,11 +181,81 @@ function bijVerlaten(event: BeforeUnloadEvent): void {
   if (waarschuwBijVerlaten(autosave.status.value)) event.preventDefault();
 }
 
+/**
+ * Wisselen van organisatie en uitloggen in de app: eerst nog opslaan. Lukt dat niet, dan vraagt
+ * de editor of de gebruiker toch verder wil; het werk blijft in het concept van deze gebruiker.
+ */
+let vertrekBevestigd = false;
+async function voorVertrek(): Promise<boolean> {
+  if (bijOpenen) return true;
+  await autosave.nuOpslaan().catch(() => {});
+  const vraag = vertrekBevestiging(autosave.status.value);
+  if (vraag === null) return true;
+  vertrekBevestigd = window.confirm(t(vraag));
+  return vertrekBevestigd;
+}
+/** Het wisselen of uitloggen mislukte na de bevestiging: het verlaten vraagt het dan opnieuw. */
+function vertrekAfgebroken(): void {
+  vertrekBevestigd = false;
+}
+// Een nieuwe wijziging na die bevestiging verdient opnieuw de vraag bij het verlaten.
+watch(
+  () => store.gewijzigdSindsOpslaan,
+  () => {
+    vertrekBevestigd = false;
+  },
+);
+
 // Navigeren in de app: dezelfde vraag als bij `beforeunload`. Annuleren houdt de gebruiker hier.
-// Bij een conflict of fout bewaart `stop()` niets, maar het concept blijft staan.
+// Bij een conflict of fout bewaart `stop()` niets, maar het concept blijft staan. Na wisselen of
+// uitloggen werd het al gevraagd (`voorVertrek`): dan niet nog eens.
 onBeforeRouteLeave(() => {
+  if (vertrekBevestigd) {
+    vertrekBevestigd = false;
+    return true;
+  }
   if (!waarschuwBijVerlaten(autosave.status.value)) return true;
   return window.confirm(t("editor.verlaten.bevestiging"));
+});
+
+// --- Verlopen sessie -----------------------------------------------------------
+
+/**
+ * Inloggen in een nieuw tabblad: het werk in dit tabblad blijft staan. Na het inloggen komt dat
+ * tabblad op /weer-aangemeld, niet in de editor: geen tweede venster op hetzelfde project (R8).
+ */
+function opnieuwInloggen(): void {
+  window.open(`/inloggen?terug=${encodeURIComponent("/weer-aangemeld")}`, "_blank", "noopener");
+}
+
+/**
+ * Terug in dit tabblad: de sessie opnieuw lezen (bv. na inloggen of uitloggen in een ander
+ * tabblad). Na een 401 en weer dezelfde gebruiker: één keer bewaren, zonder timer.
+ */
+function bijFocus(): void {
+  if (autosave.afgemeld.value) void opnieuwProberen();
+  else void sessie.laad().catch(() => {});
+}
+
+// Een 401 bij het bewaren: de sessie opnieuw lezen, zodat de melding zegt of er nu iemand anders
+// ingelogd is (401 ANDERE_GEBRUIKER) of niemand.
+watch(autosave.afgemeld, (afgemeld) => {
+  if (afgemeld) void sessie.laad().catch(() => {});
+});
+
+/**
+ * De melding "afgemeld" met "Opnieuw inloggen": na een 401, en ook zodra de sessie geen gebruiker
+ * meer heeft (bv. "Opnieuw proberen" bij status fout vond geen sessie meer).
+ */
+const afgemeldMelding = computed(() =>
+  toonAfgemeld({ afgemeld: autosave.afgemeld.value, gebruikerId: sessie.gebruiker?.id ?? null }),
+);
+
+/** Nu is een andere gebruiker ingelogd dan die van dit venster: zijn naam, anders null. */
+const andereGebruiker = computed(() => {
+  const huidig = sessie.gebruiker;
+  if (!huidig || huidig.id === gebruikerId) return null;
+  return { naam: huidig.naam, oorspronkelijk: oorspronkelijkeNaam };
 });
 
 // --- Exporteren ---------------------------------------------------------------
@@ -213,14 +342,20 @@ function bestandBuitenDropzone(event: DragEvent): void {
   if (event.type === "dragover") event.dataTransfer.dropEffect = "none";
 }
 
+let afmeldenVoorVertrek: (() => void) | undefined;
+
 onMounted(() => {
+  afmeldenVoorVertrek = sessie.registreerVoorVertrek(voorVertrek, vertrekAfgebroken);
   window.addEventListener("beforeunload", bijVerlaten);
+  window.addEventListener("focus", bijFocus);
   window.addEventListener("dragover", bestandBuitenDropzone);
   window.addEventListener("drop", bestandBuitenDropzone);
   void laad();
 });
 onBeforeUnmount(() => {
+  afmeldenVoorVertrek?.();
   window.removeEventListener("beforeunload", bijVerlaten);
+  window.removeEventListener("focus", bijFocus);
   window.removeEventListener("dragover", bestandBuitenDropzone);
   window.removeEventListener("drop", bestandBuitenDropzone);
 });
@@ -231,7 +366,10 @@ onBeforeUnmount(() => {
     <template v-if="laadstatus === 'klaar' && store.document">
       <EditorBovenbalk
         :status="autosave.status.value"
+        :afgemeld="afgemeldMelding"
+        :andere-gebruiker="andereGebruiker"
         @opnieuw-proberen="opnieuwProberen"
+        @opnieuw-inloggen="opnieuwInloggen"
         @toon-conflict="conflictOpen = true"
         @toon-bevindingen="toonBevindingen"
         @exporteren="exportOpen = true"

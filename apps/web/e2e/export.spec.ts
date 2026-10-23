@@ -1,7 +1,12 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
-import { bewaarBedrijfSnapshot, herstelBedrijf, zetBedrijfBasislijn, type BedrijfSnapshot } from "./hulp/bedrijf";
+import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
+import { gebruikTestgebruiker } from "./hulp/inloggen";
 import { leesPdf } from "./hulp/pdf";
+
+// Eén ingelogde eigenaar met een eigen organisatie, en dus eigen bedrijfsgegevens, voor dit hele
+// bestand.
+gebruikTestgebruiker(test, { voorvoegsel: "export" });
 
 // Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
 const naam = `Test Exportdialoog ${Date.now()}`;
@@ -181,18 +186,8 @@ const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 type Project = { versie: number; document: { nodes: Record<string, { type: string; doorsnede_mm2?: number }> } };
 
 test.describe("echte pdf-export", () => {
-  let snapshot: BedrijfSnapshot;
-
-  test.beforeAll(async () => {
-    snapshot = await bewaarBedrijfSnapshot();
-  });
-
   test.beforeEach(async ({ request }) => {
     await zetBedrijfBasislijn(request);
-  });
-
-  test.afterAll(async () => {
-    await herstelBedrijf(snapshot);
   });
 
   /** De soort van elke pagina, uit de paginatitel in de cartouche (vlak voor "Datum:"). */

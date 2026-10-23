@@ -17,8 +17,14 @@ const pdfjsBron = (naam: string) => ({
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-10-18",
+  // De e2e-server (Playwright) bouwt in een eigen map, naast de ontwikkelserver.
+  buildDir: process.env.ELENTRIK_BUILD_DIR || ".nuxt",
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
   css: ["~/assets/css/main.css"],
+  runtimeConfig: {
+    // Alleen op de server: de basis-URL waarmee de auth-client tijdens SSR Better Auth aanspreekt.
+    authBasisUrl: process.env.BETTER_AUTH_URL || "http://127.0.0.1:3000",
+  },
   nitro: {
     publicAssets: [
       pdfjsBron("wasm"),

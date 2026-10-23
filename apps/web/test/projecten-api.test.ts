@@ -49,6 +49,27 @@ describe("useProjectenApi", () => {
     await expect(api.bewaar("abc", 3, { document: {} as never })).rejects.toBe(eigen);
   });
 
+  test("met een gebruiker: bewaar en dupliceer zeggen voor wie ze werken", async () => {
+    const oproepen: Oproep[] = [];
+    const api = maakProjectenApi(
+      async (...argumenten) => {
+        oproepen.push(argumenten);
+        return { versie: 4, id: "kopie" };
+      },
+      { gebruikerId: "g1" },
+    );
+    const document = {} as never;
+    await api.bewaar("abc", 3, { document });
+    await api.dupliceer("abc");
+    expect(oproepen).toEqual([
+      [
+        "/api/projecten/abc",
+        { method: "PUT", headers: { "If-Match": "3", "x-elentrik-gebruiker": "g1" }, body: { document } },
+      ],
+      ["/api/projecten/abc/dupliceer", { method: "POST", headers: { "x-elentrik-gebruiker": "g1" } }],
+    ]);
+  });
+
   test("dupliceer en verwijder gebruiken de juiste routes", async () => {
     const { api, oproepen } = maakApi({ id: "kopie" });
     expect(await api.dupliceer("abc")).toEqual({ id: "kopie" });

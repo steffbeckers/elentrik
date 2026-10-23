@@ -32,6 +32,7 @@ import { computed, ref, shallowRef } from "vue";
 import type { Richting } from "../composables/sneltoetsen";
 import { zelfdeAdres } from "../editor/adres";
 import { samengevoegd } from "../editor/resultaten";
+import { useSessieStore } from "./sessie";
 
 /** Eén undo-stap. Stappen met dezelfde `groep` na elkaar worden samengevoegd. */
 export type Stap = { patches: Patch[]; inversePatches: Patch[]; groep?: string };
@@ -124,6 +125,12 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value++;
   }
 
+  /**
+   * De gebruiker van dit editorvenster, voor `door` van een afwijking; geen state. `nieuwVenster`
+   * wist hem, de eerste `laad` daarna onthoudt de ingelogde gebruiker (`onthoudAuteur`).
+   */
+  let vensterAuteur: { id: string; naam: string } | null = null;
+
   function laad(project: TeLadenProject): void {
     document.value = project.document;
     projectId.value = project.id;
@@ -136,6 +143,12 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan.value = 0;
     laadGeneratie.value++;
     groepGesloten = true;
+    onthoudAuteur();
+  }
+
+  /** Een nieuw editorvenster (pagina): de volgende `laad` bepaalt wie er werkt. */
+  function nieuwVenster(): void {
+    vensterAuteur = null;
   }
 
   /**
@@ -319,14 +332,34 @@ export const useEditorStore = defineStore("editor", () => {
     pasToe(samengevoegd(doc, resultaten));
   }
 
+  /**
+   * Onthoudt de ingelogde gebruiker als die van dit venster. Een andere gebruiker (die intussen in
+   * een ander tabblad inlogde) overschrijft hem nooit; dezelfde gebruiker werkt zijn naam bij.
+   */
+  function onthoudAuteur(): void {
+    const huidige = useSessieStore().gebruiker;
+    if (!huidige) return;
+    if (vensterAuteur === null || vensterAuteur.id === huidige.id) {
+      vensterAuteur = { id: huidige.id, naam: huidige.naam };
+    }
+  }
+
+  /**
+   * De naam voor `door` van een afwijking: de gebruiker van dit venster. Is de sessie intussen
+   * verlopen of van een ander, dan blijft het de naam van wie het venster opende.
+   */
+  function auteur(): string {
+    onthoudAuteur();
+    return vensterAuteur?.naam || useSessieStore().gebruiker?.naam || "onbekend";
+  }
+
   function zetAfwijking(regelId: string, nodeId: NodeId, motivatie: string): void {
     pasToe(
       voegAfwijkingToe(vereisDocument(), {
         regelId,
         nodeId,
         motivatie,
-        // TODO(plan inloggen en organisaties): `door` wordt de ingelogde gebruiker.
-        door: "lokaal",
+        door: auteur(),
         datum: vandaag(),
       }),
     );
@@ -406,6 +439,7 @@ export const useEditorStore = defineStore("editor", () => {
     navigeer,
     verwijderSelectie,
     zetAfwijking,
+    nieuwVenster,
     wisAfwijking,
     wijzigProjectgegevens,
   };

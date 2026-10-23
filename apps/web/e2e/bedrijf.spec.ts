@@ -1,29 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
-import {
-  bewaarBedrijfSnapshot,
-  herstelBedrijf,
-  zetBedrijfBasislijn,
-  type BedrijfSnapshot,
-} from "./hulp/bedrijf";
+import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
+import { gebruikTestgebruiker } from "./hulp/inloggen";
 
 const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const PLAN_PDF = fileURLToPath(new URL("./fixtures/plan-2p.pdf", import.meta.url));
 
-// De bedrijfsgegevens zijn één gedeelde rij in de ontwikkelbank: de volledige rij (ook het logo)
-// wordt voor de run bewaard en erna teruggezet; elke test begint van een bekende basislijn.
-let snapshot: BedrijfSnapshot;
-
-test.beforeAll(async () => {
-  snapshot = await bewaarBedrijfSnapshot();
-});
+// Eén ingelogde eigenaar met een eigen organisatie, en dus eigen bedrijfsgegevens, voor dit hele
+// bestand. Elke test begint van een bekende basislijn.
+gebruikTestgebruiker(test, { voorvoegsel: "bedrijf" });
 
 test.beforeEach(async ({ request }) => {
   await zetBedrijfBasislijn(request);
-});
-
-test.afterAll(async () => {
-  await herstelBedrijf(snapshot);
 });
 
 async function opKlaar(page: Page) {
