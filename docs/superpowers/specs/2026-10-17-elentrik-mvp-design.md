@@ -303,7 +303,7 @@ De lijst hieronder geeft aan welke regels de MVP minstens bevat. **De numerieke 
 
 - **Authenticatie:** e-mail en wachtwoord, plus een magic link. De eerste gebruiker maakt een organisatie aan en wordt `eigenaar`. Een eigenaar kan leden uitnodigen via e-mail.
 - **Abonnement:**
-  - één formule met een proefperiode van 30 dagen, via Mollie (eerste betaling en daarna een terugkerende domiciliëring);
+  - één formule met een proefperiode van 30 dagen, via Mollie (eerste betaling en daarna een terugkerende domiciliëring) — vervangen door Stripe, zie `2026-10-23-elentrik-abonnementen-design.md`;
   - de webhook van Mollie werkt `abonnementen` bij;
   - als het abonnement verloopt, blijven projecten zichtbaar en exporteerbaar, maar kunnen ze niet meer bewerkt worden.
 - **Talen:** de interface en de berichten van de bevindingen bestaan in het Nederlands en het Frans. De taal van de PDF is in te stellen per project.
