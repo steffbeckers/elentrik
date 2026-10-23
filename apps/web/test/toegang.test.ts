@@ -928,6 +928,54 @@ describe("de laatst gekozen organisatie", () => {
     expect(await actieveOrganisatie(tweede)).toBe(orgA);
   });
 
+  test("na een wissel naar Y, uitloggen en weer inloggen in dezelfde browser is Y actief", async () => {
+    const id = await registreer("uitloggen-gekozen@voorbeeld.be");
+    await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
+    await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
+    const eerste = await inloggen("uitloggen-gekozen@voorbeeld.be");
+    await stuur({ methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: orgA } }, eerste);
+    const [rij] = await db.select({ laatste: user.laatsteOrganisatieId }).from(user).where(eq(user.id, id));
+    expect(rij!.laatste).toBe(orgA);
+
+    // Uitloggen verwijdert de sessie: geen enkele sessie onthoudt A nog.
+    await auth.api.signOut({ headers: new Headers({ cookie: eerste }) });
+    const sessies = await db.select({ actief: session.activeOrganizationId }).from(session).where(eq(session.userId, id));
+    expect(sessies.map((s) => s.actief)).not.toContain(orgA);
+
+    const tweede = await inloggen("uitloggen-gekozen@voorbeeld.be");
+    expect(await actieveOrganisatie(tweede)).toBe(orgA);
+  });
+
+  test("uitgelogd en intussen geen lid meer van Y: het oudste lidmaatschap", async () => {
+    const id = await registreer("uitloggen-weg@voorbeeld.be");
+    await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
+    await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
+    const eerste = await inloggen("uitloggen-weg@voorbeeld.be");
+    await stuur({ methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: orgA } }, eerste);
+    await auth.api.signOut({ headers: new Headers({ cookie: eerste }) });
+    await db.delete(member).where(and(eq(member.userId, id), eq(member.organizationId, orgA)));
+
+    const tweede = await inloggen("uitloggen-weg@voorbeeld.be");
+    expect(await actieveOrganisatie(tweede)).toBe(orgB);
+  });
+
+  test("zonder bewaarde keuze bij de gebruiker telt de laatst bijgewerkte andere sessie", async () => {
+    const id = await registreer("andere-sessie@voorbeeld.be");
+    await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
+    await wordLid(id, orgA, "member", new Date("2026-06-01T00:00:00Z"));
+    const eerste = await inloggen("andere-sessie@voorbeeld.be");
+    await stuur({ methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: orgA } }, eerste);
+    await db.update(user).set({ laatsteOrganisatieId: null }).where(eq(user.id, id));
+
+    const tweede = await inloggen("andere-sessie@voorbeeld.be");
+    expect(await actieveOrganisatie(tweede)).toBe(orgA);
+  });
+
+  test("de eerste organisatie uit de registratie wordt de laatst gekozen organisatie", async () => {
+    const [rij] = await db.select({ laatste: user.laatsteOrganisatieId }).from(user).where(eq(user.id, eigenaarA.id));
+    expect(rij!.laatste).toBe(orgA);
+  });
+
   test("is de gebruiker geen lid meer van de laatst gekozen organisatie, dan het oudste lidmaatschap", async () => {
     const id = await registreer("niet-meer-gekozen@voorbeeld.be");
     await wordLid(id, orgB, "member", new Date("2026-01-01T00:00:00Z"));
@@ -1084,6 +1132,9 @@ describe("verzoeken van een andere site", () => {
       { origin: "http://kwaad.example" },
       { origin: "http://127.0.0.1:3100" },
       { origin: "null" },
+      // Een andere lokale app op een andere poort is voor de browser dezelfde site.
+      { "sec-fetch-site": "same-site", origin: "http://127.0.0.1:3100" },
+      { "sec-fetch-site": "same-origin", origin: "http://kwaad.example" },
     ];
     for (const headers of gevallen) {
       const antwoord = await stuur(
@@ -1130,6 +1181,7 @@ describe("verzoeken van een andere site", () => {
     const voor = await aantalProjecten();
     const gevallen: Record<string, string>[] = [
       { "sec-fetch-site": "same-origin", origin: "http://127.0.0.1:3000" },
+      { "sec-fetch-site": "same-origin", origin: "http://localhost:3000" },
       { "sec-fetch-site": "same-site" },
       { "sec-fetch-site": "none" },
       { origin: "http://127.0.0.1:3000" },

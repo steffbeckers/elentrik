@@ -34,7 +34,7 @@ import { ACTIEVE_ORGANISATIE_HEADER, ANDERE_ORGANISATIE } from "../../shared/org
 import { gebruikAuth } from "../auth";
 import { vertrouwdeOorsprongen } from "../auth/oorsprong";
 import { gebruikDb } from "../db";
-import { member, session } from "../db/schema";
+import { member, session, user } from "../db/schema";
 import { isEigenaarRol } from "../organisaties/regels";
 import { projectOrganisatie } from "../projecten/repo";
 
@@ -60,12 +60,22 @@ export function naarRol(rol: string): Rol {
 
 /**
  * De organisatie die een sessie zonder actieve organisatie krijgt (bijvoorbeeld een latere
- * aanmelding): de laatst gekozen organisatie (spec 2.4), dat is de actieve organisatie van de
- * laatst bijgewerkte andere sessie van de gebruiker waarvan hij nog lid is; anders zijn oudste
- * lidmaatschap. Zonder lidmaatschap: null.
+ * aanmelding), telkens alleen als de gebruiker er nog lid van is (spec 2.4):
+ * 1. de laatst gekozen organisatie, bewaard bij de gebruiker (`laatsteOrganisatieId`; overleeft
+ *    uitloggen);
+ * 2. anders de actieve organisatie van zijn laatst bijgewerkte andere sessie;
+ * 3. anders zijn oudste lidmaatschap.
+ * Zonder lidmaatschap: null.
  */
 async function voorkeur(sessieId: string, gebruikerId: string): Promise<string | null> {
   const db = gebruikDb();
+  const [bewaard] = await db
+    .select({ organisatieId: member.organizationId })
+    .from(user)
+    .innerJoin(member, and(eq(member.userId, user.id), eq(member.organizationId, user.laatsteOrganisatieId)))
+    .where(eq(user.id, gebruikerId))
+    .limit(1);
+  if (bewaard) return bewaard.organisatieId;
   const [laatst] = await db
     .select({ organisatieId: member.organizationId })
     .from(session)
@@ -229,19 +239,18 @@ const WIJZIGENDE_METHODES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
  * CSRF: een wijzigend verzoek (POST, PUT, PATCH, DELETE) dat een andere site stuurt, krijgt 403.
- * - Met `Sec-Fetch-Site` (elke huidige browser) beslist die: alleen `cross-site` wordt geweigerd.
- * - Zonder `Sec-Fetch-Site` maar met een `Origin`: die moet de oorsprong van de basis-URL zijn
- *   (of haar localhost-variant), anders 403.
- * - Zonder beide (server-side aanroepen, tests, oude clients): toegelaten.
+ * - `Sec-Fetch-Site: cross-site`: 403.
+ * - Een `Origin` die niet de oorsprong van de basis-URL is (of haar localhost-variant): 403, wat
+ *   `Sec-Fetch-Site` ook zegt. Een andere lokale app op een andere poort is voor de browser
+ *   `same-site`, maar heeft een andere Origin (ruling R13).
+ * - Zonder Origin en zonder `cross-site` (server-side aanroepen, tests, oude clients): toegelaten.
  */
 export function eisEigenSite(event: H3Event): void {
   if (!WIJZIGENDE_METHODES.has(event.method)) return;
   const site = getRequestHeader(event, "sec-fetch-site");
   const oorsprong = getRequestHeader(event, "origin");
   const vreemd =
-    site !== undefined
-      ? site === "cross-site"
-      : oorsprong !== undefined && !vertrouwdeOorsprongen().includes(oorsprong);
+    site === "cross-site" || (oorsprong !== undefined && !vertrouwdeOorsprongen().includes(oorsprong));
   if (vreemd) throw createError({ statusCode: 403, statusMessage: "Verzoek van een andere site" });
 }
 

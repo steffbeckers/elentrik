@@ -90,12 +90,19 @@ function verstuur(soort: MailSoort, mail: Mail, aan: string): void {
 }
 
 /**
- * `wachtendeBedrijfsnaam` mag alleen bij de registratie gezet worden, niet via /update-user. Bij
- * de registratie wordt ze de naam van de organisatie, dus geldt dezelfde regel: 1 tot 80 tekens
- * na trimmen, anders 400 (en geen account).
+ * De eigen velden van de gebruiker die een client niet vrij mag zetten:
+ * - `wachtendeBedrijfsnaam` alleen bij de registratie, niet via /update-user. Bij de registratie
+ *   wordt ze de naam van de organisatie, dus geldt dezelfde regel: 1 tot 80 tekens na trimmen,
+ *   anders 400 (en geen account).
+ * - `laatsteOrganisatieId` nooit: de server zet het bij het wisselen (`input: false` weigert het
+ *   al bij de registratie; dit weigert het ook uitdrukkelijk via /update-user).
  */
 function alleenBijRegistratie(path: string, body: unknown): void {
-  if (!body || typeof body !== "object" || !("wachtendeBedrijfsnaam" in body)) return;
+  if (!body || typeof body !== "object") return;
+  if ((path === "/update-user" || path === "/sign-up/email") && "laatsteOrganisatieId" in body) {
+    throw new APIError("BAD_REQUEST", { message: "laatsteOrganisatieId kan niet gezet worden." });
+  }
+  if (!("wachtendeBedrijfsnaam" in body)) return;
   if (path === "/update-user") {
     throw new APIError("BAD_REQUEST", {
       message: "wachtendeBedrijfsnaam kan alleen bij de registratie gezet worden.",
@@ -280,6 +287,8 @@ export function maakAuth(db: Db = gebruikDb()) {
       additionalFields: {
         // De bedrijfsnaam uit de registratie, tot de eerste bevestigde aanmelding (Task 3).
         wachtendeBedrijfsnaam: { type: "string", required: false, input: true },
+        // De laatst gekozen actieve organisatie (spec 2.4); alleen de server zet ze.
+        laatsteOrganisatieId: { type: "string", required: false, input: false },
       },
     },
     session: {

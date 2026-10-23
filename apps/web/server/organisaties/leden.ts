@@ -182,10 +182,18 @@ export async function mij(event: H3Event): Promise<Mij> {
   };
 }
 
-/** Maakt een organisatie waarvan de gebruiker lid is actief in zijn sessie; anders 404. */
+/** Bewaart de gekozen organisatie bij de gebruiker: de volgende sessie begint daar (spec 2.4). */
+async function onthoudOrganisatie(gebruikerId: string, organisatieId: string): Promise<void> {
+  await gebruikDb().update(user).set({ laatsteOrganisatieId: organisatieId }).where(eq(user.id, gebruikerId));
+}
+
+/**
+ * Maakt een organisatie waarvan de gebruiker lid is actief in zijn sessie (ook de automatische
+ * wissel van de editor, spec 5b.1); anders 404. De keuze blijft bij de gebruiker bewaard.
+ */
 export async function wisselActief(event: H3Event): Promise<{ actieveOrganisatieId: string }> {
   const { organisatieId } = await leesBody(event, z.object({ organisatieId: z.string().min(1).max(200) }));
-  await vereisLid(event, { organisatieId });
+  const { gebruiker } = await vereisLid(event, { organisatieId });
   await viaAuth(event, () =>
     gebruikAuth().api.setActiveOrganization({
       body: { organizationId: organisatieId },
@@ -193,6 +201,7 @@ export async function wisselActief(event: H3Event): Promise<{ actieveOrganisatie
       returnHeaders: true,
     }),
   );
+  await onthoudOrganisatie(gebruiker.id, organisatieId);
   return { actieveOrganisatieId: organisatieId };
 }
 
@@ -418,6 +427,8 @@ export async function aanvaard(event: H3Event): Promise<{ organisatieId: string 
     gebruikAuth().api.acceptInvitation({ body: { invitationId: rij.id }, headers: event.headers, returnHeaders: true }),
   );
   await wisUitnodigingstokens(db, rij.id);
+  // Better Auth maakte de organisatie actief: dat is ook de laatst gekozen.
+  await onthoudOrganisatie(gebruiker.id, rij.organisatieId);
   return { organisatieId: rij.organisatieId };
 }
 
@@ -480,6 +491,8 @@ export async function registreerViaUitnodiging(event: H3Event): Promise<{ organi
         name: naam,
         email,
         emailVerified: true,
+        // De organisatie van de uitnodiging wordt actief, en dus de laatst gekozen.
+        laatsteOrganisatieId: rij.organizationId,
         createdAt: nu,
         updatedAt: nu,
       });

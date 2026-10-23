@@ -113,6 +113,9 @@ export async function richtEersteOrganisatieIn(
         .where(eq(bedrijfsinstellingen.organisatieId, organisatieId));
     }
 
+    // De nieuwe organisatie wordt actief, en dus ook de laatst gekozen (spec 2.4).
+    await tx.update(user).set({ laatsteOrganisatieId: organisatieId }).where(eq(user.id, gebruiker.id));
+
     if (opties.sessieId) {
       await tx
         .update(session)

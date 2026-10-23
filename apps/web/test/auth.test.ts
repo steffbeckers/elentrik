@@ -271,6 +271,30 @@ describe("registreren en bevestigen", () => {
     }
   });
 
+  test("laatsteOrganisatieId is niet te zetten, niet bij de registratie en niet via update-user", async () => {
+    const nieuw = nieuwAdres();
+    await expect(
+      auth.api.signUpEmail({
+        body: { name: "Jan Peeters", email: nieuw, password: WACHTWOORD, laatsteOrganisatieId: "kaper" } as never,
+        headers: headers(),
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(await db.select().from(user).where(eq(user.email, nieuw))).toHaveLength(0);
+
+    const email = nieuwAdres();
+    await bevestigdeGebruiker(email);
+    const h = await sessieHeaders(email);
+    const [voor] = await db.select().from(user).where(eq(user.email, email));
+    for (const waarde of ["kaper", null]) {
+      await expect(
+        auth.api.updateUser({ body: { laatsteOrganisatieId: waarde } as never, headers: h }),
+      ).rejects.toMatchObject({ statusCode: 400 });
+    }
+    const [na] = await db.select().from(user).where(eq(user.email, email));
+    expect(na!.laatsteOrganisatieId).toBe(voor!.laatsteOrganisatieId);
+    expect(na!.laatsteOrganisatieId).not.toBe("kaper");
+  });
+
   test("update-user kan wachtendeBedrijfsnaam niet zetten; de naam wijzigen mag wel", async () => {
     const email = nieuwAdres();
     await bevestigdeGebruiker(email);

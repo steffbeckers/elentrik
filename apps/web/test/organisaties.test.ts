@@ -734,6 +734,8 @@ describe("uitnodiging aanvaarden", () => {
     expect(await antwoord.json()).toEqual({ organisatieId: org });
     expect(await rolVan(gast.id, org)).toBe("member");
     expect(await json(stuur("GET", "/api/mij", gast.cookie))).toMatchObject({ actieveOrganisatieId: org });
+    const [bewaard] = await db.select({ laatste: user.laatsteOrganisatieId }).from(user).where(eq(user.id, gast.id));
+    expect(bewaard!.laatste).toBe(org);
 
     const opnieuw = await stuur("POST", `/api/uitnodigingen/${token}/aanvaard`, gast.cookie);
     expect(opnieuw.status).toBe(410);
@@ -820,7 +822,12 @@ describe("registreren via een uitnodiging", () => {
     expect(cookie).toContain("better-auth.session_token=");
 
     const [nieuw] = await db.select().from(user).where(eq(user.email, gast));
-    expect(nieuw).toMatchObject({ name: "Collega", emailVerified: true, wachtendeBedrijfsnaam: null });
+    expect(nieuw).toMatchObject({
+      name: "Collega",
+      emailVerified: true,
+      wachtendeBedrijfsnaam: null,
+      laatsteOrganisatieId: org,
+    });
     const lidmaatschappen = await db.select().from(member).where(eq(member.userId, nieuw!.id));
     expect(lidmaatschappen.map((l) => [l.organizationId, l.role])).toEqual([[org, "member"]]);
     const [rij] = await db

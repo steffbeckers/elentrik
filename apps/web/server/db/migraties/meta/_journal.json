@@ -43,6 +43,13 @@
       "when": 1792698590946,
       "tag": "0005_laatste-eigenaar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792723306415,
+      "tag": "0006_laatste-organisatie",
+      "breakpoints": true
     }
   ]
 }

@@ -36,8 +36,9 @@ bedrijfsgegevens. Dat gebeurt één keer.
   van de proxy: dan delen alle gebruikers één teller. Vóór het online gaan is een ontwerp nodig
   dat de proxy vertrouwt (alleen haar `x-forwarded-for`, en alleen van haar adres).
 - **CSRF en de Origin-controle:** de eigen API-routes weigeren een wijzigend verzoek (POST, PUT,
-  PATCH, DELETE) van een andere site met 403: op `Sec-Fetch-Site: cross-site`, of, zonder die
-  header, op een `Origin` die niet de basis-URL is. Better Auth controleert de `Origin` van zijn
+  PATCH, DELETE) van een andere site met 403: op `Sec-Fetch-Site: cross-site`, en op elke
+  `Origin` die niet de basis-URL is (ook als de browser het verzoek `same-site` noemt, zoals een
+  andere lokale app op een andere poort). Better Auth controleert de `Origin` van zijn
   eigen routes tegen `trustedOrigins`. Beide volgen `BETTER_AUTH_URL`; wijst die naar `127.0.0.1`,
   dan geldt ook `localhost` op dezelfde poort. Een ander domein (bijvoorbeeld `www.` naast het
   hoofddomein) moet je dus expliciet toevoegen of vermijden.

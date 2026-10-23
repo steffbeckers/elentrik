@@ -111,6 +111,11 @@ export const user = pgTable("user", {
     .notNull(),
   /** Bedrijfsnaam uit de registratie, tot de eerste bevestigde aanmelding er een organisatie van maakt. */
   wachtendeBedrijfsnaam: text("wachtende_bedrijfsnaam"),
+  /**
+   * De laatst gekozen actieve organisatie (spec 2.4): een nieuwe sessie begint daar, zolang de
+   * gebruiker er nog lid van is. Overleeft uitloggen, anders dan de sessie zelf.
+   */
+  laatsteOrganisatieId: text("laatste_organisatie_id"),
 });
 
 export const session = pgTable(
