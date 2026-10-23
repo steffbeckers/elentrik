@@ -19,6 +19,9 @@ export type Rol = "eigenaar" | "lid";
 
 export type Gebruiker = { id: string; naam: string; email: string };
 
+/** De gebruiker zoals /api/mij hem geeft: ook of zijn gratis proefperiode al gebruikt is. */
+export type SessieGebruiker = Gebruiker & { proefGebruikt?: boolean };
+
 export type Organisatie = { id: string; naam: string; rol: Rol; toegang: Toegang };
 
 /** Het antwoord van GET /api/mij. */
@@ -43,7 +46,7 @@ export type VoorVertrek = () => boolean | Promise<boolean>;
 const altijdDoor: VoorVertrek = () => true;
 
 export const useSessieStore = defineStore("sessie", () => {
-  const gebruiker = ref<Gebruiker | null>(null);
+  const gebruiker = ref<SessieGebruiker | null>(null);
   const organisaties = ref<Organisatie[]>([]);
   const actieveOrganisatieId = ref<string | null>(null);
   /** Werd /api/mij al (met succes, of met 401) gelezen? */
@@ -59,6 +62,12 @@ export const useSessieStore = defineStore("sessie", () => {
     () => organisaties.value.find((o) => o.id === actieveOrganisatieId.value) ?? null,
   );
   const rol = computed<Rol | null>(() => actieveOrganisatie.value?.rol ?? null);
+  /** De toegang van de actieve organisatie; zonder organisatie geen beperking. */
+  const toegang = computed<Toegang>(
+    () => actieveOrganisatie.value?.toegang ?? { schrijven: true, reden: "uit", proefEinde: null },
+  );
+  /** Gebruikte deze gebruiker zijn gratis proefperiode al (voor een eerder eigen bedrijf)? */
+  const proefGebruikt = computed(() => gebruiker.value?.proefGebruikt ?? false);
   /** Wat `bestemming` van de sessie nodig heeft: null is niet ingelogd. */
   const sessieInfo = computed<SessieInfo>(() =>
     gebruiker.value ? { actieveOrganisatieId: actieveOrganisatieId.value } : null,
@@ -152,6 +161,8 @@ export const useSessieStore = defineStore("sessie", () => {
     geladen,
     actieveOrganisatie,
     rol,
+    toegang,
+    proefGebruikt,
     sessieInfo,
     gebruikApi,
     laad,

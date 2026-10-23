@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { StroomtypeSchema, type Stroomtype } from "@elentrik/model";
+import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 
 const open = defineModel<boolean>("open", { default: false });
@@ -11,6 +12,7 @@ const { t } = useI18n();
 const api = useProjectenApi();
 const toast = useToast();
 const andereOrganisatie = useAndereOrganisatie();
+const alleenLezen = useAlleenLezen();
 
 const stroomtypes = computed(() =>
   StroomtypeSchema.options.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
@@ -48,6 +50,11 @@ async function maak() {
     emit("aangemaakt", id);
   } catch (fout) {
     if (await andereOrganisatie(fout)) return;
+    // Geen schrijfrecht meer: de sessie is ververst, "Nieuw project" verdwijnt, de dialoog sluit.
+    if (await alleenLezen(fout)) {
+      open.value = false;
+      return;
+    }
     toast.add({ title: t("algemeen.fout"), color: "error" });
   } finally {
     bezig.value = false;

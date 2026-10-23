@@ -421,7 +421,7 @@
     "email": "E-mailadres",
     "wachtwoord": "Wachtwoord",
     "wachtwoordHulp": "Minstens 10 tekens.",
-    "bedrijfsnaam": "Naam van je bedrijf",
+    "bedrijfsnaam": "Naam van je bedrijf of je eigen naam",
     "fouten": {
       "naamVerplicht": "Vul je naam in.",
       "emailOngeldig": "Vul een geldig e-mailadres in.",
@@ -558,7 +558,8 @@
     "terug": "Naar de projecten",
     "nieuw": {
       "titel": "Maak een nieuw bedrijf aan",
-      "naam": "Naam van het bedrijf",
+      "naam": "Naam van je bedrijf of je eigen naam",
+      "geenProef": "Dit bedrijf heeft geen gratis proefperiode; je kiest meteen een abonnement.",
       "knop": "Bedrijf aanmaken"
     },
     "uitnodiging": {
@@ -566,11 +567,55 @@
       "uitleg": "Een eigenaar van het bedrijf kan je uitnodigen via Mijn organisatie. Je krijgt dan een mail met een link."
     }
   },
+  "abonnement": {
+    "titel": "Abonnement",
+    "laden": {
+      "bezig": "Laden…",
+      "fout": {
+        "titel": "Het abonnement kon niet geladen worden",
+        "beschrijving": "Probeer het opnieuw.",
+        "opnieuw": "Opnieuw proberen"
+      }
+    },
+    "status": {
+      "uit": "Betalen is nog niet ingesteld.",
+      "vrijgesteld": "Je bedrijf hoeft niet te betalen voor Elentrik.",
+      "proef": "Gratis proefperiode: nog {dagen} dagen, tot {datum}.",
+      "actief": "Je hebt een {formule} abonnement. Volgende verlenging op {datum}.",
+      "opgezegd": "Je abonnement is opgezegd en loopt nog tot {datum}.",
+      "betalingMislukt": "Je laatste betaling is mislukt.",
+      "beeindigd": "Je abonnement is beëindigd.",
+      "proefVoorbij": "Dit bedrijf heeft geen lopende gratis proefperiode. Kies een abonnement om projecten te bewerken."
+    },
+    "datumOnbekend": "een latere datum",
+    "formules": {
+      "maand": "Maandelijks",
+      "jaar": "Jaarlijks"
+    },
+    "per": {
+      "maand": "per maand",
+      "jaar": "per jaar"
+    },
+    "exclBtw": "excl. btw ({incl} incl. 21 % btw)",
+    "korting": "−{percentage} %",
+    "kies": "Kies",
+    "beheren": "Abonnement beheren",
+    "betalingRegelen": "Betaling regelen",
+    "lid": "Vraag een eigenaar van je bedrijf om het abonnement te regelen.",
+    "prijzenOntbreken": "Prijzen konden niet geladen worden",
+    "banner": {
+      "proef": "Nog {n} dag gratis. | Nog {n} dagen gratis.",
+      "kies": "Kies een abonnement",
+      "betaling": "Je laatste betaling is mislukt. Regel je betaling snel, anders kan je bedrijf straks geen projecten meer bewerken.",
+      "alleenLezen": "Je bedrijf heeft geen actief abonnement. Je kan projecten bekijken en exporteren, maar niet bewerken."
+    }
+  },
   "menu": {
     "nieuwBedrijf": "Nieuw bedrijf aanmaken",
     "gebruiker": "Gebruikersmenu",
     "mijnOrganisatie": "Mijn organisatie",
     "bedrijfsgegevens": "Bedrijfsgegevens",
+    "abonnement": "Abonnement",
     "uitloggen": "Uitloggen",
     "wisselenMislukt": "Wisselen van organisatie is niet gelukt.",
     "uitloggenMislukt": "Uitloggen is niet gelukt.",

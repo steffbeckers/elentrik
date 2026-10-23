@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Het menu van de ingelogde gebruiker: zijn naam, "Mijn organisatie", "Bedrijfsgegevens" en
+// Het menu van de ingelogde gebruiker: zijn naam, "Mijn organisatie", "Bedrijfsgegevens", "Abonnement" en
 // "Uitloggen". Uitloggen gaat via de sessie-store, dus eerst langs `voorVertrek`.
 import type { DropdownMenuItem } from "@nuxt/ui";
 import { useSessieStore } from "~/stores/sessie";
@@ -33,6 +33,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
         [
           { label: t("menu.mijnOrganisatie"), icon: "i-lucide-users", to: "/organisatie", slot: "organisatie" as const },
           { label: t("menu.bedrijfsgegevens"), icon: "i-lucide-building-2", to: "/instellingen" },
+          { label: t("menu.abonnement"), icon: "i-lucide-credit-card", to: "/abonnement" },
         ],
       ]
     : []),
