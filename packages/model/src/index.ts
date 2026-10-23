@@ -60,6 +60,7 @@ export {
   RuimteSchema,
   SituatiePaginaSchema,
   StroomtypeSchema,
+  TaalSchema,
   ToestelsoortSchema,
   type Adres,
   type Afwijking,
@@ -74,5 +75,6 @@ export {
   type Ruimte,
   type SituatiePagina,
   type Stroomtype,
+  type Taal,
   type Toestelsoort,
 } from "./schema";

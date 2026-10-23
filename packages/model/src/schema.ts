@@ -157,6 +157,9 @@ export const SituatiePaginaSchema = z.strictObject({
   ),
 });
 
+/** De talen van een dossier; dezelfde drie als `Taal` in @elentrik/arei en @elentrik/render. */
+export const TaalSchema = z.enum(["nl", "fr", "en"]);
+
 export const InstallatieDocumentSchema = z.strictObject({
   id: z.string(),
   schemaVersion: z.literal(SCHEMA_VERSIE),
@@ -169,6 +172,8 @@ export const InstallatieDocumentSchema = z.strictObject({
     ean: z.string().optional(),
     datum: z.string(),
     versieLabel: z.string().optional(),
+    /** De taal van het dossier (print en export). Afwezig betekent `nl`. */
+    dossierTaal: TaalSchema.optional(),
   }),
   voeding: z.strictObject({ stroomtype: StroomtypeSchema }),
   rootId: Id,
@@ -177,6 +182,7 @@ export const InstallatieDocumentSchema = z.strictObject({
   afwijkingen: z.array(AfwijkingSchema),
 });
 
+export type Taal = z.infer<typeof TaalSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type Node = z.infer<typeof NodeSchema>;
 export type NodeType = Node["type"];

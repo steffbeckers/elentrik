@@ -5,11 +5,13 @@ import {
   AdresSchema,
   AfwijkingSchema,
   StroomtypeSchema,
+  TaalSchema,
   type Adres,
   type Afwijking,
   type InstallatieDocument,
   type NodeId,
   type Stroomtype,
+  type Taal,
 } from "./schema";
 
 /**
@@ -61,6 +63,8 @@ export type ProjectWijziging = {
   werfadres?: Adres;
   ean?: string;
   datum?: string;
+  /** De taal van het dossier; `nl` op een document zonder taal verandert niets. */
+  dossierTaal?: Taal;
 };
 
 const TekstSchema = z.string();
@@ -75,7 +79,7 @@ function valideer<T>(schema: z.ZodType<T>, waarde: unknown): T {
 
 /**
  * Wijzigt de projectgegevens: klantnaam, klantadres, werfadres, EAN en datum
- * (`meta`) en het stroomtype (`voeding.stroomtype`). Alles in een aanroep is een
+ * (`meta`), de dossiertaal (`meta.dossierTaal`) en het stroomtype (`voeding.stroomtype`). Alles in een aanroep is een
  * resultaat, dus een undo-stap.
  */
 export function wijzigProject(
@@ -96,6 +100,11 @@ export function wijzigProject(
     wijziging.werfadres === undefined ? undefined : valideer(AdresSchema, wijziging.werfadres);
   const ean = wijziging.ean === undefined ? undefined : valideer(TekstSchema, wijziging.ean);
   const datum = wijziging.datum === undefined ? undefined : valideer(TekstSchema, wijziging.datum);
+  // Afwezig betekent nl: een taal die al geldt, valt weg.
+  const dossierTaal =
+    wijziging.dossierTaal === undefined ? undefined : valideer(TaalSchema, wijziging.dossierTaal);
+  const nieuweTaal =
+    dossierTaal !== undefined && dossierTaal !== (doc.meta.dossierTaal ?? "nl") ? dossierTaal : undefined;
 
   if (
     klantNaam === undefined &&
@@ -103,7 +112,8 @@ export function wijzigProject(
     klantAdres === undefined &&
     werfadres === undefined &&
     ean === undefined &&
-    datum === undefined
+    datum === undefined &&
+    nieuweTaal === undefined
   ) {
     return { doc, patches: [], inversePatches: [] };
   }
@@ -116,5 +126,6 @@ export function wijzigProject(
     if (werfadres !== undefined) draft.meta.werfadres = werfadres;
     if (ean !== undefined) draft.meta.ean = ean;
     if (datum !== undefined) draft.meta.datum = datum;
+    if (nieuweTaal !== undefined) draft.meta.dossierTaal = nieuweTaal;
   });
 }

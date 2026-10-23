@@ -431,6 +431,14 @@ const TABEL: Record<string, Rij> = {
     lid: 200,
     eigenaar: 200,
   },
+  "PUT /api/mij/taal": {
+    // Alleen een sessie, geen organisatie: ook zonder organisatie lukt het. Elke actor zet zijn eigen taal.
+    verzoek: async () => ({ methode: "PUT", pad: "/api/mij/taal", json: { taal: "nl" } }),
+    zonderOrganisatie: 200,
+    andereOrganisatie: 200,
+    lid: 200,
+    eigenaar: 200,
+  },
   "GET /api/abonnement": {
     // Het overzicht van de actieve organisatie: B ziet zijn eigen overzicht, nooit dat van A.
     verzoek: async () => ({ methode: "GET", pad: "/api/abonnement" }),

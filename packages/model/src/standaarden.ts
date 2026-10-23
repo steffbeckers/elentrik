@@ -1,7 +1,7 @@
 import { DocumentFout } from "./fouten";
 import { nieuwDocument } from "./document";
 import { voegToe, type NodeInvoer } from "./operaties";
-import type { InstallatieDocument, Polen, Stroomtype } from "./schema";
+import type { InstallatieDocument, Polen, Stroomtype, Taal } from "./schema";
 import type { Sjabloon, SjabloonNode } from "./sjablonen";
 
 /** De onderdelen in het paneel "Onderdelen" van de editor. */
@@ -66,6 +66,7 @@ export function nieuwProjectDocument(opties: {
   klantNaam: string;
   stroomtype: Stroomtype;
   datum?: string;
+  dossierTaal?: Taal;
 }): InstallatieDocument {
   const basis = nieuwDocument(opties);
   const tellerId = basis.nodes[basis.rootId]!.kinderen[0]!;

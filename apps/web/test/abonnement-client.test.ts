@@ -190,7 +190,7 @@ describe("de API", () => {
 
 describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
   const MIJ: Mij = {
-    gebruiker: { id: "u1", naam: "An", email: "an@example.test", proefGebruikt: true },
+    gebruiker: { id: "u1", naam: "An", email: "an@example.test", proefGebruikt: true, taal: "nl" as const },
     organisaties: [
       {
         id: "o1",

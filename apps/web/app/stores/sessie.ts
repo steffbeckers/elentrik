@@ -12,6 +12,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import type { Toegang } from "../../shared/abonnement";
+import type { Taal } from "../../shared/taal";
 import type { SessieInfo } from "../sessie/bestemming";
 import { foutStatus } from "../sessie/fouten";
 
@@ -26,7 +27,7 @@ export type Organisatie = { id: string; naam: string; rol: Rol; toegang: Toegang
 
 /** Het antwoord van GET /api/mij. */
 export type Mij = {
-  gebruiker: Gebruiker & { proefGebruikt: boolean };
+  gebruiker: Gebruiker & { proefGebruikt: boolean; taal: Taal };
   organisaties: Organisatie[];
   actieveOrganisatieId: string | null;
   /** Staan abonnementen aan? Uit is "zoals vóór plan 7". */

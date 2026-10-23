@@ -122,6 +122,12 @@ export const user = pgTable("user", {
    * proefperiode (spec 4.1). Alleen de server zet dit (`input: false` in Better Auth).
    */
   proefGebruikt: boolean("proef_gebruikt").default(false).notNull(),
+  /**
+   * De taal van de interface en van de mails aan deze gebruiker: `nl`, `fr` of `en`. Bij de
+   * registratie uit de header `x-elentrik-taal`; daarna alleen via PUT /api/mij/taal (`input: false`
+   * in Better Auth).
+   */
+  taal: text("taal").default("nl").notNull(),
 });
 
 export const session = pgTable(

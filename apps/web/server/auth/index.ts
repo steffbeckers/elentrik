@@ -31,6 +31,7 @@ import {
   LAATSTE_EIGENAAR_BOODSCHAP,
   MAX_NAAMLENGTE,
 } from "../organisaties/regels";
+import { isTaal, TAAL_HEADER } from "../../shared/taal";
 import { basisUrl, vertrouwdeOorsprongen } from "./oorsprong";
 
 const PLAATSHOUDER = "<vervang";
@@ -99,6 +100,8 @@ function verstuur(soort: MailSoort, mail: Mail, aan: string): void {
  *   al bij de registratie; dit weigert het ook uitdrukkelijk via /update-user).
  * - `proefGebruikt` nooit, om dezelfde reden: de server zet het bij het aanmaken van het eerste
  *   eigen bedrijf.
+ * - `taal` nooit: de registratie neemt ze uit de header `x-elentrik-taal` (zie `databaseHooks`),
+ *   het wijzigen gaat via PUT /api/mij/taal.
  */
 function alleenBijRegistratie(path: string, body: unknown): void {
   if (!body || typeof body !== "object") return;
@@ -107,6 +110,9 @@ function alleenBijRegistratie(path: string, body: unknown): void {
   }
   if ((path === "/update-user" || path === "/sign-up/email") && "proefGebruikt" in body) {
     throw new APIError("BAD_REQUEST", { message: "proefGebruikt kan niet gezet worden." });
+  }
+  if ((path === "/update-user" || path === "/sign-up/email") && "taal" in body) {
+    throw new APIError("BAD_REQUEST", { message: "taal kan niet gezet worden." });
   }
   if (!("wachtendeBedrijfsnaam" in body)) return;
   if (path === "/update-user") {
@@ -279,6 +285,19 @@ export function maakAuth(db: Db = gebruikDb()) {
       }),
     },
     databaseHooks: {
+      user: {
+        create: {
+          // De taal van de interface bij de registratie: de header `x-elentrik-taal` als die een
+          // geldige taal is, anders nl. De header (en niet de body) omdat `taal` `input: false` is:
+          // een client kan ze zo niet vrij zetten, en deze hook ziet elk pad waarlangs een gebruiker
+          // ontstaat. Het verzoek zit in de context van het endpoint (`ctx.headers`, of bij een
+          // echt HTTP-verzoek `ctx.request`).
+          before: async (nieuw, ctx) => {
+            const waarde = ctx?.headers?.get(TAAL_HEADER) ?? ctx?.request?.headers.get(TAAL_HEADER) ?? null;
+            return { data: { ...nieuw, taal: isTaal(waarde) ? waarde : "nl" } };
+          },
+        },
+      },
       session: {
         create: {
           // Na elke nieuwe sessie (dus elke aanmelding), nadat ze vastgelegd is: bij de eerste
@@ -297,6 +316,9 @@ export function maakAuth(db: Db = gebruikDb()) {
         laatsteOrganisatieId: { type: "string", required: false, input: false },
         // Waar zodra de gebruiker zijn eerste eigen bedrijf aanmaakte (spec 4.1); alleen de server zet het.
         proefGebruikt: { type: "boolean", required: false, defaultValue: false, input: false },
+        // De taal van de interface (nl, fr of en); de registratie zet ze uit de header, daarna alleen
+        // PUT /api/mij/taal.
+        taal: { type: "string", required: false, defaultValue: "nl", input: false },
       },
     },
     session: {

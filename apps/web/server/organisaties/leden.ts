@@ -14,6 +14,7 @@ import { and, asc, eq, gt } from "drizzle-orm";
 import {
   appendResponseHeader,
   createError,
+  getRequestHeader,
   getRequestIP,
   getRouterParam,
   setResponseHeader,
@@ -25,6 +26,7 @@ import { z } from "zod";
 import { gebruikAbonnementen } from "../abonnementen/config";
 import { toegangVoor } from "../abonnementen/repo";
 import type { Toegang } from "../../shared/abonnement";
+import { isTaal, TAAL_HEADER, type Taal } from "../../shared/taal";
 import { gebruikAuth } from "../auth";
 import { gebruikDb } from "../db";
 import { account, invitation, member, organization, session, user } from "../db/schema";
@@ -150,7 +152,7 @@ async function vindLid(organisatieId: string, id: string): Promise<Lid> {
 // --- De gebruiker en zijn organisaties -------------------------------------------------------
 
 export type Mij = {
-  gebruiker: { id: string; naam: string; email: string; proefGebruikt: boolean };
+  gebruiker: { id: string; naam: string; email: string; proefGebruikt: boolean; taal: Taal };
   organisaties: { id: string; naam: string; rol: Rol; toegang: Toegang }[];
   actieveOrganisatieId: string | null;
   /** Staan abonnementen aan (Stripe is ingesteld)? Uit is "zoals vóór plan 7": geen proef, geen hints. */
@@ -180,11 +182,17 @@ export async function mij(event: H3Event): Promise<Mij> {
       .where(and(eq(session.id, sessie.sessieId), eq(session.activeOrganizationId, actief)));
     actief = await kiesActieveOrganisatie(sessie.sessieId, sessie.gebruiker.id);
   }
-  const [eigen] = await db.select({ proefGebruikt: user.proefGebruikt }).from(user).where(eq(user.id, sessie.gebruiker.id));
+  const [eigen] = await db
+    .select({ proefGebruikt: user.proefGebruikt, taal: user.taal })
+    .from(user).where(eq(user.id, sessie.gebruiker.id));
   const { config } = gebruikAbonnementen();
   const toegang = await Promise.all(rijen.map((r) => toegangVoor(db, r.id, config)));
   return {
-    gebruiker: { ...sessie.gebruiker, proefGebruikt: eigen?.proefGebruikt ?? false },
+    gebruiker: {
+      ...sessie.gebruiker,
+      proefGebruikt: eigen?.proefGebruikt ?? false,
+      taal: isTaal(eigen?.taal) ? eigen.taal : "nl",
+    },
     organisaties: rijen.map((r, i) => ({ id: r.id, naam: r.naam, rol: naarRol(r.rol), toegang: toegang[i]! })),
     actieveOrganisatieId: actief,
     abonnementenIngeschakeld: config.ingeschakeld,
@@ -477,6 +485,9 @@ export async function registreerViaUitnodiging(event: H3Event): Promise<{ organi
     throw fout(429, "Te veel pogingen; probeer het straks opnieuw");
   }
   const { naam, wachtwoord } = await leesBody(event, RegistratieSchema);
+  // Zoals bij de registratie van Better Auth: de taal van de interface, anders nl.
+  const taalHeader = getRequestHeader(event, TAAL_HEADER);
+  const taal = isTaal(taalHeader) ? taalHeader : "nl";
   const db = gebruikDb();
   const id = await uitnodigingVanToken(db, getRouterParam(event, "token") ?? "");
   if (!id) throw nietMeerGeldig();
@@ -500,6 +511,7 @@ export async function registreerViaUitnodiging(event: H3Event): Promise<{ organi
         name: naam,
         email,
         emailVerified: true,
+        taal,
         // De organisatie van de uitnodiging wordt actief, en dus de laatst gekozen.
         laatsteOrganisatieId: rij.organizationId,
         createdAt: nu,
