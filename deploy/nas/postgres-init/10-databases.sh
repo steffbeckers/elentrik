@@ -1,7 +1,7 @@
 #!/bin/sh
 # Maakt de databases en rollen van de apps aan. Draait alleen bij de eerste initialisatie van een lege
 # datamap (zo werkt /docker-entrypoint-initdb.d); voor een Postgres die al draait staat dezelfde SQL in
-# docs/online.md.
+# docs/online.md, sectie 11 ("Staging"), stap 2.
 #
 # De bootstrap-superuser van Postgres is `elentrik_beheer` (POSTGRES_USER in compose.yaml), alleen voor
 # beheer; geen enkele app of back-up gebruikt hem. Daarnaast:

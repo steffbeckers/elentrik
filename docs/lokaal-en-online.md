@@ -31,6 +31,10 @@ bedrijfsgegevens. Dat gebeurt één keer.
 problemen oplossen). Hieronder staan de achtergronden die voor elke online opstelling gelden. Het
 Docker-image en `deploy/nas/compose.yaml` zetten de meeste van deze waarden zelf.
 
+**Branchstroom:** werk op `develop` (de standaardbranch) → PR → `staging` → PR → `main`. Na het mergen in
+`staging` draai je op de NAS `./bijwerken.sh staging`, na het mergen in `main` `./bijwerken.sh productie`
+(met `sudo`, zie sectie 11 van [`docs/online.md`](online.md)).
+
 - **Adressen:** zet `BETTER_AUTH_URL` op de publieke URL (op de NAS `https://elentrik.app`).
   `NUXT_AUTH_BASIS_URL` is het adres waarmee de server zichzelf aanspreekt tijdens het renderen van
   pagina's (SSR): binnen de container is dat `http://127.0.0.1:3000`, dus niet het publieke adres. De
