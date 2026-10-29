@@ -178,6 +178,60 @@ describe("graph-verzender", () => {
   });
 });
 
+describe("graph-verzender: time-out", () => {
+  const timeout = () => new DOMException("The operation was aborted due to timeout", "TimeoutError");
+
+  test("beide aanvragen krijgen een AbortSignal", async () => {
+    const { fn, aanroepen } = nepFetch(tokenAntwoord(), verstuurd());
+    await maakGraphVerzender(config, fn).verstuur(mail);
+    for (const a of aanroepen) expect(a.init.signal, a.url).toBeInstanceOf(AbortSignal);
+  });
+
+  test("een time-out op het token geeft een fout zonder geheim of token", async () => {
+    const fn = vi.fn(async () => {
+      throw timeout();
+    }) as unknown as typeof fetch;
+    const fout = await fouten(maakGraphVerzender(config, fn).verstuur(mail));
+    expect(fout).toBeInstanceOf(Error);
+    expect(fout!.message).toMatch(/Graph-token aanvragen/);
+    expect(fout!.message).toMatch(/time-out/i);
+    expect(fout!.message).not.toContain(GEHEIM);
+    expect(fout!.stack ?? "").not.toContain(GEHEIM);
+  });
+
+  test("een time-out op sendMail geeft een fout zonder geheim of token, en het token blijft bruikbaar", async () => {
+    let n = 0;
+    const fn = vi.fn(async (url: string | URL | Request) => {
+      n++;
+      if (n === 1) return tokenAntwoord();
+      if (n === 2) throw timeout();
+      return String(url) === TOKEN_URL ? tokenAntwoord() : verstuurd();
+    }) as unknown as typeof fetch;
+    const v = maakGraphVerzender(config, fn);
+    const fout = await fouten(v.verstuur(mail));
+    expect(fout!.message).toMatch(/Graph-mail versturen/);
+    expect(fout!.message).toMatch(/time-out/i);
+    expect(fout!.message).not.toContain(GEHEIM);
+    expect(fout!.message).not.toContain(TOKEN);
+    await v.verstuur(mail);
+  });
+
+  test("een afgebroken verzoek (AbortError) wordt ook als time-out gemeld", async () => {
+    const fn = vi.fn(async () => {
+      throw new DOMException("aborted", "AbortError");
+    }) as unknown as typeof fetch;
+    const fout = await fouten(maakGraphVerzender(config, fn).verstuur(mail));
+    expect(fout!.message).toMatch(/time-out/i);
+  });
+
+  test("een andere netwerkfout blijft boven", async () => {
+    const fn = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    }) as unknown as typeof fetch;
+    await expect(maakGraphVerzender(config, fn).verstuur(mail)).rejects.toThrow(/fetch failed/);
+  });
+});
+
 describe("gebruikVerzender", () => {
   beforeEach(() => {
     zetVerzender(undefined);

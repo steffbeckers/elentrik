@@ -187,14 +187,17 @@ Een gedeelde mailbox heeft geen eigen licentie nodig. Dit adres wordt `MAIL_AFZE
    nieuw geheim aanmaken, `GRAPH_CLIENT_GEHEIM` in `.env` vervangen en `docker compose up -d` draaien; het
    oude geheim kun je daarna verwijderen.
 5. **API-machtigingen**, **Een machtiging toevoegen**, **Microsoft Graph**, **Toepassingsmachtigingen**
-   (Application permissions, dus niet "Gedelegeerd"), zoek `Mail.Send` en voeg toe.
+   (Application permissions, dus niet "Gedelegeerd"), zoek `Mail.Send` en voeg toe. Kies je straks (Stap 5) Weg A,
+   sla dan deze en de volgende stap over: de Exchange-roltoewijzing geeft de machtiging, en een tenantbreed verleende
+   `Mail.Send` zou die beperking tenietdoen.
 6. Klik **Beheerderstoestemming verlenen voor <jouw tenant>** (Grant admin consent) en bevestig. De status
-   moet "Verleend" tonen.
+   moet "Verleend" tonen. Alleen nodig voor Weg B.
 
 ### Stap 5. Beperken tot die ene mailbox
 
-Op dit punt mag de app, met `Mail.Send` als toepassingsmachtiging, **in naam van elke mailbox in de tenant**
-mailen. Beperk dat tot `noreply@elentrik.app`. Microsoft beschrijft hiervoor twee wegen; kies de eerste.
+Met `Mail.Send` als tenantbreed verleende toepassingsmachtiging (stap 4.5 en 4.6) mag de app **in naam van elke
+mailbox in de tenant** mailen. Beperk dat tot `noreply@elentrik.app`. Microsoft beschrijft hiervoor twee wegen;
+kies de eerste.
 
 **Weg A: RBAC for Applications in Exchange Online (de nieuwere weg).** Controleer de exacte cmdlets en
 parameters altijd tegen Microsoft Learn ("Role Based Access Control for Applications in Exchange Online"),
@@ -212,17 +215,16 @@ New-ManagementScope -Name "Elentrik-noreply" -RecipientRestrictionFilter "Primar
 # 3. De rol "Application Mail.Send" aan de app geven, beperkt tot dat bereik.
 New-ManagementRoleAssignment -App <client-id-of-service-principal-id> -Role "Application Mail.Send" -CustomResourceScope "Elentrik-noreply"
 
-# 4. Controleren (de cmdlet-naam hoort bij RBAC for Applications; controleer hem in de Microsoft-documentatie).
+# 4. Controleren wat de roltoewijzing toelaat (de cmdlet negeert Entra-machtigingen en bewijst de beperking dus niet).
 Test-ServicePrincipalAuthorization -Identity <client-id> -Resource noreply@elentrik.app
 ```
 
-Lees in de Microsoft-documentatie na hoe een breed verleende Entra-toestemming (stap 4.6) zich verhoudt tot
-de Exchange-roltoewijzing. Een `Mail.Send` die tenantbreed verleend blijft, kan de beperking tenietdoen. Dan
-trek je die Entra-toestemming in (API-machtigingen, de machtiging verwijderen) en laat je alleen de
-Exchange-roltoewijzing werken. Of dat nodig is, bepaalt de test hieronder.
+Entra-machtigingen en Exchange-roltoewijzingen tellen samen op: een tenantbreed verleende `Mail.Send`
+(stap 4.5 en 4.6) laat de beperking van Weg A dus niet werken. Heb je ze al gegeven, trek ze dan in (API-machtigingen,
+de machtiging verwijderen) en laat alleen de Exchange-roltoewijzing werken.
 
-**Weg B: de oudere application access policy** (werkt mét de Entra-toestemming; Microsoft raadt nieuwe
-opzetten af). Maak een e-mailingeschakelde beveiligingsgroep met alleen `noreply@elentrik.app`, en dan:
+**Weg B: de oudere application access policy** (beperkt de Entra-toestemming van stap 4.5 en 4.6; Microsoft raadt
+nieuwe opzetten af). Maak een e-mailingeschakelde beveiligingsgroep met alleen `noreply@elentrik.app`, en dan:
 
 ```powershell
 New-ApplicationAccessPolicy -AppId <client-id> -PolicyScopeGroupId <groep-e-mailadres> -AccessRight RestrictAccess -Description "Elentrik mag alleen als noreply mailen"
@@ -233,9 +235,9 @@ Een wijziging kan tot ongeveer een uur duren voor ze werkt.
 
 **Test de beperking altijd**, na de eerste start van de app (sectie 3, 4): een mail vanaf `noreply@elentrik.app`
 moet lukken (registreren op `https://elentrik.app` en de bevestigingsmail ontvangen). Een verzoek namens een
-andere mailbox moet falen met een 403 `ErrorAccessDenied`; probeer dat met een tijdelijke, losse proef
-(bijvoorbeeld Graph Explorer, of een tweede token-aanvraag met een ander afzenderadres) en verwijder die
-proef daarna.
+andere mailbox moet falen met een 403 `ErrorAccessDenied`; probeer dat met een tijdelijke, losse proef met
+een token van de app zelf (een tweede token-aanvraag met een ander afzenderadres; Graph Explorer toetst
+gedelegeerde rechten van jezelf, niet die van de app) en verwijder die proef daarna.
 
 ### Waar vind ik de vier waarden?
 
@@ -706,8 +708,8 @@ status 403, code ErrorAccessDenied". Meestal:
 - **Token aanvragen mislukt (400 of 401):** `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID` of `GRAPH_CLIENT_GEHEIM` klopt
   niet, of **het geheim is verlopen**. Maak in Entra een nieuw geheim aan (sectie 2, stap 4) en vervang het
   in `.env`. Let op dat je de kolom "Waarde" kopieerde en niet "Geheime ID".
-- **Versturen mislukt met 403 `ErrorAccessDenied`:** de beheerderstoestemming ontbreekt (sectie 2, stap 4.6) of de
-  beperking tot de mailbox (sectie 2, stap 5) sluit `MAIL_AFZENDER` uit. Een wijziging kan tot ongeveer een uur
+- **Versturen mislukt met 403 `ErrorAccessDenied`:** de beheerderstoestemming ontbreekt bij Weg B (sectie 2, stap 4.6),
+  of de beperking tot de mailbox (sectie 2, stap 5) sluit `MAIL_AFZENDER` uit. Een wijziging kan tot ongeveer een uur
   duren.
 - **Versturen mislukt met 404 of een fout over de mailbox:** `MAIL_AFZENDER` bestaat niet, of is geen
   adres van de mailbox in de tenant.

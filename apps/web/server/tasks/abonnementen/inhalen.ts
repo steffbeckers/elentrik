@@ -1,6 +1,6 @@
 // De Nitro-taak `abonnementen:inhalen`, elk uur om :00 (nuxt.config.ts, nitro.scheduledTasks). Ze
-// doet niets zolang abonnementen uit staan (geen STRIPE_GEHEIME_SLEUTEL), ook onder `nuxt dev`, en
-// niets met ELENTRIK_GEPLANDE_TAKEN=uit (de e2e-server).
+// doet niets zolang abonnementen uit staan (geen STRIPE_GEHEIME_SLEUTEL), niets buiten productie
+// (tenzij ELENTRIK_GEPLANDE_TAKEN=aan) en niets met ELENTRIK_GEPLANDE_TAKEN=uit.
 // Vitest start Nitro niet en de planner van Nitro slaat zichzelf over in een testomgeving.
 //
 // `defineTask` komt uit de Nitro-auto-imports; de logica staat in server/abonnementen/inhalen.ts.

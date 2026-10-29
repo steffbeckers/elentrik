@@ -7,6 +7,9 @@ import type { Mail, Verzender } from "./verzend";
 
 export type GraphConfig = { tenantId: string; clientId: string; clientGeheim: string; afzender: string };
 
+/** Een aanvraag bij Microsoft die langer duurt, wordt afgebroken. */
+const TIMEOUT_MS = 30_000;
+
 /** Het token wordt niet meer hergebruikt vanaf 5 minuten voor het verloopt. */
 const MARGE_MS = 5 * 60 * 1000;
 
@@ -30,21 +33,35 @@ async function graphFout(wat: string, antwoord: Response): Promise<Error> {
   return new Error(`${wat} mislukt: status ${antwoord.status}${code ? `, code ${code}` : ""}`);
 }
 
+/** Een time-out of afbreking wordt een eigen fout; de oorspronkelijke fout bevat geen geheimen, maar blijft weg. */
+async function metTimeout(wat: string, aanvraag: () => Promise<Response>): Promise<Response> {
+  try {
+    return await aanvraag();
+  } catch (fout) {
+    const naam = fout instanceof Error ? fout.name : "";
+    if (naam === "TimeoutError" || naam === "AbortError") throw new Error(`${wat} mislukt: time-out na ${TIMEOUT_MS / 1000} seconden`);
+    throw fout;
+  }
+}
+
 export function maakGraphVerzender(config: GraphConfig, fetchFn: typeof fetch = fetch, nu: () => number = Date.now): Verzender {
   let token: Token | undefined;
   let lopend: Promise<Token> | undefined;
 
   async function haalToken(): Promise<Token> {
-    const antwoord = await fetchFn(`https://login.microsoftonline.com/${encodeURIComponent(config.tenantId)}/oauth2/v2.0/token`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: config.clientId,
-        client_secret: config.clientGeheim,
-        grant_type: "client_credentials",
-        scope: "https://graph.microsoft.com/.default",
-      }).toString(),
-    });
+    const antwoord = await metTimeout("Graph-token aanvragen", () =>
+      fetchFn(`https://login.microsoftonline.com/${encodeURIComponent(config.tenantId)}/oauth2/v2.0/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: config.clientId,
+          client_secret: config.clientGeheim,
+          grant_type: "client_credentials",
+          scope: "https://graph.microsoft.com/.default",
+        }).toString(),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      }),
+    );
     if (!antwoord.ok) throw await graphFout("Graph-token aanvragen", antwoord);
     const body = (await antwoord.json()) as { access_token?: unknown; expires_in?: unknown };
     if (typeof body.access_token !== "string" || !body.access_token) throw new Error("Graph-token aanvragen mislukt: geen token in het antwoord");
@@ -88,11 +105,14 @@ export function maakGraphVerzender(config: GraphConfig, fetchFn: typeof fetch = 
 
       for (let poging = 1; ; poging++) {
         const gebruikt = await geefToken();
-        const antwoord = await fetchFn(url, {
-          method: "POST",
-          headers: { authorization: `Bearer ${gebruikt.waarde}`, "content-type": "application/json" },
-          body,
-        });
+        const antwoord = await metTimeout("Graph-mail versturen", () =>
+          fetchFn(url, {
+            method: "POST",
+            headers: { authorization: `Bearer ${gebruikt.waarde}`, "content-type": "application/json" },
+            body,
+            signal: AbortSignal.timeout(TIMEOUT_MS),
+          }),
+        );
         if (antwoord.ok) return; // 202 Accepted
         if (antwoord.status === 401 && poging === 1) {
           // Het token is geweigerd: vergeten (tenzij een ander al een nieuw heeft) en één keer opnieuw.

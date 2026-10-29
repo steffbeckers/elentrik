@@ -23,10 +23,27 @@ const VERPLICHT = [
 
 const GRAPH = ["GRAPH_TENANT_ID", "GRAPH_CLIENT_ID", "GRAPH_CLIENT_GEHEIM", "MAIL_AFZENDER"] as const;
 
+const SMTP = ["SMTP_HOST", "SMTP_VAN"] as const;
+
 const STRIPE = ["STRIPE_WEBHOOK_GEHEIM", "STRIPE_PRIJS_MAAND", "STRIPE_PRIJS_JAAR"] as const;
 
 function gezet(env: Env, naam: string): boolean {
   return !!env[naam]?.trim();
+}
+
+/** Nog de plaatshouder uit .env.voorbeeld (`<...>`), zoals `leesGeheim` die ook weigert. */
+function isPlaatshouder(env: Env, naam: string): boolean {
+  return !!env[naam]?.trim().startsWith("<");
+}
+
+/** Een geldig http(s)-adres. */
+function isHttpUrl(waarde: string): boolean {
+  try {
+    const protocol = new URL(waarde).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 /** De lijst met problemen in de configuratie: alleen namen van variabelen, geen waarden. */
@@ -36,13 +53,26 @@ export function controleerConfiguratie(env: Env): string[] {
     if (!problemen.includes(naam)) problemen.push(naam);
   };
 
+  const productie = env.NODE_ENV === "production";
+
   for (const naam of VERPLICHT) if (!gezet(env, naam)) meld(naam);
+
+  // Gezet maar geen adres dat de app kan gebruiken (een plaatshouder, een adres zonder http(s)://).
+  const url = env.BETTER_AUTH_URL?.trim();
+  if (url && !isHttpUrl(url)) meld("BETTER_AUTH_URL");
+
+  // Het databasewachtwoord staat in compose in PGPASSWORD; de plaatshouder uit .env.voorbeeld is geen wachtwoord.
+  if (productie && isPlaatshouder(env, "PGPASSWORD")) meld("PGPASSWORD");
 
   const verzender = env.MAIL_VERZENDER?.trim();
   if (verzender === "graph") {
-    for (const naam of GRAPH) if (!gezet(env, naam)) meld(naam);
+    for (const naam of GRAPH) if (!gezet(env, naam) || isPlaatshouder(env, naam)) meld(naam);
   } else if (verzender && verzender !== "smtp") {
     meld("MAIL_VERZENDER");
+  } else if (productie) {
+    // Zonder MAIL_VERZENDER of met smtp valt de code terug op Mailpit (127.0.0.1:1025): in productie
+    // zou elke mail stilletjes verloren gaan. SMTP_POORT, SMTP_GEBRUIKER en SMTP_WACHTWOORD blijven optioneel.
+    for (const naam of SMTP) if (!gezet(env, naam)) meld(naam);
   }
 
   if (gezet(env, "STRIPE_GEHEIME_SLEUTEL")) {

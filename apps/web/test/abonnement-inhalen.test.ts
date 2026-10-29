@@ -385,11 +385,21 @@ describe("het lock", () => {
 });
 
 describe("ELENTRIK_GEPLANDE_TAKEN", () => {
-  test("alleen 'uit' zet de geplande taken uit", () => {
-    expect(geplandeTakenAan({})).toBe(true);
-    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: "" })).toBe(true);
-    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: "aan" })).toBe(true);
-    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: "uit" })).toBe(false);
-    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: " UIT " })).toBe(false);
+  test("in productie standaard aan; 'uit' zet ze uit", () => {
+    expect(geplandeTakenAan({ NODE_ENV: "production" })).toBe(true);
+    expect(geplandeTakenAan({ NODE_ENV: "production", ELENTRIK_GEPLANDE_TAKEN: "" })).toBe(true);
+    expect(geplandeTakenAan({ NODE_ENV: "production", ELENTRIK_GEPLANDE_TAKEN: "aan" })).toBe(true);
+    expect(geplandeTakenAan({ NODE_ENV: "production", ELENTRIK_GEPLANDE_TAKEN: "uit" })).toBe(false);
+    expect(geplandeTakenAan({ NODE_ENV: "production", ELENTRIK_GEPLANDE_TAKEN: " UIT " })).toBe(false);
+  });
+
+  test("buiten productie alleen met 'aan'", () => {
+    for (const NODE_ENV of [undefined, "development", "test"]) {
+      expect(geplandeTakenAan({ NODE_ENV }), String(NODE_ENV)).toBe(false);
+      expect(geplandeTakenAan({ NODE_ENV, ELENTRIK_GEPLANDE_TAKEN: "" }), String(NODE_ENV)).toBe(false);
+      expect(geplandeTakenAan({ NODE_ENV, ELENTRIK_GEPLANDE_TAKEN: "uit" }), String(NODE_ENV)).toBe(false);
+      expect(geplandeTakenAan({ NODE_ENV, ELENTRIK_GEPLANDE_TAKEN: "aan" }), String(NODE_ENV)).toBe(true);
+      expect(geplandeTakenAan({ NODE_ENV, ELENTRIK_GEPLANDE_TAKEN: " AAN " }), String(NODE_ENV)).toBe(true);
+    }
   });
 });

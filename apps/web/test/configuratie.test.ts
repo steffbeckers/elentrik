@@ -68,6 +68,78 @@ describe("controleerConfiguratie", () => {
     expect(controleerConfiguratie({ ...VOLLEDIG, MAIL_VERZENDER: "post" })).toEqual(["MAIL_VERZENDER"]);
   });
 
+  describe("in productie", () => {
+    const PROD: Record<string, string> = {
+      ...VOLLEDIG,
+      NODE_ENV: "production",
+      SMTP_HOST: "smtp.example.be",
+      SMTP_VAN: "Elentrik <noreply@elentrik.example.be>",
+    };
+
+    test("smtp (ook als MAIL_VERZENDER leeg is) vraagt SMTP_HOST en SMTP_VAN", () => {
+      expect(controleerConfiguratie(PROD)).toEqual([]);
+      expect(controleerConfiguratie({ ...PROD, MAIL_VERZENDER: "smtp" })).toEqual([]);
+      for (const verzender of [undefined, "", "smtp"]) {
+        for (const naam of ["SMTP_HOST", "SMTP_VAN"]) {
+          const env: Record<string, string | undefined> = { ...PROD, MAIL_VERZENDER: verzender };
+          delete env[naam];
+          expect(controleerConfiguratie(env), `${verzender} zonder ${naam}`).toEqual([naam]);
+          expect(controleerConfiguratie({ ...env, [naam]: "  " }), `${verzender} met blanco ${naam}`).toEqual([naam]);
+        }
+      }
+    });
+
+    test("graph vraagt geen SMTP-variabelen", () => {
+      const graph = {
+        ...VOLLEDIG,
+        NODE_ENV: "production",
+        MAIL_VERZENDER: "graph",
+        GRAPH_TENANT_ID: "t",
+        GRAPH_CLIENT_ID: "c",
+        GRAPH_CLIENT_GEHEIM: GEHEIM,
+        MAIL_AFZENDER: "noreply@elentrik.example.be",
+      };
+      expect(controleerConfiguratie(graph)).toEqual([]);
+    });
+
+    test("een onbekende MAIL_VERZENDER meldt alleen die naam", () => {
+      expect(controleerConfiguratie({ ...PROD, MAIL_VERZENDER: "post" })).toEqual(["MAIL_VERZENDER"]);
+    });
+
+    test("PGPASSWORD als plaatshouder (<...>): die naam; een echte waarde of niet gezet is goed", () => {
+      expect(controleerConfiguratie({ ...PROD, PGPASSWORD: "<vervang-door-een-lange-willekeurige-waarde>" })).toEqual(["PGPASSWORD"]);
+      expect(controleerConfiguratie({ ...PROD, PGPASSWORD: "rook/test#pw?x@y" })).toEqual([]);
+      expect(controleerConfiguratie(PROD)).toEqual([]);
+    });
+  });
+
+  test("buiten productie blijft SMTP onbeperkt (Mailpit-standaard)", () => {
+    expect(controleerConfiguratie({ ...VOLLEDIG, NODE_ENV: "development" })).toEqual([]);
+    expect(controleerConfiguratie({ ...VOLLEDIG, MAIL_VERZENDER: "smtp" })).toEqual([]);
+  });
+
+  test("plaatshouders die met < beginnen tellen als niet ingevuld (graph)", () => {
+    const graph = {
+      ...VOLLEDIG,
+      MAIL_VERZENDER: "graph",
+      GRAPH_TENANT_ID: "t",
+      GRAPH_CLIENT_ID: "c",
+      GRAPH_CLIENT_GEHEIM: GEHEIM,
+      MAIL_AFZENDER: "noreply@elentrik.example.be",
+    };
+    for (const naam of ["GRAPH_TENANT_ID", "GRAPH_CLIENT_ID", "GRAPH_CLIENT_GEHEIM", "MAIL_AFZENDER"]) {
+      expect(controleerConfiguratie({ ...graph, [naam]: "<tenant-id>" }), naam).toEqual([naam]);
+      expect(controleerConfiguratie({ ...graph, [naam]: "  <client-geheim>" }), naam).toEqual([naam]);
+    }
+  });
+
+  test("BETTER_AUTH_URL moet een http(s)-adres zijn", () => {
+    expect(controleerConfiguratie({ ...VOLLEDIG, BETTER_AUTH_URL: "http://127.0.0.1:3399" })).toEqual([]);
+    for (const slecht of ["elentrik.app", "<jouw-adres>", "ftp://elentrik.app", "https://", "onzin"]) {
+      expect(controleerConfiguratie({ ...VOLLEDIG, BETTER_AUTH_URL: slecht }), slecht).toEqual(["BETTER_AUTH_URL"]);
+    }
+  });
+
   test("een Stripe-sleutel vraagt beide prijzen en het webhookgeheim", () => {
     expect(controleerConfiguratie(STRIPE)).toEqual([]);
     for (const naam of ["STRIPE_WEBHOOK_GEHEIM", "STRIPE_PRIJS_MAAND", "STRIPE_PRIJS_JAAR"]) {
@@ -145,8 +217,13 @@ describe("controleerBijStart", () => {
 
   test("in productie zonder problemen: geen throw en geen waarschuwing", () => {
     const waarschuw = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(() => controleerBijStart({ ...VOLLEDIG, NODE_ENV: "production" })).not.toThrow();
+    const env = { ...VOLLEDIG, NODE_ENV: "production", SMTP_HOST: "smtp.example.be", SMTP_VAN: "noreply@elentrik.example.be" };
+    expect(() => controleerBijStart(env)).not.toThrow();
     expect(waarschuw).not.toHaveBeenCalled();
+  });
+
+  test("in productie met smtp (standaard) zonder SMTP_HOST en SMTP_VAN: de server start niet", () => {
+    expect(() => controleerBijStart({ ...VOLLEDIG, NODE_ENV: "production" })).toThrow(/SMTP_HOST, SMTP_VAN/);
   });
 
   test("buiten productie met problemen: een waarschuwing met de namen, geen throw", () => {

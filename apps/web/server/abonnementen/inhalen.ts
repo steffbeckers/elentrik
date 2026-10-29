@@ -68,9 +68,14 @@ export function postgresLock(client: Pick<postgres.Sql, "reserve">): MetLock {
   };
 }
 
-/** `ELENTRIK_GEPLANDE_TAKEN=uit` zet de geplande taken uit (de e2e-server, een noodstop). */
+/**
+ * In productie draaien de geplande taken standaard; daarbuiten (`nuxt dev`, tests) alleen met
+ * `ELENTRIK_GEPLANDE_TAKEN=aan`. `uit` zet ze altijd uit (de e2e-server, een noodstop).
+ */
 export function geplandeTakenAan(env: Record<string, string | undefined> = process.env): boolean {
-  return env.ELENTRIK_GEPLANDE_TAKEN?.trim().toLowerCase() !== "uit";
+  const keuze = env.ELENTRIK_GEPLANDE_TAKEN?.trim().toLowerCase();
+  if (keuze === "uit") return false;
+  return env.NODE_ENV === "production" || keuze === "aan";
 }
 
 function soort(fout: unknown): string {
