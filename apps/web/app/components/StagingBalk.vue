@@ -9,8 +9,8 @@ const omgeving = useOmgeving();
 <template>
   <div
     v-if="toonBalk(omgeving)"
-    role="status"
-    class="sticky top-0 z-[100] flex h-[var(--staging-balk-hoogte)] items-center justify-center bg-warning px-3 text-center text-xs font-semibold text-inverted sm:text-sm"
+    role="note"
+    class="sticky top-0 z-[100] flex h-[var(--staging-balk-hoogte)] items-center justify-center bg-warning px-3 text-center text-xs font-semibold text-black sm:text-sm"
     data-testid="staging-balk"
   >
     {{ $t("omgeving.staging") }}

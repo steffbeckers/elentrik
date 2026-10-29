@@ -54,6 +54,11 @@ describe("docs/online.md en deploy/nas/.env.voorbeeld", () => {
     expect(handleiding).not.toMatch(/dexxter/i);
   });
 
+  test("compose.yaml heeft een vaste projectnaam elentrik (Container Manager en SSH moeten hetzelfde project raken)", () => {
+    const compose = lees("deploy", "nas", "compose.yaml");
+    expect(compose).toMatch(/^name: elentrik$/m);
+  });
+
   test("de hulpfuncties herkennen de vormen", () => {
     expect(variabelenUitVoorbeeld("A_B=1\n# C_D=2\n#E=3\n# gewone tekst: x=1\nfoo=bar\n")).toEqual(["A_B", "C_D", "E"]);
     expect(vermeldingenMetGelijkteken("`ABC_DEF=1` en x=2 en p=none en AB=3 en v=DMARC1")).toEqual(["ABC_DEF"]);
