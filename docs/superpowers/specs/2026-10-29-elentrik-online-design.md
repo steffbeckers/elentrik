@@ -1,7 +1,7 @@
 # Elentrik: online op de NAS (ontwerp)
 
 - **Datum:** 2026-10-29
-- **Status:** ter review
+- **Status:** goedgekeurd
 - **Bouwt voort op:**
   - de MVP-spec §8 "Hosting";
   - de opvolgpunten van plan 6 (proxy en rate limiting);
