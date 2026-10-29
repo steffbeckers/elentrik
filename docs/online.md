@@ -822,6 +822,7 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 | Variabele | Verplicht | Waar je de waarde vindt |
 | --- | --- | --- |
 | `POSTGRES_WACHTWOORD` | ja | Zelf verzonnen: `openssl rand -hex 32`. Geen aanhalingstekens, spaties of `$`. Bewaar het in je wachtwoordbeheerder. |
+| `POSTGRES_BEHEER_WACHTWOORD` | ja | Zelf verzonnen: `openssl rand -hex 32`, een andere waarde dan de twee app-wachtwoorden. Het wachtwoord van de beheerder `elentrik_beheer` (de superuser van Postgres, voor beheer; geen app gebruikt hem). |
 
 ### Aanmelden en adres
 
