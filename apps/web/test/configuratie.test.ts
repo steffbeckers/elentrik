@@ -263,3 +263,94 @@ describe("de Nitro-plugin", () => {
     expect(waarschuw).toHaveBeenCalled();
   });
 });
+
+describe("grendels per omgeving (plan 10)", () => {
+  const STAGING: Record<string, string> = {
+    ...VOLLEDIG,
+    ELENTRIK_OMGEVING: "staging",
+    MAIL_VERZENDER: "smtp",
+    SMTP_HOST: "mailpit",
+    SMTP_VAN: "Elentrik <noreply@staging.elentrik.app>",
+    STRIPE_GEHEIME_SLEUTEL: "sk_test_x",
+    STRIPE_WEBHOOK_GEHEIM: "whsec_x",
+    STRIPE_PRIJS_MAAND: "price_m",
+    STRIPE_PRIJS_JAAR: "price_j",
+  };
+  const GRAPH_VARS = {
+    GRAPH_TENANT_ID: "t",
+    GRAPH_CLIENT_ID: "c",
+    GRAPH_CLIENT_GEHEIM: GEHEIM,
+    MAIL_AFZENDER: "noreply@elentrik.example.be",
+  };
+
+  test("staging met smtp/mailpit en een sk_test_-sleutel: geen probleem", () => {
+    expect(controleerConfiguratie(STAGING)).toEqual([]);
+    expect(controleerConfiguratie({ ...STAGING, NODE_ENV: "production" })).toEqual([]);
+  });
+
+  test("staging met MAIL_VERZENDER=graph: MAIL_VERZENDER", () => {
+    expect(controleerConfiguratie({ ...STAGING, MAIL_VERZENDER: "graph", ...GRAPH_VARS })).toEqual(["MAIL_VERZENDER"]);
+  });
+
+  test("staging met een sk_live_-sleutel: STRIPE_GEHEIME_SLEUTEL, zonder de waarde", () => {
+    const problemen = controleerConfiguratie({ ...STAGING, STRIPE_GEHEIME_SLEUTEL: `sk_live_${GEHEIM}` });
+    expect(problemen).toEqual(["STRIPE_GEHEIME_SLEUTEL"]);
+    expect(problemen.join()).not.toContain(GEHEIM);
+  });
+
+  test.each(["sk_test_abc", "rk_test_abc", "  sk_test_abc  "])("staging met testsleutel %j: geen probleem", (sleutel) => {
+    expect(controleerConfiguratie({ ...STAGING, STRIPE_GEHEIME_SLEUTEL: sleutel })).toEqual([]);
+  });
+
+  test.each(["rk_live_abc", "  sk_live_abc", "sk_abc", "geheim-zonder-voorvoegsel", "Sk_test_abc"])(
+    "staging met sleutel %j (geen testsleutel): STRIPE_GEHEIME_SLEUTEL",
+    (sleutel) => {
+      const problemen = controleerConfiguratie({ ...STAGING, STRIPE_GEHEIME_SLEUTEL: sleutel });
+      expect(problemen).toEqual(["STRIPE_GEHEIME_SLEUTEL"]);
+      expect(problemen.join()).not.toContain(sleutel.trim());
+    },
+  );
+
+  test("staging zonder Stripe-sleutel mag (abonnementen uit)", () => {
+    expect(controleerConfiguratie({ ...STAGING, STRIPE_GEHEIME_SLEUTEL: "" })).toEqual([]);
+  });
+
+  test("productie met SMTP_HOST=mailpit: SMTP_HOST", () => {
+    const productie = { ...VOLLEDIG, ELENTRIK_OMGEVING: "productie", NODE_ENV: "production", SMTP_HOST: "mailpit", SMTP_VAN: "x@elentrik.app" };
+    expect(controleerConfiguratie(productie)).toEqual(["SMTP_HOST"]);
+    expect(controleerConfiguratie({ ...productie, SMTP_HOST: " Mailpit " })).toEqual(["SMTP_HOST"]);
+    expect(controleerConfiguratie({ ...productie, SMTP_HOST: "elentrik-mailpit" })).toEqual(["SMTP_HOST"]);
+    expect(controleerConfiguratie({ ...productie, SMTP_HOST: " Elentrik-Mailpit " })).toEqual(["SMTP_HOST"]);
+    expect(controleerConfiguratie({ ...productie, SMTP_HOST: "smtp.example.be" })).toEqual([]);
+  });
+
+  test("productie met graph en een live-sleutel is toegelaten", () => {
+    const productie = {
+      ...VOLLEDIG,
+      ELENTRIK_OMGEVING: "productie",
+      MAIL_VERZENDER: "graph",
+      ...GRAPH_VARS,
+      STRIPE_GEHEIME_SLEUTEL: "sk_live_x",
+      STRIPE_WEBHOOK_GEHEIM: "whsec_x",
+      STRIPE_PRIJS_MAAND: "price_m",
+      STRIPE_PRIJS_JAAR: "price_j",
+    };
+    expect(controleerConfiguratie(productie)).toEqual([]);
+  });
+
+  test("zonder ELENTRIK_OMGEVING gelden de grendels niet (lokaal en e2e)", () => {
+    expect(controleerConfiguratie({ ...VOLLEDIG, MAIL_VERZENDER: "graph", ...GRAPH_VARS, SMTP_HOST: "mailpit" })).toEqual([]);
+    expect(controleerConfiguratie({ ...STRIPE, SMTP_HOST: "mailpit" })).toEqual([]);
+  });
+
+  test("een andere waarde dan productie of staging: ELENTRIK_OMGEVING (anders vallen de grendels stil weg)", () => {
+    expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_OMGEVING: "Staging" })).toEqual(["ELENTRIK_OMGEVING"]);
+    expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_OMGEVING: "  " })).toEqual([]);
+  });
+
+  test("met ELENTRIK_OMGEVING gezet weigert de server ook buiten NODE_ENV=production", () => {
+    const env = { ...STAGING, NODE_ENV: "development", MAIL_VERZENDER: "graph", ...GRAPH_VARS };
+    expect(() => controleerBijStart(env)).toThrow(/MAIL_VERZENDER/);
+    expect(() => controleerBijStart(env)).not.toThrow(/mailpit|geheim/);
+  });
+});

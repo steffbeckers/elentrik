@@ -14,8 +14,25 @@ export const INSPRINGING_MM = 5;
 /** De ruimte boven een kop in de bijlage, in mm. */
 export const KOP_MARGE_MM = 2;
 
-/** De stijl voor pagina's van `breedte` × `hoogte` mm. */
-export function stijl(breedte: number, hoogte: number): string {
+/**
+ * De stijl van het watermerk van staging. Het vult de pagina absoluut (geen invloed op de opmaak),
+ * vangt geen muis (`pointer-events`), is rood en halfdoorzichtig en staat 35° gekanteld. De letters
+ * zijn tekst (geen afbeelding of extern lettertype), de grootte volgt de kortste zijde van het papier.
+ */
+function watermerkStijl(breedte: number, hoogte: number): string[] {
+  const titel = getal(Math.min(breedte, hoogte) * 0.2);
+  const ondertitel = getal(Math.min(breedte, hoogte) * 0.05);
+  return [
+    ".watermerk { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; " +
+      "align-items: center; justify-content: center; pointer-events: none; color: #c00; opacity: 0.18; " +
+      "transform: rotate(-35deg); transform-origin: 50% 50%; text-align: center; white-space: nowrap; }",
+    `.watermerk-titel { font-size: ${titel}mm; font-weight: bold; line-height: 1; letter-spacing: 0.05em; }`,
+    `.watermerk-ondertitel { font-size: ${ondertitel}mm; font-weight: bold; line-height: 1.3; }`,
+  ];
+}
+
+/** De stijl voor pagina's van `breedte` × `hoogte` mm, met de stijl van het watermerk als `metWatermerk`. */
+export function stijl(breedte: number, hoogte: number, metWatermerk = false): string {
   const b = getal(breedte);
   const h = getal(hoogte);
   const rand = `${getal(RAND_MM)}mm solid #000`;
@@ -43,5 +60,6 @@ export function stijl(breedte: number, hoogte: number): string {
     ".bijlage { position: absolute; }",
     `.bijlage .motivatie, .bijlage .door { margin-left: ${getal(INSPRINGING_MM)}mm; }`,
     `.bijlage .kop { margin-top: ${getal(KOP_MARGE_MM)}mm; }`,
+    ...(metWatermerk ? watermerkStijl(breedte, hoogte) : []),
   ].join("\n");
 }

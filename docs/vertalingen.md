@@ -212,6 +212,10 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | maandelijks / jaarlijks (formule) | mensuel / annuel | monthly / yearly |
 | btw | TVA | VAT |
 | taal | langue | language |
+| testomgeving | environnement de test | test environment |
+| echte gegevens | données réelles | real data |
+
+"Staging" blijft in elke taal "Staging" (de naam van de omgeving). De balk bovenaan op staging luidt: nl "Staging: testomgeving, geen echte gegevens", fr "Staging : environnement de test, aucune donnée réelle", en "Staging: test environment, no real data".
 
 De namen van de talen staan altijd in hun eigen taal: "Nederlands", "Français", "English". In de Franse interface staat een vaste spatie vóór `:`, `?`, `!` en `;`, en binnen « ».
 

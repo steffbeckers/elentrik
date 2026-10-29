@@ -51,3 +51,11 @@ describe("TEKSTEN", () => {
     });
   });
 });
+
+describe("TEKSTEN.watermerk", () => {
+  test("de titel is overal STAGING en de ondertitel staat in de taal van het dossier", () => {
+    expect(TEKSTEN.nl.watermerk).toEqual({ titel: "STAGING", ondertitel: "Geen geldig document" });
+    expect(TEKSTEN.fr.watermerk).toEqual({ titel: "STAGING", ondertitel: "Document non valable" });
+    expect(TEKSTEN.en.watermerk).toEqual({ titel: "STAGING", ondertitel: "Not a valid document" });
+  });
+});
