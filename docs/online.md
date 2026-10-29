@@ -23,8 +23,8 @@ bezoeker -> Cloudflare -> tunnel (cloudflared) -> elentrik-web:3000
                                                     '-> bestanden  (map op de NAS)
 ```
 
-- Vier containers in een compose-project: `web` (container `elentrik-web`), `postgres`, `gotenberg` en
-  `backup`. Ze delen het Docker-netwerk `elentrik` (subnet `172.30.70.0/24`).
+- Zes containers in een compose-project: `web` (container `elentrik-web`), `postgres`, `gotenberg` en
+  `backup`, plus `web-staging` en `mailpit` voor staging (sectie 11). Ze delen het Docker-netwerk `elentrik` (subnet `172.30.70.0/24`).
 - **Er wordt geen enkele poort gepubliceerd.** De enige weg naar binnen is de tunnel.
 - De gegevens staan in mappen op de NAS onder `ELENTRIK_DATA` (standaard `/volume1/docker/elentrik`):
   `postgres/`, `bestanden/` en `backups/`.
@@ -279,18 +279,20 @@ sudo chown -R <uid>:<gid> /volume1/docker/elentrik/bestanden /volume1/docker/ele
 
 ### Stap 2. `compose.yaml`, `backup.sh` en `.env` neerzetten
 
-Zet de drie bestanden samen in `/volume1/docker/elentrik-compose/`:
+Zet deze bestanden samen in `/volume1/docker/elentrik-compose/`:
 
 - `deploy/nas/compose.yaml` uit de repo;
 - `deploy/nas/backup.sh` uit de repo, **in dezelfde map als `compose.yaml`** (compose koppelt het als
   `./backup.sh`; ontbreekt het bestand, dan maakt Docker er een lege map van en start de back-up niet);
+- `deploy/nas/bijwerken.sh` uit de repo (sectie 11) en de map `deploy/nas/postgres-init/` (met
+  `10-databases.sh`), ook naast `compose.yaml`: zonder die map maakt Postgres de databases en rollen niet aan;
 - `.env`, gemaakt van `deploy/nas/.env.voorbeeld`.
 
 Kopieer ze bijvoorbeeld vanaf je ontwikkelmachine met `scp` (de NAS-gebruiker moet SSH mogen), of upload ze met
 File Station:
 
 ```
-scp deploy/nas/compose.yaml deploy/nas/backup.sh deploy/nas/.env.voorbeeld <gebruiker>@<nas>:/volume1/docker/elentrik-compose/
+scp -r deploy/nas/compose.yaml deploy/nas/backup.sh deploy/nas/bijwerken.sh deploy/nas/postgres-init deploy/nas/.env.voorbeeld <gebruiker>@<nas>:/volume1/docker/elentrik-compose/
 ```
 
 Faalt `scp` met "subsystem request failed" (nieuwere `scp`-versies gebruiken SFTP, dat op de NAS uit kan
@@ -300,14 +302,16 @@ staan), voeg dan `-O` toe of gebruik File Station. Op de NAS:
 cd /volume1/docker/elentrik-compose
 sudo cp .env.voorbeeld .env
 sudo chmod 600 .env
-sudo chmod 755 backup.sh
+sudo chmod 755 backup.sh bijwerken.sh
+sudo chmod -R a+rX postgres-init
 ```
 
 Eisen voor `backup.sh`:
 
 - **LF-regeleinden**, geen CRLF. De repo dwingt dat af (`*.sh text eol=lf`), maar bewerk het bestand niet in
   Kladblok. Controle: `file backup.sh` mag niet "CRLF" noemen.
-- **Leesbaar (en liefst uitvoerbaar) voor `ELENTRIK_UID`**, dus `chmod 755` zoals hierboven.
+- **Leesbaar (en liefst uitvoerbaar) voor `ELENTRIK_UID`**, dus `chmod 755` zoals hierboven. Hetzelfde geldt
+  voor `bijwerken.sh` en `postgres-init/10-databases.sh` (LF-regeleinden, leesbaar voor iedereen).
 
 ### Stap 3. `.env` invullen
 
@@ -319,6 +323,8 @@ ELENTRIK_DATA=/volume1/docker/elentrik
 ELENTRIK_UID=<uid>
 ELENTRIK_GID=<gid>
 POSTGRES_WACHTWOORD=<lange-willekeurige-waarde>
+POSTGRES_BEHEER_WACHTWOORD=<andere-lange-willekeurige-waarde>
+STAGING_POSTGRES_WACHTWOORD=<nog-een-andere-lange-willekeurige-waarde>
 BETTER_AUTH_SECRET=<lange-willekeurige-waarde>
 BETTER_AUTH_URL=https://elentrik.app
 NUXT_AUTH_BASIS_URL=http://127.0.0.1:3000
@@ -329,7 +335,7 @@ GRAPH_CLIENT_GEHEIM=<client-geheim>
 MAIL_AFZENDER=noreply@elentrik.app
 ```
 
-Genereer de twee geheimen elk met een eigen, nieuwe waarde (nooit hergebruikt van elders):
+Genereer de geheimen elk met een eigen, nieuwe waarde (nooit hergebruikt van elders):
 
 ```
 openssl rand -hex 32
@@ -398,8 +404,8 @@ sudo docker compose ps
 sudo docker compose logs --tail 50 web
 ```
 
-- Alle vier de diensten staan op `running`, en `postgres`, `gotenberg` en `web` op `healthy` (die laatste kan
-  tot een minuut duren).
+- Alle diensten staan op `running`, en `postgres`, `gotenberg` en `web` op `healthy` (die laatste kan
+  tot een minuut duren). `web-staging` en `mailpit` horen bij staging (sectie 11).
 - In de log van `web` staat "Migraties uitgevoerd."
 - Geen enkele poort is gepubliceerd: de kolom Ports in `docker compose ps` is leeg of toont alleen `3000/tcp`.
 
@@ -551,20 +557,23 @@ zonder de echte aan te raken:
 ```
 cd /volume1/docker/elentrik-compose
 
-# 1. Een lege tijdelijke database.
-sudo docker compose exec postgres createdb -U elentrik elentrik_hersteltest
+# 1. Een lege tijdelijke database, met `elentrik` als eigenaar (alleen de beheerder mag databases aanmaken).
+sudo docker compose exec postgres createdb -U elentrik_beheer -O elentrik elentrik_hersteltest
 
-# 2. De nieuwste dump erin zetten (pas de bestandsnaam aan; ls -l /volume1/docker/elentrik/backups).
+# 2. De nieuwste dump erin zetten als de eigenaar (pas de bestandsnaam aan; ls -l /volume1/docker/elentrik/backups).
 sudo docker compose run --rm --no-deps --entrypoint sh backup -c \
-  "pg_restore -h postgres -U elentrik -d elentrik_hersteltest /backups/elentrik-<datum>-<uur>.dump"
+  "pg_restore --no-comments -h postgres -U elentrik -d elentrik_hersteltest /backups/elentrik-<datum>-<uur>.dump"
 
 # 3. Kijk of de gegevens erin staan.
 sudo docker compose exec postgres psql -U elentrik -d elentrik_hersteltest -c "select count(*) from organization;"
 sudo docker compose exec postgres psql -U elentrik -d elentrik_hersteltest -c "select count(*) from projecten;"
 
 # 4. Opruimen.
-sudo docker compose exec postgres dropdb -U elentrik elentrik_hersteltest
+sudo docker compose exec postgres dropdb -U elentrik_beheer elentrik_hersteltest
 ```
+
+`--no-comments` slaat het commentaar op de standaardextensie `plpgsql` over, dat een gewone gebruiker niet
+mag zetten.
 
 Doe hetzelfde met een dump die uit Hyper Backup of OneDrive komt, minstens een keer, om te bewijzen dat
 ook de versleutelde kopie bruikbaar is. Zet in je agenda: elk kwartaal opnieuw.
@@ -574,21 +583,25 @@ ook de versleutelde kopie bruikbaar is. Zet in je agenda: elk kwartaal opnieuw.
 ```
 cd /volume1/docker/elentrik-compose
 sudo docker compose stop web
-sudo docker compose exec postgres dropdb -U elentrik elentrik
-sudo docker compose exec postgres createdb -U elentrik elentrik
+sudo docker compose exec postgres dropdb -U elentrik_beheer elentrik
+sudo docker compose exec postgres createdb -U elentrik_beheer -O elentrik elentrik
+sudo docker compose exec postgres psql -U elentrik_beheer -d postgres \
+  -c "REVOKE CONNECT ON DATABASE elentrik FROM PUBLIC" -c "GRANT CONNECT ON DATABASE elentrik TO elentrik"
 sudo docker compose run --rm --no-deps --entrypoint sh backup -c \
-  "pg_restore -h postgres -U elentrik -d elentrik /backups/elentrik-<datum>-<uur>.dump"
+  "pg_restore --no-comments -h postgres -U elentrik -d elentrik /backups/elentrik-<datum>-<uur>.dump"
 sudo docker compose up -d
 ```
 
-De bestanden in `bestanden/` zijn los van de database: haal ze uit Hyper Backup als ze ontbreken.
+Een nieuwe database heeft weer `CONNECT` voor iedereen; de `REVOKE` en `GRANT` zetten dat terug (zoals
+`postgres-init/10-databases.sh`). De bestanden in `bestanden/` zijn los van de database: haal ze uit Hyper Backup als ze ontbreken.
 
 ---
 
 ## 7. Updaten
 
 Een nieuwe versie komt tot stand als er iets in `main` gemerged is en de workflow `web-image` het image gebouwd
-heeft (Actions, groen). **Er is geen automatische update**: jij beslist wanneer.
+heeft (Actions, groen). **Er is geen automatische update**: jij beslist wanneer. Met staging erbij werk je
+per omgeving bij met `bijwerken.sh` (sectie 11); `pull` + `up -d` hieronder werkt alle diensten tegelijk bij.
 
 ### Aanbevolen: `pull` + `up -d` (zonder `down`)
 
@@ -773,10 +786,12 @@ Zet het dan terug in de lege database van de NAS, na de eerste start van het pro
 ```
 cd /volume1/docker/elentrik-compose
 sudo docker compose stop web
-sudo docker compose exec postgres dropdb -U elentrik elentrik
-sudo docker compose exec postgres createdb -U elentrik elentrik
+sudo docker compose exec postgres dropdb -U elentrik_beheer elentrik
+sudo docker compose exec postgres createdb -U elentrik_beheer -O elentrik elentrik
+sudo docker compose exec postgres psql -U elentrik_beheer -d postgres \
+  -c "REVOKE CONNECT ON DATABASE elentrik FROM PUBLIC" -c "GRANT CONNECT ON DATABASE elentrik TO elentrik"
 sudo docker compose run --rm --no-deps --entrypoint sh backup -c \
-  "pg_restore -h postgres -U elentrik -d elentrik /backups/dev-import.dump"
+  "pg_restore --no-comments -h postgres -U elentrik -d elentrik /backups/dev-import.dump"
 sudo docker compose up -d
 ```
 
@@ -866,8 +881,7 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 
 ### Staging (naast productie)
 
-> Voorlopige lijst; de volledige handleiding voor staging (Cloudflare, mappen, eerste start, bijwerken)
-> volgt in de eigen sectie.
+De stappen voor staging (Cloudflare, Postgres, mappen, Stripe, bijwerken) staan in sectie 11.
 
 Staging draait in hetzelfde project, met een eigen database, eigen geheimen en een eigen Mailpit. Alleen
 deze variabelen zet je in `.env`; de rest staat vast in `compose.yaml`.
@@ -888,3 +902,132 @@ Deze variabelen zet `compose.yaml` voor je; zet ze niet in `.env`. Ze staan hier
 logs en in `.env.example`: `DATABASE_URL` (zonder wachtwoord), `PGPASSWORD` (krijgt `POSTGRES_WACHTWOORD`),
 `ELENTRIK_BESTANDEN_DIR` (`/data/bestanden`), `ELENTRIK_GOTENBERG_URL` (`http://gotenberg:3000`) en
 `ELENTRIK_VERTROUWD_PROXYNET` (`172.30.70.0/24`).
+
+---
+
+## 11. Staging (naast productie)
+
+Staging is een testomgeving in hetzelfde project: `web-staging` (container `elentrik-web-staging`, image
+`ghcr.io/steffbeckers/elentrik-web:staging`) met een eigen database `elentrik_staging`, eigen geheimen en eigen
+bestanden, plus een eigen `mailpit` (container `elentrik-mailpit`) die alle mail van staging opvangt. Staging
+deelt `postgres` en `gotenberg` met productie, publiceert geen poorten, toont een balk en een watermerk op de
+pdf's, is niet indexeerbaar en weigert te starten met `MAIL_VERZENDER=graph` of een `sk_live_`-sleutel. Het wordt
+niet geback-upt. Doe stap 1 tot en met 4 vóór de eerste `docker compose up -d` van het project.
+
+### Stap 1. Cloudflare
+
+Twee public hostnames op dezelfde tunnel (sectie 1, stap 3), elk met service type **HTTP**:
+
+| Subdomain | Domain | URL |
+| --- | --- | --- |
+| `staging` | `elentrik.app` | `elentrik-web-staging:3000` |
+| `mailpit-staging` | `elentrik.app` | `elentrik-mailpit:8025` |
+
+De naam is `mailpit-staging` en niet `mailpit.staging`: het gratis Universal SSL-certificaat dekt alleen één
+niveau onder `elentrik.app`.
+
+Zet de Mailpit-webinterface **achter Cloudflare Access**, anders kan iedereen de mails van staging lezen:
+
+1. **Zero Trust**, **Access**, **Applications** (de naam kan per versie licht verschillen), **Add an
+   application**, type **Self-hosted**.
+2. Application domain: subdomain `mailpit-staging`, domain `elentrik.app`.
+3. Policy: actie **Allow**, regel **Include**, selector **Emails**, waarde `<jouw-e-mailadres>`.
+4. Login method: **One-time PIN**. Opslaan.
+
+Controleer in een privévenster: `https://mailpit-staging.elentrik.app` vraagt om je e-mailadres en een pincode.
+`cloudflared` hangt al aan het netwerk `elentrik` (sectie 1, stap 4); dat geldt ook voor de nieuwe containers.
+
+### Stap 2. Postgres
+
+Begin je met een **lege** `postgres/`-map, dan maakt `postgres-init/10-databases.sh` bij de eerste start alles
+aan: de beheerder `elentrik_beheer` (superuser, alleen voor beheer), de gewone gebruikers `elentrik` en
+`elentrik_staging`, hun databases en de `REVOKE`/`GRANT`. Dat is de eenvoudigste weg; zet daarna zo nodig een
+dump terug (sectie 6).
+
+Draait Postgres al met de oude opzet (`elentrik` als superuser), dan maak je de rollen met de hand aan, met
+dezelfde wachtwoorden als in `.env`:
+
+```
+cd /volume1/docker/elentrik-compose
+sudo docker compose exec postgres psql -U elentrik -d postgres
+```
+
+```sql
+CREATE ROLE elentrik_beheer LOGIN SUPERUSER PASSWORD '<waarde van POSTGRES_BEHEER_WACHTWOORD>';
+CREATE ROLE elentrik_staging LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '<waarde van STAGING_POSTGRES_WACHTWOORD>';
+CREATE DATABASE elentrik_staging OWNER elentrik_staging;
+REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;
+REVOKE CONNECT ON DATABASE template1 FROM PUBLIC;
+REVOKE CONNECT ON DATABASE elentrik FROM PUBLIC;
+REVOKE CONNECT ON DATABASE elentrik_staging FROM PUBLIC;
+GRANT CONNECT ON DATABASE elentrik TO elentrik;
+GRANT CONNECT ON DATABASE elentrik_staging TO elentrik_staging;
+ALTER ROLE elentrik NOSUPERUSER NOCREATEDB NOCREATEROLE;
+```
+
+Weigert Postgres de laatste regel (de eerste superuser van een datamap laat zich mogelijk niet terugzetten naar
+een gewone gebruiker), begin dan met een lege `postgres/`-map.
+
+### Stap 3. Map en `.env`
+
+```
+sudo mkdir -p /volume1/docker/elentrik/staging/bestanden
+sudo chown -R <uid>:<gid> /volume1/docker/elentrik/staging/bestanden
+```
+
+Zet in `.env` (uitleg per variabele: sectie 10; gebruik nooit dezelfde waarden als bij productie):
+
+```
+STAGING_POSTGRES_WACHTWOORD=<lange-willekeurige-waarde>
+STAGING_BETTER_AUTH_SECRET=<lange-willekeurige-waarde>
+STAGING_BOEKHOUDING_INBOX=
+STAGING_STRIPE_GEHEIME_SLEUTEL=
+STAGING_STRIPE_WEBHOOK_GEHEIM=
+STAGING_STRIPE_PRIJS_MAAND=
+STAGING_STRIPE_PRIJS_JAAR=
+```
+
+### Stap 4. Stripe (alleen testmodus)
+
+Staging heeft een eigen **testeindpunt** in de testmodus van Stripe (sectie 5):
+
+1. Webhook-eindpunt op `https://staging.elentrik.app/api/stripe/webhook`, met dezelfde zeven events en de
+   API-versie `2026-09-30.endive`.
+2. Het ondertekeningsgeheim van dit eindpunt (`whsec_...`) wordt `STAGING_STRIPE_WEBHOOK_GEHEIM`, de testsleutel
+   (`sk_test_...`) `STAGING_STRIPE_GEHEIME_SLEUTEL`, en de id's van de testprijzen voor maand en jaar
+   (`price_...`) `STAGING_STRIPE_PRIJS_MAAND` en `STAGING_STRIPE_PRIJS_JAAR`. Zet alle vier of geen: zonder
+   Stripe-sleutels heeft staging geen abonnementen.
+3. Test met de testkaart `4242 4242 4242 4242`.
+
+### Stap 5. Starten en bijwerken
+
+Het image `:staging` bestaat pas na de eerste push naar de branch `staging` (Actions groen); het package
+`elentrik-web` is hetzelfde als bij productie en dus al publiek (sectie 3, stap 4). Daarna start je alles zoals in sectie 3, stap 5
+(`sudo docker compose up -d`) en controleer je:
+
+```
+sudo docker compose logs --tail 50 web-staging
+curl -s https://staging.elentrik.app/api/gezondheid
+```
+
+Verwacht `{"ok":true}`; de pagina toont de balk "Staging: testomgeving, geen echte gegevens". Registreer een
+testaccount: de bevestigingsmail staat in `https://mailpit-staging.elentrik.app`. Mailpit bewaart hoogstens 500
+mails, in het geheugen: ze verdwijnen bij een herstart. Start `web-staging` niet op, dan noemt de log de **naam** van
+de variabele die niet klopt.
+
+Een nieuwe versie zet je altijd eerst op staging en pas dan op productie. Elk script werkt alleen zijn eigen
+dienst bij; `productie` maakt eerst een verse back-up:
+
+```
+cd /volume1/docker/elentrik-compose
+sudo ./bijwerken.sh staging
+# controleer https://staging.elentrik.app, en dan pas:
+sudo ./bijwerken.sh productie
+```
+
+### Branchstroom
+
+Werk op `develop` (de standaardbranch). Een pull request `develop` naar `staging` bouwt na het mergen het image
+`:staging` (en `:sha-<korte commit>`); draai dan `sudo ./bijwerken.sh staging`. Een pull request `staging` naar
+`main` bouwt `:latest` (en `:sha-<korte commit>`); draai dan `sudo ./bijwerken.sh productie`. Een push naar
+`develop` draait alleen de tests, zonder image.
