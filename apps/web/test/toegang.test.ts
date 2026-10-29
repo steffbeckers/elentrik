@@ -590,6 +590,16 @@ const TABEL: Record<string, Rij> = {
     lid: 201,
     eigenaar: 201,
   },
+  "GET /api/gezondheid": {
+    // Publiek: de health-check van Docker en van de monitoring heeft geen sessie.
+    publiek: true,
+    verzoek: async () => ({ methode: "GET", pad: "/api/gezondheid" }),
+    zonderSessie: 200,
+    zonderOrganisatie: 200,
+    andereOrganisatie: 200,
+    lid: 200,
+    eigenaar: 200,
+  },
   "POST /api/stripe/webhook": {
     // Publiek: Stripe heeft geen sessie. Zonder handtekening geeft elke actor 400 (de handtekening
     // is de enige toegangscontrole); de inhoud staat in test/abonnement-webhook.test.ts.

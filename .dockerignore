@@ -1,0 +1,20 @@
+# De buildcontext van `docker build -f apps/web/Dockerfile .` is de repo-root. Alles wat daar niet
+# in hoort (geheimen, lokale data, builduitvoer en geïnstalleerde pakketten) blijft erbuiten.
+**/node_modules
+**/.nuxt
+**/.nuxt-e2e
+**/.output
+**/.data
+**/.env
+**/.env.*
+!**/.env.example
+**/test-results
+**/playwright-report
+**/coverage
+.git
+.claude
+.superpowers
+out
+docs
+infra
+deploy

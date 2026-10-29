@@ -25,7 +25,18 @@ export default defineNuxtConfig({
     // Alleen op de server: de basis-URL waarmee de auth-client tijdens SSR Better Auth aanspreekt.
     authBasisUrl: process.env.BETTER_AUTH_URL || "http://127.0.0.1:3000",
   },
+  vite: {
+    // Alleen voor `nuxt build`: de server-build laat de imports van shared/ (relatieve imports uit app/)
+    // extern, voor Nitro. Rolldown schrijft ze dan om naar een relatief pad dat in deze monorepo
+    // naar een map buiten de repo wijst (".../apps/web/shared/taal.ts" niet gevonden) en de productiebuild
+    // faalt. Met absolute paden vindt Nitro de bestanden en bundelt hij ze mee. De ontwikkelserver
+    // gebruikt deze optie niet.
+    build: { rolldownOptions: { makeAbsoluteExternalsRelative: false } },
+  },
   nitro: {
+    // Taken (server/tasks) en hun planning: de uurlijkse inhaaltaak voor gemiste Stripe-meldingen.
+    experimental: { tasks: true },
+    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"] },
     publicAssets: [
       pdfjsBron("wasm"),
       pdfjsBron("standard_fonts"),

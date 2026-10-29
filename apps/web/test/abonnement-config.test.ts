@@ -228,9 +228,10 @@ describe("leesWebhook", () => {
 });
 
 describe("maakStripePoort tegen een lokale nep-API", () => {
-  type Verzoek = { pad: string; versie: string | undefined; lichaam: URLSearchParams };
+  type Verzoek = { pad: string; zoek: URLSearchParams; versie: string | undefined; lichaam: URLSearchParams };
   let server: Server;
   let verzoeken: Verzoek[];
+  /** Per pad het antwoord; een functie krijgt de queryparameters (voor gepagineerde lijsten). */
   let antwoorden: Record<string, unknown>;
 
   beforeAll(async () => {
@@ -241,11 +242,17 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
         const url = new URL(req.url ?? "/", "http://127.0.0.1");
         verzoeken.push({
           pad: url.pathname,
+          zoek: url.searchParams,
           versie: req.headers["stripe-version"] as string | undefined,
           lichaam: new URLSearchParams(Buffer.concat(delen).toString("utf8")),
         });
         res.setHeader("content-type", "application/json");
-        res.end(JSON.stringify(antwoorden[url.pathname] ?? {}));
+        const antwoord = antwoorden[url.pathname];
+        res.end(
+          JSON.stringify(
+            typeof antwoord === "function" ? (antwoord as (z: URLSearchParams) => unknown)(url.searchParams) : (antwoord ?? {}),
+          ),
+        );
       });
     });
     await new Promise<void>((klaar) => server.listen(0, "127.0.0.1", klaar));
@@ -406,6 +413,97 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       subscription: "sub_oud",
     };
     expect(await poort().haalFactuur("in_oud")).toMatchObject({ id: "in_oud", abonnementId: "sub_oud" });
+  });
+
+  describe("betaaldeFacturen", () => {
+    const rauweFactuur = (id: string, klant = "cus_1") => ({
+      id,
+      object: "invoice",
+      number: `ABC-${id}`,
+      customer: klant,
+      amount_paid: 1210,
+      invoice_pdf: `https://pdf.stripe.test/${id}`,
+      billing_reason: "subscription_cycle",
+      parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } },
+    });
+
+    const DAG_S = 24 * 3600;
+
+    test("vraagt status=paid en created[gte] in seconden, 60 dagen voor sinds", async () => {
+      antwoorden["/v1/invoices"] = { object: "list", has_more: false, data: [rauweFactuur("in_1")] };
+      const sinds = new Date("2026-11-03T12:00:00.500Z");
+      const lijst = await poort().betaaldeFacturen(sinds);
+      expect(lijst).toEqual([
+        {
+          id: "in_1",
+          nummer: "ABC-in_1",
+          klantId: "cus_1",
+          abonnementId: "sub_1",
+          bedragBetaald: 1210,
+          pdfUrl: "https://pdf.stripe.test/in_1",
+          reden: "subscription_cycle",
+        },
+      ]);
+      expect(verzoeken).toHaveLength(1);
+      expect(verzoeken[0]!.pad).toBe("/v1/invoices");
+      expect(verzoeken[0]!.zoek.get("status")).toBe("paid");
+      expect(verzoeken[0]!.zoek.get("created[gte]")).toBe(String(Math.floor(sinds.getTime() / 1000) - 60 * DAG_S));
+    });
+
+    test("houdt facturen die sinds sinds betaald zijn, ook als ze veel eerder zijn aangemaakt", async () => {
+      const sinds = new Date("2026-11-03T12:00:00Z");
+      const s = Math.floor(sinds.getTime() / 1000);
+      const betaald = (id: string, paidAt: number | null, aangemaakt: number) => ({
+        ...rauweFactuur(id),
+        created: aangemaakt,
+        status_transitions: { paid_at: paidAt },
+      });
+      antwoorden["/v1/invoices"] = {
+        object: "list",
+        has_more: false,
+        data: [
+          betaald("in_oud_nu_betaald", s + 3600, s - 30 * DAG_S),
+          betaald("in_al_lang_betaald", s - 3600, s - 30 * DAG_S),
+          betaald("in_precies", s, s - DAG_S),
+          betaald("in_zonder_paid_at", null, s - DAG_S),
+        ],
+      };
+      const lijst = await poort().betaaldeFacturen(sinds);
+      expect(lijst.map((f) => f.id)).toEqual(["in_oud_nu_betaald", "in_precies", "in_zonder_paid_at"]);
+    });
+
+    test("waarschuwt zonder inhoud als de grens van 5000 facturen bereikt is", async () => {
+      antwoorden["/v1/invoices"] = (zoek: URLSearchParams) => {
+        const na = zoek.get("starting_after");
+        const start = na ? Number(na.slice(3)) + 1 : 0;
+        const data = Array.from({ length: 100 }, (_, i) => rauweFactuur(`in_${start + i}`));
+        return { object: "list", has_more: true, data };
+      };
+      const waarschuw = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const lijst = await poort().betaaldeFacturen(new Date("2026-11-03T12:00:00Z"));
+        expect(lijst).toHaveLength(5000);
+        expect(waarschuw).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(waarschuw.mock.calls)).toContain("5000");
+        expect(JSON.stringify(waarschuw.mock.calls)).not.toContain("cus_1");
+      } finally {
+        waarschuw.mockRestore();
+      }
+    });
+
+    test("volgt has_more met starting_after tot alle pagina's gelezen zijn", async () => {
+      antwoorden["/v1/invoices"] = (zoek: URLSearchParams) => {
+        const na = zoek.get("starting_after");
+        if (!na) return { object: "list", has_more: true, data: [rauweFactuur("in_1"), rauweFactuur("in_2")] };
+        if (na === "in_2") return { object: "list", has_more: true, data: [rauweFactuur("in_3")] };
+        return { object: "list", has_more: false, data: [rauweFactuur("in_4")] };
+      };
+      const lijst = await poort().betaaldeFacturen(new Date("2026-11-03T12:00:00Z"));
+      expect(lijst.map((f) => f.id)).toEqual(["in_1", "in_2", "in_3", "in_4"]);
+      expect(verzoeken.map((v) => v.zoek.get("starting_after"))).toEqual([null, "in_2", "in_3"]);
+      // Elke pagina behoudt de filters.
+      expect(verzoeken.every((v) => v.zoek.get("status") === "paid" && v.zoek.has("created[gte]"))).toBe(true);
+    });
   });
 
   test("factuurPdf haalt de PDF op met een time-out van 10 seconden", async () => {
