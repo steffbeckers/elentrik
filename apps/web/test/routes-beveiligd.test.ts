@@ -2,7 +2,7 @@
 // een nieuwe route zonder controle doet deze test falen, met het pad van het bestand. Nitro serveert
 // ook server/routes en server/middleware; die mogen niet bestaan zonder dat deze test ze kent.
 // Een publieke route (`{ publiek: true }`, zonder sessie) moet met naam in PUBLIEKE_ROUTES staan.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { API, AUTH_ROUTE, apiPad, beveiligdeRoutebestanden, PUBLIEKE_ROUTES, SERVER } from "./routes";
@@ -42,10 +42,19 @@ describe("beveiligde routes", () => {
     expect(BEWAKING.test("export default defineBeveiligdeHandler(async () => 1);")).toBe(true);
   });
 
-  test.each(["routes", "middleware"])("server/%s bestaat niet (Nitro zou het ongecontroleerd serveren)", (map) => {
+  test("server/routes bestaat niet (Nitro zou het ongecontroleerd serveren)", () => {
     expect(
-      existsSync(join(SERVER, map)),
-      `server/${map} bestaat: breid deze test en de routetabel uit voor je het toevoegt`,
+      existsSync(join(SERVER, "routes")),
+      "server/routes bestaat: breid deze test en de routetabel uit voor je het toevoegt",
     ).toBe(false);
+  });
+
+  // De enige middleware is die voor /robots.txt op staging (plan 10): zonder sessie, en alleen voor dat pad.
+  // Een andere middleware moet hier met naam bekend zijn.
+  test("server/middleware bevat alleen robots.ts, en die antwoordt alleen op /robots.txt", () => {
+    const map = join(SERVER, "middleware");
+    expect(readdirSync(map)).toEqual(["robots.ts"]);
+    const inhoud = readFileSync(join(map, "robots.ts"), "utf8");
+    expect(inhoud).toMatch(/pathname\s*!==\s*"\/robots\.txt"\)\s*return;/);
   });
 });
