@@ -5,6 +5,7 @@
 // (ruling E1).
 import { leesAbonnementConfig } from "../abonnementen/config";
 import { isCidr } from "../net";
+import { isStaging, leesOmgeving } from "../../shared/omgeving";
 
 type Env = Record<string, string | undefined>;
 
@@ -87,6 +88,20 @@ export function controleerConfiguratie(env: Env): string[] {
     }
   }
 
+  // De grendels per omgeving gelden zodra ELENTRIK_OMGEVING gezet is (alleen op de NAS), ook buiten
+  // NODE_ENV=production. Een andere waarde dan productie of staging is een fout: anders vallen de
+  // grendels stil weg bij een typefout.
+  const omgeving = leesOmgeving(env);
+  if (gezet(env, "ELENTRIK_OMGEVING") && !omgeving) meld("ELENTRIK_OMGEVING");
+  if (isStaging(omgeving)) {
+    // Staging verstuurt nooit echte mail (Mailpit) en gebruikt alleen testsleutels van Stripe.
+    if (verzender === "graph") meld("MAIL_VERZENDER");
+    if (env.STRIPE_GEHEIME_SLEUTEL?.trim().startsWith("sk_live_")) meld("STRIPE_GEHEIME_SLEUTEL");
+  } else if (omgeving === "productie") {
+    // Productie mag niet naar de Mailpit van staging sturen.
+    if (env.SMTP_HOST?.trim().toLowerCase() === "mailpit") meld("SMTP_HOST");
+  }
+
   const net = env.ELENTRIK_VERTROUWD_PROXYNET?.trim();
   if (net && !isCidr(net)) meld("ELENTRIK_VERTROUWD_PROXYNET");
 
@@ -94,14 +109,15 @@ export function controleerConfiguratie(env: Env): string[] {
 }
 
 /**
- * Controleert de configuratie bij het starten: in productie gooit een probleem een `Error` met de
+ * Controleert de configuratie bij het starten: in productie (of met ELENTRIK_OMGEVING gezet) gooit een probleem een `Error` met de
  * namen (de server start dan niet); anders volgt een waarschuwing.
  */
 export function controleerBijStart(env: Env = process.env): void {
   const problemen = controleerConfiguratie(env);
   if (problemen.length === 0) return;
   const lijst = problemen.join(", ");
-  if (env.NODE_ENV === "production") {
+  // Met ELENTRIK_OMGEVING gezet (NAS) is de server altijd strikt, ook zonder NODE_ENV=production.
+  if (env.NODE_ENV === "production" || gezet(env, "ELENTRIK_OMGEVING")) {
     throw new Error(`Ongeldige configuratie; controleer: ${lijst} (zie apps/web/.env.example)`);
   }
   console.warn(`Configuratie onvolledig of ongeldig; controleer: ${lijst} (zie apps/web/.env.example)`);

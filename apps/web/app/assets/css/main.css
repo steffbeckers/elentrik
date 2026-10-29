@@ -1,2 +1,14 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* Staging: de balk bovenaan neemt hoogte in. De pagina's met een vaste schermhoogte (de editor) en een
+   minimumhoogte (de rest) krijgen die hoogte eraf, zodat er geen schuifbalk bijkomt. Alleen op staging. */
+html.omgeving-staging {
+  --staging-balk-hoogte: 1.75rem;
+}
+html.omgeving-staging .h-dvh {
+  height: calc(100dvh - var(--staging-balk-hoogte));
+}
+html.omgeving-staging .min-h-dvh {
+  min-height: calc(100dvh - var(--staging-balk-hoogte));
+}

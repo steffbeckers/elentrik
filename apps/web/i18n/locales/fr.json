@@ -2,6 +2,9 @@
   "app": {
     "naam": "Elentrik"
   },
+  "omgeving": {
+    "staging": "Staging : environnement de test, aucune donnée réelle"
+  },
   "algemeen": {
     "annuleren": "Annuler"
   },
