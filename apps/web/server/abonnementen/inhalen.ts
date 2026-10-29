@@ -6,23 +6,25 @@
 //    alsnog doorgestuurd (`stuurFactuurDoor` is idempotent).
 //
 // Dubbel werk is ongevaarlijk (beide stappen zijn idempotent), maar twee instanties tegelijk
-// zouden dezelfde Stripe-aanroepen dubbel doen. Daarom neemt de run een advisory lock.
+// zouden dezelfde Stripe-aanroepen dubbel doen. Daarom houdt de run een advisory lock.
 //
-// Keuze van het lock: `pg_try_advisory_xact_lock` binnen een transactie die de hele run omvat. Een
-// sessielock (`pg_try_advisory_lock`) hoort bij één databaseverbinding, en postgres-js geeft elke
-// query aan een willekeurige verbinding uit de pool: lock en unlock konden zo op verschillende
-// verbindingen belanden en het lock bleef dan hangen. Een transactie zit vast aan één verbinding en
-// het lock valt automatisch weg bij commit, rollback of een gestorven proces. De werkzaamheden
-// lopen daarom op de transactie (`tx`): de rijlocks van `synchroniseerKlant` blijven tot het einde
-// van de run staan, wat voor een uurlijkse taak met een handvol klanten volstaat.
+// Het lock staat los van het werk. Het is een sessielock (`pg_try_advisory_lock`) op een
+// gereserveerde verbinding (`sql.reserve()` van postgres-js): lock en unlock lopen zo gegarandeerd
+// op dezelfde verbinding, ook al is er een pool. Het werk loopt op de gewone `db`, dus elke
+// `synchroniseerKlant` en elke `stuurFactuurDoor` commit voor zichzelf. Zo is een claim in
+// `doorgestuurde_facturen` meteen definitief, ook als de run later sneuvelt (stoppen, herstart,
+// verbroken verbinding): een mail die al weg is, gaat nooit een tweede keer, en rijlocks worden
+// niet langer vastgehouden dan nodig. Valt de gereserveerde verbinding weg, dan laat de server het
+// lock los.
 //
 // Er komt niets uit de configuratie of uit foutmeldingen in de logs: alleen klant- of factuur-id's
 // en de soort fout.
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import { and, inArray, lt, or, sql } from "drizzle-orm";
-import type { Db, Tx } from "../db";
+import { and, inArray, lt, or } from "drizzle-orm";
+import type postgres from "postgres";
+import { gebruikPostgres, type Db } from "../db";
 import { abonnementen } from "../db/schema";
 import { stuurFactuurDoor } from "./boekhouding";
 import type { AbonnementConfig } from "./config";
@@ -38,12 +40,37 @@ const STATUSSEN = ["active", "trialing", "past_due"];
 
 export type InhaalResultaat = { gesynchroniseerd: number; doorgestuurd: number };
 
-/** Neemt het lock voor de inhaaltaak tot het einde van de transactie; `false` als het bezet is. */
-export async function neemInhaalLock(tx: Tx): Promise<boolean> {
-  const antwoord: unknown = await tx.execute(sql`select pg_try_advisory_xact_lock(hashtext('abonnementen:inhalen')) as genomen`);
-  // postgres-js geeft de rijen zelf, PGlite een object met `rows`.
-  const rijen = (Array.isArray(antwoord) ? antwoord : (antwoord as { rows: unknown[] }).rows) as { genomen: boolean }[];
-  return rijen[0]?.genomen === true;
+/**
+ * Voert `werk` uit terwijl het lock gehouden wordt. Geeft `false` zonder `werk` uit te voeren als
+ * een andere run het lock heeft. In tests (PGlite heeft maar een sessie, waarin een advisory lock
+ * altijd opnieuw te nemen is) geven de tests hun eigen `MetLock`.
+ */
+export type MetLock = (werk: () => Promise<void>) => Promise<boolean>;
+
+const LOCK = "abonnementen:inhalen";
+
+/** Het echte lock: een sessielock op een gereserveerde verbinding, altijd opgeruimd in `finally`. */
+export function postgresLock(client: Pick<postgres.Sql, "reserve">): MetLock {
+  return async (werk) => {
+    const verbinding = await client.reserve();
+    try {
+      const [genomen] = await verbinding`select pg_try_advisory_lock(hashtext(${LOCK})) as genomen`;
+      if (genomen?.genomen !== true) return false;
+      try {
+        await werk();
+      } finally {
+        await verbinding`select pg_advisory_unlock(hashtext(${LOCK}))`;
+      }
+      return true;
+    } finally {
+      verbinding.release();
+    }
+  };
+}
+
+/** `ELENTRIK_GEPLANDE_TAKEN=uit` zet de geplande taken uit (de e2e-server, een noodstop). */
+export function geplandeTakenAan(env: Record<string, string | undefined> = process.env): boolean {
+  return env.ELENTRIK_GEPLANDE_TAKEN?.trim().toLowerCase() !== "uit";
 }
 
 function soort(fout: unknown): string {
@@ -51,12 +78,12 @@ function soort(fout: unknown): string {
 }
 
 async function synchroniseerAchterstallige(
-  tx: Tx,
+  db: Db,
   stripe: StripePoort,
   prijzen: { maand: string; jaar: string },
   nu: Date,
 ): Promise<number> {
-  const rijen = await tx
+  const rijen = await db
     .select({ klantId: abonnementen.stripeKlantId })
     .from(abonnementen)
     .where(
@@ -72,7 +99,7 @@ async function synchroniseerAchterstallige(
   let gesynchroniseerd = 0;
   for (const { klantId } of rijen) {
     try {
-      if ((await synchroniseerKlant(tx, stripe, prijzen, klantId, nu)) === "bijgewerkt") gesynchroniseerd++;
+      if ((await synchroniseerKlant(db, stripe, prijzen, klantId, nu)) === "bijgewerkt") gesynchroniseerd++;
     } catch (fout) {
       console.error("Inhaaltaak: synchroniseren mislukt", { klantId, fout: soort(fout) });
     }
@@ -81,7 +108,7 @@ async function synchroniseerAchterstallige(
 }
 
 async function stuurGemisteFacturen(
-  tx: Tx,
+  db: Db,
   stripe: StripePoort,
   inbox: string,
   nu: Date,
@@ -101,7 +128,7 @@ async function stuurGemisteFacturen(
   if (klanten.length === 0) return 0;
   const bekend = new Set(
     (
-      await tx
+      await db
         .select({ klantId: abonnementen.stripeKlantId })
         .from(abonnementen)
         .where(inArray(abonnementen.stripeKlantId, klanten))
@@ -112,7 +139,7 @@ async function stuurGemisteFacturen(
   for (const factuur of facturen) {
     if (!bekend.has(factuur.klantId)) continue;
     try {
-      if ((await stuurFactuurDoor(tx, stripe, inbox, factuur.id)) === "verstuurd") doorgestuurd++;
+      if ((await stuurFactuurDoor(db, stripe, inbox, factuur.id)) === "verstuurd") doorgestuurd++;
     } catch (fout) {
       console.error("Inhaaltaak: factuur doorsturen mislukt", { factuurId: factuur.id, fout: soort(fout) });
     }
@@ -124,25 +151,23 @@ async function stuurGemisteFacturen(
  * Haalt gemiste meldingen in. Zonder abonnementen, of als een andere run het lock heeft:
  * `{ gesynchroniseerd: 0, doorgestuurd: 0 }` zonder werk of Stripe-aanroepen. Een fout bij een
  * klant of factuur wordt gelogd en stopt de rest niet; de volgende run probeert het opnieuw.
- *
- * `lock` is alleen voor tests: PGlite heeft één sessie, waarin een advisory lock altijd opnieuw
- * te nemen is, dus een bezet lock is er niet echt na te bootsen.
+ * Een fout in de lockverbinding zelf gooit; wat dan al klaar was, is al vastgelegd.
  */
 export async function haalGemisteMeldingenIn(
   db: Db,
   stripe: StripePoort,
   config: AbonnementConfig,
   nu: Date = new Date(),
-  lock: (tx: Tx) => Promise<boolean> = neemInhaalLock,
+  metLock: MetLock = (werk) => postgresLock(gebruikPostgres())(werk),
 ): Promise<InhaalResultaat> {
   if (!config.ingeschakeld) return { gesynchroniseerd: 0, doorgestuurd: 0 };
 
-  return db.transaction(async (tx) => {
-    if (!(await lock(tx))) return { gesynchroniseerd: 0, doorgestuurd: 0 };
-    const gesynchroniseerd = await synchroniseerAchterstallige(tx, stripe, config.prijzen, nu);
-    const doorgestuurd = config.boekhoudingInbox
-      ? await stuurGemisteFacturen(tx, stripe, config.boekhoudingInbox, nu)
-      : 0;
-    return { gesynchroniseerd, doorgestuurd };
+  const resultaat: InhaalResultaat = { gesynchroniseerd: 0, doorgestuurd: 0 };
+  const uitgevoerd = await metLock(async () => {
+    resultaat.gesynchroniseerd = await synchroniseerAchterstallige(db, stripe, config.prijzen, nu);
+    if (config.boekhoudingInbox) {
+      resultaat.doorgestuurd = await stuurGemisteFacturen(db, stripe, config.boekhoudingInbox, nu);
+    }
   });
+  return uitgevoerd ? resultaat : { gesynchroniseerd: 0, doorgestuurd: 0 };
 }

@@ -2,9 +2,10 @@
 // en betaalde facturen van de laatste 7 dagen alsnog doorsturen. De database is PGlite, Stripe de
 // nep-poort en de mailverzender een geheugenverzender; er gaat niets over het netwerk.
 import { sql } from "drizzle-orm";
+import type postgres from "postgres";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AbonnementConfig } from "../server/abonnementen/config";
-import { haalGemisteMeldingenIn, neemInhaalLock } from "../server/abonnementen/inhalen";
+import { geplandeTakenAan, haalGemisteMeldingenIn, type MetLock, postgresLock } from "../server/abonnementen/inhalen";
 import type { StripeAbonnement, StripeFactuur } from "../server/abonnementen/stripe";
 import type { Db } from "../server/db";
 import { abonnementen, doorgestuurdeFacturen } from "../server/db/schema";
@@ -23,6 +24,12 @@ const CONFIG: AbonnementConfig = {
   prijzen: { maand: "price_maand", jaar: "price_jaar" },
   boekhoudingInbox: INBOX,
   apiBasis: null,
+};
+
+/** PGlite heeft maar een sessie: de tests voeren het werk zonder echt lock uit. */
+const zonderLock: MetLock = async (werk) => {
+  await werk();
+  return true;
 };
 
 let db: Db;
@@ -113,7 +120,7 @@ describe("selectie van rijen om te synchroniseren", () => {
   test("een actieve rij waarvan de periode meer dan 1 dag voorbij is: wel", async () => {
     const klant = await rij({ status: "active", periodeEinde: new Date(NU.getTime() - DAG_MS - 1) });
     stripe.abonnementen.set(klant, [stripeAbonnement(klant)]);
-    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU);
+    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock);
     expect(r).toEqual({ gesynchroniseerd: 1, doorgestuurd: 0 });
     expect(gesynchroniseerdeKlanten()).toEqual([klant]);
     // De rij is bijgewerkt met wat Stripe zegt.
@@ -124,7 +131,7 @@ describe("selectie van rijen om te synchroniseren", () => {
 
   test("een periode die 1 dag min 1 ms voorbij is en recent bijgewerkt: niet", async () => {
     await rij({ status: "active", periodeEinde: new Date(NU.getTime() - DAG_MS + 1) });
-    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).toEqual({ gesynchroniseerd: 0, doorgestuurd: 0 });
+    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).toEqual({ gesynchroniseerd: 0, doorgestuurd: 0 });
     expect(gesynchroniseerdeKlanten()).toEqual([]);
   });
 
@@ -132,7 +139,7 @@ describe("selectie van rijen om te synchroniseren", () => {
     const oud = await rij({ status: "trialing", bijgewerkt: new Date(NU.getTime() - DAG_MS - 1) });
     await rij({ status: "trialing", bijgewerkt: new Date(NU.getTime() - DAG_MS + 1) });
     stripe.abonnementen.set(oud, [stripeAbonnement(oud)]);
-    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).toEqual({ gesynchroniseerd: 1, doorgestuurd: 0 });
+    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).toEqual({ gesynchroniseerd: 1, doorgestuurd: 0 });
     expect(gesynchroniseerdeKlanten()).toEqual([oud]);
   });
 
@@ -147,7 +154,7 @@ describe("selectie van rijen om te synchroniseren", () => {
     await rij({ status: "incomplete_expired", periodeEinde: oud, bijgewerkt: oud });
     await rij({ status: null, periodeEinde: null, bijgewerkt: oud });
     for (const k of kandidaten) stripe.abonnementen.set(k, [stripeAbonnement(k)]);
-    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU);
+    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock);
     expect(r.gesynchroniseerd).toBe(3);
     expect(gesynchroniseerdeKlanten().sort()).toEqual([...kandidaten].sort());
   });
@@ -163,7 +170,7 @@ describe("selectie van rijen om te synchroniseren", () => {
       return echt(klantId);
     };
     const fout = vi.spyOn(console, "error").mockImplementation(() => {});
-    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU);
+    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock);
     expect(r).toEqual({ gesynchroniseerd: 1, doorgestuurd: 0 });
     // Het logt de klant, nooit de foutmelding zelf.
     expect(fout).toHaveBeenCalled();
@@ -181,7 +188,7 @@ describe("betaalde facturen van de laatste 7 dagen", () => {
     factuur("in_vreemd", "cus_onbekend");
     await db.insert(doorgestuurdeFacturen).values({ stripeFactuurId: "in_al", nummer: "ELK-in_al" });
 
-    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU);
+    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock);
 
     expect(r).toEqual({ gesynchroniseerd: 0, doorgestuurd: 1 });
     expect(aanroepen("betaaldeFacturen")).toEqual([
@@ -199,22 +206,22 @@ describe("betaalde facturen van de laatste 7 dagen", () => {
   test("een tweede run stuurt niets opnieuw", async () => {
     const klant = await rij({ status: "active" });
     factuur("in_1", klant);
-    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).doorgestuurd).toBe(1);
-    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).doorgestuurd).toBe(0);
+    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).doorgestuurd).toBe(1);
+    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).doorgestuurd).toBe(0);
     expect(mails).toHaveLength(1);
   });
 
   test("een factuur van nul euro wordt niet doorgestuurd en niet geteld", async () => {
     const klant = await rij({ status: "active" });
     factuur("in_nul", klant, { bedragBetaald: 0 });
-    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).toEqual({ gesynchroniseerd: 0, doorgestuurd: 0 });
+    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).toEqual({ gesynchroniseerd: 0, doorgestuurd: 0 });
     expect(mails).toHaveLength(0);
   });
 
   test("zonder BOEKHOUDING_INBOX worden geen facturen opgehaald", async () => {
     const klant = await rij({ status: "active" });
     factuur("in_1", klant);
-    const r = await haalGemisteMeldingenIn(db, stripe, { ...CONFIG, boekhoudingInbox: null }, NU);
+    const r = await haalGemisteMeldingenIn(db, stripe, { ...CONFIG, boekhoudingInbox: null }, NU, zonderLock);
     expect(r).toEqual({ gesynchroniseerd: 0, doorgestuurd: 0 });
     expect(aanroepen("betaaldeFacturen")).toEqual([]);
   });
@@ -234,10 +241,10 @@ describe("betaalde facturen van de laatste 7 dagen", () => {
       },
     });
     const fout = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).doorgestuurd).toBe(1);
+    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).doorgestuurd).toBe(1);
     expect(fout).toHaveBeenCalled();
     expect(JSON.stringify(fout.mock.calls)).not.toContain(INBOX);
-    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).doorgestuurd).toBe(1);
+    expect((await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).doorgestuurd).toBe(1);
     expect(mails).toHaveLength(2);
   });
 
@@ -248,19 +255,58 @@ describe("betaalde facturen van de laatste 7 dagen", () => {
       throw new Error("Stripe is niet bereikbaar");
     };
     vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU)).toEqual({ gesynchroniseerd: 1, doorgestuurd: 0 });
+    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).toEqual({ gesynchroniseerd: 1, doorgestuurd: 0 });
   });
 });
 
 describe("uitgeschakeld", () => {
   test("abonnementen uit: niets doen en de poort niet aanroepen", async () => {
     await rij({ status: "active", bijgewerkt: new Date(NU.getTime() - 5 * DAG_MS) });
-    expect(await haalGemisteMeldingenIn(db, stripe, { ingeschakeld: false }, NU)).toEqual({
+    expect(await haalGemisteMeldingenIn(db, stripe, { ingeschakeld: false }, NU, zonderLock)).toEqual({
       gesynchroniseerd: 0,
       doorgestuurd: 0,
     });
     expect(stripe.aanroepen).toEqual([]);
     expect(mails).toHaveLength(0);
+  });
+});
+
+describe("de run is niet een grote transactie", () => {
+  test("faalt de run na de eerste factuur, dan blijft die claim staan en gaat er in de volgende run niets dubbel", async () => {
+    const klant = await rij({ status: "active" });
+    factuur("in_a", klant);
+    factuur("in_b", klant);
+    // Een lock dat het werk uitvoert en daarna faalt, zoals een verbroken lockverbinding of een gestopt proces.
+    const faalNaWerk: MetLock = async (werk) => {
+      await werk();
+      throw new Error("verbinding verbroken");
+    };
+    await expect(haalGemisteMeldingenIn(db, stripe, CONFIG, NU, faalNaWerk)).rejects.toThrow("verbinding verbroken");
+    expect(mails).toHaveLength(2);
+    const ids = (await db.select().from(doorgestuurdeFacturen)).map((f) => f.stripeFactuurId).sort();
+    expect(ids).toEqual(["in_a", "in_b"]);
+
+    expect(await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock)).toEqual({
+      gesynchroniseerd: 0,
+      doorgestuurd: 0,
+    });
+    expect(mails).toHaveLength(2);
+  });
+
+  test("een klant die vastloopt, laat de eerder gesynchroniseerde rij bijgewerkt achter", async () => {
+    const oud = new Date(NU.getTime() - 5 * DAG_MS);
+    const eerste = await rij({ status: "active", bijgewerkt: oud });
+    const tweede = await rij({ status: "active", bijgewerkt: oud });
+    stripe.abonnementen.set(eerste, [stripeAbonnement(eerste)]);
+    const echt = stripe.abonnementenVanKlant;
+    stripe.abonnementenVanKlant = async (klantId) => {
+      if (klantId === tweede) throw new Error("stop");
+      return echt(klantId);
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock);
+    const [rij1] = await db.select().from(abonnementen).where(sql`${abonnementen.stripeKlantId} = ${eerste}`);
+    expect(rij1!.bijgewerkt).toEqual(NU);
   });
 });
 
@@ -274,33 +320,76 @@ describe("het lock", () => {
     expect(mails).toHaveLength(0);
   });
 
-  test("een vrij lock laat de run door", async () => {
+  test("een vrij lock laat de run door en geeft het resultaat", async () => {
     const klant = await rij({ status: "active", bijgewerkt: new Date(NU.getTime() - 5 * DAG_MS) });
     stripe.abonnementen.set(klant, [stripeAbonnement(klant)]);
-    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, async () => true);
+    const r = await haalGemisteMeldingenIn(db, stripe, CONFIG, NU, zonderLock);
     expect(r.gesynchroniseerd).toBe(1);
   });
 
-  // PGlite kent maar een sessie, en advisory locks zijn per sessie herbruikbaar: een "bezet" lock
-  // is hier dus niet echt na te bootsen. Deze test toont wel dat de echte SQL het juiste lock
-  // (hashtext('abonnementen:inhalen')) neemt en het bij het einde van de transactie loslaat.
-  test("neemInhaalLock houdt het advisory lock voor 'abonnementen:inhalen' tot het einde van de transactie", async () => {
-    // Een bigint-sleutel staat in pg_locks verdeeld over classid (hoge 32 bits) en objid (lage 32).
-    const aantal = async (d: Pick<Db, "execute">) =>
-      (
-        (await d.execute(sql`
-          select count(*)::int as aantal from pg_locks
-          where locktype = 'advisory'
-            and ((classid::bigint << 32) | objid::bigint) = hashtext('abonnementen:inhalen')::bigint
-        `)) as unknown as { rows: { aantal: number }[] }
-      ).rows[0]!.aantal;
+  // postgresLock tegen een nepverbinding: PGlite kent maar een sessie, waarin een advisory lock altijd
+  // opnieuw te nemen is, dus de echte contentie is niet na te bootsen. Wel wat er op de verbinding gebeurt.
+  describe("postgresLock", () => {
+    function nepClient(genomen: boolean) {
+      const log: string[] = [];
+      const verbinding = Object.assign(
+        async (delen: TemplateStringsArray, ...waarden: unknown[]) => {
+          const tekst = delen.join("?");
+          log.push(`${tekst.trim()} [${waarden.join(",")}]`);
+          return tekst.includes("pg_try_advisory_lock") ? [{ genomen }] : [];
+        },
+        { release: () => void log.push("release") },
+      );
+      const client = {
+        reserve: async () => {
+          log.push("reserve");
+          return verbinding;
+        },
+      } as unknown as Pick<postgres.Sql, "reserve">;
+      return { client, log };
+    }
 
-    let binnen = -1;
-    await db.transaction(async (tx) => {
-      expect(await neemInhaalLock(tx)).toBe(true);
-      binnen = await aantal(tx);
+    test("neemt het lock voor 'abonnementen:inhalen', voert uit, geeft het vrij en daarna de verbinding terug", async () => {
+      const { client, log } = nepClient(true);
+      let uitgevoerd = false;
+      expect(await postgresLock(client)(async () => void (uitgevoerd = true))).toBe(true);
+      expect(uitgevoerd).toBe(true);
+      expect(log).toEqual([
+        "reserve",
+        "select pg_try_advisory_lock(hashtext(?)) as genomen [abonnementen:inhalen]",
+        "select pg_advisory_unlock(hashtext(?)) [abonnementen:inhalen]",
+        "release",
+      ]);
     });
-    expect(binnen).toBe(1);
-    expect(await aantal(db)).toBe(0);
+
+    test("is het lock bezet: niet uitvoeren, niet vrijgeven, wel de verbinding teruggeven", async () => {
+      const { client, log } = nepClient(false);
+      let uitgevoerd = false;
+      expect(await postgresLock(client)(async () => void (uitgevoerd = true))).toBe(false);
+      expect(uitgevoerd).toBe(false);
+      expect(log.some((l) => l.includes("pg_advisory_unlock"))).toBe(false);
+      expect(log.at(-1)).toBe("release");
+    });
+
+    test("gooit het werk, dan wordt het lock toch vrijgegeven en de verbinding teruggegeven", async () => {
+      const { client, log } = nepClient(true);
+      await expect(
+        postgresLock(client)(async () => {
+          throw new Error("kapot");
+        }),
+      ).rejects.toThrow("kapot");
+      expect(log.some((l) => l.includes("pg_advisory_unlock"))).toBe(true);
+      expect(log.at(-1)).toBe("release");
+    });
+  });
+});
+
+describe("ELENTRIK_GEPLANDE_TAKEN", () => {
+  test("alleen 'uit' zet de geplande taken uit", () => {
+    expect(geplandeTakenAan({})).toBe(true);
+    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: "" })).toBe(true);
+    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: "aan" })).toBe(true);
+    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: "uit" })).toBe(false);
+    expect(geplandeTakenAan({ ELENTRIK_GEPLANDE_TAKEN: " UIT " })).toBe(false);
   });
 });

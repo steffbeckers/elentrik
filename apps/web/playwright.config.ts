@@ -63,6 +63,8 @@ export default defineConfig({
       STRIPE_API_BASIS: E2E_STRIPE_URL,
       // Geen boekhoudmail in e2e, ook niet als .env een adres heeft.
       BOEKHOUDING_INBOX: "",
+      // Geen uurlijkse inhaaltaak in e2e: de tests sturen zelf de events die ze nodig hebben.
+      ELENTRIK_GEPLANDE_TAKEN: "uit",
     },
     timeout: 120_000,
   },

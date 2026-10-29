@@ -427,7 +427,9 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } },
     });
 
-    test("vraagt status=paid en created[gte] in seconden", async () => {
+    const DAG_S = 24 * 3600;
+
+    test("vraagt status=paid en created[gte] in seconden, 60 dagen voor sinds", async () => {
       antwoorden["/v1/invoices"] = { object: "list", has_more: false, data: [rauweFactuur("in_1")] };
       const sinds = new Date("2026-11-03T12:00:00.500Z");
       const lijst = await poort().betaaldeFacturen(sinds);
@@ -445,7 +447,48 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       expect(verzoeken).toHaveLength(1);
       expect(verzoeken[0]!.pad).toBe("/v1/invoices");
       expect(verzoeken[0]!.zoek.get("status")).toBe("paid");
-      expect(verzoeken[0]!.zoek.get("created[gte]")).toBe(String(Math.floor(sinds.getTime() / 1000)));
+      expect(verzoeken[0]!.zoek.get("created[gte]")).toBe(String(Math.floor(sinds.getTime() / 1000) - 60 * DAG_S));
+    });
+
+    test("houdt facturen die sinds sinds betaald zijn, ook als ze veel eerder zijn aangemaakt", async () => {
+      const sinds = new Date("2026-11-03T12:00:00Z");
+      const s = Math.floor(sinds.getTime() / 1000);
+      const betaald = (id: string, paidAt: number | null, aangemaakt: number) => ({
+        ...rauweFactuur(id),
+        created: aangemaakt,
+        status_transitions: { paid_at: paidAt },
+      });
+      antwoorden["/v1/invoices"] = {
+        object: "list",
+        has_more: false,
+        data: [
+          betaald("in_oud_nu_betaald", s + 3600, s - 30 * DAG_S),
+          betaald("in_al_lang_betaald", s - 3600, s - 30 * DAG_S),
+          betaald("in_precies", s, s - DAG_S),
+          betaald("in_zonder_paid_at", null, s - DAG_S),
+        ],
+      };
+      const lijst = await poort().betaaldeFacturen(sinds);
+      expect(lijst.map((f) => f.id)).toEqual(["in_oud_nu_betaald", "in_precies", "in_zonder_paid_at"]);
+    });
+
+    test("waarschuwt zonder inhoud als de grens van 5000 facturen bereikt is", async () => {
+      antwoorden["/v1/invoices"] = (zoek: URLSearchParams) => {
+        const na = zoek.get("starting_after");
+        const start = na ? Number(na.slice(3)) + 1 : 0;
+        const data = Array.from({ length: 100 }, (_, i) => rauweFactuur(`in_${start + i}`));
+        return { object: "list", has_more: true, data };
+      };
+      const waarschuw = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const lijst = await poort().betaaldeFacturen(new Date("2026-11-03T12:00:00Z"));
+        expect(lijst).toHaveLength(5000);
+        expect(waarschuw).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(waarschuw.mock.calls)).toContain("5000");
+        expect(JSON.stringify(waarschuw.mock.calls)).not.toContain("cus_1");
+      } finally {
+        waarschuw.mockRestore();
+      }
     });
 
     test("volgt has_more met starting_after tot alle pagina's gelezen zijn", async () => {

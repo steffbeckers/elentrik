@@ -56,13 +56,20 @@ export interface StripePoort {
   beeindigAbonnement(id: string): Promise<void>;
   haalFactuur(id: string): Promise<StripeFactuur | null>;
   factuurPdf(factuur: StripeFactuur): Promise<Uint8Array>;
-  /** Alle betaalde facturen die sinds `sinds` zijn aangemaakt (alle pagina's). */
+  /** Alle facturen die sinds `sinds` betaald zijn (alle pagina's), ook als ze eerder zijn aangemaakt. */
   betaaldeFacturen(sinds: Date): Promise<StripeFactuur[]>;
   haalPrijs(id: string): Promise<StripePrijs>;
 }
 
 /** Een bovengrens voor het aantal facturen dat de inhaaltaak per keer leest. */
 const MAX_BETAALDE_FACTUREN = 5000;
+
+/**
+ * Een factuur kan lang voor zijn betaling zijn aangemaakt (een mislukte betaling die later slaagt).
+ * `betaaldeFacturen` leest daarom facturen die tot zoveel eerder dan `sinds` zijn aangemaakt en
+ * houdt er lokaal de over die sinds `sinds` betaald zijn.
+ */
+const AANGEMAAKT_VENSTER_MS = 60 * 24 * 3600 * 1000;
 
 /** Hoe lang een Stripe-aanroep (of het ophalen van een factuur-PDF) hoogstens duurt. */
 const STRIPE_TIMEOUT_MS = 10_000;
@@ -200,9 +207,18 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
     async betaaldeFacturen(sinds) {
       // De SDK volgt `has_more` zelf (met `starting_after`) tot alles gelezen is.
       const lijst = await stripe.invoices
-        .list({ status: "paid", created: { gte: Math.floor(sinds.getTime() / 1000) }, limit: 100 })
+        .list({
+          status: "paid",
+          created: { gte: Math.floor((sinds.getTime() - AANGEMAAKT_VENSTER_MS) / 1000) },
+          limit: 100,
+        })
         .autoPagingToArray({ limit: MAX_BETAALDE_FACTUREN });
-      return lijst.map(naarFactuur);
+      if (lijst.length >= MAX_BETAALDE_FACTUREN) {
+        console.warn("Stripe: betaalde facturen afgekapt op de grens", { grens: MAX_BETAALDE_FACTUREN });
+      }
+      // `paid_at` ontbreekt zelden; dan blijft de factuur erbij (doorsturen is idempotent).
+      const vanaf = Math.floor(sinds.getTime() / 1000);
+      return lijst.filter((f) => (f.status_transitions?.paid_at ?? vanaf) >= vanaf).map(naarFactuur);
     },
 
     async factuurPdf(factuur) {

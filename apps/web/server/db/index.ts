@@ -10,6 +10,7 @@ export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 let huidige: Db | undefined;
+let huidigeClient: postgres.Sql | undefined;
 
 export function gebruikDb(): Db {
   if (!huidige) {
@@ -17,12 +18,21 @@ export function gebruikDb(): Db {
     if (!url) {
       throw new Error("DATABASE_URL ontbreekt; zie apps/web/.env.example");
     }
-    huidige = drizzle(postgres(url), { schema });
+    huidigeClient = postgres(url);
+    huidige = drizzle(huidigeClient, { schema });
   }
   return huidige;
+}
+
+/** De postgres-js-client onder `gebruikDb()`, voor wat Drizzle niet kan (een gereserveerde verbinding). */
+export function gebruikPostgres(): postgres.Sql {
+  gebruikDb();
+  if (!huidigeClient) throw new Error("De database is niet via DATABASE_URL geopend");
+  return huidigeClient;
 }
 
 /** Alleen voor tests: vervangt de database die `gebruikDb()` teruggeeft. */
 export function zetDb(db: Db): void {
   huidige = db;
+  huidigeClient = undefined;
 }
