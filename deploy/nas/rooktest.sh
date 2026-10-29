@@ -39,6 +39,10 @@ TMP="$(pad "$(mktemp -d)")"
 DATA="${TMP}/data"
 mkdir -p "${DATA}/postgres" "${DATA}/bestanden" "${DATA}/backups"
 
+# Het databasewachtwoord van de rooktest (bevat bewust / # ? @), uit .env.rooktest.
+DB_WACHTWOORD="$(grep '^POSTGRES_WACHTWOORD=' "${ROOT}/deploy/nas/.env.rooktest" | cut -d= -f2- | tr -d "'")"
+[ -n "$DB_WACHTWOORD" ] || { echo "POSTGRES_WACHTWOORD ontbreekt in .env.rooktest" >&2; exit 1; }
+
 export ELENTRIK_DATA="$DATA"
 export ELENTRIK_IMAGE="$IMAGE"
 export ROOK_NAAM="$PROJECT"
@@ -51,6 +55,14 @@ faal() { printf '   FOUT  %s\n' "$*" >&2; exit 1; }
 compose() {
   docker compose -p "$PROJECT" --env-file "${ROOT}/deploy/nas/.env.rooktest" \
     -f "${ROOT}/deploy/nas/compose.yaml" -f "${TMP}/override.yaml" "$@"
+}
+
+# Faalt als (een stuk van) het databasewachtwoord in de tekst $1 staat; $2 zegt waar.
+geen_lek() {
+  local stuk
+  for stuk in "$DB_WACHTWOORD" "rook/test" "test#pw" "pw?x" "x@y"; do
+    if printf '%s' "$1" | grep -qF -- "$stuk"; then faal "het wachtwoord (stuk '${stuk}') staat in $2"; fi
+  done
 }
 
 # Wacht (hoogstens $2 seconden) tot container $1 gestopt is en geeft de exitcode, of "timeout".
@@ -301,6 +313,26 @@ LIJST="$(compose run -T --rm --no-deps --entrypoint sh backup -c 'pg_restore --l
 printf '%s' "$LIJST" | grep -q 'TABLE DATA public projecten' || faal "pg_restore --list toont de tabel projecten niet"
 goed "$(basename "$DUMP") is leesbaar met pg_restore --list"
 
+# De nachtelijke lus rond de zomertijd: elke kalenderdag precies een dump. backup.sh --test-tijd leest
+# polltijdstippen (elke minuut) en meldt wanneer de lus zou dumpen; het draait met busybox en de echte
+# tijdzonedata van Europe/Brussels in het postgres:alpine-image.
+stap "5b. Back-up rond de zomertijd (drie nachten, een poll per minuut)"
+dumps_in() { # $1 = begin (UTC), $2 = einde (UTC)
+  node -e 'for (let t = Date.parse(process.argv[1]) / 1000; t <= Date.parse(process.argv[2]) / 1000; t += 60) console.log(t)' "$1" "$2" \
+    | docker run --rm -i -e TZ=Europe/Brussels -v "${ROOT}/deploy/nas/backup.sh:/backup.sh:ro" --entrypoint sh "$PG_IMAGE" /backup.sh --test-tijd \
+    | tr '\n' ' ' | sed 's/ *$//'
+}
+# Lente: 2027-03-28, 02:00 wordt 03:00. Herfst: 2027-10-31, 03:00 wordt 02:00. Gewone nacht: juni.
+LENTE="$(dumps_in 2027-03-27T18:00:00Z 2027-03-29T18:00:00Z)"
+[ "$LENTE" = "dump 20270328 03 dump 20270329 03" ] || faal "lente: verwacht een dump per dag (28 en 29 maart), kreeg: '${LENTE}'"
+goed "nacht van 27 op 28 maart (klok vooruit): precies een dump per dag"
+HERFST="$(dumps_in 2027-10-30T18:00:00Z 2027-11-01T18:00:00Z)"
+[ "$HERFST" = "dump 20271031 03 dump 20271101 03" ] || faal "herfst: verwacht een dump per dag (31 oktober en 1 november), kreeg: '${HERFST}'"
+goed "nacht van 30 op 31 oktober (klok achteruit): precies een dump per dag"
+GEWOON="$(dumps_in 2027-06-14T18:00:00Z 2027-06-17T18:00:00Z)"
+[ "$GEWOON" = "dump 20270615 03 dump 20270616 03 dump 20270617 03" ] || faal "gewone nachten: kreeg: '${GEWOON}'"
+goed "gewone nachten: precies een dump per dag, om 03:xx lokale tijd"
+
 # ---------------------------------------------------------------- 6. kapotte migratie
 stap "6. Een kapotte migratie laat de app niet starten"
 KAPOT_CONTEXT="${TMP}/kapot"
@@ -315,7 +347,8 @@ EOF
 docker build -t "$IMAGE_KAPOT" "$KAPOT_CONTEXT" >"${TMP}/build-kapot.log" 2>&1 || faal "het kapotte image bouwen mislukte"
 
 WEB_ENV=(
-  -e "DATABASE_URL=postgres://elentrik:rooktest-db-wachtwoord@postgres:5432/elentrik"
+  -e "DATABASE_URL=postgres://elentrik@postgres:5432/elentrik"
+  -e "PGPASSWORD=${DB_WACHTWOORD}"
   -e "BETTER_AUTH_SECRET=rooktest-geheim-alleen-voor-de-rooktest-0123456789"
   -e "BETTER_AUTH_URL=${BASIS}"
   -e "ELENTRIK_BESTANDEN_DIR=/tmp/bestanden"
@@ -332,6 +365,7 @@ GEZONDHEID="$(docker inspect "${PROJECT}-kapot" --format '{{if .State.Health}}{{
 docker logs "${PROJECT}-kapot" 2>&1 | grep -qi 'migr' || faal "de log van de kapotte migratie vermeldt de migratie niet"
 goed "hij werd nooit gezond (status: ${GEZONDHEID}) en de log meldt de mislukte migratie"
 docker logs --tail 3 "${PROJECT}-kapot" 2>&1 | sed 's/^/        | /'
+geen_lek "$(docker logs "${PROJECT}-kapot" 2>&1)" "de log van de kapotte migratie"
 TELLING="$(psql_db 'select count(*) from drizzle.__drizzle_migrations' | tr -d '[:space:]')"
 [ "$TELLING" = "$VERWACHT" ] || faal "na de kapotte migratie telt __drizzle_migrations ${TELLING}, verwacht ${VERWACHT}"
 goed "de database bleef ongewijzigd (${TELLING} migraties)"
@@ -344,7 +378,8 @@ GEHEIM_TESTWAARDE="geheime-testwaarde-die-nooit-in-de-log-mag-staan-98765"
 # De variabele ELENTRIK_GOTENBERG_URL ontbreekt; de rest is geldig, zodat de migraties slagen en de
 # opstartcontrole van de configuratie zelf aan bod komt. Het geheim moet nergens in de log verschijnen.
 docker run -d --name "${PROJECT}-zonder" --network "$PROJECT" \
-  -e "DATABASE_URL=postgres://elentrik:rooktest-db-wachtwoord@postgres:5432/elentrik" \
+  -e "DATABASE_URL=postgres://elentrik@postgres:5432/elentrik" \
+  -e "PGPASSWORD=${DB_WACHTWOORD}" \
   -e "BETTER_AUTH_SECRET=${GEHEIM_TESTWAARDE}" \
   -e "BETTER_AUTH_URL=${BASIS}" \
   -e "ELENTRIK_BESTANDEN_DIR=/tmp/bestanden" \
@@ -355,10 +390,26 @@ EXIT_ZONDER="$(wacht_op_stop "${PROJECT}-zonder" 120)"
 goed "de container zonder ELENTRIK_GOTENBERG_URL stopt met exitcode ${EXIT_ZONDER}"
 LOG_ZONDER="$(docker logs "${PROJECT}-zonder" 2>&1)"
 printf '%s' "$LOG_ZONDER" | grep -q 'ELENTRIK_GOTENBERG_URL' || faal "de log noemt ELENTRIK_GOTENBERG_URL niet"
+geen_lek "$LOG_ZONDER" "de log zonder ELENTRIK_GOTENBERG_URL"
 if printf '%s' "$LOG_ZONDER" | grep -q "$GEHEIM_TESTWAARDE"; then faal "de log bevat een geheime waarde"; fi
 [ "$(docker inspect "${PROJECT}-zonder" --format '{{.State.Health.Status}}')" != healthy ] || faal "de container zonder variabele werd gezond"
 goed "de log noemt ELENTRIK_GOTENBERG_URL en bevat geen waarde van een geheim; nooit gezond"
 printf '%s\n' "$LOG_ZONDER" | grep -m3 'ELENTRIK_GOTENBERG_URL' | cut -c1-160 | sed 's/^/        | /'
 docker rm -f "${PROJECT}-zonder" >/dev/null
+
+# ---------------------------------------------------------------- 8. het databasewachtwoord in de logs
+stap "8. Het databasewachtwoord (met / # ? @) staat nergens in een log"
+# Een wachtwoord in de URL is toch ongeldig (/ # ? @): het migratiescript meldt dan alleen een code.
+SLECHTE_URL_UITVOER="$(docker run --rm --network "$PROJECT" -e "DATABASE_URL=postgres://elentrik:${DB_WACHTWOORD}@postgres:5432/elentrik" \
+  --entrypoint node "$IMAGE" /app/migreer.mjs 2>&1 || true)"
+printf '%s\n' "$SLECHTE_URL_UITVOER" | head -3 | sed 's/^/        | /'
+printf '%s' "$SLECHTE_URL_UITVOER" | grep -q 'Migreren mislukt' || faal "migreer.mjs meldt een ongeldige URL niet"
+geen_lek "$SLECHTE_URL_UITVOER" "de uitvoer van migreer.mjs met een ongeldige URL"
+goed "migreer.mjs met het wachtwoord in een ongeldige URL meldt alleen een code, geen wachtwoord"
+for DIENST in web postgres gotenberg; do
+  geen_lek "$(compose logs --no-color "$DIENST" 2>&1)" "de log van $DIENST"
+done
+geen_lek "$(compose logs --no-color backup 2>&1)" "de log van backup"
+goed "de logs van web, postgres, gotenberg en backup bevatten het wachtwoord niet (de stack draaide er de hele rooktest mee)"
 
 stap "Klaar"

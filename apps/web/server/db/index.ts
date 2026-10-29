@@ -12,13 +12,28 @@ export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 let huidige: Db | undefined;
 let huidigeClient: postgres.Sql | undefined;
 
+/**
+ * Opent de postgres-js-client. Een ongeldige URL gooit bij postgres-js een fout die de hele URL
+ * (met wachtwoord) in zijn `input` meedraagt, en Node toont die in de log. Daarom een eigen fout
+ * met alleen de code. Het wachtwoord hoort bij voorkeur niet in de URL maar in PGPASSWORD
+ * (postgres-js leest die zelf; zie deploy/nas/compose.yaml).
+ */
+function openClient(url: string): postgres.Sql {
+  try {
+    return postgres(url);
+  } catch (fout) {
+    const code = fout && typeof fout === "object" && "code" in fout ? String(fout.code) : "onbekend";
+    throw new Error(`DATABASE_URL is ongeldig (${code}); zie apps/web/.env.example`);
+  }
+}
+
 export function gebruikDb(): Db {
   if (!huidige) {
     const url = process.env.DATABASE_URL;
     if (!url) {
       throw new Error("DATABASE_URL ontbreekt; zie apps/web/.env.example");
     }
-    huidigeClient = postgres(url);
+    huidigeClient = openClient(url);
     huidige = drizzle(huidigeClient, { schema });
   }
   return huidige;

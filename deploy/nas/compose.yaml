@@ -19,7 +19,9 @@ services:
     volumes:
       - ${ELENTRIK_DATA:?ELENTRIK_DATA ontbreekt in .env}/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U elentrik -d elentrik"]
+      # Via TCP (-h): de tijdelijke server tijdens de eerste initialisatie luistert niet op TCP, dus meldt
+      # pas de echte server zich gezond.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U elentrik -d elentrik"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -51,12 +53,15 @@ services:
       postgres:
         condition: service_healthy
       gotenberg:
-        condition: service_started
+        condition: service_healthy
     environment:
       TZ: Europe/Brussels
       # Ontbreekt een van deze waarden, dan start de app niet: hij controleert ze zelf bij het starten
       # en noemt de naam van de variabele (nooit de waarde) in de log.
-      DATABASE_URL: postgres://elentrik:${POSTGRES_WACHTWOORD:?POSTGRES_WACHTWOORD ontbreekt in .env}@postgres:5432/elentrik
+      # Het wachtwoord staat bewust niet in de URL: tekens als / # ? @ breken een URL, en een foutmelding
+      # over een ongeldige URL zou het wachtwoord in de log zetten. postgres-js leest PGPASSWORD zelf.
+      DATABASE_URL: postgres://elentrik@postgres:5432/elentrik
+      PGPASSWORD: ${POSTGRES_WACHTWOORD:?POSTGRES_WACHTWOORD ontbreekt in .env}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-}
       NUXT_AUTH_BASIS_URL: ${NUXT_AUTH_BASIS_URL:-http://127.0.0.1:3000}

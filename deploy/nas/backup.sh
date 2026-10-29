@@ -4,13 +4,23 @@
 # ouder dan 30 dagen worden verwijderd. De verbinding komt uit PGHOST, PGUSER, PGDATABASE en
 # PGPASSWORD (compose zet ze).
 #
-#   backup.sh        wacht tot 03:00, maakt een dump en herhaalt dat elke nacht
-#   backup.sh --nu   maakt een dump meteen en stopt (voor een test of vlak voor een update)
+#   backup.sh                 draait voor altijd: een nachtelijke dump, elke kalenderdag precies een
+#   backup.sh --nu            maakt een dump meteen en stopt (voor een test of vlak voor een update)
+#   backup.sh --test-tijd     leest Unix-tijden (een per regel, als polltijdstippen) van stdin en schrijft
+#                             "dump JJJJMMDD UU" voor elk moment waarop de lus zou dumpen; er wordt niets
+#                             gedumpt (voor deploy/nas/rooktest.sh, rond de zomertijdnachten)
+#
+# Het schema: elke minuut kijkt de lus naar de lokale klok (TZ=Europe/Brussels). Is het uur 03 en
+# staat er voor de datum van vandaag nog geen markering, dan volgt een dump en de markering. Zo krijgt
+# elke kalenderdag precies een dump, ook in de nacht dat de klok vooruit gaat (02:00 wordt 03:00) of
+# achteruit (03:00 wordt 02:00; het uur 03 komt dan maar een keer voor).
 set -u
 
 MAP=/backups
 BEWAAR_DAGEN=30
-DRIE_UUR=$((3 * 3600))
+DUMPUUR=03
+# De datum van de laatste geslaagde nachtelijke dump; een handmatige --nu telt niet mee.
+MARKERING="$MAP/.laatste-nachtdump"
 
 log() { echo "[backup $(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
@@ -30,14 +40,9 @@ ruim_op() {
   find "$MAP" -maxdepth 1 -type f \( -name 'elentrik-*.dump' -o -name 'elentrik-*.dump.tmp' \) -mtime +"$BEWAAR_DAGEN" -exec rm -f {} \;
 }
 
-# Het aantal seconden tot de volgende 03:00 (lokale tijd), 0 tot 86399.
-seconden_tot_drie() {
-  u=$(date +%H); m=$(date +%M); s=$(date +%S)
-  u=${u#0}; m=${m#0}; s=${s#0}
-  nu=$(( ${u:-0} * 3600 + ${m:-0} * 60 + ${s:-0} ))
-  wacht=$(( DRIE_UUR - nu ))
-  [ "$wacht" -lt 0 ] && wacht=$(( wacht + 86400 ))
-  echo "$wacht"
+# Moet er nu een nachtelijke dump komen? $1 = datum (JJJJMMDD), $2 = uur (UU), lokale tijd.
+moet_dumpen() {
+  [ "$2" = "$DUMPUUR" ] && [ "$(cat "$MARKERING" 2>/dev/null)" != "$1" ]
 }
 
 if [ "${1:-}" = "--nu" ]; then
@@ -46,17 +51,33 @@ if [ "${1:-}" = "--nu" ]; then
   exit 0
 fi
 
-log "wacht op 03:00 ($(date +%Z)); bewaart ${BEWAAR_DAGEN} dagen"
+if [ "${1:-}" = "--test-tijd" ]; then
+  MARKERING=$(mktemp)
+  rm -f "$MARKERING"
+  while read -r tijd; do
+    datum=$(date -d "@$tijd" +%Y%m%d)
+    uur=$(date -d "@$tijd" +%H)
+    if moet_dumpen "$datum" "$uur"; then
+      echo "dump $datum $uur"
+      echo "$datum" >"$MARKERING"
+    fi
+  done
+  rm -f "$MARKERING"
+  exit 0
+fi
+
+log "dumpt elke nacht om ${DUMPUUR}:00 ($(date +%Z)); bewaart ${BEWAAR_DAGEN} dagen"
 while :; do
-  wacht=$(seconden_tot_drie)
-  # Hoogstens een uur per keer slapen: de klok (zomertijd) wordt zo telkens opnieuw gelezen.
-  if [ "$wacht" -gt 3600 ]; then
-    sleep 3600
-    continue
+  datum=$(date +%Y%m%d)
+  uur=$(date +%H)
+  if moet_dumpen "$datum" "$uur"; then
+    if maak_dump; then
+      echo "$datum" >"$MARKERING"
+      ruim_op
+    else
+      # Mislukt (bijvoorbeeld de database is even weg): over vijf minuten opnieuw, binnen het uur.
+      sleep 240
+    fi
   fi
-  sleep "$wacht"
-  maak_dump
-  ruim_op
-  # Voorbij het venster van 03:00, zodat dezelfde nacht niet opnieuw begint.
-  sleep 120
+  sleep 60
 done
