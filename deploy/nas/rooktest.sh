@@ -147,6 +147,7 @@ printf '%s' "$NAS_CONFIG" | node -e '
   process.stdin.on("data", (d) => (s += d)).on("end", () => {
     const c = JSON.parse(s);
     const fouten = [];
+    if (c.name !== "elentrik") fouten.push("compose.yaml heeft niet de vaste projectnaam elentrik");
     for (const [naam, d] of Object.entries(c.services)) {
       if (d.ports && d.ports.length) fouten.push(naam + " publiceert een poort");
     }
@@ -252,6 +253,12 @@ done
 [ "$GEZOND" = 1 ] || faal "/api/gezondheid werd niet 200 binnen 3 minuten"
 goed "/api/gezondheid geeft 200"
 [ "$(curl -s "${BASIS}/api/gezondheid" | jget ok)" = true ] || faal "/api/gezondheid geeft niet { ok: true }"
+
+# De vaste projectnaam elentrik in compose.yaml mag de eigen projectnaam van de rooktest niet overschrijven
+# (-p wint): anders zou de rooktest het lokale infra-project elentrik raken.
+[ "$(docker inspect "${PROJECT}-web" --format '{{index .Config.Labels "com.docker.compose.project"}}')" = "$PROJECT" ] || faal "de rooktest draait niet onder zijn eigen projectnaam"
+[ -z "$(docker ps -aq --filter label=com.docker.compose.project=elentrik --filter label=com.docker.compose.service=web)" ] || faal "er draait een compose-project met de naam elentrik"
+goed "de stack draait onder het project ${PROJECT}, niet onder de vaste naam elentrik uit compose.yaml"
 
 # Docker's eigen HEALTHCHECK (node + /api/gezondheid in het image) moet ook slagen.
 GEZONDHEID_WEB=""

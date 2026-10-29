@@ -94,12 +94,16 @@ export function controleerConfiguratie(env: Env): string[] {
   const omgeving = leesOmgeving(env);
   if (gezet(env, "ELENTRIK_OMGEVING") && !omgeving) meld("ELENTRIK_OMGEVING");
   if (isStaging(omgeving)) {
-    // Staging verstuurt nooit echte mail (Mailpit) en gebruikt alleen testsleutels van Stripe.
+    // Staging verstuurt nooit echte mail (Mailpit) en gebruikt alleen testsleutels van Stripe: een
+    // sleutel die geen sk_test_ of rk_test_ is (ook een beperkte live-sleutel, rk_live_) wordt geweigerd.
     if (verzender === "graph") meld("MAIL_VERZENDER");
-    if (env.STRIPE_GEHEIME_SLEUTEL?.trim().startsWith("sk_live_")) meld("STRIPE_GEHEIME_SLEUTEL");
+    if (gezet(env, "STRIPE_GEHEIME_SLEUTEL") && !/^(sk|rk)_test_/.test(env.STRIPE_GEHEIME_SLEUTEL!.trim())) {
+      meld("STRIPE_GEHEIME_SLEUTEL");
+    }
   } else if (omgeving === "productie") {
-    // Productie mag niet naar de Mailpit van staging sturen.
-    if (env.SMTP_HOST?.trim().toLowerCase() === "mailpit") meld("SMTP_HOST");
+    // Productie mag niet naar de Mailpit van staging sturen (dienstnaam mailpit, containernaam elentrik-mailpit).
+    const smtpHost = env.SMTP_HOST?.trim().toLowerCase();
+    if (smtpHost === "mailpit" || smtpHost === "elentrik-mailpit") meld("SMTP_HOST");
   }
 
   const net = env.ELENTRIK_VERTROUWD_PROXYNET?.trim();
