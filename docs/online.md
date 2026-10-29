@@ -27,9 +27,9 @@ bezoeker -> Cloudflare -> tunnel (cloudflared) -> elentrik-web:3000
   `backup`, plus `web-staging` en `mailpit` voor staging (sectie 11). Ze delen het Docker-netwerk `elentrik` (subnet `172.30.70.0/24`).
 - **Er wordt geen enkele poort gepubliceerd.** De enige weg naar binnen is de tunnel.
 - De gegevens staan in mappen op de NAS onder `ELENTRIK_DATA` (standaard `/volume1/docker/elentrik`):
-  `postgres/`, `bestanden/` en `backups/`.
-- Het image komt van GitHub: `ghcr.io/steffbeckers/elentrik-web`, met de tags `latest` en `sha-<korte commit>`.
-  GitHub Actions bouwt het bij elke push naar `main`, nadat de tests en de typecheck slaagden.
+  `postgres/`, `bestanden/`, `backups/` en `staging/bestanden/`.
+- Het image komt van GitHub: `ghcr.io/steffbeckers/elentrik-web`, met de tags `latest` (push naar `main`), `staging` (push naar
+  `staging`) en `sha-<korte commit>`. GitHub Actions bouwt het bij zo'n push, nadat de tests en de typecheck slaagden.
 
 ### Voor je begint
 
@@ -264,9 +264,9 @@ id <gebruiker>
 Noteer `uid=` (dit wordt `ELENTRIK_UID`) en `gid=` (dit wordt `ELENTRIK_GID`). Maak dan de mappen:
 
 ```
-sudo mkdir -p /volume1/docker/elentrik/postgres /volume1/docker/elentrik/bestanden /volume1/docker/elentrik/backups
+sudo mkdir -p /volume1/docker/elentrik/postgres /volume1/docker/elentrik/bestanden /volume1/docker/elentrik/backups /volume1/docker/elentrik/staging/bestanden
 sudo mkdir -p /volume1/docker/elentrik-compose
-sudo chown -R <uid>:<gid> /volume1/docker/elentrik/bestanden /volume1/docker/elentrik/backups
+sudo chown -R <uid>:<gid> /volume1/docker/elentrik/bestanden /volume1/docker/elentrik/backups /volume1/docker/elentrik/staging/bestanden
 ```
 
 - `postgres/` laat je met rust: de databasecontainer zet er zelf de rechten op.
@@ -325,6 +325,7 @@ ELENTRIK_GID=<gid>
 POSTGRES_WACHTWOORD=<lange-willekeurige-waarde>
 POSTGRES_BEHEER_WACHTWOORD=<andere-lange-willekeurige-waarde>
 STAGING_POSTGRES_WACHTWOORD=<nog-een-andere-lange-willekeurige-waarde>
+STAGING_BETTER_AUTH_SECRET=<nog-een-andere-lange-willekeurige-waarde>
 BETTER_AUTH_SECRET=<lange-willekeurige-waarde>
 BETTER_AUTH_URL=https://elentrik.app
 NUXT_AUTH_BASIS_URL=http://127.0.0.1:3000
@@ -834,7 +835,7 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 
 | Variabele | Verplicht | Waar je de waarde vindt |
 | --- | --- | --- |
-| `ELENTRIK_DATA` | ja | Het basispad van de gegevens, bijvoorbeeld `/volume1/docker/elentrik`; de drie mappen daaronder maak je zelf aan (sectie 3, stap 1). |
+| `ELENTRIK_DATA` | ja | Het basispad van de gegevens, bijvoorbeeld `/volume1/docker/elentrik`; de mappen daaronder (`postgres/`, `bestanden/`, `backups/` en `staging/bestanden/`) maak je zelf aan (sectie 3, stap 1). |
 | `ELENTRIK_UID` | ja | `id <gebruiker>` in een SSH-sessie op de NAS, het getal na `uid=`. |
 | `ELENTRIK_GID` | ja | Hetzelfde commando, het getal na `gid=`. |
 | `ELENTRIK_IMAGE` | nee | Standaard `ghcr.io/steffbeckers/elentrik-web:latest`. Vastzetten: een tag `sha-<korte commit>` uit de lijst van het package op GitHub. |
@@ -898,7 +899,7 @@ deze variabelen zet je in `.env`; de rest staat vast in `compose.yaml`.
 | `STAGING_POSTGRES_WACHTWOORD` | ja | Zelf verzonnen: `openssl rand -hex 32`, een andere waarde dan `POSTGRES_WACHTWOORD`. Wordt bij de eerste start van een lege database vastgelegd. |
 | `STAGING_BETTER_AUTH_SECRET` | ja | Zelf verzonnen: `openssl rand -hex 32`, minstens 32 tekens, nooit hetzelfde als `BETTER_AUTH_SECRET`. |
 | `STAGING_BOEKHOUDING_INBOX` | nee | Leeg laten, of een adres voor de kopie van betaalde facturen op staging. |
-| `STAGING_STRIPE_GEHEIME_SLEUTEL` | nee | Alleen een testsleutel (`sk_test_...`); met `sk_live_...` start staging niet. |
+| `STAGING_STRIPE_GEHEIME_SLEUTEL` | nee | Alleen een testsleutel (`sk_test_...` of `rk_test_...`); met een andere sleutel (ook `sk_live_...` of `rk_live_...`) start staging niet. |
 | `STAGING_STRIPE_WEBHOOK_GEHEIM` | bij Stripe | Het ondertekeningsgeheim van het testeindpunt voor staging (`whsec_...`). |
 | `STAGING_STRIPE_PRIJS_MAAND` | bij Stripe | Het id van de maandprijs in de testmodus (`price_...`). |
 | `STAGING_STRIPE_PRIJS_JAAR` | bij Stripe | Het id van de jaarprijs in de testmodus (`price_...`). |
@@ -908,7 +909,7 @@ deze variabelen zet je in `.env`; de rest staat vast in `compose.yaml`.
 Deze variabelen zet `compose.yaml` voor je; zet ze niet in `.env`. Ze staan hier zodat je ze herkent in de
 logs en in `.env.example`: `DATABASE_URL` (zonder wachtwoord), `PGPASSWORD` (krijgt `POSTGRES_WACHTWOORD`),
 `ELENTRIK_BESTANDEN_DIR` (`/data/bestanden`), `ELENTRIK_GOTENBERG_URL` (`http://gotenberg:3000`) en
-`ELENTRIK_VERTROUWD_PROXYNET` (`172.30.70.0/24`).
+`ELENTRIK_VERTROUWD_PROXYNET` (`172.30.70.0/24`) en `ELENTRIK_OMGEVING` (`productie` bij `web`, `staging` bij `web-staging`).
 
 ---
 
@@ -918,12 +919,13 @@ Staging is een testomgeving in hetzelfde project: `web-staging` (container `elen
 `ghcr.io/steffbeckers/elentrik-web:staging`) met een eigen database `elentrik_staging`, eigen geheimen en eigen
 bestanden, plus een eigen `mailpit` (container `elentrik-mailpit`) die alle mail van staging opvangt. Staging
 deelt `postgres` en `gotenberg` met productie, publiceert geen poorten, toont een balk en een watermerk op de
-pdf's, is niet indexeerbaar en weigert te starten met `MAIL_VERZENDER=graph` of een `sk_live_`-sleutel. Het wordt
+pdf's, is niet indexeerbaar en weigert te starten met `MAIL_VERZENDER=graph` of een Stripe-sleutel die geen testsleutel is. Het wordt
 niet geback-upt. Doe stap 1 tot en met 4 vóór je staging voor het eerst start (stap 5).
 
 ### Stap 1. Cloudflare
 
-Twee public hostnames op dezelfde tunnel (sectie 1, stap 3), elk met service type **HTTP**:
+Twee public hostnames op dezelfde tunnel (sectie 1, stap 3), elk met service type **HTTP**. Maak de hostname
+`mailpit-staging` pas aan nadat de Access-toepassing hieronder bestaat, zodat de mail van staging nooit even openbaar is:
 
 | Subdomain | Domain | URL |
 | --- | --- | --- |
@@ -962,8 +964,10 @@ sudo docker compose exec postgres psql -U elentrik -d postgres
 ```
 
 ```sql
-CREATE ROLE elentrik_beheer LOGIN SUPERUSER PASSWORD '<waarde van POSTGRES_BEHEER_WACHTWOORD>';
-CREATE ROLE elentrik_staging LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '<waarde van STAGING_POSTGRES_WACHTWOORD>';
+CREATE ROLE elentrik_beheer LOGIN SUPERUSER;
+CREATE ROLE elentrik_staging LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;
+\password elentrik_beheer
+\password elentrik_staging
 CREATE DATABASE elentrik_staging OWNER elentrik_staging;
 REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;
 REVOKE CONNECT ON DATABASE template1 FROM PUBLIC;
@@ -972,6 +976,8 @@ REVOKE CONNECT ON DATABASE elentrik_staging FROM PUBLIC;
 GRANT CONNECT ON DATABASE elentrik TO elentrik;
 GRANT CONNECT ON DATABASE elentrik_staging TO elentrik_staging;
 ```
+
+`\password` vraagt het wachtwoord zelf, zodat het niet in de psql-geschiedenis komt.
 
 ### Stap 3. Map en `.env`
 

@@ -12,6 +12,10 @@
 # Alle image-versies staan vast. Een nieuwe versie van de app: zet ELENTRIK_IMAGE op een andere tag
 # (of haal `latest` opnieuw op) en maak het project opnieuw aan.
 
+# Vaste projectnaam: Container Manager noemt het project `elentrik`, terwijl `docker compose` via SSH
+# anders de mapnaam (`elentrik-compose`) zou nemen en bijwerken.sh dan op een ander project werkte.
+name: elentrik
+
 services:
   postgres:
     image: postgres:16.14-alpine

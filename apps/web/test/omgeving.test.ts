@@ -167,6 +167,14 @@ describe("de balk en de titel in de app", () => {
     expect(bron).not.toMatch(/UButton|@click|close|dismiss/i);
   });
 
+  test("de balk heeft donkere tekst op de waarschuwingskleur en is geen live-gebied", () => {
+    const bron = lees("app/components/StagingBalk.vue");
+    expect(bron).toContain("text-black");
+    expect(bron).not.toContain("text-inverted");
+    expect(bron).toContain('role="note"');
+    expect(bron).not.toContain('role="status"');
+  });
+
   test.each(["nl", "fr", "en"])("%s.json heeft omgeving.staging", (taal) => {
     const json = JSON.parse(lees(`i18n/locales/${taal}.json`)) as { omgeving?: { staging?: string } };
     expect(json.omgeving?.staging).toMatch(/^Staging/);
