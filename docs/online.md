@@ -366,7 +366,7 @@ Het project haalt het image zonder aanmelding op uit GHCR, dus het package moet 
 bevat geen geheimen (alle configuratie komt bij het opstarten uit `.env`).
 
 1. Controleer op GitHub, tabblad **Actions**, dat de run van de workflow `web-image` groen is (eerst de job
-   `test`, dan `image`). Alleen een push naar `main` bouwt en pusht het image.
+   `test`, dan `image`). Alleen een push naar `main` (`:latest`) of `staging` (`:staging`) bouwt en pusht een image.
 2. Ga naar je GitHub-profiel, **Packages**, `elentrik-web`, **Package settings** (rechts), onderaan
    **Danger Zone**, **Change visibility**, **Public** (de naam kan per versie licht verschillen).
 3. Controleer vanaf een ander apparaat of de NAS: `docker pull ghcr.io/steffbeckers/elentrik-web:latest` werkt
@@ -392,6 +392,11 @@ sudo docker compose up -d
 
 Kies **een** manier en blijf erbij: een project dat je via SSH start, verschijnt niet in het tabblad
 Project van Container Manager.
+
+Het image van staging (`:staging`) bestaat pas na de eerste push naar de branch `staging`, en een ontbrekend
+image laat het hele `up` mislukken. Start bij de allereerste keer daarom alleen productie:
+`sudo docker compose up -d web postgres gotenberg backup` (`mailpit` hoort alleen bij staging). Staging volgt in
+sectie 11.
 
 Bij de eerste start haalt Docker de images binnen en maakt Postgres de database aan. De app migreert de
 database zelf voor hij verzoeken aanneemt.
@@ -912,7 +917,7 @@ Staging is een testomgeving in hetzelfde project: `web-staging` (container `elen
 bestanden, plus een eigen `mailpit` (container `elentrik-mailpit`) die alle mail van staging opvangt. Staging
 deelt `postgres` en `gotenberg` met productie, publiceert geen poorten, toont een balk en een watermerk op de
 pdf's, is niet indexeerbaar en weigert te starten met `MAIL_VERZENDER=graph` of een `sk_live_`-sleutel. Het wordt
-niet geback-upt. Doe stap 1 tot en met 4 vóór de eerste `docker compose up -d` van het project.
+niet geback-upt. Doe stap 1 tot en met 4 vóór je staging voor het eerst start (stap 5).
 
 ### Stap 1. Cloudflare
 
@@ -944,8 +949,10 @@ aan: de beheerder `elentrik_beheer` (superuser, alleen voor beheer), de gewone g
 `elentrik_staging`, hun databases en de `REVOKE`/`GRANT`. Dat is de eenvoudigste weg; zet daarna zo nodig een
 dump terug (sectie 6).
 
-Draait Postgres al met de oude opzet (`elentrik` als superuser), dan maak je de rollen met de hand aan, met
-dezelfde wachtwoorden als in `.env`:
+Draait Postgres al met de oude opzet, dan blijft `elentrik` een superuser (Postgres laat de eerste superuser van
+een datamap niet terugzetten naar een gewone gebruiker), dus productie en staging zijn dan niet echt van elkaar
+gescheiden. Echte scheiding vraagt een lege `postgres/`-map en een dump terugzetten (sectie 6, sectie 9). Wil je
+dat tijdelijk aanvaarden, dan voeg je staging zo toe, met dezelfde wachtwoorden als in `.env`:
 
 ```
 cd /volume1/docker/elentrik-compose
@@ -962,11 +969,7 @@ REVOKE CONNECT ON DATABASE elentrik FROM PUBLIC;
 REVOKE CONNECT ON DATABASE elentrik_staging FROM PUBLIC;
 GRANT CONNECT ON DATABASE elentrik TO elentrik;
 GRANT CONNECT ON DATABASE elentrik_staging TO elentrik_staging;
-ALTER ROLE elentrik NOSUPERUSER NOCREATEDB NOCREATEROLE;
 ```
-
-Weigert Postgres de laatste regel (de eerste superuser van een datamap laat zich mogelijk niet terugzetten naar
-een gewone gebruiker), begin dan met een lege `postgres/`-map.
 
 ### Stap 3. Map en `.env`
 
@@ -1002,8 +1005,8 @@ Staging heeft een eigen **testeindpunt** in de testmodus van Stripe (sectie 5):
 ### Stap 5. Starten en bijwerken
 
 Het image `:staging` bestaat pas na de eerste push naar de branch `staging` (Actions groen); het package
-`elentrik-web` is hetzelfde als bij productie en dus al publiek (sectie 3, stap 4). Daarna start je alles zoals in sectie 3, stap 5
-(`sudo docker compose up -d`) en controleer je:
+`elentrik-web` is hetzelfde als bij productie en dus al publiek (sectie 3, stap 4). Daarna start je staging met `sudo docker compose up -d` (nu bestaat het
+image) en controleer je:
 
 ```
 sudo docker compose logs --tail 50 web-staging
