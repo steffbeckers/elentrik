@@ -917,3 +917,61 @@ describe("breekRegels", () => {
     expect(breekRegels("x".repeat(20), 15, 2.5, 1)).toEqual(breekRegels("x".repeat(20), 15, 2.5));
   });
 });
+
+describe("printHtml: watermerk (staging)", () => {
+  const WATERMERK = { titel: "STAGING", ondertitel: "Geen geldig document" };
+
+  test("met watermerk heeft elke pagina precies één watermerk met titel en ondertitel", () => {
+    const doc = metGegevens(referentieAppartement());
+    const uit = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties({ watermerk: WATERMERK }));
+    const lijst = paginas(uit.html);
+    expect(lijst.length).toBe(uit.paginas);
+    expect(lijst.length).toBeGreaterThan(1);
+    for (const pagina of lijst) {
+      expect(pagina.match(/class="watermerk"/g)).toHaveLength(1);
+      expect(pagina).toContain('<div class="watermerk-titel">STAGING</div>');
+      expect(pagina).toContain('<div class="watermerk-ondertitel">Geen geldig document</div>');
+    }
+  });
+
+  test("het watermerk is afdrukbaar en verschuift de opmaak niet: absoluut, zonder pointer-events, halfdoorzichtig, geroteerd", () => {
+    const doc = metGegevens(referentieAppartement());
+    const uit = printHtml(doc, analyseer(doc), [], opties({ watermerk: WATERMERK }));
+    const css = uit.html.match(/<style>([\s\S]*?)<\/style>/)![1]!;
+    const regel = css.split("\n").filter((r) => r.includes(".watermerk"));
+    expect(regel.length).toBeGreaterThan(0);
+    const alles = regel.join("\n");
+    expect(alles).toMatch(/position:\s*absolute/);
+    expect(alles).toMatch(/pointer-events:\s*none/);
+    expect(alles).toMatch(/opacity:\s*0?\.\d+/);
+    expect(alles).toMatch(/rotate\(-\d+deg\)/);
+    expect(css).not.toMatch(/https?:|@import|url\(/);
+  });
+
+  test("de teksten van het watermerk worden geëscaped", () => {
+    const doc = metGegevens(referentieAppartement());
+    const uit = printHtml(doc, analyseer(doc), [], opties({ watermerk: { titel: "A<B", ondertitel: "x & y" } }));
+    expect(uit.html).toContain("A&lt;B");
+    expect(uit.html).toContain("x &amp; y");
+  });
+
+  test("zonder watermerk komt er geen watermerk-element of -stijl in de HTML, en het aantal pagina's blijft gelijk", () => {
+    const doc = metGegevens(referentieAppartement());
+    const zonder = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties());
+    const met = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties({ watermerk: WATERMERK }));
+    expect(zonder.html).not.toContain("watermerk");
+    expect(met.paginas).toBe(zonder.paginas);
+  });
+
+  test("het watermerk wijzigt de rest van de pagina's niet: zonder watermerk-markup is de HTML gelijk aan die zonder", () => {
+    const doc = metGegevens(referentieAppartement());
+    const zonder = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties());
+    const met = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties({ watermerk: WATERMERK }));
+    const gestript = met.html
+      .replace(/<div class="watermerk">.*?<\/div><\/div>/g, "")
+      .split("\n")
+      .filter((r) => !r.includes(".watermerk"))
+      .join("\n");
+    expect(gestript).toBe(zonder.html);
+  });
+});

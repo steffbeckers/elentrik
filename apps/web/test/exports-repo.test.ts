@@ -518,3 +518,44 @@ describe("exportBestandsnaam", () => {
     expect(await exportBestandsnaam(db, ONBEKEND)).toBe("export.pdf");
   });
 });
+
+describe("maakExport: watermerk van staging", () => {
+  async function exporteer(omgeving: string | undefined, dossierTaal?: "nl" | "fr" | "en") {
+    const doc = structuredClone(referentieWoning());
+    if (dossierTaal !== undefined) doc.meta.dossierTaal = dossierTaal;
+    const { db, org, opslag, projectId } = await opzet(doc);
+    const nep = nepPdf();
+    const env = omgeving === undefined ? {} : { ELENTRIK_OMGEVING: omgeving };
+    await maakExport(db, opslag, org, projectId, VERSIE, invoer(), { maakPdf: nep.maakPdf, env });
+    return nep.oproepen[0]!.html;
+  }
+
+  test("bij staging staat het watermerk in de dossiertaal op elke pagina (fr: Document non valable)", async () => {
+    const html = await exporteer("staging", "fr");
+    expect(html).toContain('<div class="watermerk-titel">STAGING</div>');
+    expect(html).toContain('<div class="watermerk-ondertitel">Document non valable</div>');
+    expect(html.match(/class="watermerk"/g)!.length).toBe(html.match(/<section class="pagina">/g)!.length);
+  });
+
+  test("bij staging zonder dossiertaal is de ondertitel Nederlands", async () => {
+    expect(await exporteer("staging")).toContain("Geen geldig document");
+  });
+
+  test("bij productie, een lege of onbekende omgeving staat er geen watermerk in", async () => {
+    for (const omgeving of ["productie", "", "iets-anders", undefined]) {
+      expect(await exporteer(omgeving, "fr")).not.toContain("watermerk");
+    }
+  });
+
+  test("zonder ingespoten omgeving leest de export ELENTRIK_OMGEVING op het moment van de aanroep", async () => {
+    const { db, org, opslag, projectId } = await opzet();
+    const nep = nepPdf();
+    vi.stubEnv("ELENTRIK_OMGEVING", "staging");
+    try {
+      await maakExport(db, opslag, org, projectId, VERSIE, invoer(), { maakPdf: nep.maakPdf });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(nep.oproepen[0]!.html).toContain("watermerk-titel");
+  });
+});

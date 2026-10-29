@@ -26,6 +26,8 @@ export type PrintOpties = {
   afbeeldingen: Record<string, string>;
   /** De bestandsnaam van het logo. */
   logo?: string;
+  /** Staging: een diagonaal, halfdoorzichtig watermerk op elke pagina. Zonder blijft de HTML ongewijzigd. */
+  watermerk?: { titel: string; ondertitel: string };
 };
 
 export type PrintResultaat = {
@@ -74,6 +76,14 @@ type Context = {
   taal: Taal;
   terugval: (type: NodeType) => string;
 };
+
+/** Het watermerk van een pagina; de opmaak staat in `stijl`. Zonder invloed op de rest van de pagina. */
+function watermerkHtml(w: { titel: string; ondertitel: string }): string {
+  return (
+    `<div class="watermerk"><div class="watermerk-titel">${escapeXml(w.titel)}</div>` +
+    `<div class="watermerk-ondertitel">${escapeXml(w.ondertitel)}</div></div>`
+  );
+}
 
 function mm(waarde: number): string {
   return `${getal(waarde)}mm`;
@@ -302,6 +312,7 @@ export function printHtml(
   if (onderdelen.bijlage || paginas.length === 0) paginas.push(...bijlagePaginas(c, bevindingen, overgeslagen));
 
   const totaal = paginas.length;
+  const watermerk = opties.watermerk ? watermerkHtml(opties.watermerk) : "";
   const secties = paginas.map(
     (pagina, i) =>
       `<section class="pagina">${pagina.inhoud}${cartouche({
@@ -316,7 +327,7 @@ export function printHtml(
         versieLabel: opties.versieLabel,
         nummer: i + 1,
         totaal,
-      })}</section>`,
+      })}${watermerk}</section>`,
   );
   const maat = papierMaat(papier.formaat);
   const titel = [doc.meta.klant.naam, opties.versieLabel].filter((d) => d.trim() !== "").join(" — ");
@@ -324,7 +335,7 @@ export function printHtml(
     "<!doctype html>\n" +
     `<html lang="${opties.taal}">\n<head>\n<meta charset="utf-8">\n` +
     `<title>${escapeXml(titel)}</title>\n` +
-    `<style>\n${stijl(maat.breedte, maat.hoogte)}\n</style>\n</head>\n<body>\n` +
+    `<style>\n${stijl(maat.breedte, maat.hoogte, opties.watermerk !== undefined)}\n</style>\n</head>\n<body>\n` +
     `${secties.join("\n")}\n</body>\n</html>\n`;
   return { html, paginas: totaal, overgeslagen };
 }
