@@ -1,7 +1,7 @@
 # Elentrik: lokaal in gebruik nemen en online zetten
 
-Praktische notities bij het inloggen en de organisaties (plan 6). Alles draait voorlopig op
-`127.0.0.1`.
+Praktische notities bij het inloggen en de organisaties (plan 6), bedoeld voor lokaal gebruik op
+`127.0.0.1`. Elentrik online zetten op de NAS staat in [`docs/online.md`](online.md).
 
 ## De eerste echte registratie
 
@@ -24,17 +24,27 @@ bedrijfsgegevens. Dat gebeurt één keer.
 5. **Is de mail toch weg of verlopen** (de link is 24 uur geldig)? Probeer in te loggen en kies
    "Bevestigingsmail opnieuw sturen".
 
-## Voor Elentrik online gaat
+## Online gaan
 
-- **Adressen:** zet `BETTER_AUTH_URL` op de publieke URL (bijvoorbeeld `https://app.elentrik.be`).
-  Zet ook `NUXT_AUTH_BASIS_URL` op dezelfde waarde: de basis-URL van de auth-client tijdens SSR
-  wordt bij het bouwen vastgelegd, en die variabele overschrijft ze bij het starten.
+**Online zetten op de NAS achter de Cloudflare Tunnel staat stap voor stap in
+[`docs/online.md`](online.md)** (Cloudflare, Microsoft 365, de NAS, Stripe, back-ups, updaten en
+problemen oplossen). Hieronder staan de achtergronden die voor elke online opstelling gelden. Het
+Docker-image en `deploy/nas/compose.yaml` zetten de meeste van deze waarden zelf.
+
+- **Adressen:** zet `BETTER_AUTH_URL` op de publieke URL (op de NAS `https://elentrik.app`).
+  `NUXT_AUTH_BASIS_URL` is het adres waarmee de server zichzelf aanspreekt tijdens het renderen van
+  pagina's (SSR): binnen de container is dat `http://127.0.0.1:3000`, dus niet het publieke adres. De
+  basis-URL van de auth-client tijdens SSR wordt bij het bouwen vastgelegd, en die variabele
+  overschrijft ze bij het starten.
 - **Cookies:** `Secure` gaat vanzelf aan zodra `BETTER_AUTH_URL` met `https://` begint. Lokaal
   (http) staat het uit. Cookies blijven `HttpOnly` en `SameSite=Lax`.
 - **Rate limiting achter een proxy:** de auth-route vervangt `x-forwarded-for` door het IP van de
-  socket, zodat een client zijn IP niet kan kiezen. Achter een reverse proxy is dat IP altijd dat
-  van de proxy: dan delen alle gebruikers één teller. Vóór het online gaan is een ontwerp nodig
-  dat de proxy vertrouwt (alleen haar `x-forwarded-for`, en alleen van haar adres).
+  socket, zodat een client zijn IP niet kan kiezen. Achter de Cloudflare Tunnel is dat IP altijd dat
+  van de tunnel, dus Elentrik gebruikt dan de header `CF-Connecting-IP`, maar **alleen** voor
+  verzoeken uit het subnet in `ELENTRIK_VERTROUWD_PROXYNET` (op de NAS het Docker-netwerk
+  `elentrik`, `172.30.70.0/24`). Zo werken de limieten per bezoeker. Zonder die variabele (lokaal) telt
+  het IP van de socket. Zet daarom alleen `cloudflared` en de containers van Elentrik op dat
+  netwerk (zie `docs/online.md`, sectie 1).
 - **CSRF en de Origin-controle:** de eigen API-routes weigeren een wijzigend verzoek (POST, PUT,
   PATCH, DELETE) van een andere site met 403: op `Sec-Fetch-Site: cross-site`, en op elke
   `Origin` die niet de basis-URL is (ook als de browser het verzoek `same-site` noemt, zoals een
@@ -48,7 +58,8 @@ bedrijfsgegevens. Dat gebeurt één keer.
   - `SMTP_BEVEILIGD=true`: TLS vanaf het begin van de verbinding (meestal poort 465);
   - `SMTP_VAN`: de afzender.
 
-  Die waarden staan alleen in `.env` en worden nooit gelogd.
+  Die waarden staan alleen in `.env` en worden nooit gelogd. Online op de NAS verstuurt Elentrik
+  standaard via Microsoft Graph (`MAIL_VERZENDER=graph`); zie `docs/online.md`, sectie 2.
 - **Geheim:** `BETTER_AUTH_SECRET` is een eigen, lange willekeurige waarde (minstens 32 tekens),
   alleen in `.env` en nooit in de repo.
 
@@ -131,7 +142,8 @@ De code legt deze instellingen niet vast. Doe ze in testmodus en later nog eens 
   - betaalmethode bijwerken toegelaten;
   - de factuurgeschiedenis **uit**, omdat de officiële facturen uit de boekhouding komen;
   - sla de standaardconfiguratie van het portaal op, ook in testmodus (anders faalt het portaal).
-- **Webhook-eindpunt** (zodra Elentrik online staat, op `https://<jouw-domein>/api/stripe/webhook`),
+- **Webhook-eindpunt** (zodra Elentrik online staat, op `https://elentrik.app/api/stripe/webhook`;
+  de stappen online staan in `docs/online.md`, sectie 5),
   met deze events:
   - `checkout.session.completed` en `checkout.session.async_payment_failed`;
   - `customer.subscription.created`, `customer.subscription.updated` en `customer.subscription.deleted`;
