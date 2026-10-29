@@ -2,7 +2,12 @@
 # .env.voorbeeld en vul in); zie docs/online.md.
 #
 # Er worden bewust geen poorten gepubliceerd: de enige weg naar binnen is de Cloudflare Tunnel, die
-# dit netwerk (`elentrik`) deelt en de app bereikt op http://elentrik-web:3000.
+# dit netwerk (`elentrik`) deelt en de app bereikt op http://elentrik-web:3000 (productie) en
+# http://elentrik-web-staging:3000 (staging).
+#
+# Staging draait naast productie: een eigen web-dienst (web-staging) en een eigen Mailpit, maar dezelfde
+# Postgres (een eigen database en rol) en dezelfde Gotenberg. Staging verstuurt nooit echte mail en
+# gebruikt alleen testsleutels van Stripe; de app weigert te starten als dat niet klopt.
 #
 # Alle image-versies staan vast. Een nieuwe versie van de app: zet ELENTRIK_IMAGE op een andere tag
 # (of haal `latest` opnieuw op) en maak het project opnieuw aan.
@@ -16,8 +21,12 @@ services:
       POSTGRES_USER: elentrik
       POSTGRES_DB: elentrik
       POSTGRES_PASSWORD: ${POSTGRES_WACHTWOORD:?POSTGRES_WACHTWOORD ontbreekt in .env}
+      # Alleen voor postgres-init/10-staging.sh, bij de eerste initialisatie van een lege datamap.
+      STAGING_POSTGRES_WACHTWOORD: ${STAGING_POSTGRES_WACHTWOORD:?STAGING_POSTGRES_WACHTWOORD ontbreekt in .env}
     volumes:
       - ${ELENTRIK_DATA:?ELENTRIK_DATA ontbreekt in .env}/postgres:/var/lib/postgresql/data
+      # Maakt de database en rol van staging aan; draait alleen bij een lege datamap.
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       # Via TCP (-h): de tijdelijke server tijdens de eerste initialisatie luistert niet op TCP, dus meldt
       # pas de echte server zich gezond.
@@ -69,6 +78,8 @@ services:
       ELENTRIK_GOTENBERG_URL: http://gotenberg:3000
       ELENTRIK_VERTROUWD_PROXYNET: 172.30.70.0/24
       ELENTRIK_GEPLANDE_TAKEN: ${ELENTRIK_GEPLANDE_TAKEN:-}
+      # Zet de grendels van de opstartcontrole aan: productie weigert SMTP_HOST=mailpit.
+      ELENTRIK_OMGEVING: productie
       MAIL_VERZENDER: ${MAIL_VERZENDER:-smtp}
       MAIL_AFZENDER: ${MAIL_AFZENDER:-}
       GRAPH_TENANT_ID: ${GRAPH_TENANT_ID:-}
@@ -87,6 +98,66 @@ services:
       BOEKHOUDING_INBOX: ${BOEKHOUDING_INBOX:-}
     volumes:
       - ${ELENTRIK_DATA}/bestanden:/data/bestanden
+    networks:
+      - elentrik
+
+  # Staging: dezelfde app als productie, met een eigen database, eigen geheimen en eigen bestanden,
+  # herkenbaar aan de balk en het watermerk, niet indexeerbaar. Alle mail gaat naar de Mailpit hieronder.
+  web-staging:
+    image: ghcr.io/steffbeckers/elentrik-web:staging
+    container_name: elentrik-web-staging
+    restart: unless-stopped
+    user: "${ELENTRIK_UID:?ELENTRIK_UID ontbreekt in .env}:${ELENTRIK_GID:?ELENTRIK_GID ontbreekt in .env}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      TZ: Europe/Brussels
+      # Zet de grendels aan: staging weigert MAIL_VERZENDER=graph en een Stripe-sleutel sk_live_...
+      ELENTRIK_OMGEVING: staging
+      DATABASE_URL: postgres://elentrik_staging@postgres:5432/elentrik_staging
+      PGPASSWORD: ${STAGING_POSTGRES_WACHTWOORD:?STAGING_POSTGRES_WACHTWOORD ontbreekt in .env}
+      BETTER_AUTH_SECRET: ${STAGING_BETTER_AUTH_SECRET:-}
+      BETTER_AUTH_URL: https://staging.elentrik.app
+      NUXT_AUTH_BASIS_URL: http://127.0.0.1:3000
+      ELENTRIK_BESTANDEN_DIR: /data/bestanden
+      ELENTRIK_GOTENBERG_URL: http://gotenberg:3000
+      ELENTRIK_VERTROUWD_PROXYNET: 172.30.70.0/24
+      ELENTRIK_GEPLANDE_TAKEN: ${ELENTRIK_GEPLANDE_TAKEN:-}
+      # Alle mail naar de Mailpit van deze stack; nooit naar Graph of een echte mailserver.
+      MAIL_VERZENDER: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_VAN: "Elentrik staging <noreply@staging.elentrik.app>"
+      STRIPE_GEHEIME_SLEUTEL: ${STAGING_STRIPE_GEHEIME_SLEUTEL:-}
+      STRIPE_WEBHOOK_GEHEIM: ${STAGING_STRIPE_WEBHOOK_GEHEIM:-}
+      STRIPE_PRIJS_MAAND: ${STAGING_STRIPE_PRIJS_MAAND:-}
+      STRIPE_PRIJS_JAAR: ${STAGING_STRIPE_PRIJS_JAAR:-}
+      BOEKHOUDING_INBOX: ${STAGING_BOEKHOUDING_INBOX:-}
+    volumes:
+      - ${ELENTRIK_DATA}/staging/bestanden:/data/bestanden
+    networks:
+      - elentrik
+
+  # Vangt alle mail van staging op. Geen poorten en geen aanmelding op SMTP: het is alleen intern bereikbaar.
+  # De webinterface (poort 8025) bereik je alleen binnen het netwerk (zie docs/online.md). De berichten staan
+  # in het geheugen en verdwijnen bij een herstart; 500 is het maximum.
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    container_name: elentrik-mailpit
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Brussels
+      MP_MAX_MESSAGES: "500"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - elentrik
 
