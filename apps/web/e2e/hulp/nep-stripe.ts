@@ -6,7 +6,7 @@
 // Wat ze doet:
 // - prijzen lezen (vaste maand- en jaarprijs), klanten maken;
 // - Checkout-sessies maken, lezen en laten vervallen, met een nepbetaalpagina op /checkout/:id;
-// - een leeg abonnementenoverzicht, en een nepklantenportaal.
+// - een leeg abonnementenoverzicht en een lege lijst betaalde facturen, en een nepklantenportaal.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { E2E_STRIPE_PRIJS_JAAR, E2E_STRIPE_PRIJS_MAAND } from "../omgeving";
 
@@ -126,6 +126,11 @@ export async function startNepStripe(poort: number): Promise<{ stop(): Promise<v
 
     if (methode === "GET" && pad === "/v1/subscriptions") {
       return json(res, 200, { object: "list", data: [], has_more: false, url: "/v1/subscriptions" });
+    }
+
+    // De uurlijkse inhaaltaak leest de betaalde facturen: er zijn er geen.
+    if (methode === "GET" && pad === "/v1/invoices") {
+      return json(res, 200, { object: "list", data: [], has_more: false, url: "/v1/invoices" });
     }
 
     if (methode === "POST" && pad === "/v1/billing_portal/sessions") {

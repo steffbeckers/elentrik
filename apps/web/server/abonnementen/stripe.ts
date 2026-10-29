@@ -56,8 +56,13 @@ export interface StripePoort {
   beeindigAbonnement(id: string): Promise<void>;
   haalFactuur(id: string): Promise<StripeFactuur | null>;
   factuurPdf(factuur: StripeFactuur): Promise<Uint8Array>;
+  /** Alle betaalde facturen die sinds `sinds` zijn aangemaakt (alle pagina's). */
+  betaaldeFacturen(sinds: Date): Promise<StripeFactuur[]>;
   haalPrijs(id: string): Promise<StripePrijs>;
 }
+
+/** Een bovengrens voor het aantal facturen dat de inhaaltaak per keer leest. */
+const MAX_BETAALDE_FACTUREN = 5000;
 
 /** Hoe lang een Stripe-aanroep (of het ophalen van een factuur-PDF) hoogstens duurt. */
 const STRIPE_TIMEOUT_MS = 10_000;
@@ -190,6 +195,14 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
         if (bestaatNiet(fout)) return null;
         throw fout;
       }
+    },
+
+    async betaaldeFacturen(sinds) {
+      // De SDK volgt `has_more` zelf (met `starting_after`) tot alles gelezen is.
+      const lijst = await stripe.invoices
+        .list({ status: "paid", created: { gte: Math.floor(sinds.getTime() / 1000) }, limit: 100 })
+        .autoPagingToArray({ limit: MAX_BETAALDE_FACTUREN });
+      return lijst.map(naarFactuur);
     },
 
     async factuurPdf(factuur) {

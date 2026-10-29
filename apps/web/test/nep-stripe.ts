@@ -1,6 +1,6 @@
 // Een geheugenimplementatie van de Stripe-poort voor de tests. Ze praat nooit met het netwerk
 // en legt elke aanroep vast in `aanroepen`. De tests vullen `abonnementen`, `facturen` en
-// `prijzen` zelf.
+// `prijzen` zelf. `betaaldeFacturen` geeft alle `facturen` terug (ze gelden als betaald).
 import type {
   StripeAbonnement,
   StripeCheckout,
@@ -83,6 +83,11 @@ export function maakNepStripe(): NepStripe {
       nep.aanroepen.push({ methode: "haalFactuur", invoer: id });
       const f = nep.facturen.get(id);
       return f ? { ...f } : null;
+    },
+
+    async betaaldeFacturen(sinds) {
+      nep.aanroepen.push({ methode: "betaaldeFacturen", invoer: sinds });
+      return [...nep.facturen.values()].map((f) => ({ ...f }));
     },
 
     async factuurPdf(factuur) {

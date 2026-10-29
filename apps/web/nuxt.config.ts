@@ -26,6 +26,9 @@ export default defineNuxtConfig({
     authBasisUrl: process.env.BETTER_AUTH_URL || "http://127.0.0.1:3000",
   },
   nitro: {
+    // Taken (server/tasks) en hun planning: de uurlijkse inhaaltaak voor gemiste Stripe-meldingen.
+    experimental: { tasks: true },
+    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"] },
     publicAssets: [
       pdfjsBron("wasm"),
       pdfjsBron("standard_fonts"),
