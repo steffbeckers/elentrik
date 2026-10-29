@@ -18,14 +18,18 @@ services:
     restart: unless-stopped
     environment:
       TZ: Europe/Brussels
-      POSTGRES_USER: elentrik
-      POSTGRES_DB: elentrik
-      POSTGRES_PASSWORD: ${POSTGRES_WACHTWOORD:?POSTGRES_WACHTWOORD ontbreekt in .env}
-      # Alleen voor postgres-init/10-staging.sh, bij de eerste initialisatie van een lege datamap.
+      # De superuser van Postgres, alleen voor beheer: geen app en geen back-up gebruikt hem. De app van
+      # productie (`elentrik`) en die van staging (`elentrik_staging`) zijn gewone gebruikers, aangemaakt
+      # door postgres-init/10-databases.sh; zo kan geen van beide in de database van de ander.
+      POSTGRES_USER: elentrik_beheer
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_BEHEER_WACHTWOORD:?POSTGRES_BEHEER_WACHTWOORD ontbreekt in .env}
+      # Alleen voor postgres-init/10-databases.sh, bij de eerste initialisatie van een lege datamap.
+      POSTGRES_WACHTWOORD: ${POSTGRES_WACHTWOORD:?POSTGRES_WACHTWOORD ontbreekt in .env}
       STAGING_POSTGRES_WACHTWOORD: ${STAGING_POSTGRES_WACHTWOORD:?STAGING_POSTGRES_WACHTWOORD ontbreekt in .env}
     volumes:
       - ${ELENTRIK_DATA:?ELENTRIK_DATA ontbreekt in .env}/postgres:/var/lib/postgresql/data
-      # Maakt de database en rol van staging aan; draait alleen bij een lege datamap.
+      # Maakt de databases en rollen aan; draait alleen bij een lege datamap.
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       # Via TCP (-h): de tijdelijke server tijdens de eerste initialisatie luistert niet op TCP, dus meldt
