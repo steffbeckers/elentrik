@@ -81,4 +81,5 @@ export const FR: Teksten = {
     geenBevindingen: "Aucun constat",
   },
   geenKringen: "Aucun circuit",
+  watermerk: { titel: "STAGING", ondertitel: "Document non valable" },
 };

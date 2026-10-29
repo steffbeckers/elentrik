@@ -44,6 +44,8 @@ export type Teksten = {
     geenBevindingen: string;
   };
   geenKringen: string;
+  /** Het watermerk op de pdf van staging: de titel groot, de ondertitel in de taal van het dossier. */
+  watermerk: { titel: string; ondertitel: string };
 };
 
 export const NL: Teksten = {
@@ -125,4 +127,5 @@ export const NL: Teksten = {
     geenBevindingen: "Geen bevindingen",
   },
   geenKringen: "Geen kringen",
+  watermerk: { titel: "STAGING", ondertitel: "Geen geldig document" },
 };

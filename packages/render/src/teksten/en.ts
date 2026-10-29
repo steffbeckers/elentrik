@@ -81,4 +81,5 @@ export const EN: Teksten = {
     geenBevindingen: "No findings",
   },
   geenKringen: "No circuits",
+  watermerk: { titel: "STAGING", ondertitel: "Not a valid document" },
 };
