@@ -51,6 +51,9 @@ mkdir -p "${DATA}/postgres" "${DATA}/bestanden" "${DATA}/backups" "${DATA}/stagi
 # Het databasewachtwoord van de rooktest (bevat bewust / # ? @), uit .env.rooktest.
 DB_WACHTWOORD="$(grep '^POSTGRES_WACHTWOORD=' "${ROOT}/deploy/nas/.env.rooktest" | cut -d= -f2- | tr -d "'")"
 [ -n "$DB_WACHTWOORD" ] || { echo "POSTGRES_WACHTWOORD ontbreekt in .env.rooktest" >&2; exit 1; }
+# Het wachtwoord van de beheerder (superuser) van Postgres; geen enkele app of back-up mag hem gebruiken.
+BEHEER_WACHTWOORD="$(grep '^POSTGRES_BEHEER_WACHTWOORD=' "${ROOT}/deploy/nas/.env.rooktest" | cut -d= -f2- | tr -d "'")"
+[ -n "$BEHEER_WACHTWOORD" ] || { echo "POSTGRES_BEHEER_WACHTWOORD ontbreekt in .env.rooktest" >&2; exit 1; }
 # Het wachtwoord van de staging-database (met een enkele aanhalingsteken erin: in .env.rooktest tussen dubbele).
 STAGING_WACHTWOORD="$(grep '^STAGING_POSTGRES_WACHTWOORD=' "${ROOT}/deploy/nas/.env.rooktest" | cut -d= -f2- | sed 's/^"//; s/"$//')"
 [ -n "$STAGING_WACHTWOORD" ] || { echo "STAGING_POSTGRES_WACHTWOORD ontbreekt in .env.rooktest" >&2; exit 1; }
@@ -71,7 +74,7 @@ compose() {
 # Faalt als (een stuk van) het databasewachtwoord in de tekst $1 staat; $2 zegt waar.
 geen_lek() {
   local stuk
-  for stuk in "$DB_WACHTWOORD" "rook/test" "test#pw" "pw?x" "x@y" "$STAGING_WACHTWOORD" "stg/rook" "ook#pw"; do
+  for stuk in "$DB_WACHTWOORD" "rook/test" "test#pw" "pw?x" "x@y" "$STAGING_WACHTWOORD" "stg/rook" "ook#pw" "$BEHEER_WACHTWOORD" "beheer/rook"; do
     if printf '%s' "$1" | grep -qF -- "$stuk"; then faal "het wachtwoord (stuk '${stuk}') staat in $2"; fi
   done
 }
@@ -172,6 +175,12 @@ printf '%s' "$NAS_CONFIG" | node -e '
     const bestanden = (d) => (d.volumes || []).find((v) => v.target === "/data/bestanden");
     if (!bestanden(st) || !String(bestanden(st).source).endsWith("/staging/bestanden")) fouten.push("web-staging: de bestanden staan niet in <data>/staging/bestanden");
     if (bestanden(st) && bestanden(w) && bestanden(st).source === bestanden(w).source) fouten.push("web en web-staging delen de bestandenmap");
+    // De superuser `elentrik_beheer` is alleen voor beheer: geen enkele andere dienst gebruikt hem of zijn wachtwoord.
+    if (c.services.postgres.environment.POSTGRES_USER !== "elentrik_beheer") fouten.push("postgres: POSTGRES_USER is niet elentrik_beheer");
+    for (const [naam, d] of Object.entries(c.services)) {
+      if (naam !== "postgres" && JSON.stringify(d.environment || {}).includes("beheer")) fouten.push(naam + " gebruikt de beheerder van Postgres");
+    }
+    if (w.environment.DATABASE_URL !== "postgres://elentrik@postgres:5432/elentrik" || c.services.backup.environment.PGUSER !== "elentrik") fouten.push("web of backup gebruikt niet de gewone gebruiker elentrik");
     for (const dienst of ["postgres", "gotenberg", "mailpit"]) {
       if (!st.depends_on || !st.depends_on[dienst]) fouten.push("web-staging hangt niet af van " + dienst);
     }
@@ -504,6 +513,14 @@ stap "9. Productie en staging naast elkaar op een Postgres en een Gotenberg"
 [ "$(compose ps -q gotenberg | wc -l | tr -d ' ')" = 1 ] || faal "er draait niet precies een Gotenberg"
 [ "$(curl -s "${BASIS_STAGING}/api/gezondheid" | jget ok)" = true ] || faal "/api/gezondheid van staging geeft niet { ok: true }"
 goed "web en web-staging zijn beide healthy tegen een Postgres en een Gotenberg"
+MAILPIT_GEZOND=""
+for _ in $(seq 1 15); do
+  MAILPIT_GEZOND="$(docker inspect "${PROJECT}-mailpit" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}geen{{end}}')"
+  [ "$MAILPIT_GEZOND" = healthy ] && break
+  sleep 2
+done
+[ "$MAILPIT_GEZOND" = healthy ] || faal "de healthcheck van mailpit werd niet healthy (status: ${MAILPIT_GEZOND})"
+goed "de healthcheck van mailpit meldt healthy"
 psql_staging() { compose exec -T -e "PGPASSWORD=${STAGING_WACHTWOORD}" postgres psql -h postgres -U elentrik_staging -d elentrik_staging -tA -c "$1"; }
 TELLING_STAGING="$(psql_staging 'select count(*) from drizzle.__drizzle_migrations' | tr -d '[:space:]')"
 [ "$TELLING_STAGING" = "$VERWACHT" ] || faal "de staging-database telt ${TELLING_STAGING} migraties, verwacht ${VERWACHT}"
@@ -511,7 +528,7 @@ goed "web-staging heeft de migraties op zijn eigen database elentrik_staging gez
 [ "$(psql_db "select count(*) from \"user\" where email like '%@staging-rooktest.%'" | tr -d '[:space:]')" = 0 ] || faal "staging-gegevens in de productiedatabase"
 
 # ---------------------------------------------------------------- 10. gescheiden databases en rollen
-stap "10. elentrik_staging komt niet in de database elentrik"
+stap "10. Productie en staging kunnen niet in elkaars database (beide gewone gebruikers, geen superuser)"
 UITVOER="$(compose exec -T -e "PGPASSWORD=${STAGING_WACHTWOORD}" postgres psql -h postgres -U elentrik_staging -d elentrik -tA -c 'select 1' 2>&1 || true)"
 printf '%s\n' "$UITVOER" | head -2 | sed 's/^/        | /'
 printf '%s' "$UITVOER" | grep -q 'permission denied for database' || faal "elentrik_staging mag de database elentrik openen, of de fout klopt niet"
@@ -524,11 +541,25 @@ goed "elentrik_staging opent wel zijn eigen database en is geen superuser"
 if compose exec -T -e "PGPASSWORD=fout-wachtwoord" postgres psql -h postgres -U elentrik_staging -d elentrik_staging -tA -c 'select 1' >/dev/null 2>&1; then
   faal "elentrik_staging kan met een verkeerd wachtwoord aanmelden"
 fi
-PUBLIEK="$(psql_db "select count(*) from pg_database d, aclexplode(coalesce(d.datacl, acldefault('d', d.datdba))) a where d.datname in ('elentrik','elentrik_staging') and a.grantee = 0 and a.privilege_type = 'CONNECT'" | tr -d '[:space:]')"
-[ "$PUBLIEK" = 0 ] || faal "PUBLIC heeft nog CONNECT op een van de twee databases"
-goed "verkeerd wachtwoord wordt geweigerd en PUBLIC heeft geen CONNECT op elentrik of elentrik_staging"
-# Let op: de rol elentrik is de bootstrap-superuser van Postgres en omzeilt elke GRANT; "omgekeerd" is dus
-# niet af te dwingen. Wat telt is dat staging (de rol zonder rechten) productie niet bereikt.
+PUBLIEK="$(psql_db "select count(*) from pg_database d, aclexplode(coalesce(d.datacl, acldefault('d', d.datdba))) a where d.datname in ('elentrik','elentrik_staging','postgres','template1') and a.grantee = 0 and a.privilege_type = 'CONNECT'" | tr -d '[:space:]')"
+[ "$PUBLIEK" = 0 ] || faal "PUBLIC heeft nog CONNECT op een van de databases"
+goed "verkeerd wachtwoord wordt geweigerd en PUBLIC heeft geen CONNECT op elentrik, elentrik_staging, postgres of template1"
+# Omgekeerd: ook de app van productie is een gewone gebruiker en komt niet in staging. De superuser is de
+# aparte beheerder elentrik_beheer, die geen enkele app gebruikt.
+for DB in elentrik_staging postgres template1; do
+  UITVOER="$(compose exec -T -e "PGPASSWORD=${DB_WACHTWOORD}" postgres psql -h postgres -U elentrik -d "$DB" -tA -c 'select 1' 2>&1 || true)"
+  printf '%s' "$UITVOER" | grep -q 'permission denied for database' || faal "elentrik mag de database ${DB} openen, of de fout klopt niet: ${UITVOER}"
+  geen_lek "$UITVOER" "de foutmelding van de geweigerde verbinding"
+done
+printf '%s
+' "$UITVOER" | head -1 | sed 's/^/        | /'
+goed "elentrik (productie) krijgt 'permission denied for database' op elentrik_staging, postgres en template1"
+[ "$(compose exec -T -e "PGPASSWORD=${DB_WACHTWOORD}" postgres psql -h postgres -U elentrik -d elentrik -tA -c 'select current_database()' | tr -d '[:space:]')" = elentrik ] || faal "elentrik kan zijn eigen database niet openen"
+[ "$(psql_db "select rolsuper::text || rolcreatedb::text || rolcreaterole::text || rolbypassrls::text from pg_roles where rolname = 'elentrik'" | tr -d '[:space:]')" = falsefalsefalsefalse ] || faal "elentrik is superuser of mag databases/rollen maken"
+[ "$(psql_db "select string_agg(datname || '=' || pg_get_userbyid(datdba), ',' order by datname) from pg_database where datname like 'elentrik%'" | tr -d '[:space:]')" = "elentrik=elentrik,elentrik_staging=elentrik_staging" ] || faal "de eigenaars van de databases kloppen niet"
+if compose exec -T postgres psql -U elentrik -d elentrik -tA -c 'create role rooktest_mag_niet' >/dev/null 2>&1; then faal "elentrik mag een rol aanmaken"; fi
+[ "$(compose exec -T postgres psql -U elentrik_beheer -d postgres -tA -c "select rolsuper::text from pg_roles where rolname = 'elentrik_beheer'" | tr -d '[:space:]')" = true ] || faal "de beheerder elentrik_beheer is geen superuser"
+goed "elentrik is een gewone gebruiker (geen superuser, createdb, createrole, bypassrls) en eigenaar van zijn database; elentrik_beheer is de superuser"
 
 # ---------------------------------------------------------------- 11. de eigen Mailpit van de stack
 stap "11. Een registratie op staging komt in de Mailpit van de stack"
@@ -692,9 +723,18 @@ ID_STAGING_VOOR="$ID_STAGING_NA"
 bijwerken productie >"${TMP}/bijwerken-productie.log" 2>&1 || { cat "${TMP}/bijwerken-productie.log" >&2; faal "bijwerken.sh productie mislukte"; }
 sed 's/^/        | /' "${TMP}/bijwerken-productie.log"
 grep -q 'dump gemaakt' "${TMP}/bijwerken-productie.log" || faal "bijwerken.sh productie maakte geen back-up"
+REGEL_DUMP="$(grep -n 'dump gemaakt' "${TMP}/bijwerken-productie.log" | head -1 | cut -d: -f1)"
+REGEL_HERSTART="$(grep -n 'web herstarten' "${TMP}/bijwerken-productie.log" | head -1 | cut -d: -f1)"
+[ -n "$REGEL_DUMP" ] && [ -n "$REGEL_HERSTART" ] && [ "$REGEL_DUMP" -lt "$REGEL_HERSTART" ] || faal "bijwerken.sh productie maakt de back-up niet vóór het herstarten van web (regels ${REGEL_DUMP:-?} en ${REGEL_HERSTART:-?})"
 grep -q 'pull web)' "${TMP}/bijwerken-productie.log" || faal "bijwerken.sh productie haalde web niet op (pull)"
 [ "$(docker inspect "${PROJECT}-web-staging" --format '{{.Id}}')" = "$ID_STAGING_VOOR" ] || faal "bijwerken.sh productie herstartte web-staging"
 [ "$(docker inspect "${PROJECT}-web" --format '{{.State.Health.Status}}')" = healthy ] || faal "web is na bijwerken niet healthy"
 goed "bijwerken.sh productie: eerst een back-up, dan web; web-staging onaangeroerd"
+
+# Een laatste controle over alle logs van de hele rooktest: geen van de drie wachtwoorden in een log.
+for DIENST in web web-staging mailpit postgres gotenberg backup; do
+  geen_lek "$(compose logs --no-color "$DIENST" 2>&1)" "de log van $DIENST"
+done
+goed "de logs van web, web-staging, mailpit, postgres, gotenberg en backup bevatten na alle stappen geen wachtwoord"
 
 stap "Klaar"
