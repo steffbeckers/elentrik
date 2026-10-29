@@ -394,7 +394,9 @@ Kies **een** manier en blijf erbij: een project dat je via SSH start, verschijnt
 Project van Container Manager.
 
 Het image van staging (`:staging`) bestaat pas na de eerste push naar de branch `staging`, en een ontbrekend
-image laat het hele `up` mislukken. Start bij de allereerste keer daarom alleen productie:
+image laat het hele `up` mislukken. Het eenvoudigst zorg je eerst dat `:staging` bestaat (merge `develop` een
+keer in `staging`, dan bouwt GitHub Actions het image); dan werken manier A (Container Manager start alle
+diensten) en manier B. Alleen voor manier B kan het ook zonder staging:
 `sudo docker compose up -d web postgres gotenberg backup` (`mailpit` hoort alleen bij staging). Staging volgt in
 sectie 11.
 
