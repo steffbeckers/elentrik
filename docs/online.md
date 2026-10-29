@@ -863,6 +863,24 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 | --- | --- | --- |
 | `ELENTRIK_GEPLANDE_TAKEN` | nee | Weglaten. Met `uit` doet de uurlijkse inhaaltaak niets. |
 
+### Staging (naast productie)
+
+> Voorlopige lijst; de volledige handleiding voor staging (Cloudflare, mappen, eerste start, bijwerken)
+> volgt in de eigen sectie.
+
+Staging draait in hetzelfde project, met een eigen database, eigen geheimen en een eigen Mailpit. Alleen
+deze variabelen zet je in `.env`; de rest staat vast in `compose.yaml`.
+
+| Variabele | Verplicht | Waar je de waarde vindt |
+| --- | --- | --- |
+| `STAGING_POSTGRES_WACHTWOORD` | ja | Zelf verzonnen: `openssl rand -hex 32`, een andere waarde dan `POSTGRES_WACHTWOORD`. Wordt bij de eerste start van een lege database vastgelegd. |
+| `STAGING_BETTER_AUTH_SECRET` | ja | Zelf verzonnen: `openssl rand -hex 32`, minstens 32 tekens, nooit hetzelfde als `BETTER_AUTH_SECRET`. |
+| `STAGING_BOEKHOUDING_INBOX` | nee | Leeg laten, of een adres voor de kopie van betaalde facturen op staging. |
+| `STAGING_STRIPE_GEHEIME_SLEUTEL` | nee | Alleen een testsleutel (`sk_test_...`); met `sk_live_...` start staging niet. |
+| `STAGING_STRIPE_WEBHOOK_GEHEIM` | bij Stripe | Het ondertekeningsgeheim van het testeindpunt voor staging (`whsec_...`). |
+| `STAGING_STRIPE_PRIJS_MAAND` | bij Stripe | Het id van de maandprijs in de testmodus (`price_...`). |
+| `STAGING_STRIPE_PRIJS_JAAR` | bij Stripe | Het id van de jaarprijs in de testmodus (`price_...`). |
+
 ### Door `compose.yaml` zelf gezet (niet in `.env`)
 
 Deze variabelen zet `compose.yaml` voor je; zet ze niet in `.env`. Ze staan hier zodat je ze herkent in de

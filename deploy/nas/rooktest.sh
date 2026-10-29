@@ -12,10 +12,14 @@
 #   3. start een kopie van het image met een opzettelijk kapotte migratie (moet stoppen met exitcode
 #      != 0 en nooit gezond worden) en een container met een ontbrekende variabele (de log noemt de
 #      naam, nooit de waarde);
-#   4. ruimt alles op: containers, netwerk, volume, test-images en de tijdelijke map.
+#   4. controleert staging naast productie (stap 9 tot en met 15): beide web-diensten tegen een
+#      Postgres en een Gotenberg, gescheiden databases en rollen, de eigen Mailpit van de stack,
+#      het watermerk in de PDF, noindex en de balk, de grendels en bijwerken.sh;
+#   5. ruimt alles op: containers, netwerk, volume, test-images en de tijdelijke map.
 #
 # Raakt nooit de lokale infra (postgres 5432, gotenberg 3001): alleen Mailpit wordt gelezen (8025) en
-# gebruikt als SMTP-host (1025). Zet ROOKTEST_BEHOUD=1 om na afloop niets op te ruimen.
+# gebruikt als SMTP-host (1025). Staging gebruikt de eigen Mailpit van de stack (tijdelijk op
+# 127.0.0.1:38025). Zet ROOKTEST_BEHOUD=1 om na afloop niets op te ruimen.
 set -Eeuo pipefail
 
 # Git Bash op Windows zet argumenten als /backups om in C:/Program Files/Git/backups; voor docker
@@ -23,8 +27,12 @@ set -Eeuo pipefail
 docker() { MSYS_NO_PATHCONV=1 command docker "$@"; }
 
 POORT=3399
+POORT_STAGING=3398
+POORT_MAILPIT_STAGING=38025
 MAILPIT=http://127.0.0.1:8025
+MAILPIT_STAGING="http://127.0.0.1:${POORT_MAILPIT_STAGING}"
 BASIS="http://127.0.0.1:${POORT}"
+BASIS_STAGING="http://127.0.0.1:${POORT_STAGING}"
 PG_IMAGE=postgres:16.14-alpine
 
 # Padden die native programma's (docker, curl) begrijpen: C:/... in plaats van /c/... op Windows.
@@ -35,18 +43,21 @@ ID="$(date +%s)$RANDOM"
 PROJECT="elentrik-rooktest-${ID}"
 IMAGE="elentrik-web:rooktest-${ID}"
 IMAGE_KAPOT="elentrik-web:rooktest-kapot-${ID}"
+IMAGE_STAGING="elentrik-web:rooktest-staging-${ID}"
 TMP="$(pad "$(mktemp -d)")"
 DATA="${TMP}/data"
-mkdir -p "${DATA}/postgres" "${DATA}/bestanden" "${DATA}/backups"
+mkdir -p "${DATA}/postgres" "${DATA}/bestanden" "${DATA}/backups" "${DATA}/staging/bestanden"
 
 # Het databasewachtwoord van de rooktest (bevat bewust / # ? @), uit .env.rooktest.
 DB_WACHTWOORD="$(grep '^POSTGRES_WACHTWOORD=' "${ROOT}/deploy/nas/.env.rooktest" | cut -d= -f2- | tr -d "'")"
 [ -n "$DB_WACHTWOORD" ] || { echo "POSTGRES_WACHTWOORD ontbreekt in .env.rooktest" >&2; exit 1; }
+# Het wachtwoord van de staging-database (met een enkele aanhalingsteken erin: in .env.rooktest tussen dubbele).
+STAGING_WACHTWOORD="$(grep '^STAGING_POSTGRES_WACHTWOORD=' "${ROOT}/deploy/nas/.env.rooktest" | cut -d= -f2- | sed 's/^"//; s/"$//')"
+[ -n "$STAGING_WACHTWOORD" ] || { echo "STAGING_POSTGRES_WACHTWOORD ontbreekt in .env.rooktest" >&2; exit 1; }
 
 export ELENTRIK_DATA="$DATA"
 export ELENTRIK_IMAGE="$IMAGE"
 export ROOK_NAAM="$PROJECT"
-
 AANTAL=0
 stap() { printf '\n== %s\n' "$*"; }
 goed() { AANTAL=$((AANTAL + 1)); printf '   OK  %s\n' "$*"; }
@@ -60,7 +71,7 @@ compose() {
 # Faalt als (een stuk van) het databasewachtwoord in de tekst $1 staat; $2 zegt waar.
 geen_lek() {
   local stuk
-  for stuk in "$DB_WACHTWOORD" "rook/test" "test#pw" "pw?x" "x@y"; do
+  for stuk in "$DB_WACHTWOORD" "rook/test" "test#pw" "pw?x" "x@y" "$STAGING_WACHTWOORD" "stg/rook" "ook#pw"; do
     if printf '%s' "$1" | grep -qF -- "$stuk"; then faal "het wachtwoord (stuk '${stuk}') staat in $2"; fi
   done
 }
@@ -93,18 +104,18 @@ opruimen() {
   set +e
   if [ "$code" -ne 0 ] && [ "$COMPOSE_GESTART" = 1 ]; then
     printf '\n--- logs van web (laatste 60 regels) ---\n' >&2
-    compose logs --no-color --tail 60 web >&2
+    compose logs --no-color --tail 60 web web-staging >&2
   fi
   if [ "${ROOKTEST_BEHOUD:-}" = 1 ]; then
     printf '\nROOKTEST_BEHOUD=1: project %s, map %s en image %s blijven staan.\n' "$PROJECT" "$TMP" "$IMAGE" >&2
     exit "$code"
   fi
   printf '\n== Opruimen\n'
-  docker rm -f "${PROJECT}-kapot" "${PROJECT}-zonder" >/dev/null 2>&1
+  docker rm -f "${PROJECT}-kapot" "${PROJECT}-zonder" "${PROJECT}-graph" "${PROJECT}-sk-live" "${PROJECT}-mailpit-prod" >/dev/null 2>&1
   [ "$COMPOSE_GESTART" = 1 ] && compose down -v --remove-orphans --timeout 5 >/dev/null 2>&1
   # Bestanden die de containers aanmaakten, kunnen van een andere gebruiker zijn.
   docker run --rm -v "${TMP}:/d" --entrypoint sh "$PG_IMAGE" -c 'rm -rf /d/data' >/dev/null 2>&1
-  docker rmi -f "$IMAGE" "$IMAGE_KAPOT" >/dev/null 2>&1
+  docker rmi -f "$IMAGE_STAGING" "$IMAGE" "$IMAGE_KAPOT" >/dev/null 2>&1
   rm -rf "$TMP"
   if [ "$code" -eq 0 ]; then printf 'Rooktest geslaagd: %s controles OK.\n' "$AANTAL"; fi
   exit "$code"
@@ -119,7 +130,9 @@ command -v node >/dev/null || faal "node ontbreekt"
 docker info >/dev/null 2>&1 || faal "Docker draait niet"
 curl -s --max-time 3 -o /dev/null "${MAILPIT}/api/v1/info" || faal "Mailpit is niet bereikbaar op ${MAILPIT} (start met: pnpm db:up)"
 if curl -s --max-time 2 -o /dev/null "${BASIS}/"; then faal "poort ${POORT} is al in gebruik"; fi
-goed "Docker, Mailpit en poort ${POORT} zijn in orde"
+if curl -s --max-time 2 -o /dev/null "${BASIS_STAGING}/"; then faal "poort ${POORT_STAGING} is al in gebruik"; fi
+if curl -s --max-time 2 -o /dev/null "${MAILPIT_STAGING}/"; then faal "poort ${POORT_MAILPIT_STAGING} is al in gebruik"; fi
+goed "Docker, Mailpit en de poorten ${POORT}, ${POORT_STAGING} en ${POORT_MAILPIT_STAGING} zijn in orde"
 
 # De NAS-compose zelf, met het voorbeeldbestand: geldig, geen enkele gepubliceerde poort, het vaste
 # netwerk, en elke variabele die compose gebruikt staat in .env.voorbeeld.
@@ -134,12 +147,34 @@ printf '%s' "$NAS_CONFIG" | node -e '
     for (const [naam, d] of Object.entries(c.services)) {
       if (d.ports && d.ports.length) fouten.push(naam + " publiceert een poort");
     }
-    for (const naam of ["web", "postgres", "gotenberg", "backup"]) {
+    for (const naam of ["web", "web-staging", "postgres", "gotenberg", "mailpit", "backup"]) {
       if (!c.services[naam]) fouten.push("dienst " + naam + " ontbreekt");
     }
     const n = c.networks && c.networks.elentrik;
     if (!n || n.name !== "elentrik" || n.ipam.config[0].subnet !== "172.30.70.0/24") fouten.push("netwerk elentrik of subnet klopt niet");
     if (c.services.web.environment.ELENTRIK_VERTROUWD_PROXYNET !== "172.30.70.0/24") fouten.push("ELENTRIK_VERTROUWD_PROXYNET klopt niet");
+    const w = c.services.web, st = c.services["web-staging"], m = c.services.mailpit;
+    if (!st || !m) {
+      console.error("web-staging of mailpit ontbreekt");
+      process.exit(1);
+    }
+    if (w.environment.ELENTRIK_OMGEVING !== "productie") fouten.push("web: ELENTRIK_OMGEVING is niet productie");
+    if (st.environment.ELENTRIK_OMGEVING !== "staging") fouten.push("web-staging: ELENTRIK_OMGEVING is niet staging");
+    if (st.container_name !== "elentrik-web-staging") fouten.push("web-staging: containernaam klopt niet");
+    if (st.image !== "ghcr.io/steffbeckers/elentrik-web:staging") fouten.push("web-staging: image klopt niet");
+    if (m.container_name !== "elentrik-mailpit" || m.image !== "axllent/mailpit:v1.31.4") fouten.push("mailpit: naam of image klopt niet");
+    if (m.environment.MP_MAX_MESSAGES !== "500") fouten.push("mailpit: MP_MAX_MESSAGES is niet 500");
+    const se = st.environment;
+    if (se.DATABASE_URL !== "postgres://elentrik_staging@postgres:5432/elentrik_staging") fouten.push("web-staging: DATABASE_URL klopt niet");
+    if (se.BETTER_AUTH_URL !== "https://staging.elentrik.app" || se.MAIL_VERZENDER !== "smtp" || se.SMTP_HOST !== "mailpit" || String(se.SMTP_PORT) !== "1025") fouten.push("web-staging: BETTER_AUTH_URL of de mailinstellingen kloppen niet");
+    if (se.PGPASSWORD === w.environment.PGPASSWORD) fouten.push("web-staging deelt het databasewachtwoord met web");
+    if (se.BETTER_AUTH_SECRET === w.environment.BETTER_AUTH_SECRET) fouten.push("web-staging deelt BETTER_AUTH_SECRET met web");
+    const bestanden = (d) => (d.volumes || []).find((v) => v.target === "/data/bestanden");
+    if (!bestanden(st) || !String(bestanden(st).source).endsWith("/staging/bestanden")) fouten.push("web-staging: de bestanden staan niet in <data>/staging/bestanden");
+    if (bestanden(st) && bestanden(w) && bestanden(st).source === bestanden(w).source) fouten.push("web en web-staging delen de bestandenmap");
+    for (const dienst of ["postgres", "gotenberg", "mailpit"]) {
+      if (!st.depends_on || !st.depends_on[dienst]) fouten.push("web-staging hangt niet af van " + dienst);
+    }
     if (fouten.length) {
       console.error(fouten.join("\n"));
       process.exit(1);
@@ -148,7 +183,7 @@ printf '%s' "$NAS_CONFIG" | node -e '
 for NAAM in $(grep -oE '\$\{[A-Z_]+' "${ROOT}/deploy/nas/compose.yaml" | tr -d '${' | sort -u); do
   grep -qE "^#? ?${NAAM}=" "${ROOT}/deploy/nas/.env.voorbeeld" || faal "${NAAM} staat niet in .env.voorbeeld"
 done
-goed "compose.yaml is geldig, publiceert geen poorten, heeft netwerk elentrik (172.30.70.0/24) en alle variabelen staan in .env.voorbeeld"
+goed "compose.yaml is geldig, publiceert geen poorten, heeft netwerk elentrik (172.30.70.0/24), web en web-staging zijn gescheiden en alle variabelen staan in .env.voorbeeld"
 
 # ---------------------------------------------------------------- bouwen
 stap "Image bouwen"
@@ -156,6 +191,7 @@ docker build -f "${ROOT}/apps/web/Dockerfile" -t "$IMAGE" "$ROOT" >"${TMP}/build
   || { tail -60 "${TMP}/build.log" >&2; faal "docker build mislukt"; }
 GROOTTE="$(docker image inspect "$IMAGE" --format '{{.Size}}')"
 goed "image gebouwd: $((GROOTTE / 1024 / 1024)) MB"
+docker tag "$IMAGE" "$IMAGE_STAGING"
 GEBRUIKER="$(docker image inspect "$IMAGE" --format '{{.Config.User}}')"
 [ -n "$GEBRUIKER" ] && [ "$GEBRUIKER" != "root" ] && [ "$GEBRUIKER" != "0" ] || faal "het image draait als root"
 goed "het image draait als gebruiker '${GEBRUIKER}'"
@@ -172,6 +208,19 @@ services:
       - "127.0.0.1:${POORT}:3000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+  # Staging: hetzelfde image onder een eigen tag (bijwerken.sh vervangt die later), op een eigen poort.
+  web-staging:
+    container_name: ${ROOK_NAAM}-web-staging
+    image: ${IMAGE_STAGING}
+    ports:
+      - "127.0.0.1:${POORT_STAGING}:3000"
+    environment:
+      BETTER_AUTH_URL: ${BASIS_STAGING}
+  # De Mailpit van de stack, alleen hier gepubliceerd zodat het script de mail kan lezen.
+  mailpit:
+    container_name: ${ROOK_NAAM}-mailpit
+    ports:
+      - "127.0.0.1:${POORT_MAILPIT_STAGING}:8025"
   postgres:
     volumes:
       - rooktest-postgres:/var/lib/postgresql/data
@@ -204,6 +253,16 @@ for _ in $(seq 1 30); do
 done
 [ "$GEZONDHEID_WEB" = healthy ] || faal "de HEALTHCHECK van web werd niet healthy (status: ${GEZONDHEID_WEB})"
 goed "de HEALTHCHECK van het image meldt healthy"
+
+# Staging draait er in dezelfde stack naast, tegen dezelfde Postgres en Gotenberg.
+GEZONDHEID_STAGING=""
+for _ in $(seq 1 30); do
+  GEZONDHEID_STAGING="$(docker inspect "${PROJECT}-web-staging" --format '{{.State.Health.Status}}')"
+  [ "$GEZONDHEID_STAGING" = healthy ] && break
+  sleep 2
+done
+[ "$GEZONDHEID_STAGING" = healthy ] || faal "de HEALTHCHECK van web-staging werd niet healthy (status: ${GEZONDHEID_STAGING})"
+goed "de HEALTHCHECK van web-staging meldt healthy"
 
 UID_WEB="$(docker exec "${PROJECT}-web" id -u)"
 [ "$UID_WEB" != 0 ] || faal "web draait als root"
@@ -411,5 +470,231 @@ for DIENST in web postgres gotenberg; do
 done
 geen_lek "$(compose logs --no-color backup 2>&1)" "de log van backup"
 goed "de logs van web, postgres, gotenberg en backup bevatten het wachtwoord niet (de stack draaide er de hele rooktest mee)"
+
+# ================================================================ staging naast productie
+# De tekst van een PDF, via pdf.js uit apps/web (dezelfde bibliotheek als de app).
+pdf_tekst() {
+  (cd "${ROOT}/apps/web" && node --input-type=module -e '
+    import { readFileSync } from "node:fs";
+    import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+    const doc = await getDocument({ data: new Uint8Array(readFileSync(process.argv[1])), useSystemFonts: true }).promise;
+    let tekst = "";
+    for (let p = 1; p <= doc.numPages; p++) {
+      const inhoud = await (await doc.getPage(p)).getTextContent();
+      tekst += inhoud.items.map((i) => i.str).join(" ") + "\n";
+    }
+    process.stdout.write(tekst);
+  ' "$1")
+}
+
+# De statuscode en X-Robots-Tag van een adres: "<status> <waarde of ->".
+kop_van() { # $1 = adres, $2 = optioneel cookiebestand
+  local kop status robots
+  kop="$(curl -s -D - -o /dev/null ${2:+-b "$2"} "$1" | tr -d '\r')"
+  status="$(printf '%s\n' "$kop" | head -1 | cut -d' ' -f2)"
+  robots="$(printf '%s\n' "$kop" | grep -i '^x-robots-tag:' | head -1 | cut -d: -f2- | sed 's/^ *//' || true)"
+  printf '%s %s' "$status" "${robots:--}"
+}
+
+# ---------------------------------------------------------------- 9. twee web-diensten, een Postgres, een Gotenberg
+stap "9. Productie en staging naast elkaar op een Postgres en een Gotenberg"
+[ "$(docker inspect "${PROJECT}-web" --format '{{.State.Health.Status}}')" = healthy ] || faal "web is niet healthy"
+[ "$(docker inspect "${PROJECT}-web-staging" --format '{{.State.Health.Status}}')" = healthy ] || faal "web-staging is niet healthy"
+[ "$(compose ps -q postgres | wc -l | tr -d ' ')" = 1 ] || faal "er draait niet precies een Postgres"
+[ "$(compose ps -q gotenberg | wc -l | tr -d ' ')" = 1 ] || faal "er draait niet precies een Gotenberg"
+[ "$(curl -s "${BASIS_STAGING}/api/gezondheid" | jget ok)" = true ] || faal "/api/gezondheid van staging geeft niet { ok: true }"
+goed "web en web-staging zijn beide healthy tegen een Postgres en een Gotenberg"
+psql_staging() { compose exec -T -e "PGPASSWORD=${STAGING_WACHTWOORD}" postgres psql -h postgres -U elentrik_staging -d elentrik_staging -tA -c "$1"; }
+TELLING_STAGING="$(psql_staging 'select count(*) from drizzle.__drizzle_migrations' | tr -d '[:space:]')"
+[ "$TELLING_STAGING" = "$VERWACHT" ] || faal "de staging-database telt ${TELLING_STAGING} migraties, verwacht ${VERWACHT}"
+goed "web-staging heeft de migraties op zijn eigen database elentrik_staging gezet (${TELLING_STAGING})"
+[ "$(psql_db "select count(*) from \"user\" where email like '%@staging-rooktest.%'" | tr -d '[:space:]')" = 0 ] || faal "staging-gegevens in de productiedatabase"
+
+# ---------------------------------------------------------------- 10. gescheiden databases en rollen
+stap "10. elentrik_staging komt niet in de database elentrik"
+UITVOER="$(compose exec -T -e "PGPASSWORD=${STAGING_WACHTWOORD}" postgres psql -h postgres -U elentrik_staging -d elentrik -tA -c 'select 1' 2>&1 || true)"
+printf '%s\n' "$UITVOER" | head -2 | sed 's/^/        | /'
+printf '%s' "$UITVOER" | grep -q 'permission denied for database' || faal "elentrik_staging mag de database elentrik openen, of de fout klopt niet"
+geen_lek "$UITVOER" "de foutmelding van de geweigerde verbinding"
+goed "elentrik_staging krijgt 'permission denied for database' op elentrik"
+[ "$(psql_staging 'select current_database()' | tr -d '[:space:]')" = elentrik_staging ] || faal "elentrik_staging kan zijn eigen database niet openen"
+[ "$(psql_staging "select rolsuper::text || rolcreatedb::text || rolcreaterole::text from pg_roles where rolname = 'elentrik_staging'" | tr -d '[:space:]')" = falsefalsefalse ] || faal "elentrik_staging is superuser of mag databases/rollen maken"
+goed "elentrik_staging opent wel zijn eigen database en is geen superuser"
+# Via het netwerk (-h postgres) geldt scram; op 127.0.0.1 staat de Postgres-image op trust. Een verkeerd wachtwoord wordt dus geweigerd.
+if compose exec -T -e "PGPASSWORD=fout-wachtwoord" postgres psql -h postgres -U elentrik_staging -d elentrik_staging -tA -c 'select 1' >/dev/null 2>&1; then
+  faal "elentrik_staging kan met een verkeerd wachtwoord aanmelden"
+fi
+PUBLIEK="$(psql_db "select count(*) from pg_database d, aclexplode(coalesce(d.datacl, acldefault('d', d.datdba))) a where d.datname in ('elentrik','elentrik_staging') and a.grantee = 0 and a.privilege_type = 'CONNECT'" | tr -d '[:space:]')"
+[ "$PUBLIEK" = 0 ] || faal "PUBLIC heeft nog CONNECT op een van de twee databases"
+goed "verkeerd wachtwoord wordt geweigerd en PUBLIC heeft geen CONNECT op elentrik of elentrik_staging"
+# Let op: de rol elentrik is de bootstrap-superuser van Postgres en omzeilt elke GRANT; "omgekeerd" is dus
+# niet af te dwingen. Wat telt is dat staging (de rol zonder rechten) productie niet bereikt.
+
+# ---------------------------------------------------------------- 11. de eigen Mailpit van de stack
+stap "11. Een registratie op staging komt in de Mailpit van de stack"
+for _ in $(seq 1 30); do
+  curl -s --max-time 3 -o /dev/null "${MAILPIT_STAGING}/api/v1/info" && break
+  sleep 1
+done
+EMAIL_S="rooktest-${ID}@staging-rooktest.elentrik.test"
+WACHTWOORD_S="Rooktest-staging-wachtwoord-${ID}"
+JAR_S="${TMP}/cookies-staging.txt"
+CODE="$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -H "origin: ${BASIS_STAGING}" \
+  --data "{\"name\":\"Staging Gebruiker\",\"email\":\"${EMAIL_S}\",\"password\":\"${WACHTWOORD_S}\",\"wachtendeBedrijfsnaam\":\"Staging Elektro\"}" \
+  "${BASIS_STAGING}/api/auth/sign-up/email")"
+[ "$CODE" = 200 ] || faal "registreren op staging gaf ${CODE}"
+MAIL_ID_S=""
+for _ in $(seq 1 40); do
+  MAIL_ID_S="$(curl -s -G --data-urlencode "query=to:${EMAIL_S}" "${MAILPIT_STAGING}/api/v1/search" | jget messages.0.ID || true)"
+  [ -n "$MAIL_ID_S" ] && break
+  sleep 0.5
+done
+[ -n "$MAIL_ID_S" ] || faal "geen bevestigingsmail in de Mailpit van de stack"
+TEKST_S="$(curl -s "${MAILPIT_STAGING}/api/v1/message/${MAIL_ID_S}" | jget Text)"
+LINK_S="$(printf '%s' "$TEKST_S" | grep -oE "${BASIS_STAGING}/[^[:space:]<>\"]+" | head -1 || true)"
+[ -n "$LINK_S" ] || faal "geen link naar ${BASIS_STAGING} in de mail van staging"
+goed "de bevestigingsmail van staging staat in de Mailpit van de stack (SMTP naar mailpit:1025)"
+HOST_TREFFERS="$(curl -s -G --data-urlencode "query=to:${EMAIL_S}" "${MAILPIT}/api/v1/search" | jget messages_count)"
+[ "${HOST_TREFFERS:-0}" = 0 ] || faal "de mail van staging kwam in de lokale Mailpit van de host terecht"
+goed "de mail van staging is niet bij de Mailpit van de host aangekomen"
+
+CODE="$(curl -s -o /dev/null -w '%{http_code}' -c "$JAR_S" "$LINK_S")"
+case "$CODE" in 2*|3*) ;; *) faal "bevestigen op staging gaf ${CODE}" ;; esac
+grep -q 'session_token' "$JAR_S" || faal "geen sessiecookie na bevestigen op staging"
+[ "$(psql_staging "select count(*) from \"user\" where email = '${EMAIL_S}'" | tr -d '[:space:]')" = 1 ] || faal "de gebruiker staat niet in elentrik_staging"
+[ "$(psql_db "select count(*) from \"user\" where email = '${EMAIL_S}'" | tr -d '[:space:]')" = 0 ] || faal "de gebruiker van staging staat in de productiedatabase"
+goed "de staging-gebruiker staat alleen in elentrik_staging, niet in elentrik"
+
+# ---------------------------------------------------------------- 12. het watermerk in de PDF
+stap "12. Een export op staging heeft het watermerk, op productie niet"
+PROJ_S="$(curl -s -b "$JAR_S" -X POST -H 'content-type: application/json' -H "origin: ${BASIS_STAGING}" \
+  --data '{"naam":"Rooktest project","klantnaam":"","stroomtype":"2x230V"}' "${BASIS_STAGING}/api/projecten")"
+PROJECT_ID_S="$(printf '%s' "$PROJ_S" | jget id)"
+PROJECT_VERSIE_S="$(printf '%s' "$PROJ_S" | jget versie)"
+[ -n "$PROJECT_ID_S" ] || faal "project aanmaken op staging mislukt: ${PROJ_S}"
+EXPORT_S="$(curl -s -b "$JAR_S" -X POST -H 'content-type: application/json' -H "origin: ${BASIS_STAGING}" -H "if-match: ${PROJECT_VERSIE_S}" \
+  --data '{"onderdelen":{"eendraadschema":true,"situatieschema":false,"kringenlijst":true,"bijlage":false},"papier":"A4","versieLabel":"V1"}' \
+  "${BASIS_STAGING}/api/projecten/${PROJECT_ID_S}/exports")"
+BESTAND_ID_S="$(printf '%s' "$EXPORT_S" | jget bestandId)"
+[ -n "$BESTAND_ID_S" ] || faal "export op staging mislukt: ${EXPORT_S}"
+curl -s -b "$JAR_S" -o "${TMP}/export-staging.pdf" "${BASIS_STAGING}/api/bestanden/${BESTAND_ID_S}"
+[ "$(head -c 5 "${TMP}/export-staging.pdf")" = "%PDF-" ] || faal "de export van staging is geen PDF"
+[ -n "$(find "${DATA}/staging/bestanden" -type f | head -1)" ] || faal "de export van staging staat niet in <data>/staging/bestanden"
+[ "$(find "${DATA}/bestanden" -type f | wc -l | tr -d ' ')" = 1 ] || faal "productie heeft meer of minder dan een bestand: de bestandenmappen zijn niet gescheiden"
+goed "de export van staging staat in <data>/staging/bestanden, niet in de map van productie"
+TEKST_PDF_S="$(pdf_tekst "${TMP}/export-staging.pdf")"
+TEKST_PDF_P="$(pdf_tekst "${TMP}/export.pdf")"
+[ "${#TEKST_PDF_S}" -gt 200 ] || faal "de tekst van de PDF van staging is niet te lezen (pdf.js gaf ${#TEKST_PDF_S} tekens)"
+[ "${#TEKST_PDF_P}" -gt 200 ] || faal "de tekst van de PDF van productie is niet te lezen (pdf.js gaf ${#TEKST_PDF_P} tekens)"
+printf '%s' "$TEKST_PDF_S" | grep -q 'STAGING' || faal "de PDF van staging bevat het woord STAGING niet"
+printf '%s' "$TEKST_PDF_S" | grep -qE 'Geen geldig document|Document non valable|Not a valid document' || faal "de PDF van staging bevat 'Geen geldig document' niet"
+if printf '%s' "$TEKST_PDF_P" | grep -q 'STAGING'; then faal "de PDF van productie bevat STAGING"; fi
+goed "de PDF-tekst van staging bevat STAGING en 'Geen geldig document'; die van productie niet"
+
+# ---------------------------------------------------------------- 13. noindex en de balk
+stap "13. Staging is herkenbaar en niet indexeerbaar; productie ongewijzigd"
+curl -s -o "${TMP}/inloggen-staging.html" "${BASIS_STAGING}/inloggen"
+grep -q 'data-testid="staging-balk"' "${TMP}/inloggen-staging.html" || faal "de SSR-HTML van /inloggen op staging heeft de balk niet"
+grep -q 'Staging: testomgeving, geen echte gegevens' "${TMP}/inloggen-staging.html" || faal "de balktekst staat niet in de SSR-HTML van staging"
+grep -q '<title>\[Staging\] ' "${TMP}/inloggen-staging.html" || faal "de titel van staging begint niet met [Staging] "
+if grep -q 'data-testid="staging-balk"' "${TMP}/inloggen.html"; then faal "productie toont de staging-balk"; fi
+if grep -q '<title>\[Staging\]' "${TMP}/inloggen.html"; then faal "productie heeft een [Staging]-titel"; fi
+goed "SSR-HTML van /inloggen: staging heeft de balk en de titel [Staging] ...; productie niet"
+ASSET="$(grep -oE '/_nuxt/[A-Za-z0-9_./-]+\.(js|css)' "${TMP}/inloggen-staging.html" | head -1)"
+[ -n "$ASSET" ] || faal "geen /_nuxt/-bestand gevonden in de HTML van /inloggen"
+# Pad en verwachte status. Zonder sessie verwijst een onbekende pagina of API-route naar /inloggen (302);
+# met sessie (cookie "ja") geeft hij echt 404. Een onbekend bestand onder /_nuxt/ geeft altijd 404.
+for REGEL in "/inloggen 200 nee" "${ASSET} 200 nee" "/api/gezondheid 200 nee" "/bestaat-niet-${ID} 302 nee"   "/bestaat-niet-${ID} 404 ja" "/api/bestaat-niet-${ID} 404 ja" "/_nuxt/bestaat-niet-${ID}.js 404 nee"; do
+  read -r PAD VERWACHT_STATUS MET_COOKIE <<<"$REGEL"
+  if [ "$MET_COOKIE" = ja ]; then KOP_S="$(kop_van "${BASIS_STAGING}${PAD}" "$JAR_S")"; KOP_P="$(kop_van "${BASIS}${PAD}" "$JAR")"
+  else KOP_S="$(kop_van "${BASIS_STAGING}${PAD}")"; KOP_P="$(kop_van "${BASIS}${PAD}")"; fi
+  [ "$KOP_S" = "${VERWACHT_STATUS} noindex, nofollow" ] || faal "staging ${PAD}: '${KOP_S}', verwacht '${VERWACHT_STATUS} noindex, nofollow'"
+  [ "$KOP_P" = "${VERWACHT_STATUS} -" ] || faal "productie ${PAD}: '${KOP_P}', verwacht '${VERWACHT_STATUS} -'"
+  printf '        | %-34s %s%s  staging: %s   productie: %s
+' "$PAD" "$VERWACHT_STATUS" "$([ "$MET_COOKIE" = ja ] && echo ' (met sessie)' || true)" "$KOP_S" "$KOP_P"
+done
+goed "X-Robots-Tag op staging bij een pagina, een /_nuxt-bestand, een API-route, een doorverwijzing en twee 404's; op productie nergens"
+ROBOTS_S="$(curl -s "${BASIS_STAGING}/robots.txt")"
+[ "$ROBOTS_S" = "$(printf 'User-agent: *\nDisallow: /')" ] || faal "robots.txt van staging klopt niet: '${ROBOTS_S}'"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" "${BASIS}/robots.txt")" = 404 ] || faal "productie geeft met sessie geen 404 op /robots.txt (zoals vandaag)"
+if curl -s "${BASIS}/robots.txt" | grep -q Disallow; then faal "productie geeft Disallow op /robots.txt"; fi
+goed "robots.txt van staging is 'User-agent: *' + 'Disallow: /'; productie geeft 404 (met sessie) en nooit Disallow"
+
+# ---------------------------------------------------------------- 14. de grendels in de opstartcontrole
+stap "14. Staging start nooit met Graph of een live Stripe-sleutel; productie nooit met de Mailpit van staging"
+grendel() { # $1 = naam, $2 = dienst, $3 = variabele die de log moet noemen, $4 = waarde die nooit in de log mag, rest = -e opties
+  local naam="$1" dienst="$2" noemt="$3" geheim="$4" code log
+  shift 4
+  compose run -d --no-deps --name "${PROJECT}-${naam}" "$@" "$dienst" >/dev/null || faal "${naam}: de container starten mislukte"
+  code="$(wacht_op_stop "${PROJECT}-${naam}" 120)"
+  [ "$code" != timeout ] || faal "${naam}: de container stopte niet"
+  [ "$code" != 0 ] || faal "${naam}: de container stopte met exitcode 0"
+  [ "$(docker inspect "${PROJECT}-${naam}" --format '{{.State.Health.Status}}')" != healthy ] || faal "${naam}: de container werd healthy"
+  log="$(docker logs "${PROJECT}-${naam}" 2>&1)"
+  printf '%s' "$log" | grep -q "$noemt" || faal "${naam}: de log noemt ${noemt} niet"
+  if [ -n "$geheim" ] && printf '%s' "$log" | grep -qF -- "$geheim"; then faal "${naam}: de log bevat een waarde (${geheim})"; fi
+  geen_lek "$log" "de log van ${naam}"
+  printf '%s\n' "$log" | grep -m1 "$noemt" | cut -c1-160 | sed 's/^/        | /'
+  docker rm -f "${PROJECT}-${naam}" >/dev/null
+  goed "${naam}: exitcode ${code}, nooit healthy, de log noemt ${noemt} en geen waarde"
+}
+grendel graph web-staging MAIL_VERZENDER "rooktest-graph-geheim-0123" \
+  -e MAIL_VERZENDER=graph -e GRAPH_TENANT_ID=rooktest-tenant -e GRAPH_CLIENT_ID=rooktest-client \
+  -e GRAPH_CLIENT_GEHEIM=rooktest-graph-geheim-0123 -e MAIL_AFZENDER=noreply@rooktest.elentrik.test
+grendel sk-live web-staging STRIPE_GEHEIME_SLEUTEL "sk_live_rooktest0123456789" \
+  -e STRIPE_GEHEIME_SLEUTEL=sk_live_rooktest0123456789 -e STRIPE_WEBHOOK_GEHEIM=whsec_rooktest0123456789 \
+  -e STRIPE_PRIJS_MAAND=price_rooktestmaand -e STRIPE_PRIJS_JAAR=price_rooktestjaar
+grendel mailpit-prod web SMTP_HOST "" -e SMTP_HOST=mailpit
+[ "$(docker inspect "${PROJECT}-web-staging" --format '{{.State.Health.Status}}')" = healthy ] || faal "web-staging werd ongezond"
+
+# ---------------------------------------------------------------- 15. bijwerken.sh
+stap "15. bijwerken.sh herstart alleen de gevraagde dienst"
+BIJWERKEN="${ROOT}/deploy/nas/bijwerken.sh"
+[ -f "$BIJWERKEN" ] || faal "deploy/nas/bijwerken.sh ontbreekt"
+bijwerken() { # $@ = argumenten van bijwerken.sh. Pull wordt onderschept: de images van de rooktest bestaan alleen lokaal.
+  (
+    export COMPOSE_PROJECT_NAME="$PROJECT" COMPOSE_PATH_SEPARATOR=, COMPOSE_FILE="${ROOT}/deploy/nas/compose.yaml,${TMP}/override.yaml" \
+      COMPOSE_ENV_FILES="${ROOT}/deploy/nas/.env.rooktest"
+    docker() {
+      if [ "${1:-}" = compose ] && [[ " $* " == *" pull "* ]]; then echo "(pull overgeslagen in de rooktest: $*)" >&2; return 0; fi
+      MSYS_NO_PATHCONV=1 command docker "$@"
+    }
+    export -f docker
+    bash "$BIJWERKEN" "$@"
+  )
+}
+if bijwerken >"${TMP}/bijwerken-leeg.log" 2>&1; then faal "bijwerken.sh zonder argument gaf exitcode 0"; fi
+grep -q 'staging|productie' "${TMP}/bijwerken-leeg.log" || faal "bijwerken.sh zonder argument toont de gebruiksregel niet"
+if bijwerken web >"${TMP}/bijwerken-fout.log" 2>&1; then faal "bijwerken.sh met een ongeldig argument gaf exitcode 0"; fi
+grep -q 'staging|productie' "${TMP}/bijwerken-fout.log" || faal "bijwerken.sh met een ongeldig argument toont de gebruiksregel niet"
+goed "bijwerken.sh zonder of met een ongeldig argument stopt met een foutcode en de gebruiksregel"
+
+ID_WEB_VOOR="$(docker inspect "${PROJECT}-web" --format '{{.Id}}')"
+ID_STAGING_VOOR="$(docker inspect "${PROJECT}-web-staging" --format '{{.Id}}')"
+# Een "nieuwe versie" van het staging-image: dezelfde lagen, een ander revisielabel.
+REVISIE="rooktest-${ID}"
+printf 'FROM %s\nLABEL org.opencontainers.image.revision=%s\n' "$IMAGE" "$REVISIE" | docker build -q -t "$IMAGE_STAGING" - >/dev/null \
+  || faal "het nieuwe staging-image bouwen mislukte"
+bijwerken staging >"${TMP}/bijwerken-staging.log" 2>&1 || { cat "${TMP}/bijwerken-staging.log" >&2; faal "bijwerken.sh staging mislukte"; }
+sed 's/^/        | /' "${TMP}/bijwerken-staging.log"
+ID_WEB_NA="$(docker inspect "${PROJECT}-web" --format '{{.Id}}')"
+ID_STAGING_NA="$(docker inspect "${PROJECT}-web-staging" --format '{{.Id}}')"
+[ "$ID_WEB_NA" = "$ID_WEB_VOOR" ] || faal "bijwerken.sh staging herstartte web: het container-ID veranderde"
+[ "$ID_STAGING_NA" != "$ID_STAGING_VOOR" ] || faal "bijwerken.sh staging maakte web-staging niet opnieuw aan"
+grep -q "$REVISIE" "${TMP}/bijwerken-staging.log" || faal "bijwerken.sh toont de image-revisie niet"
+grep -q 'pull web-staging)' "${TMP}/bijwerken-staging.log" || faal "bijwerken.sh staging haalde web-staging niet op (pull)"
+if grep -qE 'dump gemaakt' "${TMP}/bijwerken-staging.log"; then faal "bijwerken.sh staging maakte een back-up (alleen productie)"; fi
+[ "$(docker inspect "${PROJECT}-web-staging" --format '{{.State.Health.Status}}')" = healthy ] || faal "web-staging is na bijwerken niet healthy"
+[ "$(curl -s "${BASIS}/api/gezondheid" | jget ok)" = true ] || faal "productie reageert niet meer na bijwerken van staging"
+goed "bijwerken.sh staging: web-staging opnieuw aangemaakt, web onaangeroerd (container-ID gelijk), revisie getoond, geen back-up"
+
+ID_STAGING_VOOR="$ID_STAGING_NA"
+bijwerken productie >"${TMP}/bijwerken-productie.log" 2>&1 || { cat "${TMP}/bijwerken-productie.log" >&2; faal "bijwerken.sh productie mislukte"; }
+sed 's/^/        | /' "${TMP}/bijwerken-productie.log"
+grep -q 'dump gemaakt' "${TMP}/bijwerken-productie.log" || faal "bijwerken.sh productie maakte geen back-up"
+grep -q 'pull web)' "${TMP}/bijwerken-productie.log" || faal "bijwerken.sh productie haalde web niet op (pull)"
+[ "$(docker inspect "${PROJECT}-web-staging" --format '{{.Id}}')" = "$ID_STAGING_VOOR" ] || faal "bijwerken.sh productie herstartte web-staging"
+[ "$(docker inspect "${PROJECT}-web" --format '{{.State.Health.Status}}')" = healthy ] || faal "web is na bijwerken niet healthy"
+goed "bijwerken.sh productie: eerst een back-up, dan web; web-staging onaangeroerd"
 
 stap "Klaar"
