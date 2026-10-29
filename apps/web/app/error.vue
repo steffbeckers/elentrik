@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // De foutpagina van de app: een onbekende pagina, of een server die (even) niet antwoordt.
 import type { NuxtError } from "#app";
+import { titelVoor, toonBalk } from "../shared/omgeving";
 import { isTaal } from "../shared/taal";
 import { uiLocale } from "./sessie/ui-taal";
 
@@ -10,9 +11,15 @@ const { t, locale } = useI18n();
 // Nuxt UI (aria-labels, sluitknoppen) in dezelfde taal als de interface.
 const ui = computed(() => uiLocale(isTaal(locale.value) ? locale.value : "nl"));
 
+const omgeving = useOmgeving();
+
 const nietGevonden = computed(() => props.error.statusCode === 404);
 
-useHead({ title: () => `${t(nietGevonden.value ? "fout.nietGevonden.titel" : "fout.algemeen.titel")} · ${t("app.naam")}` });
+useHead({
+  title: () => `${t(nietGevonden.value ? "fout.nietGevonden.titel" : "fout.algemeen.titel")} · ${t("app.naam")}`,
+  titleTemplate: (titel) => titelVoor(titel, omgeving.value),
+  htmlAttrs: { class: () => (toonBalk(omgeving.value) ? "omgeving-staging" : undefined) },
+});
 
 /** Opnieuw proberen: de fout wissen en de pagina opnieuw laden (de sessie wordt opnieuw gelezen). */
 function opnieuw() {
@@ -22,6 +29,7 @@ function opnieuw() {
 
 <template>
   <UApp :locale="ui">
+    <StagingBalk />
     <main class="flex min-h-dvh flex-col items-center justify-center px-4 py-8">
       <UCard class="w-full max-w-md">
         <template #header>
