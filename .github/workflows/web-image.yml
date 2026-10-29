@@ -2,9 +2,9 @@ name: web-image
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging, develop]
   pull_request:
-    branches: [main]
+    branches: [main, staging, develop]
 
 concurrency:
   group: web-image-${{ github.ref }}
@@ -41,7 +41,8 @@ jobs:
 
   image:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Alleen `main` (productie) en `staging` bouwen een image; `develop` draait alleen de tests.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -58,18 +59,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Korte sha bepalen
-        id: sha
-        run: echo "kort=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      # De tags volgen uit de exacte branchnaam; elke andere waarde laat de stap falen. De branchnaam
+      # gaat via `env` naar het script, nooit rechtstreeks in de scripttekst.
+      - name: Tags bepalen
+        id: tags
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          kort="${GITHUB_SHA::7}"
+          case "$REF_NAME" in
+            main) hoofdtag=latest ;;
+            staging) hoofdtag=staging ;;
+            *)
+              echo "Geen image voor deze branch" >&2
+              exit 1
+              ;;
+          esac
+          {
+            echo "tags<<EOF_TAGS"
+            echo "ghcr.io/steffbeckers/elentrik-web:${hoofdtag}"
+            echo "ghcr.io/steffbeckers/elentrik-web:sha-${kort}"
+            echo "EOF_TAGS"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@v7.4.0
         with:
           context: .
           file: apps/web/Dockerfile
           push: true
-          tags: |
-            ghcr.io/steffbeckers/elentrik-web:latest
-            ghcr.io/steffbeckers/elentrik-web:sha-${{ steps.sha.outputs.kort }}
+          tags: ${{ steps.tags.outputs.tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/steffbeckers/elentrik
             org.opencontainers.image.revision=${{ github.sha }}
