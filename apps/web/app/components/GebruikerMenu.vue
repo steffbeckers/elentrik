@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // Het menu van de ingelogde gebruiker: zijn naam, "Mijn organisatie", "Bedrijfsgegevens", "Abonnement" en
-// "Uitloggen". Uitloggen gaat via de sessie-store, dus eerst langs `voorVertrek`.
+// "Uitloggen", en de taal als submenu (dezelfde keuzes als `TaalKiezer`). Uitloggen gaat via de
+// sessie-store, dus eerst langs `voorVertrek`.
 import type { DropdownMenuItem } from "@nuxt/ui";
+import { taalKeuzes } from "~/sessie/taal";
 import { useSessieStore } from "~/stores/sessie";
 
 /** Compact (de editor): de naam pas vanaf een breed scherm, anders alleen het icoon. */
@@ -10,6 +12,7 @@ defineProps<{ compact?: boolean }>();
 const { t } = useI18n();
 const sessie = useSessieStore();
 const toast = useToast();
+const { taal, zetTaal } = useTaal();
 
 const bezig = ref(false);
 
@@ -37,6 +40,14 @@ const items = computed<DropdownMenuItem[][]>(() => [
         ],
       ]
     : []),
+  [
+    {
+      label: t("taal.label"),
+      icon: "i-lucide-languages",
+      slot: "taal" as const,
+      children: taalKeuzes(taal.value, zetTaal),
+    },
+  ],
   [{ label: t("menu.uitloggen"), icon: "i-lucide-log-out", slot: "uitloggen" as const, onSelect: uitloggen }],
 ]);
 </script>
@@ -57,6 +68,9 @@ const items = computed<DropdownMenuItem[][]>(() => [
     </UButton>
     <template #organisatie-label>
       <span data-testid="mijn-organisatie">{{ $t("menu.mijnOrganisatie") }}</span>
+    </template>
+    <template #taal-label>
+      <span data-testid="taal-menu">{{ $t("taal.label") }}</span>
     </template>
     <template #uitloggen-label>
       <span data-testid="uitloggen">{{ $t("menu.uitloggen") }}</span>

@@ -17,6 +17,8 @@ const KLEUR: Record<Ernst, string> = {
 
 const store = useEditorStore();
 const voerUit = useDocumentFoutMelding();
+// De bevindingen staan in de taal van de interface (spec §2.3), niet in de dossiertaal.
+const { taal } = useTaal();
 
 /** `store.bevindingen` is al gesorteerd; hier alleen gegroepeerd in de volgorde fout, waarschuwing, info. */
 const groepen = computed(() =>
@@ -51,7 +53,7 @@ const teMotiveren = ref<Bevinding | null>(null);
 /** Blijft staan na het sluiten, zodat de tekst niet wegvalt tijdens de sluitanimatie. */
 const dialoogBericht = ref("");
 watch(teMotiveren, (b) => {
-  if (b) dialoogBericht.value = formatteerBericht(b, "nl");
+  if (b) dialoogBericht.value = formatteerBericht(b, taal.value);
 });
 const dialoogOpen = computed({
   get: () => teMotiveren.value !== null,
@@ -94,7 +96,7 @@ function verwijderAfwijking(b: Bevinding): void {
         >
           <button type="button" class="block w-full text-left hover:underline" @click="selecteer(b)">
             <span v-if="onderwerp(b)" class="mr-1 font-semibold">{{ onderwerp(b) }}</span>
-            <span>{{ formatteerBericht(b, "nl") }}</span>
+            <span>{{ formatteerBericht(b, taal) }}</span>
           </button>
           <p v-if="b.afgeweken" class="mt-1 text-xs text-muted">
             {{ $t("editor.bevindingen.afgeweken", { motivatie: motivatieVan(b) }) }}

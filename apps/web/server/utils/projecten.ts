@@ -6,6 +6,7 @@
 import { StroomtypeSchema } from "@elentrik/model";
 import { createError, getHeader, getRouterParam, readBody, type H3Event } from "h3";
 import { z } from "zod";
+import { nietGevondenFout } from "../fouten";
 import { ProjectFout } from "../projecten/repo";
 
 /** Een id in de database: een uuid. Ook gebruikt door de bestanden-hulp en de exports-repo. */
@@ -28,7 +29,7 @@ export const BewaarProjectSchema = z.object({
 /** Een id dat geen uuid is, kan nooit een bestaand project zijn: 404. */
 export function projectId(event: H3Event): string {
   const id = IdSchema.safeParse(getRouterParam(event, "id"));
-  if (!id.success) throw createError({ statusCode: 404, statusMessage: "Project niet gevonden" });
+  if (!id.success) throw nietGevondenFout();
   return id.data;
 }
 
@@ -42,7 +43,7 @@ export async function leesBody<T extends z.ZodType>(
     throw createError({
       statusCode: 400,
       statusMessage: "Ongeldige invoer",
-      data: { issues: resultaat.error.issues },
+      data: { issues: resultaat.error.issues, code: "ONGELDIGE_INVOER" },
     });
   }
   return resultaat.data;
@@ -56,9 +57,18 @@ export function leesIfMatch(event: H3Event): number {
     throw createError({
       statusCode: 428,
       statusMessage: "If-Match met de documentversie is verplicht",
+      data: { code: "IF_MATCH_VEREIST" },
     });
   }
   return versie;
+}
+
+/** De details van een ProjectFout (een object met bv. `versie`) samen met de foutcode, voor `data`. */
+function metDetails(details: unknown): Record<string, unknown> {
+  if (details === undefined) return {};
+  return details !== null && typeof details === "object" && !Array.isArray(details)
+    ? (details as Record<string, unknown>)
+    : { details };
 }
 
 /** Voert een repo-aanroep uit en vertaalt ProjectFout naar 404, 409 of 422. */
@@ -69,18 +79,18 @@ export async function metProjectFouten<T>(actie: () => Promise<T>): Promise<T> {
     if (!(fout instanceof ProjectFout)) throw fout;
     switch (fout.code) {
       case "NIET_GEVONDEN":
-        throw createError({ statusCode: 404, statusMessage: "Project niet gevonden" });
+        throw nietGevondenFout();
       case "CONFLICT":
         throw createError({
           statusCode: 409,
           statusMessage: "Het project is intussen gewijzigd",
-          data: fout.details,
+          data: { ...metDetails(fout.details), code: "PROJECT_GEWIJZIGD" },
         });
       case "ONGELDIG":
         throw createError({
           statusCode: 422,
           statusMessage: "Ongeldig document",
-          data: fout.details,
+          data: { ...metDetails(fout.details), code: "ONGELDIG_DOCUMENT" },
         });
     }
   }

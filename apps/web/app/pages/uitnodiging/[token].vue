@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { vertaalFout } from "~/fouten";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isNaam, wachtwoordFout } from "~/sessie/invoer";
 import { useSessieStore, type Rol } from "~/stores/sessie";
+import { TAAL_HEADER } from "../../../shared/taal";
 
 type UitnodigingInfo = {
   id: string;
@@ -14,6 +16,7 @@ type UitnodigingInfo = {
 const { t } = useI18n();
 const route = useRoute();
 const sessie = useSessieStore();
+const { taal } = useTaal();
 
 useHead({ title: () => `${t("uitnodiging.titel")} · ${t("app.naam")}` });
 
@@ -55,9 +58,8 @@ function verwerkFout(fout: unknown): void {
   const status = foutStatus(fout);
   if (status === 410) nietMeerGeldig.value = true;
   else if (foutCode(fout) === "ACCOUNT_BESTAAT") accountBestaat.value = true;
-  else if (status === 429) melding.value = t("auth.fouten.teVeel");
-  else if (status === 403) melding.value = t("uitnodiging.onbevestigd");
-  else melding.value = t("algemeen.fout");
+  else if (status === 403 && !foutCode(fout)) melding.value = t("fouten.EMAIL_NIET_BEVESTIGD");
+  else melding.value = vertaalFout(fout, t);
 }
 
 async function aanvaard() {
@@ -111,6 +113,8 @@ async function registreer() {
     await $fetch(`${pad.value}/registreer`, {
       method: "POST",
       body: { naam: formulier.naam.trim(), wachtwoord: formulier.wachtwoord },
+      // De taal van de interface wordt die van het nieuwe account.
+      headers: { [TAAL_HEADER]: taal.value },
     });
     await sessie.laad();
     if (sessie.gebruiker) await navigateTo("/", { replace: true });

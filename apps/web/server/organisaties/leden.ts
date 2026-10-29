@@ -14,6 +14,7 @@ import { and, asc, eq, gt } from "drizzle-orm";
 import {
   appendResponseHeader,
   createError,
+  getRequestHeader,
   getRequestIP,
   getRouterParam,
   setResponseHeader,
@@ -25,8 +26,11 @@ import { z } from "zod";
 import { gebruikAbonnementen } from "../abonnementen/config";
 import { toegangVoor } from "../abonnementen/repo";
 import type { Toegang } from "../../shared/abonnement";
+import type { Foutcode } from "../../shared/foutcodes";
+import { isTaal, TAAL_HEADER, type Taal } from "../../shared/taal";
 import { gebruikAuth } from "../auth";
 import { gebruikDb } from "../db";
+import { nietGevondenFout } from "../fouten";
 import { account, invitation, member, organization, session, user } from "../db/schema";
 import { leesBody } from "../utils/projecten";
 import { kiesActieveOrganisatie, naarRol, type Rol, vereisLid, vereisSessie } from "../utils/toegang";
@@ -43,26 +47,33 @@ import { uitnodigingVanToken, wisUitnodigingstokens } from "./uitnodigingstoken"
 
 // --- Fouten ----------------------------------------------------------------------------------
 
-/** Een h3-fout met de boodschap in `message` (die mag accenten bevatten) en eventueel een code. */
-function fout(statusCode: number, message: string, code?: string): H3Error {
-  return createError({ statusCode, message, ...(code ? { data: { code } } : {}) });
+/**
+ * Een h3-fout met de boodschap in `message` (die mag accenten bevatten) en altijd een code uit
+ * FOUTCODES: de client vertaalt de fout met die code (test/foutcodes.test.ts dwingt het af).
+ */
+function fout(statusCode: number, message: string, code: Foutcode): H3Error {
+  return createError({ statusCode, message, data: { code } });
 }
 
-const nietGevonden = () => fout(404, "Niet gevonden");
-const nietMeerGeldig = () => fout(410, "Deze uitnodiging is niet meer geldig");
+const nietGevonden = () => nietGevondenFout();
+const nietMeerGeldig = () => fout(410, "Deze uitnodiging is niet meer geldig", "UITNODIGING_VERVALLEN");
 const laatsteEigenaar = () => fout(409, LAATSTE_EIGENAAR_BOODSCHAP, LAATSTE_EIGENAAR);
 
 /** Codes van Better Auth (en van onze eigen hooks) naar status, boodschap en eigen code. */
-const AUTH_CODES: Record<string, [number, string, string?]> = {
+const AUTH_CODES: Record<string, [number, string, Foutcode]> = {
+  ALLEEN_EIGENAAR: [403, "Alleen een eigenaar mag dit", "ALLEEN_EIGENAAR"],
   LAATSTE_EIGENAAR: [409, LAATSTE_EIGENAAR_BOODSCHAP, LAATSTE_EIGENAAR],
   YOU_CANNOT_LEAVE_THE_ORGANIZATION_AS_THE_ONLY_OWNER: [409, LAATSTE_EIGENAAR_BOODSCHAP, LAATSTE_EIGENAAR],
   YOU_CANNOT_LEAVE_THE_ORGANIZATION_WITHOUT_AN_OWNER: [409, LAATSTE_EIGENAAR_BOODSCHAP, LAATSTE_EIGENAAR],
   USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: [409, "Dit adres is al lid", "AL_LID"],
   USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION: [409, "Dit adres is al uitgenodigd", "AL_UITGENODIGD"],
-  INVITATION_NOT_FOUND: [410, "Deze uitnodiging is niet meer geldig"],
-  YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION: [403, "Deze uitnodiging is voor een ander adres"],
-  EMAIL_VERIFICATION_REQUIRED_BEFORE_ACCEPTING_OR_REJECTING_INVITATION: [403, "Bevestig eerst je e-mailadres"],
-  MEMBER_NOT_FOUND: [404, "Niet gevonden"],
+  INVITATION_NOT_FOUND: [410, "Deze uitnodiging is niet meer geldig", "UITNODIGING_VERVALLEN"],
+  YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION: [403, "Deze uitnodiging is voor een ander adres", "UITNODIGING_ANDER_ADRES"],
+  EMAIL_VERIFICATION_REQUIRED_BEFORE_ACCEPTING_OR_REJECTING_INVITATION: [
+    403,
+    "Bevestig eerst je e-mailadres",
+    "EMAIL_NIET_BEVESTIGD",
+  ],
 };
 
 /** Komt deze fout (ergens in de keten van oorzaken) van de databasetrigger voor de laatste eigenaar? */
@@ -83,11 +94,13 @@ export function vertaalAuthFout(fout_: unknown): unknown {
   if (!fout_ || typeof fout_ !== "object" || !("statusCode" in fout_) || !("body" in fout_)) return fout_;
   const status = (fout_ as { statusCode: unknown }).statusCode;
   const code = ((fout_ as { body?: { code?: unknown } }).body ?? {}).code;
+  // Een onbekend lid is dezelfde 404 als elk ander onbekend object (zie server/fouten.ts).
+  if (code === "MEMBER_NOT_FOUND") return nietGevonden();
   const bekend = typeof code === "string" ? AUTH_CODES[code] : undefined;
   if (bekend) return fout(bekend[0], bekend[1], bekend[2]);
-  if (status === 401) return fout(401, "Niet ingelogd");
-  if (status === 403) return fout(403, "Niet toegelaten");
-  if (status === 400 || status === 422) return fout(400, "Ongeldige invoer");
+  if (status === 401) return fout(401, "Niet ingelogd", "NIET_AANGEMELD");
+  if (status === 403) return fout(403, "Niet toegelaten", "NIET_TOEGELATEN");
+  if (status === 400 || status === 422) return fout(400, "Ongeldige invoer", "ONGELDIGE_INVOER");
   return fout_;
 }
 
@@ -150,7 +163,7 @@ async function vindLid(organisatieId: string, id: string): Promise<Lid> {
 // --- De gebruiker en zijn organisaties -------------------------------------------------------
 
 export type Mij = {
-  gebruiker: { id: string; naam: string; email: string; proefGebruikt: boolean };
+  gebruiker: { id: string; naam: string; email: string; proefGebruikt: boolean; taal: Taal };
   organisaties: { id: string; naam: string; rol: Rol; toegang: Toegang }[];
   actieveOrganisatieId: string | null;
   /** Staan abonnementen aan (Stripe is ingesteld)? Uit is "zoals vóór plan 7": geen proef, geen hints. */
@@ -180,11 +193,17 @@ export async function mij(event: H3Event): Promise<Mij> {
       .where(and(eq(session.id, sessie.sessieId), eq(session.activeOrganizationId, actief)));
     actief = await kiesActieveOrganisatie(sessie.sessieId, sessie.gebruiker.id);
   }
-  const [eigen] = await db.select({ proefGebruikt: user.proefGebruikt }).from(user).where(eq(user.id, sessie.gebruiker.id));
+  const [eigen] = await db
+    .select({ proefGebruikt: user.proefGebruikt, taal: user.taal })
+    .from(user).where(eq(user.id, sessie.gebruiker.id));
   const { config } = gebruikAbonnementen();
   const toegang = await Promise.all(rijen.map((r) => toegangVoor(db, r.id, config)));
   return {
-    gebruiker: { ...sessie.gebruiker, proefGebruikt: eigen?.proefGebruikt ?? false },
+    gebruiker: {
+      ...sessie.gebruiker,
+      proefGebruikt: eigen?.proefGebruikt ?? false,
+      taal: isTaal(eigen?.taal) ? eigen.taal : "nl",
+    },
     organisaties: rijen.map((r, i) => ({ id: r.id, naam: r.naam, rol: naarRol(r.rol), toegang: toegang[i]! })),
     actieveOrganisatieId: actief,
     abonnementenIngeschakeld: config.ingeschakeld,
@@ -219,7 +238,7 @@ export async function hernoem(event: H3Event): Promise<{ id: string; naam: strin
   const { organisatieId } = await vereisLid(event, { rol: "eigenaar" });
   const { naam: invoer } = await leesBody(event, z.object({ naam: z.string() }));
   const naam = geldigeNaam(invoer);
-  if (naam === null) throw fout(400, `De naam telt 1 tot ${MAX_NAAMLENGTE} tekens`);
+  if (naam === null) throw fout(400, `De naam telt 1 tot ${MAX_NAAMLENGTE} tekens`, "ONGELDIGE_NAAM");
   const bijgewerkt = await viaAuth(event, () =>
     gebruikAuth().api.updateOrganization({
       body: { organizationId: organisatieId, data: { name: naam } },
@@ -427,11 +446,11 @@ export async function aanvaard(event: H3Event): Promise<{ organisatieId: string 
   const { gebruiker } = await vereisSessie(event);
   const rij = await openUitnodiging(event);
   if (rij.email.toLowerCase() !== gebruiker.email.toLowerCase()) {
-    throw fout(403, "Deze uitnodiging is voor een ander adres");
+    throw fout(403, "Deze uitnodiging is voor een ander adres", "UITNODIGING_ANDER_ADRES");
   }
   const db = gebruikDb();
   const [account_] = await db.select({ bevestigd: user.emailVerified }).from(user).where(eq(user.id, gebruiker.id));
-  if (!account_?.bevestigd) throw fout(403, "Bevestig eerst je e-mailadres");
+  if (!account_?.bevestigd) throw fout(403, "Bevestig eerst je e-mailadres", "EMAIL_NIET_BEVESTIGD");
   await viaAuth(event, () =>
     gebruikAuth().api.acceptInvitation({ body: { invitationId: rij.id }, headers: event.headers, returnHeaders: true }),
   );
@@ -474,9 +493,12 @@ export async function registreerViaUitnodiging(event: H3Event): Promise<{ organi
   const poging = registratieLimiet.probeer(ip);
   if (!poging.toegelaten) {
     setResponseHeader(event, "retry-after", poging.wachtSeconden);
-    throw fout(429, "Te veel pogingen; probeer het straks opnieuw");
+    throw fout(429, "Te veel pogingen; probeer het straks opnieuw", "TE_VEEL_POGINGEN");
   }
   const { naam, wachtwoord } = await leesBody(event, RegistratieSchema);
+  // Zoals bij de registratie van Better Auth: de taal van de interface, anders nl.
+  const taalHeader = getRequestHeader(event, TAAL_HEADER);
+  const taal = isTaal(taalHeader) ? taalHeader : "nl";
   const db = gebruikDb();
   const id = await uitnodigingVanToken(db, getRouterParam(event, "token") ?? "");
   if (!id) throw nietMeerGeldig();
@@ -500,6 +522,7 @@ export async function registreerViaUitnodiging(event: H3Event): Promise<{ organi
         name: naam,
         email,
         emailVerified: true,
+        taal,
         // De organisatie van de uitnodiging wordt actief, en dus de laatst gekozen.
         laatsteOrganisatieId: rij.organizationId,
         createdAt: nu,

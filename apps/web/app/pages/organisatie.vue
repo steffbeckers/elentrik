@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { datumTekst } from "~/abonnement/weergave";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useOrganisatieApi } from "~/composables/useOrganisatieApi";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { vertaalFout } from "~/fouten";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isBedrijfsnaam, isEmail } from "~/sessie/invoer";
 import { useSessieStore, type Rol } from "~/stores/sessie";
@@ -10,6 +12,7 @@ type Lid = { id: string; gebruikerId: string; naam: string; email: string; rol: 
 type Uitnodiging = { id: string; email: string; rol: Rol; verlooptOp: string };
 
 const { t } = useI18n();
+const { taal } = useTaal();
 const sessie = useSessieStore();
 const toast = useToast();
 // Elke wijziging stuurt de actieve organisatie van deze pagina mee (een ander tabblad kan wisselen).
@@ -60,15 +63,14 @@ const rolOpties = computed(() => [
   { value: "lid", label: t("rollen.lid") },
 ]);
 
-/** De melding bij een mislukte actie: de laatste eigenaar en een ontbrekende rol krijgen hun eigen tekst. */
+/**
+ * De melding bij een mislukte actie: de vertaalde foutcode (`fouten.<CODE>`). Een 403 zonder code
+ * (een route die geen code meestuurt) betekent hier dat alleen een eigenaar dit mag; een 403 mét
+ * code gaat langs `vertaalFout` zoals elke andere fout.
+ */
 function foutTekst(fout: unknown): string {
-  const code = foutCode(fout);
-  if (code === "LAATSTE_EIGENAAR") return t("organisatie.laatsteEigenaar");
-  if (code === "ALLEEN_EIGENAAR" || foutStatus(fout) === 403) return t("organisatie.alleenEigenaar");
-  if (code === "AL_LID") return t("organisatie.uitnodigen.alLid");
-  if (code === "AL_UITGENODIGD") return t("organisatie.uitnodigen.alUitgenodigd");
-  if (foutStatus(fout) === 429) return t("auth.fouten.teVeel");
-  return t("algemeen.fout");
+  if (foutStatus(fout) === 403 && !foutCode(fout)) return t("organisatie.alleenEigenaar");
+  return vertaalFout(fout, t);
 }
 
 /** Wisselde een ander tabblad de organisatie (409 ANDERE_ORGANISATIE), dan meldt die dat zelf. */
@@ -190,7 +192,7 @@ async function trekIn(uitnodiging: Uitnodiging) {
 }
 
 function datum(iso: string): string {
-  return new Date(iso).toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" });
+  return datumTekst(iso, taal.value);
 }
 
 // --- Verlaten --------------------------------------------------------------------------------

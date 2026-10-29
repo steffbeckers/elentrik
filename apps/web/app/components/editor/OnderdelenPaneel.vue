@@ -27,7 +27,7 @@ const toetsVan = Object.fromEntries(
 const toestelsoorten = computed(() =>
   (VELDEN.toestel.find((v) => v.sleutel === "soort")?.opties ?? []).map((o) => ({
     value: o.waarde as Toestelsoort,
-    label: o.label,
+    label: o.labelSleutel ? t(o.labelSleutel) : String(o.waarde),
   })),
 );
 

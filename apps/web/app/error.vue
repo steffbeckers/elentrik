@@ -1,9 +1,14 @@
 <script setup lang="ts">
 // De foutpagina van de app: een onbekende pagina, of een server die (even) niet antwoordt.
 import type { NuxtError } from "#app";
+import { isTaal } from "../shared/taal";
+import { uiLocale } from "./sessie/ui-taal";
 
 const props = defineProps<{ error: NuxtError }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
+
+// Nuxt UI (aria-labels, sluitknoppen) in dezelfde taal als de interface.
+const ui = computed(() => uiLocale(isTaal(locale.value) ? locale.value : "nl"));
 
 const nietGevonden = computed(() => props.error.statusCode === 404);
 
@@ -16,7 +21,7 @@ function opnieuw() {
 </script>
 
 <template>
-  <UApp>
+  <UApp :locale="ui">
     <main class="flex min-h-dvh flex-col items-center justify-center px-4 py-8">
       <UCard class="w-full max-w-md">
         <template #header>

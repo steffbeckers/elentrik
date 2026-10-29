@@ -21,21 +21,3 @@ export function volgendVersieLabel(aantalExports: number | null): string {
 export function onopgelosteFouten(bevindingen: readonly Bevinding[]): number {
   return bevindingen.filter((b) => b.ernst === "fout" && !b.afgeweken).length;
 }
-
-function nietLegeTekst(waarde: unknown): string | undefined {
-  return typeof waarde === "string" && waarde.trim() !== "" ? waarde : undefined;
-}
-
-/**
- * De tekst die de server bij een fout meegaf (`statusMessage`), zoals `$fetch` hem doorgeeft:
- * eerst uit de JSON-body (`data`), anders van de fout zelf. Zonder bruikbare tekst `undefined`.
- */
-export function serverBoodschap(fout: unknown): string | undefined {
-  if (typeof fout !== "object" || fout === null) return undefined;
-  const { data, statusMessage } = fout as { data?: unknown; statusMessage?: unknown };
-  const uitBody =
-    typeof data === "object" && data !== null
-      ? nietLegeTekst((data as { statusMessage?: unknown }).statusMessage)
-      : undefined;
-  return uitBody ?? nietLegeTekst(statusMessage);
-}

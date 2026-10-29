@@ -3,8 +3,7 @@
     "naam": "Elentrik"
   },
   "algemeen": {
-    "annuleren": "Annuleren",
-    "fout": "Er ging iets mis. Probeer het opnieuw."
+    "annuleren": "Annuleren"
   },
   "editor": {
     "canvas": {
@@ -134,6 +133,10 @@
       "titel": "Projectgegevens",
       "naam": "Naam",
       "stroomtype": "Stroomtype",
+      "dossierTaal": {
+        "label": "Dossiertaal",
+        "hulp": "De taal van de PDF bij het exporteren."
+      },
       "bewaren": "Bewaren",
       "klant": {
         "titel": "Klant",
@@ -272,6 +275,7 @@
     "export": {
       "titel": "Exporteren als PDF",
       "beschrijving": "De PDF komt uit het opgeslagen project en wordt als versie bewaard.",
+      "dossierTaal": "Dossiertaal: {taal}",
       "opslaan": "Het project wordt eerst opgeslagen…",
       "geblokkeerd": {
         "titel": "Exporteren kan nu niet",
@@ -415,6 +419,107 @@
       "3N400V": "3N × 400 V (drie fasen en nul)"
     }
   },
+  "velden": {
+    "label": {
+      "label": "Label"
+    },
+    "ruimte": {
+      "label": "Ruimte"
+    },
+    "gevoeligheid_mA": {
+      "label": "Gevoeligheid"
+    },
+    "nominaal_A": {
+      "label": "Nominale stroom"
+    },
+    "polen": {
+      "label": "Polen"
+    },
+    "klasse": {
+      "label": "Type"
+    },
+    "curve": {
+      "label": "Curve"
+    },
+    "kortsluitvermogen_kA": {
+      "label": "Kortsluitvermogen"
+    },
+    "naam": {
+      "label": "Naam"
+    },
+    "kabeltype": {
+      "label": "Kabeltype"
+    },
+    "doorsnede_mm2": {
+      "label": "Doorsnede"
+    },
+    "aantalGeleiders": {
+      "label": "Aantal geleiders"
+    },
+    "plaatsing": {
+      "label": "Plaatsing",
+      "opties": {
+        "inbouw": "Inbouw",
+        "opbouw": "Opbouw",
+        "buis": "In buis",
+        "grond": "In de grond"
+      }
+    },
+    "aantal": {
+      "label": "Aantal"
+    },
+    "randaarde": {
+      "label": "Randaarde"
+    },
+    "kinderbeveiliging": {
+      "label": "Kinderbeveiliging"
+    },
+    "waterdicht": {
+      "label": "Waterdicht"
+    },
+    "vermogen_W": {
+      "label": "Vermogen"
+    },
+    "soort": {
+      "label": "Soort",
+      "opties": {
+        "standaard": "Standaard",
+        "led": "LED",
+        "tl": "TL",
+        "spot": "Spot",
+        "noodverlichting": "Noodverlichting",
+        "enkel": "Enkel",
+        "dubbel": "Dubbel",
+        "wissel": "Wissel",
+        "kruis": "Kruis",
+        "dimmer": "Dimmer",
+        "drukknop": "Drukknop",
+        "wasmachine": "Wasmachine",
+        "droogkast": "Droogkast",
+        "vaatwasser": "Vaatwasser",
+        "kookplaat": "Kookplaat",
+        "oven": "Oven",
+        "boiler": "Boiler",
+        "warmtepomp": "Warmtepomp",
+        "laadpaal": "Laadpaal",
+        "omvormer": "Omvormer",
+        "andere": "Andere"
+      }
+    }
+  },
+  "ruimtes": {
+    "badkamer": "Badkamer",
+    "keuken": "Keuken",
+    "wasplaats": "Wasplaats",
+    "slaapkamer": "Slaapkamer",
+    "leefruimte": "Leefruimte",
+    "garage": "Garage",
+    "kelder": "Kelder",
+    "zolder": "Zolder",
+    "buiten": "Buiten",
+    "technisch": "Technische ruimte",
+    "andere": "Andere"
+  },
   "rollen": {
     "eigenaar": "Eigenaar",
     "lid": "Lid"
@@ -435,8 +540,7 @@
       "wachtwoordVerplicht": "Vul je wachtwoord in.",
       "wachtwoordTeKort": "Een wachtwoord telt minstens 10 tekens.",
       "wachtwoordTeLang": "Een wachtwoord telt hoogstens 128 tekens.",
-      "bedrijfsnaam": "De naam van het bedrijf telt 1 tot 80 tekens.",
-      "teVeel": "Te veel pogingen. Wacht even en probeer het opnieuw."
+      "bedrijfsnaam": "De naam van het bedrijf telt 1 tot 80 tekens."
     }
   },
   "inloggen": {
@@ -496,7 +600,6 @@
       "knop": "Account aanmaken en aanvaarden"
     },
     "accountBestaat": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
-    "onbevestigd": "Bevestig eerst je e-mailadres en probeer het dan opnieuw.",
     "nietVoorJou": "Deze uitnodiging is voor een ander adres.",
     "ongeldig": {
       "titel": "Deze uitnodiging is niet meer geldig",
@@ -541,9 +644,7 @@
       "email": "E-mailadres",
       "rol": "Rol",
       "knop": "Uitnodigen",
-      "verstuurd": "De uitnodiging is verstuurd naar {email}.",
-      "alLid": "Dit adres is al lid.",
-      "alUitgenodigd": "Dit adres is al uitgenodigd."
+      "verstuurd": "De uitnodiging is verstuurd naar {email}."
     },
     "verlaten": {
       "knop": "Organisatie verlaten",
@@ -551,7 +652,6 @@
       "bevestiging": "Wil je {organisatie} verlaten? Je ziet de projecten ervan dan niet meer.",
       "bevestigen": "Verlaten"
     },
-    "laatsteEigenaar": "Er moet minstens één eigenaar blijven.",
     "alleenEigenaar": "Alleen een eigenaar mag dit.",
     "laden": "Laden…",
     "andereOrganisatie": {
@@ -646,5 +746,54 @@
     "titel": "Opnieuw aangemeld",
     "tekst": "Je bent opnieuw aangemeld. Sluit dit tabblad en klik in de editor op ‘Opnieuw proberen’.",
     "sluiten": "Tabblad sluiten"
+  },
+  "taal": {
+    "kiezen": "Taal kiezen",
+    "label": "Taal",
+    "bewarenMislukt": "Je taalkeuze kon niet bewaard worden. Bij je volgende aanmelding of herlading wordt ze teruggezet; probeer opnieuw.",
+    "wisselenMislukt": "De taal kon niet gewisseld worden. Probeer het opnieuw."
+  },
+  "fouten": {
+    "onbekend": "Er ging iets mis. Probeer het opnieuw.",
+    "NIET_AANGEMELD": "Je bent niet meer aangemeld. Log opnieuw in.",
+    "ANDERE_GEBRUIKER": "Je bent intussen als iemand anders aangemeld. Laad de pagina opnieuw.",
+    "ANDERE_ORGANISATIE": "Je actieve organisatie werd intussen gewijzigd. Kijk je wijziging na en probeer opnieuw.",
+    "ALLEEN_EIGENAAR": "Alleen een eigenaar mag dit.",
+    "NIET_TOEGELATEN": "Dit is niet toegelaten.",
+    "VERZOEK_VAN_ANDERE_SITE": "Dit verzoek kwam niet van Elentrik en werd geweigerd. Laad de pagina opnieuw.",
+    "NIET_GEVONDEN": "Dit bestaat niet (meer), of je hebt er geen toegang toe.",
+    "ONGELDIGE_INVOER": "Sommige gegevens zijn niet geldig. Kijk ze na en probeer opnieuw.",
+    "ONGELDIGE_NAAM": "De naam telt 1 tot 80 tekens.",
+    "ONGELDIGE_TAAL": "Deze taal wordt niet ondersteund.",
+    "IF_MATCH_VEREIST": "De versie van het project ontbreekt. Laad het project opnieuw.",
+    "PROJECT_GEWIJZIGD": "Het project is intussen elders gewijzigd.",
+    "ONGELDIG_DOCUMENT": "Het project bevat ongeldige gegevens en kon niet opgeslagen worden.",
+    "BESTAND_TE_GROOT": "Dit bestand is te groot.",
+    "BESTANDSTYPE_NIET_TOEGELATEN": "Dit bestandstype wordt niet aanvaard.",
+    "RASTER_TE_GROOT": "Dit plan is te groot (meer dan 8.000 pixels).",
+    "ONBEREIKBAAR": "De PDF-dienst is niet bereikbaar. Probeer het straks opnieuw.",
+    "TIMEOUT": "De PDF-dienst antwoordde niet op tijd. Probeer het straks opnieuw.",
+    "MISLUKT": "De PDF kon niet gemaakt worden. Probeer het opnieuw.",
+    "ABONNEMENT_VEREIST": "Je bedrijf heeft geen actief abonnement. Je kan projecten bekijken en exporteren, maar niet bewerken.",
+    "ABONNEMENT_BESTAAT": "Dit bedrijf heeft al een abonnement.",
+    "GEEN_KLANT": "Dit bedrijf heeft nog geen betaalgegevens. Kies eerst een abonnement.",
+    "ABONNEMENTEN_UIT": "Betalen is nog niet ingesteld.",
+    "LAATSTE_EIGENAAR": "Er moet minstens één eigenaar blijven.",
+    "AL_LID": "Dit adres is al lid.",
+    "AL_UITGENODIGD": "Dit adres is al uitgenodigd.",
+    "UITNODIGING_VERVALLEN": "Deze uitnodiging is niet meer geldig.",
+    "UITNODIGING_ANDER_ADRES": "Deze uitnodiging is voor een ander adres.",
+    "EMAIL_NIET_BEVESTIGD": "Bevestig eerst je e-mailadres en probeer het dan opnieuw.",
+    "ACCOUNT_BESTAAT": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
+    "TE_VEEL_UITNODIGINGEN": "Te veel uitnodigingen. Probeer het straks opnieuw.",
+    "TE_VEEL_POGINGEN": "Te veel pogingen. Wacht even en probeer het opnieuw.",
+    "INVALID_EMAIL_OR_PASSWORD": "Het e-mailadres of het wachtwoord klopt niet.",
+    "EMAIL_NOT_VERIFIED": "Je e-mailadres is nog niet bevestigd.",
+    "INVALID_TOKEN": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",
+    "TOKEN_EXPIRED": "Deze link is verlopen. Vraag een nieuwe aan.",
+    "PASSWORD_TOO_SHORT": "Een wachtwoord telt minstens 10 tekens.",
+    "PASSWORD_TOO_LONG": "Een wachtwoord telt hoogstens 128 tekens.",
+    "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Er bestaat al een account met dit adres.",
+    "INVALID_EMAIL": "Vul een geldig e-mailadres in."
   }
 }

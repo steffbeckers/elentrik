@@ -48,9 +48,28 @@ export default defineNuxtConfig({
       ],
     },
   },
+  // De taal van de interface (plan 8): geen prefix in de URL. De eerste keer de taal van de browser
+  // (Accept-Language op de server), daarna de cookie `elentrik_taal`. Na het lezen van de sessie
+  // wint `user.taal` (app/stores/sessie.ts); de terugvaltaal is nl. `fallbackLocale` voor
+  // ontbrekende berichten staat in i18n/i18n.config.ts. De locales `language` dienen voor
+  // `<html lang>` (app.vue); ze zijn dezelfde als `LOCALES` in shared/taal.ts.
   i18n: {
     strategy: "no_prefix",
     defaultLocale: "nl",
-    locales: [{ code: "nl", language: "nl-BE", file: "nl.json" }],
+    langDir: "locales",
+    locales: [
+      { code: "nl", language: "nl-BE", file: "nl.json" },
+      { code: "fr", language: "fr-BE", file: "fr.json" },
+      { code: "en", language: "en-GB", file: "en.json" },
+    ],
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: "elentrik_taal",
+      // Met `no_prefix` stuurt de module nergens naar door; deze twee hebben dan geen effect. De
+      // detectie gebeurt bij elke eerste lading van de app (SSR): eerst de cookie, dan Accept-Language.
+      redirectOn: "root",
+      alwaysRedirect: false,
+      fallbackLocale: "nl",
+    },
   },
 });

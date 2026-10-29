@@ -1,7 +1,7 @@
 import type { Bevinding, Ernst } from "@elentrik/arei";
 import { describe, expect, test } from "vitest";
 import type { AutosaveStatus } from "../app/composables/useAutosave";
-import { magExporteren, onopgelosteFouten, serverBoodschap, volgendVersieLabel } from "../app/editor/export";
+import { magExporteren, onopgelosteFouten, volgendVersieLabel } from "../app/editor/export";
 
 function bevinding(ernst: Ernst, afgeweken = false): Bevinding {
   return { regelId: "r", ernst, nodeIds: ["n"], berichtSleutel: "k", parameters: {}, afgeweken };
@@ -43,26 +43,5 @@ describe("onopgelosteFouten", () => {
       bevinding("waarschuwing", true),
     ];
     expect(onopgelosteFouten(bevindingen)).toBe(2);
-  });
-});
-
-describe("serverBoodschap", () => {
-  test("de statusMessage uit de body van de fout", () => {
-    const fout = { statusCode: 502, data: { statusCode: 502, statusMessage: "De PDF-dienst is niet bereikbaar." } };
-    expect(serverBoodschap(fout)).toBe("De PDF-dienst is niet bereikbaar.");
-  });
-
-  test("anders de statusMessage op de fout zelf", () => {
-    expect(serverBoodschap({ statusCode: 502, statusMessage: "De PDF kon niet gemaakt worden." })).toBe(
-      "De PDF kon niet gemaakt worden.",
-    );
-  });
-
-  test("niets bruikbaars geeft undefined", () => {
-    expect(serverBoodschap(new Error("netwerk"))).toBeUndefined();
-    expect(serverBoodschap({ statusCode: 502, statusMessage: "" })).toBeUndefined();
-    expect(serverBoodschap({ data: { statusMessage: 3 } })).toBeUndefined();
-    expect(serverBoodschap(null)).toBeUndefined();
-    expect(serverBoodschap("tekst")).toBeUndefined();
   });
 });

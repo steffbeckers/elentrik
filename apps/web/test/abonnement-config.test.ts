@@ -273,6 +273,7 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       trialEinde,
       succesUrl: "https://app.test/abonnement?terug={CHECKOUT_SESSION_ID}",
       annuleerUrl: "https://app.test/abonnement",
+      locale: "nl",
     });
     expect(r).toEqual({ id: "cs_1", url: "https://checkout.stripe.test/cs_1" });
     const v = verzoeken[0]!;
@@ -304,8 +305,40 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       trialEinde: null,
       succesUrl: "https://app.test/a",
       annuleerUrl: "https://app.test/b",
+      locale: "nl",
     });
     expect(verzoeken[0]!.lichaam.has("subscription_data[trial_end]")).toBe(false);
+  });
+
+  test.each(["nl", "fr", "en"] as const)("maakCheckout stuurt locale=%s op de draad", async (locale) => {
+    antwoorden["/v1/checkout/sessions"] = { id: "cs_3", object: "checkout.session", url: "https://checkout.stripe.test/cs_3" };
+    await poort().maakCheckout({
+      klantId: "cus_1",
+      prijsId: "price_maand",
+      organisatieId: "org_1",
+      trialEinde: null,
+      succesUrl: "https://app.test/a",
+      annuleerUrl: "https://app.test/b",
+      locale,
+    });
+    expect(verzoeken[0]!.lichaam.get("locale")).toBe(locale);
+  });
+
+  test.each(["nl", "fr", "en"] as const)("maakPortaal stuurt locale=%s op de draad", async (locale) => {
+    antwoorden["/v1/billing_portal/sessions"] = {
+      id: "bps_1",
+      object: "billing_portal.session",
+      url: "https://portaal.stripe.test/bps_1",
+    };
+    const r = await poort().maakPortaal({ klantId: "cus_1", terugUrl: "https://app.test/abonnement", locale });
+    expect(r).toEqual({ url: "https://portaal.stripe.test/bps_1" });
+    const v = verzoeken[0]!;
+    expect(v.pad).toBe("/v1/billing_portal/sessions");
+    expect(Object.fromEntries(v.lichaam)).toMatchObject({
+      customer: "cus_1",
+      return_url: "https://app.test/abonnement",
+      locale,
+    });
   });
 
   test("abonnementenVanKlant vraagt alle statussen en neemt de periode van het eerste item", async () => {
@@ -414,6 +447,7 @@ describe("maakNepStripe", () => {
       trialEinde: null,
       succesUrl: "x",
       annuleerUrl: "y",
+      locale: "nl",
     });
     expect(checkout).toEqual({ id: "cs_nep_1", url: "https://checkout.nep/cs_nep_1" });
     expect(await nep.haalCheckout("cs_nep_1")).toEqual({ id: "cs_nep_1", klantId: "cus_nep_1", abonnementId: null });

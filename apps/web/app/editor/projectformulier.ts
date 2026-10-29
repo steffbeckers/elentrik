@@ -1,6 +1,6 @@
 // Het formulier van de projectgegevens en zijn omzetting van en naar de gegevens voor de store.
 // Puur en zonder I/O; expliciete imports (ruling E1).
-import type { Adres, InstallatieDocument, Stroomtype } from "@elentrik/model";
+import type { Adres, InstallatieDocument, Stroomtype, Taal } from "@elentrik/model";
 import {
   adresFormulierUitAdres,
   adresUitFormulier,
@@ -17,6 +17,8 @@ export type ProjectFormulier = {
   ean: string;
   /** `JJJJ-MM-DD`, zoals een datumveld ze geeft. */
   datum: string;
+  /** De taal van het dossier (PDF); een document zonder taal toont `nl`. */
+  dossierTaal: Taal;
 };
 
 export type ProjectFormulierFout = {
@@ -35,6 +37,7 @@ export type ProjectgegevensWijziging = {
   werfadres?: Adres;
   ean: string;
   datum: string;
+  dossierTaal: Taal;
 };
 
 export function formulierUitProject(naam: string, doc: InstallatieDocument): ProjectFormulier {
@@ -46,6 +49,7 @@ export function formulierUitProject(naam: string, doc: InstallatieDocument): Pro
     werf: adresFormulierUitAdres(doc.meta.werfadres),
     ean: doc.meta.ean ?? "",
     datum: doc.meta.datum,
+    dossierTaal: doc.meta.dossierTaal ?? "nl",
   };
 }
 
@@ -78,5 +82,6 @@ export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijzig
     ...(werfadres !== undefined ? { werfadres } : {}),
     ean: f.ean.trim(),
     datum: f.datum.trim(),
+    dossierTaal: f.dossierTaal,
   };
 }

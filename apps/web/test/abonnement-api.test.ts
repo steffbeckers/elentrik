@@ -250,6 +250,23 @@ describe("checkout", () => {
     expect((aanroepen("maakCheckout")[0]!.invoer as { klantId: string }).klantId).toBe("cus_a");
   });
 
+  describe("locale", () => {
+    afterEach(async () => {
+      await db.update(user).set({ taal: "nl" }).where(eq(user.id, eigenaarA.id));
+    });
+
+    test("zonder gekozen taal is de locale nl", async () => {
+      expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+      expect((aanroepen("maakCheckout")[0]!.invoer as { locale: string }).locale).toBe("nl");
+    });
+
+    test.each(["fr", "en"] as const)("een %s-eigenaar geeft locale %s door aan Stripe", async (taal) => {
+      await db.update(user).set({ taal }).where(eq(user.id, eigenaarA.id));
+      expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+      expect((aanroepen("maakCheckout")[0]!.invoer as { locale: string }).locale).toBe(taal);
+    });
+  });
+
   test("een onbekende status in de database blokkeert niet", async () => {
     await db
       .insert(abonnementen)
@@ -397,6 +414,17 @@ describe("portaal", () => {
     const invoer = aanroepen("maakPortaal")[0]!.invoer as { klantId: string; terugUrl: string };
     expect(invoer.klantId).toBe("cus_a");
     expect(new URL(invoer.terugUrl).pathname).toBe("/abonnement");
+  });
+
+  test.each([["nl"], ["fr"], ["en"]] as const)("de locale van het portaal is de taal van de eigenaar (%s)", async (taal) => {
+    await db.insert(abonnementen).values({ organisatieId: eigenaarA.organisatieId, stripeKlantId: "cus_a" });
+    await db.update(user).set({ taal }).where(eq(user.id, eigenaarA.id));
+    try {
+      expect((await portaal(eigenaarA.cookie)).status).toBe(200);
+    } finally {
+      await db.update(user).set({ taal: "nl" }).where(eq(user.id, eigenaarA.id));
+    }
+    expect((aanroepen("maakPortaal")[0]!.invoer as { locale: string }).locale).toBe(taal);
   });
 });
 

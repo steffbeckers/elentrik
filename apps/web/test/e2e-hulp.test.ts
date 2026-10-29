@@ -10,6 +10,7 @@ import {
 } from "../e2e/omgeving";
 import { linkUitTekst } from "../e2e/hulp/link";
 import { bevestigMail, herstelMail, magicLinkMail, uitnodigingMail } from "../server/mail/sjablonen";
+import { TALEN } from "../shared/taal";
 
 describe("eisE2eDatabase", () => {
   test("de e2e-url wordt aanvaard", () => {
@@ -60,27 +61,28 @@ describe("linkUitTekst", () => {
     magic: `${basis}/api/auth/magic-link/verify?token=ssss&callbackURL=%2F`,
   };
 
-  test("haalt de herstellink exact uit de herstelmail (met s'en en punten)", () => {
-    const mail = herstelMail({ naam: "Jan", link: links.herstel });
+  test.each(TALEN)("haalt de herstellink exact uit de herstelmail in het %s (met s'en en punten)", (taal) => {
+    const mail = herstelMail({ naam: "Jan", link: links.herstel, taal });
     expect(linkUitTekst(mail.tekst, basis)).toBe(links.herstel);
   });
 
-  test("haalt de bevestigingslink met & en %-codes exact uit de tekst, zonder &amp;", () => {
-    const mail = bevestigMail({ naam: "Jan", link: links.bevestiging });
+  test.each(TALEN)("haalt de bevestigingslink met & en %-codes exact uit de tekst in het %s, zonder &amp;", (taal) => {
+    const mail = bevestigMail({ naam: "Jan", link: links.bevestiging, taal });
     const gevonden = linkUitTekst(mail.tekst, basis);
     expect(gevonden).toBe(links.bevestiging);
     expect(gevonden).not.toContain("&amp;");
   });
 
-  test("haalt de uitnodigingslink en de magic link exact uit hun mails", () => {
+  test.each(TALEN)("haalt de uitnodigingslink en de magic link exact uit hun mails in het %s", (taal) => {
     const uitnodiging = uitnodigingMail({
       uitnodiger: "Els",
       organisatie: "Janssens Elektro",
       rol: "lid",
       link: links.uitnodiging,
+      taal,
     });
     expect(linkUitTekst(uitnodiging.tekst, basis)).toBe(links.uitnodiging);
-    expect(linkUitTekst(magicLinkMail({ link: links.magic }).tekst, basis)).toBe(links.magic);
+    expect(linkUitTekst(magicLinkMail({ link: links.magic, taal }).tekst, basis)).toBe(links.magic);
   });
 
   test("stopt bij witruimte, < , > en aanhalingstekens", () => {

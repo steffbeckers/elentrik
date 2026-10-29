@@ -85,7 +85,7 @@ describe("metExportFouten", () => {
       }),
     );
     expect(e.statusCode).toBe(409);
-    expect(e.data).toEqual({ versie: 7 });
+    expect(e.data).toEqual({ versie: 7, code: "PROJECT_GEWIJZIGD" });
   });
 
   test("een andere fout gaat ongewijzigd door", async () => {

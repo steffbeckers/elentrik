@@ -43,11 +43,11 @@ describe("waarborgen", () => {
     }
   });
 
-  test("elke berichtSleutel van elke regel bestaat in nl en fr", () => {
+  test("elke berichtSleutel van elke regel bestaat in nl, fr en en", () => {
     for (const [sleutel, set] of Object.entries(REGELSETS)) {
       for (const regel of set.regels) {
         for (const berichtSleutel of regel.berichtSleutels) {
-          for (const taal of ["nl", "fr"] as const) {
+          for (const taal of ["nl", "fr", "en"] as const) {
             const tekst = BERICHTEN[taal][berichtSleutel];
             expect(tekst, `${sleutel}/${regel.id} ${taal} ${berichtSleutel}`).toBeTypeOf("string");
             expect(tekst?.trim(), `${sleutel}/${regel.id} ${taal} ${berichtSleutel} leeg`).not.toBe("");

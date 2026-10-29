@@ -41,7 +41,7 @@ function fout(status: number, code: string) {
 
 describe("de pagina", () => {
   test("een eigenaar zonder abonnement ziet twee kaarten met -17 % op jaarlijks", () => {
-    const w = paginaWeergave(overzicht(), "eigenaar");
+    const w = paginaWeergave(overzicht(), "eigenaar", "nl");
     expect(w.kaarten.map((k) => k.formule)).toEqual(["maand", "jaar"]);
     expect(w.kaarten[0]!.korting).toBeNull();
     expect(w.kaarten[1]!.korting).toBe(17);
@@ -51,7 +51,7 @@ describe("de pagina", () => {
   });
 
   test("een lid ziet geen knoppen, wel de uitleg", () => {
-    const w = paginaWeergave(overzicht(), "lid");
+    const w = paginaWeergave(overzicht(), "lid", "nl");
     expect(w.kaarten).toEqual([]);
     expect(w.beheer).toBeNull();
     expect(w.melding).toBe("lid");
@@ -59,19 +59,19 @@ describe("de pagina", () => {
 
   test("een eigenaar met een abonnement ziet beheren; bij past_due of unpaid betaling regelen", () => {
     const actief = overzicht({ schrijven: true, reden: "actief", status: "active", formule: "maand", heeftKlant: true });
-    expect(paginaWeergave(actief, "eigenaar").kaarten).toEqual([]);
-    expect(paginaWeergave(actief, "eigenaar").beheer).toBe("abonnement.beheren");
+    expect(paginaWeergave(actief, "eigenaar", "nl").kaarten).toEqual([]);
+    expect(paginaWeergave(actief, "eigenaar", "nl").beheer).toBe("abonnement.beheren");
     for (const status of ["past_due", "unpaid"] as const) {
-      expect(paginaWeergave({ ...actief, status }, "eigenaar").beheer).toBe("abonnement.betalingRegelen");
+      expect(paginaWeergave({ ...actief, status }, "eigenaar", "nl").beheer).toBe("abonnement.betalingRegelen");
     }
     // Een beëindigd abonnement kan opnieuw genomen worden.
-    const beeindigd = paginaWeergave({ ...actief, status: "canceled", schrijven: false, reden: "beeindigd" }, "eigenaar");
+    const beeindigd = paginaWeergave({ ...actief, status: "canceled", schrijven: false, reden: "beeindigd" }, "eigenaar", "nl");
     expect(beeindigd.kaarten).toHaveLength(2);
     expect(beeindigd.beheer).toBeNull();
   });
 
   test("zonder prijzen: de status blijft en de melding komt, zonder knoppen", () => {
-    const w = paginaWeergave(overzicht({ prijzen: null }), "eigenaar");
+    const w = paginaWeergave(overzicht({ prijzen: null }), "eigenaar", "nl");
     expect(w.statusSleutel).toBe("abonnement.status.proefVoorbij");
     expect(w.melding).toBe("prijzen");
     expect(w.kaarten).toEqual([]);
@@ -82,13 +82,14 @@ describe("de pagina", () => {
     const w = paginaWeergave(
       overzicht({ prijzen: null, status: "active", reden: "actief", schrijven: true, heeftKlant: true }),
       "eigenaar",
+      "nl",
     );
     expect(w.beheer).toBe("abonnement.beheren");
     expect(w.melding).toBeNull();
   });
 
   test("abonnementen uit: alleen de melding dat betalen nog niet is ingesteld", () => {
-    const w = paginaWeergave(overzicht({ ingeschakeld: false, reden: "uit", schrijven: true, prijzen: null }), "eigenaar");
+    const w = paginaWeergave(overzicht({ ingeschakeld: false, reden: "uit", schrijven: true, prijzen: null }), "eigenaar", "nl");
     // De zin "Betalen is nog niet ingesteld." staat één keer: in de melding, niet ook in de statusregel.
     expect(w.statusSleutel).toBeNull();
     expect(w.melding).toBe("uit");
@@ -190,7 +191,7 @@ describe("de API", () => {
 
 describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
   const MIJ: Mij = {
-    gebruiker: { id: "u1", naam: "An", email: "an@example.test", proefGebruikt: true },
+    gebruiker: { id: "u1", naam: "An", email: "an@example.test", proefGebruikt: true, taal: "nl" as const },
     organisaties: [
       {
         id: "o1",

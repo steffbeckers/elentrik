@@ -3,6 +3,7 @@ import type { TableColumn } from "@nuxt/ui";
 import type { ProjectSamenvatting } from "~/composables/useProjectenApi";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
 
 const { t } = useI18n();
@@ -10,6 +11,7 @@ const api = useProjectenApi();
 const toast = useToast();
 const sessie = useSessieStore();
 const alleenLezen = useAlleenLezen();
+const { taal } = useTaal();
 
 // Zonder schrijfrecht (spec 4.4) zijn aanmaken en dupliceren verborgen; de server weigert ze met 402.
 const kanSchrijven = computed(() => sessie.toegang.schrijven);
@@ -59,7 +61,7 @@ async function voerActieUit(actie: () => Promise<unknown>): Promise<boolean> {
     return true;
   } catch (fout) {
     // Een 402 ververst de sessie en meldt alleen-lezen; een andere fout is een generieke fout.
-    if (!(await alleenLezen(fout))) toast.add({ title: t("algemeen.fout"), color: "error" });
+    if (!(await alleenLezen(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
     return false;
   }
 }
@@ -132,7 +134,7 @@ async function bevestigVerwijderen() {
           <span class="sr-only">{{ $t("projecten.kolommen.acties") }}</span>
         </template>
         <template #gewijzigd-cell="{ row }">
-          {{ relatieveTijd(row.original.gewijzigd, nu) }}
+          {{ relatieveTijd(row.original.gewijzigd, taal, nu) }}
         </template>
         <template #acties-cell="{ row }">
           <div class="flex justify-end gap-1">

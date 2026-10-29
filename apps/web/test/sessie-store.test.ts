@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { useSessieStore, type Mij, type SessieApi } from "../app/stores/sessie";
 
 const MIJ: Mij = {
-  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", proefGebruikt: true },
+  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", proefGebruikt: true, taal: "nl" as const },
   organisaties: [
     { id: "o1", naam: "Peeters Elektro", rol: "eigenaar", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
     { id: "o2", naam: "Janssens BV", rol: "lid", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },

@@ -126,6 +126,7 @@ describe("formatteerBericht", () => {
   const catalogus = {
     nl: { test: "Kring {kring}: {aantal}", getal: "Waarde {x}", los: "Hallo {onbekend}" },
     fr: { test: "Circuit {kring}: {aantal}", getal: "Valeur {x}" },
+    en: { test: "Circuit {kring}: {aantal}", getal: "Value {x}" },
   };
   const maak = (berichtSleutel: string, parameters: Bevinding["parameters"]): Bevinding => ({
     regelId: "R1",

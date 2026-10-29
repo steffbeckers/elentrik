@@ -57,6 +57,13 @@
       "when": 1792740525677,
       "tag": "0007_abonnementen",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792772335180,
+      "tag": "0008_taal",
+      "breakpoints": true
     }
   ]
 }

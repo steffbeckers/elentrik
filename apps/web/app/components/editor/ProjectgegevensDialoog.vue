@@ -8,7 +8,9 @@ import {
   valideerProjectFormulier,
   type ProjectFormulier,
 } from "~/editor/projectformulier";
+import { TAALNAMEN } from "~/sessie/taal";
 import { useEditorStore } from "~/stores/editor";
+import { TALEN } from "../../../shared/taal";
 
 const open = defineModel<boolean>("open", { default: false });
 
@@ -20,6 +22,9 @@ const stroomtypes = computed(() =>
   StroomtypeSchema.options.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
 );
 
+/** De talen van het dossier, elk in haar eigen taal ("Français"), zoals de taalkiezer en het exportvenster. */
+const dossierTalen = TALEN.map((value) => ({ value, label: TAALNAMEN[value] }));
+
 const formulier = reactive<ProjectFormulier>({
   naam: "",
   klantNaam: "",
@@ -28,6 +33,7 @@ const formulier = reactive<ProjectFormulier>({
   werf: leegAdresFormulier(),
   ean: "",
   datum: "",
+  dossierTaal: "nl",
 });
 
 watch(open, (nuOpen) => {
@@ -58,6 +64,13 @@ function bewaar(): void {
           </UFormField>
           <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
             <USelect v-model="formulier.stroomtype" :items="stroomtypes" class="w-full" />
+          </UFormField>
+          <UFormField
+            name="dossierTaal"
+            :label="$t('editor.projectgegevens.dossierTaal.label')"
+            :help="$t('editor.projectgegevens.dossierTaal.hulp')"
+          >
+            <USelect v-model="formulier.dossierTaal" :items="dossierTalen" class="w-full" data-testid="dossiertaal" />
           </UFormField>
         </div>
 

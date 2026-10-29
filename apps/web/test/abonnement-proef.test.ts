@@ -275,8 +275,9 @@ describe("migratie 0007 op bestaande gegevens", () => {
       entries: { tag: string }[];
     };
     const tags = journal.entries.map((e) => e.tag);
-    expect(tags.at(-1)).toBe("0007_abonnementen");
-    for (const tag of tags.slice(0, -1)) await voerUit(pg, `${tag}.sql`);
+    const index = tags.indexOf("0007_abonnementen");
+    expect(index).toBeGreaterThan(-1);
+    for (const tag of tags.slice(0, index)) await voerUit(pg, `${tag}.sql`);
 
     await pg.exec(`
       insert into "user" (id, name, email) values ('eigenaar', 'E', 'e@x.be'), ('lid', 'L', 'l@x.be'), ('niemand', 'N', 'n@x.be');
@@ -285,7 +286,8 @@ describe("migratie 0007 op bestaande gegevens", () => {
         ('m1', 'org', 'eigenaar', 'owner', now()), ('m2', 'org', 'lid', 'member', now());
     `);
     const voor = Date.now();
-    await voerUit(pg, `${tags.at(-1)}.sql`);
+    // 0007 zelf, daarna de migraties die erop volgen (0008 voegt user.taal toe).
+    for (const tag of tags.slice(index)) await voerUit(pg, `${tag}.sql`);
 
     const gebruikers = await pg.query<{ id: string; proef_gebruikt: boolean }>(
       'select id, proef_gebruikt from "user" order by id',

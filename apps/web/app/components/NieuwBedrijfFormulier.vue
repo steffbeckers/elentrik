@@ -2,7 +2,7 @@
 // Een nieuw bedrijf (organisatie) aanmaken: via Better Auth (`organization.create`, de enige
 // organisatieroute die de client zelf aanspreekt), daarna actief maken via onze eigen route.
 // De bedrijfsgegevens van de nieuwe organisatie ontstaan op de server wanneer ze nodig zijn.
-import { foutStatus } from "~/sessie/fouten";
+import { vertaalFout } from "~/fouten";
 import { isBedrijfsnaam } from "~/sessie/invoer";
 import { maakSlug } from "~/sessie/slug";
 import { useSessieStore } from "~/stores/sessie";
@@ -34,13 +34,13 @@ async function maak() {
       keepCurrentActiveOrganization: true,
     });
     if (error || !data) {
-      fout.value = foutStatus(error) === 429 ? t("auth.fouten.teVeel") : t("algemeen.fout");
+      fout.value = vertaalFout(error, t);
       return;
     }
     await sessie.laad();
     if (await sessie.wissel(data.id)) emit("aangemaakt", data.id);
-  } catch {
-    fout.value = t("algemeen.fout");
+  } catch (e) {
+    fout.value = vertaalFout(e, t);
   } finally {
     bezig.value = false;
   }

@@ -185,7 +185,8 @@ export async function maakExport(
     onderdelen,
     versieLabel: invoer.versieLabel,
     datum: doc.meta.datum.trim() !== "" ? doc.meta.datum : lokaleDatum(nu),
-    taal: "nl",
+    // De taal van het dossier (het snapshot-document), nooit die van wie toevallig exporteert.
+    taal: doc.meta.dossierTaal ?? "nl",
     installateur,
     afbeeldingen,
     ...(logo !== undefined ? { logo } : {}),

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   nieuwDocument,
+  parseDocument,
   pasPatchesToe,
   verwijderAfwijking,
   voegAfwijkingToe,
@@ -146,6 +147,62 @@ describe("wijzigProject", () => {
     expect(r.doc).toBe(doc);
     expect(r.patches).toEqual([]);
     expect(r.inversePatches).toEqual([]);
+  });
+
+  describe("dossierTaal", () => {
+    test("een document zonder dossierTaal blijft geldig en ongewijzigd na parse", () => {
+      const doc = nieuwDocument();
+      expect("dossierTaal" in doc.meta).toBe(false);
+      expect(parseDocument(kloon(doc))).toEqual(doc);
+    });
+
+    test("nieuwDocument zet de gekozen dossiertaal, en parse houdt ze", () => {
+      const doc = nieuwDocument({ dossierTaal: "en" });
+      expect(doc.meta.dossierTaal).toBe("en");
+      expect(parseDocument(kloon(doc)).meta.dossierTaal).toBe("en");
+    });
+
+    test("parse weigert een onbekende dossiertaal", () => {
+      const doc = kloon(nieuwDocument());
+      (doc.meta as Record<string, unknown>).dossierTaal = "de";
+      expect(vangFout(() => parseDocument(doc)).code).toBe("ONGELDIG_SCHEMA");
+    });
+
+    test("fr zetten verandert alleen meta.dossierTaal, en undo herstelt de afwezigheid", () => {
+      const doc = nieuwDocument();
+      const r = wijzigProject(doc, { dossierTaal: "fr" });
+      expect(r.doc.meta.dossierTaal).toBe("fr");
+      expect(r.doc).toEqual({ ...doc, meta: { ...doc.meta, dossierTaal: "fr" } });
+      const terug = pasPatchesToe(r.doc, r.inversePatches);
+      expect(terug).toEqual(doc);
+      expect("dossierTaal" in terug.meta).toBe(false);
+    });
+
+    test("een ongeldige taal gooit ONGELDIG_SCHEMA", () => {
+      const doc = nieuwDocument();
+      const fout = vangFout(() => wijzigProject(doc, { dossierTaal: "de" as never }));
+      expect(fout.code).toBe("ONGELDIG_SCHEMA");
+    });
+
+    test("een gelijke waarde valt weg", () => {
+      const fr = nieuwDocument({ dossierTaal: "fr" });
+      const r = wijzigProject(fr, { dossierTaal: "fr" });
+      expect(r.doc).toBe(fr);
+      expect(r.patches).toEqual([]);
+      // Afwezig betekent nl: nl zetten op een document zonder veld verandert niets.
+      const kaal = nieuwDocument();
+      const nl = wijzigProject(kaal, { dossierTaal: "nl" });
+      expect(nl.doc).toBe(kaal);
+      expect(nl.patches).toEqual([]);
+    });
+
+    test("telt als dezelfde undo-stap als de andere projectgegevens", () => {
+      const doc = nieuwDocument();
+      const r = wijzigProject(doc, { klantNaam: "X", dossierTaal: "en" });
+      expect(r.doc.meta.klant.naam).toBe("X");
+      expect(r.doc.meta.dossierTaal).toBe("en");
+      expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+    });
   });
 
   describe("projectgegevens", () => {

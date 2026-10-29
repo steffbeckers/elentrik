@@ -1,5 +1,6 @@
 // Pure helpers voor de abonnementspagina en de banner: prijzen, korting, welke banner en welke
-// tekst bij een situatie hoort. Geen Nuxt, geen i18n: de sleutels staan in nl.json.
+// tekst bij een situatie hoort. Geen Nuxt, geen i18n: de sleutels staan in nl.json; bedragen en
+// datums krijgen de taal mee.
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
@@ -11,6 +12,7 @@ import {
   type Prijs,
   type Toegang,
 } from "../../shared/abonnement";
+import { LOCALES, type Taal } from "../../shared/taal";
 import { foutCode, foutStatus } from "../sessie/fouten";
 import type { Rol } from "../stores/sessie";
 
@@ -20,9 +22,9 @@ const BTW = 121;
 /** De banner voor de proefperiode verschijnt in de laatste zoveel dagen. */
 const PROEF_BANNER_DAGEN = 7;
 
-/** Het bedrag excl. btw en ter info incl. 21 % btw (afgerond op een cent), in `nl-BE`. */
-export function prijsTekst(p: Prijs): { excl: string; incl: string } {
-  const formaat = new Intl.NumberFormat("nl-BE", { style: "currency", currency: p.munt.toUpperCase() });
+/** Het bedrag excl. btw en ter info incl. 21 % btw (afgerond op een cent), in de locale van de taal. */
+export function prijsTekst(p: Prijs, taal: Taal): { excl: string; incl: string } {
+  const formaat = new Intl.NumberFormat(LOCALES[taal], { style: "currency", currency: p.munt.toUpperCase() });
   return {
     excl: formaat.format(p.bedrag / 100),
     incl: formaat.format(Math.round((p.bedrag * BTW) / 100) / 100),
@@ -39,9 +41,9 @@ export function dagenTot(einde: string, nu: Date): number {
   return Math.ceil((new Date(einde).getTime() - nu.getTime()) / DAG_MS);
 }
 
-/** Een datum voor in een zin, bv. "1 november 2026". */
-export function datumTekst(iso: string): string {
-  return new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
+/** Een datum voor in een zin in de taal, bv. "1 november 2026" of "1 novembre 2026". */
+export function datumTekst(iso: string, taal: Taal): string {
+  return new Intl.DateTimeFormat(LOCALES[taal], { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
 }
 
 export type Banner = {
@@ -131,8 +133,8 @@ export type PaginaWeergave = {
   beheer: "abonnement.beheren" | "abonnement.betalingRegelen" | null;
 };
 
-/** Wat /abonnement toont voor dit overzicht en deze rol. */
-export function paginaWeergave(o: AbonnementOverzicht, rol: Rol | null): PaginaWeergave {
+/** Wat /abonnement toont voor dit overzicht en deze rol; de bedragen in de taal. */
+export function paginaWeergave(o: AbonnementOverzicht, rol: Rol | null, taal: Taal): PaginaWeergave {
   const weergave: PaginaWeergave = { statusSleutel: statusTekstSleutel(o), melding: null, kaarten: [], beheer: null };
   // "Betalen is nog niet ingesteld." staat één keer: in de melding, niet ook in de statusregel.
   if (!o.ingeschakeld) return { ...weergave, statusSleutel: null, melding: "uit" };
@@ -146,8 +148,8 @@ export function paginaWeergave(o: AbonnementOverzicht, rol: Rol | null): PaginaW
   return {
     ...weergave,
     kaarten: [
-      { formule: "maand", prijs: prijsTekst(maand), korting: null },
-      { formule: "jaar", prijs: prijsTekst(jaar), korting: jaarKorting(maand, jaar) },
+      { formule: "maand", prijs: prijsTekst(maand, taal), korting: null },
+      { formule: "jaar", prijs: prijsTekst(jaar, taal), korting: jaarKorting(maand, jaar) },
     ],
   };
 }

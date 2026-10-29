@@ -5,6 +5,7 @@ import { datumTekst, paginaWeergave, statusAantal } from "~/abonnement/weergave"
 import { useAbonnementApi } from "~/composables/useAbonnementApi";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
+import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
 
 const { t } = useI18n();
@@ -14,6 +15,7 @@ const route = useRoute();
 const router = useRouter();
 const api = useAbonnementApi();
 const andereOrganisatie = useAndereOrganisatie();
+const { taal } = useTaal();
 
 useHead({ title: () => `${t("abonnement.titel")} · ${t("app.naam")}` });
 
@@ -44,7 +46,7 @@ watch(error, useSessieHerstel());
 const nu = ref(new Date());
 onMounted(() => (nu.value = new Date()));
 
-const weergave = computed(() => (overzicht.value ? paginaWeergave(overzicht.value, sessie.rol) : null));
+const weergave = computed(() => (overzicht.value ? paginaWeergave(overzicht.value, sessie.rol, taal.value) : null));
 
 const formuleLabel = (formule: Formule) => t(`abonnement.formules.${formule}`);
 
@@ -61,7 +63,7 @@ const statusTekst = computed(() => {
     w.statusSleutel,
     {
       dagen,
-      datum: einde ? datumTekst(einde) : t("abonnement.datumOnbekend"),
+      datum: einde ? datumTekst(einde, taal.value) : t("abonnement.datumOnbekend"),
       formule: o.formule ? formuleLabel(o.formule).toLowerCase() : "",
     },
     dagen,
@@ -77,7 +79,7 @@ async function voerUit(soort: Formule | "beheer", actie: () => Promise<unknown>)
     await actie();
   } catch (fout) {
     if (await andereOrganisatie(fout)) return;
-    toast.add({ title: t("algemeen.fout"), color: "error" });
+    toast.add({ title: vertaalFout(fout, t), color: "error" });
   } finally {
     bezig.value = null;
   }

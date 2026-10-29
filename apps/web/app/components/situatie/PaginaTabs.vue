@@ -16,6 +16,7 @@ const emit = defineEmits<{
 const editor = useEditorStore();
 const situatie = useSituatieStore();
 const { t } = useI18n();
+const { taal } = useTaal();
 const voerUit = useDocumentFoutMelding();
 
 const paginas = computed<SituatiePagina[]>(() => editor.document?.situatie.paginas ?? []);
@@ -152,7 +153,7 @@ function wisSchaal(): void {
 
     <div v-if="schaal" class="ml-auto flex shrink-0 items-center gap-1 text-sm text-muted">
       <span data-testid="schaal-tekst">{{
-        $t("editor.situatie.schaal.tekst", { waarde: formatteerMmPerPx(schaal.mmPerPx) })
+        $t("editor.situatie.schaal.tekst", { waarde: formatteerMmPerPx(schaal.mmPerPx, taal) })
       }}</span>
       <UButton
         color="neutral"

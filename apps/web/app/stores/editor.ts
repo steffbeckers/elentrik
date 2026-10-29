@@ -32,6 +32,7 @@ import { computed, ref, shallowRef } from "vue";
 import type { Richting } from "../composables/sneltoetsen";
 import { zelfdeAdres } from "../editor/adres";
 import { samengevoegd } from "../editor/resultaten";
+import type { Taal } from "../../shared/taal";
 import { useSessieStore } from "./sessie";
 
 /** Eén undo-stap. Stappen met dezelfde `groep` na elkaar worden samengevoegd. */
@@ -403,6 +404,8 @@ export const useEditorStore = defineStore("editor", () => {
     werfadres?: Adres;
     ean?: string;
     datum?: string;
+    /** De taal van het dossier (PDF); dezelfde taal opnieuw (of nl zonder taal) maakt geen stap. */
+    dossierTaal?: Taal;
   }): void {
     if (alleenLezen.value) return;
     const doc = vereisDocument();
@@ -420,6 +423,7 @@ export const useEditorStore = defineStore("editor", () => {
     }
     if (gegevens.ean !== undefined && gegevens.ean !== (doc.meta.ean ?? "")) wijziging.ean = gegevens.ean;
     if (gegevens.datum !== undefined) wijziging.datum = gegevens.datum;
+    if (gegevens.dossierTaal !== undefined) wijziging.dossierTaal = gegevens.dossierTaal;
     // Eerst de operatie: gooit die, dan blijft ook de naam ongewijzigd.
     const r = wijzigProject(doc, wijziging);
     if (gegevens.naam !== undefined && gegevens.naam !== naam.value) {

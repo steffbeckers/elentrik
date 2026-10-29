@@ -8,6 +8,7 @@ import {
   valideerStructuur,
   type InstallatieDocument,
   type Stroomtype,
+  type Taal,
 } from "@elentrik/model";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Project, ProjectSamenvatting } from "../../shared/projecten";
@@ -64,15 +65,19 @@ export async function lijstProjecten(db: Db, organisatieId: string): Promise<Pro
   return rijen.map((rij) => ({ ...rij, gewijzigd: rij.gewijzigd.toISOString() }));
 }
 
-/** Een nieuw project in `organisatieId` (de actieve organisatie van de aanvrager). */
+/**
+ * Een nieuw project in `organisatieId` (de actieve organisatie van de aanvrager). De dossiertaal
+ * is de taal van de aanvrager; zonder taal blijft het veld weg (dat betekent nl).
+ */
 export async function maakProject(
   db: Db,
   organisatieId: string,
-  invoer: { naam: string; klantnaam: string; stroomtype: Stroomtype },
+  invoer: { naam: string; klantnaam: string; stroomtype: Stroomtype; dossierTaal?: Taal },
 ): Promise<{ id: string; versie: number }> {
   const document = nieuwProjectDocument({
     klantNaam: invoer.klantnaam,
     stroomtype: invoer.stroomtype,
+    ...(invoer.dossierTaal !== undefined ? { dossierTaal: invoer.dossierTaal } : {}),
   });
   const [rij] = await db
     .insert(projecten)

@@ -38,6 +38,12 @@ describe("formulierUitProject", () => {
     expect(f.klant.straat).toBe("Kerkstraat");
     expect(f.ean).toBe("5414");
   });
+
+  test("de dossiertaal: nl voor een document zonder taal, anders die van het document", () => {
+    const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    expect(formulierUitProject("Woning", doc).dossierTaal).toBe("nl");
+    expect(formulierUitProject("Woning", wijzigProject(doc, { dossierTaal: "fr" }).doc).dossierTaal).toBe("fr");
+  });
 });
 
 describe("valideerProjectFormulier", () => {
@@ -90,7 +96,12 @@ describe("gegevensUitFormulier", () => {
       werfadres: { straat: "Dorpsstraat", nummer: "3", postcode: "9000", gemeente: "Gent", land: "België" },
       ean: "54",
       datum: "2026-10-18",
+      dossierTaal: "nl",
     });
+  });
+
+  test("de gekozen dossiertaal gaat mee", () => {
+    expect(gegevensUitFormulier(startFormulier({ dossierTaal: "en" })).dossierTaal).toBe("en");
   });
 
   test("een leeg werfadres gaat niet mee: het werfadres in het document blijft ongewijzigd", () => {

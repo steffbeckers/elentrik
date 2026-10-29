@@ -4,6 +4,7 @@ import {
   InstallatieDocumentSchema,
   type InstallatieDocument,
   type Stroomtype,
+  type Taal,
 } from "./schema";
 import { SCHEMA_VERSIE } from "./versie";
 
@@ -28,6 +29,8 @@ export function nieuwDocument(
     stroomtype?: Stroomtype;
     regelset?: string;
     datum?: string;
+    /** Afwezig betekent `nl`: het veld wordt dan niet gezet. */
+    dossierTaal?: Taal;
   } = {},
 ): InstallatieDocument {
   const rootId = nieuwId();
@@ -41,6 +44,7 @@ export function nieuwDocument(
       installateur: { naam: "" },
       werfadres: { straat: "", nummer: "", postcode: "", gemeente: "", land: "België" },
       datum: opties.datum ?? vandaag(),
+      ...(opties.dossierTaal !== undefined ? { dossierTaal: opties.dossierTaal } : {}),
     },
     voeding: { stroomtype: opties.stroomtype ?? "2x230V" },
     rootId,

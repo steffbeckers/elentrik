@@ -1,4 +1,4 @@
-/** Nederlandse berichtteksten per berichtSleutel; aangevuld door de regels (Task 13–15). */
+/** Nederlandse berichtteksten per berichtSleutel; aangevuld door de regels (Task 13–15); `waarde.*` vertaalt ruimtes en toestelsoorten in parameters. */
 export const NL: Readonly<Record<string, string>> = {
   "arei.differentieel.algemeen.ontbreekt": "De installatie heeft geen algemeen differentieel.",
   "arei.differentieel.algemeen.te-ongevoelig":
@@ -26,4 +26,25 @@ export const NL: Readonly<Record<string, string>> = {
   "arei.leiding.onvolledig.doorsnede": "Bij deze leiding is de doorsnede nog niet ingevuld.",
   "arei.punt.zonder-beveiliging.ontbreekt":
     "Dit punt hangt niet achter een automaat of zekering in een verdeelbord.",
+  // Waarden die als parameter in een bericht staan (een ruimte of toestelsoort), zodat elke taal ze vertaalt.
+  "waarde.badkamer": "badkamer",
+  "waarde.keuken": "keuken",
+  "waarde.wasplaats": "wasplaats",
+  "waarde.slaapkamer": "slaapkamer",
+  "waarde.leefruimte": "leefruimte",
+  "waarde.garage": "garage",
+  "waarde.kelder": "kelder",
+  "waarde.zolder": "zolder",
+  "waarde.buiten": "buiten",
+  "waarde.technisch": "technisch",
+  "waarde.wasmachine": "wasmachine",
+  "waarde.droogkast": "droogkast",
+  "waarde.vaatwasser": "vaatwasser",
+  "waarde.kookplaat": "kookplaat",
+  "waarde.oven": "oven",
+  "waarde.boiler": "boiler",
+  "waarde.warmtepomp": "warmtepomp",
+  "waarde.laadpaal": "laadpaal",
+  "waarde.omvormer": "omvormer",
+  "waarde.andere": "andere",
 };

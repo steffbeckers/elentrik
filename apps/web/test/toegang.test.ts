@@ -431,6 +431,14 @@ const TABEL: Record<string, Rij> = {
     lid: 200,
     eigenaar: 200,
   },
+  "PUT /api/mij/taal": {
+    // Alleen een sessie, geen organisatie: ook zonder organisatie lukt het. Elke actor zet zijn eigen taal.
+    verzoek: async () => ({ methode: "PUT", pad: "/api/mij/taal", json: { taal: "nl" } }),
+    zonderOrganisatie: 200,
+    andereOrganisatie: 200,
+    lid: 200,
+    eigenaar: 200,
+  },
   "GET /api/abonnement": {
     // Het overzicht van de actieve organisatie: B ziet zijn eigen overzicht, nooit dat van A.
     verzoek: async () => ({ methode: "GET", pad: "/api/abonnement" }),
@@ -1278,5 +1286,114 @@ describe("verzoeken van een andere site", () => {
       eigenaarA.cookie,
     );
     expect(antwoord.status).toBe(200);
+  });
+});
+
+// Isolatie: een onbekend id en het id van een object van een andere organisatie moeten voor elk
+// soort object exact dezelfde fout geven (status, statusMessage, message en data.code), anders
+// verraadt het verschil dat het object bestaat. Zie server/fouten.ts.
+describe("niet gevonden is voor elk soort object identiek", () => {
+  type Foutantwoord = { status: number; statusMessage: string; message: unknown; data: unknown };
+
+  async function foutVan(verzoek: Verzoek, cookie: string): Promise<Foutantwoord> {
+    const antwoord = await stuur(verzoek, cookie);
+    const lichaam = (await antwoord.json()) as { statusMessage?: string; message?: unknown; data?: unknown };
+    return { status: antwoord.status, statusMessage: lichaam.statusMessage ?? "", message: lichaam.message, data: lichaam.data };
+  }
+
+  const NIEUWE_BESTANDSFORMULIER = () => pngFormulier({ soort: "plan-raster" });
+
+  type Soort = { naam: string; bestaand: () => Promise<string>; maak: (id: string) => Verzoek };
+
+  const SOORTEN: Soort[] = [
+    {
+      naam: "bestand (GET)",
+      bestaand: async () => (await bewaarLogo(db, opslag, orgA, png(10, 10))).id,
+      maak: (id) => ({ methode: "GET", pad: `/api/bestanden/${id}` }),
+    },
+    { naam: "project (GET)", bestaand: () => projectIn(orgA), maak: (id) => ({ methode: "GET", pad: `/api/projecten/${id}` }) },
+    {
+      naam: "project (PUT)",
+      bestaand: () => projectIn(orgA),
+      maak: (id) => ({ methode: "PUT", pad: `/api/projecten/${id}`, ifMatch: 1, json: { naam: "X", document: {} } }),
+    },
+    { naam: "project (DELETE)", bestaand: () => projectIn(orgA), maak: (id) => ({ methode: "DELETE", pad: `/api/projecten/${id}` }) },
+    {
+      naam: "project dupliceren",
+      bestaand: () => projectIn(orgA),
+      maak: (id) => ({ methode: "POST", pad: `/api/projecten/${id}/dupliceer` }),
+    },
+    {
+      naam: "planbestand uploaden",
+      bestaand: () => projectIn(orgA),
+      maak: (id) => ({ methode: "POST", pad: `/api/projecten/${id}/bestanden`, formulier: NIEUWE_BESTANDSFORMULIER() }),
+    },
+    {
+      naam: "exports (GET)",
+      bestaand: () => projectIn(orgA),
+      maak: (id) => ({ methode: "GET", pad: `/api/projecten/${id}/exports` }),
+    },
+    {
+      naam: "export maken (POST)",
+      bestaand: () => projectIn(orgA),
+      maak: (id) => ({ methode: "POST", pad: `/api/projecten/${id}/exports`, ifMatch: 1, json: EXPORT_INVOER }),
+    },
+    {
+      naam: "lid (rol wijzigen)",
+      bestaand: () => extraLid(orgA),
+      maak: (id) => ({ methode: "PUT", pad: `/api/organisaties/leden/${id}`, json: { rol: "lid" } }),
+    },
+    {
+      naam: "lid (verwijderen)",
+      bestaand: () => extraLid(orgA),
+      maak: (id) => ({ methode: "DELETE", pad: `/api/organisaties/leden/${id}` }),
+    },
+    {
+      naam: "uitnodiging (intrekken)",
+      bestaand: () => uitnodigingIn(orgA),
+      maak: (id) => ({ methode: "DELETE", pad: `/api/organisaties/uitnodigingen/${id}` }),
+    },
+    {
+      naam: "Checkout-sessie (synchroniseer)",
+      bestaand: async () => "cs_van_a",
+      maak: (id) => ({ methode: "POST", pad: "/api/abonnement/synchroniseer", json: { sessie: id } }),
+    },
+  ];
+
+  test.each(SOORTEN)("$naam: onbekend, misvormd en van een andere organisatie zijn identiek", async ({ bestaand, maak }) => {
+    const vreemd = await foutVan(maak(await bestaand()), eigenaarB.cookie);
+    const onbekend = await foutVan(maak(crypto.randomUUID()), eigenaarB.cookie);
+    expect(vreemd.status).toBe(404);
+    expect(vreemd.data).toEqual({ code: "NIET_GEVONDEN" });
+    expect(vreemd.statusMessage).toBe("Niet gevonden");
+    expect(onbekend).toEqual(vreemd);
+    // Een misvormd id (geen uuid) verschilt evenmin van een onbekend id.
+    const misvormd = await foutVan(maak("geen-uuid"), eigenaarB.cookie);
+    expect(misvormd).toEqual(vreemd);
+  });
+
+  test("bestand: het bestand van een andere organisatie en een bestand zonder organisatie of inhoud zijn identiek", async () => {
+    const zonderOrg = crypto.randomUUID();
+    await db.insert(bestanden).values({
+      id: zonderOrg,
+      organisatieId: null,
+      soort: "logo",
+      mime: "image/png",
+      grootte: 33,
+      sleutel: `bedrijf/${zonderOrg}`,
+    });
+    const zonderInhoud = crypto.randomUUID();
+    await db.insert(bestanden).values({
+      id: zonderInhoud,
+      organisatieId: orgB,
+      soort: "logo",
+      mime: "image/png",
+      grootte: 33,
+      sleutel: `org/${orgB}/${zonderInhoud}`,
+    });
+    const vreemd = await foutVan({ methode: "GET", pad: `/api/bestanden/${(await bewaarLogo(db, opslag, orgA, png(10, 10))).id}` }, eigenaarB.cookie);
+    for (const id of [zonderOrg, zonderInhoud]) {
+      expect(await foutVan({ methode: "GET", pad: `/api/bestanden/${id}` }, eigenaarB.cookie)).toEqual(vreemd);
+    }
   });
 });

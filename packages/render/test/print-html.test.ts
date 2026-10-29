@@ -9,7 +9,7 @@ import {
 import { bruikbaar, papierMaat, STANDAARD_PAPIER_A4, tekstBreedte } from "@elentrik/layout";
 import type { InstallatieDocument, Partij } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { NL, overgeslagenPaginas, printHtml, type PrintOpties } from "../src/index";
+import { formatteerDatum, LOCALES, NL, overgeslagenPaginas, printHtml, TEKSTEN, type PrintOpties } from "../src/index";
 import { cartouche } from "../src/print/cartouche";
 import {
   BIJLAGE_BREEDTE_FACTOR,
@@ -214,7 +214,7 @@ describe("printHtml", () => {
           NL.cartouche.werf,
           "Nieuwstraat 88",
           `${NL.cartouche.ean}: 541448820000000000`,
-          `${NL.cartouche.datum}: 2026-10-19`,
+          `${NL.cartouche.datum}: 19/10/2026`,
           `${NL.cartouche.versie}: v1`,
         ]),
       );
@@ -485,7 +485,7 @@ describe("printHtml", () => {
         `${NL.bijlage.afwijkingen} (1)`,
         bericht,
         `${NL.bijlage.motivatie}: Wordt later geplaatst door de klant.`,
-        `${NL.bijlage.door}: Jan Peeters — ${NL.cartouche.datum}: 2026-10-02`,
+        `${NL.bijlage.door}: Jan Peeters — ${NL.cartouche.datum}: 2/10/2026`,
       ]),
     );
   });
@@ -717,6 +717,7 @@ describe("cartouche", () => {
       installateur: INSTALLATEUR,
       logo: undefined,
       titel: "Bijlage",
+      taal: "nl",
       datum: "2026-10-19",
       versieLabel: "v1",
       nummer: 1,
@@ -726,6 +727,122 @@ describe("cartouche", () => {
     expect(keurder).toHaveLength(2);
     expect(keurder[1]!.tekst.endsWith("…")).toBe(true);
     for (const r of keurder) expect(tekstBreedte(r.tekst, r.grootte)).toBeLessThanOrEqual(r.breedte);
+  });
+});
+
+describe("talen", () => {
+  const talen = ["nl", "fr", "en"] as const;
+
+  test("de cartouchedatum staat per taal in de locale van de taal (geen ISO meer)", () => {
+    const doc = metGegevens(referentieAppartement());
+    const verwacht = { nl: "19/10/2026", fr: "19/10/2026", en: "19/10/2026" } as const;
+    for (const taal of talen) {
+      // Dezelfde datum, vast in UTC, zoals de cartouche haar opmaakt.
+      const formaat = new Intl.DateTimeFormat(LOCALES[taal], { day: "numeric", month: "2-digit", year: "numeric", timeZone: "UTC" });
+      expect(formaat.format(new Date(Date.UTC(2026, 9, 19)))).toBe(verwacht[taal]);
+      const uit = printHtml(doc, analyseer(doc), [], opties({ taal }));
+      const teksten = regels(paginas(uit.html)[0]!).map((r) => r.tekst);
+      expect(teksten).toContain(`${TEKSTEN[taal].cartouche.datum}: ${verwacht[taal]}`);
+      expect(uit.html).not.toContain("2026-10-19");
+    }
+  });
+
+  test("een dag met één cijfer volgt de notatie van de locale", () => {
+    for (const taal of talen) expect(formatteerDatum("2026-03-05", taal)).toBe("5/03/2026");
+  });
+
+  test("de datum van een afwijking in de bijlage volgt de taal, niet ISO", () => {
+    for (const taal of talen) {
+      const doc = metGegevens(referentieAppartement());
+      const analyse = analyseer(doc);
+      doc.afwijkingen.push({
+        regelId: "arei.situatie.niet-geplaatst",
+        nodeId: analyse.kringen[0]!.puntIds[0]!,
+        motivatie: "x",
+        door: "Jan",
+        datum: "2026-03-05",
+      });
+      const bevindingen = controleer(doc, haalRegelset(doc.regelset));
+      const { html } = printHtml(doc, analyse, bevindingen, opties({ taal, onderdelen: alleenOnderdeel("bijlage") }));
+      const t = TEKSTEN[taal];
+      expect(regels(html).map((r) => r.tekst)).toContain(`${t.bijlage.door}: Jan — ${t.cartouche.datum}: 5/03/2026`);
+      expect(html).not.toContain("2026-03-05");
+    }
+  });
+
+  test("een onmogelijke datum blijft zoals ze is", () => {
+    expect(formatteerDatum("2026-02-30", "fr")).toBe("2026-02-30");
+  });
+
+  test("een datum die geen ISO-datum is, blijft zoals ze is", () => {
+    const doc = metGegevens(referentieAppartement());
+    const uit = printHtml(doc, analyseer(doc), [], opties({ taal: "fr", datum: "vandaag" }));
+    expect(regels(paginas(uit.html)[0]!).map((r) => r.tekst)).toContain(`${TEKSTEN.fr.cartouche.datum}: vandaag`);
+  });
+
+  for (const taal of ["fr", "en"] as const) {
+    test(`taal ${taal}: paginatitels, kolommen en cartouche komen uit TEKSTEN.${taal}, niet uit het Nederlands`, () => {
+      const doc = metGegevens(referentieAppartement());
+      const uit = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties({ taal }));
+      const t = TEKSTEN[taal];
+      expect(uit.html).toContain(`<html lang="${taal}">`);
+      const teksten = regels(uit.html).map((r) => r.tekst);
+      expect(teksten).toEqual(
+        expect.arrayContaining([
+          t.paginatitels.eendraadschema,
+          t.paginatitels.kringenlijst,
+          t.paginatitels.bijlage,
+          t.kolommen.beveiliging,
+          t.cartouche.klant,
+          t.cartouche.werf,
+        ]),
+      );
+      expect(teksten).not.toContain(NL.paginatitels.eendraadschema);
+      expect(teksten).not.toContain(NL.paginatitels.kringenlijst);
+      expect(teksten).not.toContain(NL.cartouche.klant);
+    });
+
+    test(`taal ${taal}: de bevindingen in de bijlage zijn in het ${taal}`, () => {
+      const doc = metGegevens(referentieAppartement());
+      const bevindingen = bevindingenVan(doc);
+      expect(bevindingen.length).toBeGreaterThan(0);
+      const uit = printHtml(doc, analyseer(doc), bevindingen, opties({ taal, onderdelen: alleenOnderdeel("bijlage") }));
+      const bericht = formatteerBericht(bevindingen[0]!, taal);
+      expect(bericht).not.toBe(formatteerBericht(bevindingen[0]!, "nl"));
+      const bijlage = regels(uit.html).map((r) => r.tekst).join(" ");
+      expect(bijlage).toContain(bericht.split(" ").slice(0, 3).join(" "));
+    });
+
+    test(`snapshot: referentieAppartement op A4 in het ${taal}`, async () => {
+      const doc = metGegevens(referentieAppartement());
+      const uit = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties({ taal }));
+      await expect(nummerNodeIds(uit.html)).toMatchFileSnapshot(`__snapshots__/print-appartement-a4-${taal}.html`);
+    });
+  }
+
+  test("de vertaalde kolomkoppen, typen en ruimtes passen in hun kolom op A4, zonder afkorting", () => {
+    const rijBreedte = bruikbaar({ ...STANDAARD_PAPIER_A4, formaat: "A4" }).breedte;
+    const kolomBreedte = (aandeel: number) => rijBreedte * aandeel - 2 * 1 - 0.25;
+    for (const taal of talen) {
+      const t = TEKSTEN[taal];
+      const koppen: [string, number][] = [
+        [t.kolommen.kring, 0.07], [t.kolommen.punt, 0.07], [t.kolommen.type, 0.2], [t.kolommen.ruimte, 0.14],
+        [t.kolommen.beveiliging, 0.16], [t.kolommen.differentieel, 0.16], [t.kolommen.leiding, 0.2],
+      ];
+      const typen = Object.values(t.types).map((x): [string, number] => [x, 0.2]);
+      const toestellen = Object.values(t.toestelsoorten).map((x): [string, number] => [`${t.types.toestel} (${x})`, 0.2]);
+      const ruimtes = Object.values(t.ruimtes).map((x): [string, number] => [x, 0.14]);
+      for (const [tekst, aandeel] of [...koppen, ...typen, ...toestellen, ...ruimtes]) {
+        expect(tekstBreedte(tekst, 3), `${taal} ${tekst}`).toBeLessThanOrEqual(kolomBreedte(aandeel));
+      }
+    }
+  });
+
+  test("het Nederlands blijft de standaard: lang nl en Nederlandse titels", () => {
+    const doc = metGegevens(referentieAppartement());
+    const uit = printHtml(doc, analyseer(doc), [], opties({ taal: "nl" }));
+    expect(uit.html).toContain('<html lang="nl">');
+    expect(regels(uit.html).map((r) => r.tekst)).toContain(NL.paginatitels.eendraadschema);
   });
 });
 
@@ -773,6 +890,18 @@ describe("breekRegels", () => {
 
   test("witruimte wordt samengevoegd, een regeleinde blijft een regeleinde", () => {
     expect(breekRegels("a   b\nc", 100, 2.5)).toEqual(["a b", "c"]);
+  });
+
+  test("breekt nooit op een vaste spatie (U+00A0) of smalle vaste spatie (U+202F)", () => {
+    // Elk van de twee koppelt "admis" en ":" (Frans) of 12 en 345 (duizendtal): ze blijven bij elkaar.
+    for (const vast of ["\u00a0", "\u202f"]) {
+      const tekst = `Maximum admis${vast}: 8 prises`;
+      // Zo smal dat alleen "Maximum" en "admis:" samen op een regel kunnen: op de vaste spatie breken kan dus niet.
+      const uit = breekRegels(tekst, 18, 2.5);
+      expect(uit.join(" ")).toBe(tekst);
+      expect(uit.some((r) => r.startsWith(":") || r.endsWith("admis"))).toBe(false);
+      expect(breekRegels(`een${vast}twee`, 100, 2.5)).toEqual([`een${vast}twee`]);
+    }
   });
 
   test("een lege tekst geeft geen regels", () => {

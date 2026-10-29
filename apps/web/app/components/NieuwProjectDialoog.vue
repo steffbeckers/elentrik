@@ -2,6 +2,7 @@
 import { StroomtypeSchema, type Stroomtype } from "@elentrik/model";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
+import { vertaalFout } from "~/fouten";
 
 const open = defineModel<boolean>("open", { default: false });
 const emit = defineEmits<{ aangemaakt: [id: string] }>();
@@ -55,7 +56,7 @@ async function maak() {
       open.value = false;
       return;
     }
-    toast.add({ title: t("algemeen.fout"), color: "error" });
+    toast.add({ title: vertaalFout(fout, t), color: "error" });
   } finally {
     bezig.value = false;
   }

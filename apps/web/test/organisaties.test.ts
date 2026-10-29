@@ -11,6 +11,7 @@ import { zetAbonnementen } from "../server/abonnementen/config";
 import { type Db, zetDb } from "../server/db";
 import { account, invitation, member, organization, session, user, verification } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
+import { nietGevondenFout } from "../server/fouten";
 import { registratieLimiet, uitnodigingLimiet, vertaalAuthFout } from "../server/organisaties/leden";
 import { maakLimiet } from "../server/organisaties/limiet";
 import { maakUitnodigingstoken } from "../server/organisaties/uitnodigingstoken";
@@ -236,7 +237,7 @@ describe("GET /api/mij", () => {
 
     const mij = await json(stuur("GET", "/api/mij", eigenaar.cookie));
     expect(mij).toEqual({
-      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, proefGebruikt: true },
+      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, proefGebruikt: true, taal: "nl" },
       organisaties: expect.arrayContaining([
         { id: org, naam: "Bedrijf", rol: "eigenaar", toegang: UIT },
         { id: tweede, naam: "Ander bedrijf", rol: "lid", toegang: UIT },
@@ -1263,6 +1264,16 @@ END $$`),
     const eigenaarLid = (await lidId(eigenaar.id, org))!;
     const fout = await foutVan(db.delete(member).where(eq(member.id, eigenaarLid)));
     expect(vertaalAuthFout(fout)).toMatchObject({ statusCode: 409, data: { code: "LAATSTE_EIGENAAR" } });
+  });
+
+  test("MEMBER_NOT_FOUND van Better Auth geeft exact dezelfde fout als nietGevondenFout()", () => {
+    const verwacht = nietGevondenFout();
+    const fout = vertaalAuthFout({ statusCode: 404, body: { code: "MEMBER_NOT_FOUND" } }) as typeof verwacht;
+    expect(fout.statusCode).toBe(verwacht.statusCode);
+    expect(fout.statusMessage).toBe(verwacht.statusMessage);
+    expect(fout.message).toBe(verwacht.message);
+    expect(fout.data).toEqual(verwacht.data);
+    expect(fout.toJSON()).toEqual(verwacht.toJSON());
   });
 
   test("verdwijnt de gebruiker zelf (cascade), dan houdt de trigger niets tegen", async () => {

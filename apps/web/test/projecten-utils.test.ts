@@ -83,7 +83,7 @@ describe("metProjectFouten", () => {
       throw new ProjectFout("CONFLICT", { versie: 7 });
     });
     expect(fout?.statusCode).toBe(409);
-    expect(fout?.data).toEqual({ versie: 7 });
+    expect(fout?.data).toEqual({ versie: 7, code: "PROJECT_GEWIJZIGD" });
   });
 
   test("ONGELDIG wordt 422 met details", async () => {
@@ -91,7 +91,7 @@ describe("metProjectFouten", () => {
       throw new ProjectFout("ONGELDIG", { problemen: [] });
     });
     expect(fout?.statusCode).toBe(422);
-    expect(fout?.data).toEqual({ problemen: [] });
+    expect(fout?.data).toEqual({ problemen: [], code: "ONGELDIG_DOCUMENT" });
   });
 
   test("andere fouten blijven ongewijzigd", async () => {

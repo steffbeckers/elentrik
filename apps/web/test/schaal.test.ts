@@ -20,13 +20,20 @@ describe("berekenMmPerPx", () => {
 
 describe("formatteerMmPerPx", () => {
   test("toont drie beduidende cijfers met een decimale komma", () => {
-    expect(formatteerMmPerPx(12.5)).toBe("12,5");
-    expect(formatteerMmPerPx(3.14159)).toBe("3,14");
-    expect(formatteerMmPerPx(0.0123456)).toBe("0,0123");
+    expect(formatteerMmPerPx(12.5, "nl")).toBe("12,5");
+    expect(formatteerMmPerPx(3.14159, "nl")).toBe("3,14");
+    expect(formatteerMmPerPx(0.0123456, "nl")).toBe("0,0123");
+  });
+
+  test("volgt de taal: fr-BE en en-GB", () => {
+    expect(formatteerMmPerPx(12.5, "fr")).toBe("12,5");
+    expect(formatteerMmPerPx(1234.5, "fr")).toBe(new Intl.NumberFormat("fr-BE").format(1235));
+    expect(formatteerMmPerPx(12.5, "en")).toBe("12.5");
+    expect(formatteerMmPerPx(1234.5, "en")).toBe("1,235");
   });
 
   test("rondt grote waarden af op een geheel getal, niet op tientallen", () => {
-    expect(formatteerMmPerPx(1234.5)).toBe("1.235");
-    expect(formatteerMmPerPx(20)).toBe("20");
+    expect(formatteerMmPerPx(1234.5, "nl")).toBe("1.235");
+    expect(formatteerMmPerPx(20, "nl")).toBe("20");
   });
 });
