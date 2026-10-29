@@ -1,0 +1,114 @@
+# Elentrik op de NAS (Synology Container Manager). Zet naast dit bestand een `.env` (kopieer
+# .env.voorbeeld en vul in); zie docs/online.md.
+#
+# Er worden bewust geen poorten gepubliceerd: de enige weg naar binnen is de Cloudflare Tunnel, die
+# dit netwerk (`elentrik`) deelt en de app bereikt op http://elentrik-web:3000.
+#
+# Alle image-versies staan vast. Een nieuwe versie van de app: zet ELENTRIK_IMAGE op een andere tag
+# (of haal `latest` opnieuw op) en maak het project opnieuw aan.
+
+services:
+  postgres:
+    image: postgres:16.14-alpine
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Brussels
+      POSTGRES_USER: elentrik
+      POSTGRES_DB: elentrik
+      POSTGRES_PASSWORD: ${POSTGRES_WACHTWOORD:?POSTGRES_WACHTWOORD ontbreekt in .env}
+    volumes:
+      - ${ELENTRIK_DATA:?ELENTRIK_DATA ontbreekt in .env}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elentrik -d elentrik"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - elentrik
+
+  gotenberg:
+    image: gotenberg/gotenberg:8.37.0-chromium
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Brussels
+    # Ruimer dan de 60 s van de client (server/pdf/gotenberg.ts): zo vuurt de time-out van de client eerst.
+    command: ["gotenberg", "--api-timeout=65s"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - elentrik
+
+  web:
+    image: ${ELENTRIK_IMAGE:-ghcr.io/steffbeckers/elentrik-web:latest}
+    container_name: elentrik-web
+    restart: unless-stopped
+    # Niet als root: de map ${ELENTRIK_DATA}/bestanden moet voor deze gebruiker beschrijfbaar zijn.
+    user: "${ELENTRIK_UID:?ELENTRIK_UID ontbreekt in .env}:${ELENTRIK_GID:?ELENTRIK_GID ontbreekt in .env}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    environment:
+      TZ: Europe/Brussels
+      # Ontbreekt een van deze waarden, dan start de app niet: hij controleert ze zelf bij het starten
+      # en noemt de naam van de variabele (nooit de waarde) in de log.
+      DATABASE_URL: postgres://elentrik:${POSTGRES_WACHTWOORD:?POSTGRES_WACHTWOORD ontbreekt in .env}@postgres:5432/elentrik
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-}
+      NUXT_AUTH_BASIS_URL: ${NUXT_AUTH_BASIS_URL:-http://127.0.0.1:3000}
+      ELENTRIK_BESTANDEN_DIR: /data/bestanden
+      ELENTRIK_GOTENBERG_URL: http://gotenberg:3000
+      ELENTRIK_VERTROUWD_PROXYNET: 172.30.70.0/24
+      ELENTRIK_GEPLANDE_TAKEN: ${ELENTRIK_GEPLANDE_TAKEN:-}
+      MAIL_VERZENDER: ${MAIL_VERZENDER:-smtp}
+      MAIL_AFZENDER: ${MAIL_AFZENDER:-}
+      GRAPH_TENANT_ID: ${GRAPH_TENANT_ID:-}
+      GRAPH_CLIENT_ID: ${GRAPH_CLIENT_ID:-}
+      GRAPH_CLIENT_GEHEIM: ${GRAPH_CLIENT_GEHEIM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_VAN: ${SMTP_VAN:-}
+      SMTP_GEBRUIKER: ${SMTP_GEBRUIKER:-}
+      SMTP_WACHTWOORD: ${SMTP_WACHTWOORD:-}
+      SMTP_BEVEILIGD: ${SMTP_BEVEILIGD:-}
+      STRIPE_GEHEIME_SLEUTEL: ${STRIPE_GEHEIME_SLEUTEL:-}
+      STRIPE_WEBHOOK_GEHEIM: ${STRIPE_WEBHOOK_GEHEIM:-}
+      STRIPE_PRIJS_MAAND: ${STRIPE_PRIJS_MAAND:-}
+      STRIPE_PRIJS_JAAR: ${STRIPE_PRIJS_JAAR:-}
+      BOEKHOUDING_INBOX: ${BOEKHOUDING_INBOX:-}
+    volumes:
+      - ${ELENTRIK_DATA}/bestanden:/data/bestanden
+    networks:
+      - elentrik
+
+  # Elke nacht om 03:00 (Europe/Brussels) een pg_dump -Fc in ${ELENTRIK_DATA}/backups, 30 dagen bewaard.
+  backup:
+    image: postgres:16.14-alpine
+    restart: unless-stopped
+    user: "${ELENTRIK_UID}:${ELENTRIK_GID}"
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: Europe/Brussels
+      PGHOST: postgres
+      PGUSER: elentrik
+      PGDATABASE: elentrik
+      PGPASSWORD: ${POSTGRES_WACHTWOORD}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ${ELENTRIK_DATA}/backups:/backups
+    networks:
+      - elentrik
+
+networks:
+  elentrik:
+    name: elentrik
+    ipam:
+      config:
+        - subnet: 172.30.70.0/24
