@@ -3,6 +3,7 @@
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module
 // rechtstreeks (ruling E1).
 import { createTransport } from "nodemailer";
+import { maakGraphVerzender } from "./graph";
 
 export type Bijlage = { naam: string; inhoud: Uint8Array; type: string };
 
@@ -83,12 +84,32 @@ export function maakVerzender(transport?: MailTransport): Verzender {
 
 let huidige: Verzender | undefined;
 
+/**
+ * De verzender volgens MAIL_VERZENDER: `graph` (Microsoft Graph, met GRAPH_TENANT_ID, GRAPH_CLIENT_ID,
+ * GRAPH_CLIENT_GEHEIM en MAIL_AFZENDER), anders SMTP. Ontbreekt een Graph-variabele, dan noemt de fout
+ * alleen de naam.
+ */
+function kiesVerzender(env: Record<string, string | undefined> = process.env): Verzender {
+  if (env.MAIL_VERZENDER?.trim() !== "graph") return maakVerzender();
+  const waarde = (naam: string): string => {
+    const w = env[naam]?.trim();
+    if (!w) throw new Error(`MAIL_VERZENDER=graph vraagt ${naam}`);
+    return w;
+  };
+  return maakGraphVerzender({
+    tenantId: waarde("GRAPH_TENANT_ID"),
+    clientId: waarde("GRAPH_CLIENT_ID"),
+    clientGeheim: waarde("GRAPH_CLIENT_GEHEIM"),
+    afzender: waarde("MAIL_AFZENDER"),
+  });
+}
+
 export function gebruikVerzender(): Verzender {
-  huidige ??= maakVerzender();
+  huidige ??= kiesVerzender();
   return huidige;
 }
 
-/** Alleen voor tests: vervangt de verzender die `gebruikVerzender()` teruggeeft. */
-export function zetVerzender(verzender: Verzender): void {
+/** Alleen voor tests: vervangt de verzender die `gebruikVerzender()` teruggeeft (`undefined`: opnieuw kiezen). */
+export function zetVerzender(verzender: Verzender | undefined): void {
   huidige = verzender;
 }
