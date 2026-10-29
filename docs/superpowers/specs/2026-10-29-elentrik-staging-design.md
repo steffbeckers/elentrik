@@ -1,7 +1,7 @@
 # Elentrik: staging-omgeving (ontwerp)
 
 - **Datum:** 2026-10-29
-- **Status:** ter review
+- **Status:** goedgekeurd
 - **Bouwt voort op:** plan 9 "Online op de NAS" (`docs/superpowers/specs/2026-10-29-elentrik-online-design.md`). PR #9 wordt eerst gemerged; dit plan komt daarbovenop.
 - **Beslist met de gebruiker:**
   - **Domeinen:**
