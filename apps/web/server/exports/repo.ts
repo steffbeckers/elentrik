@@ -3,10 +3,11 @@
 // rechtstreeks (ruling E1).
 import { analyseer, controleer, haalRegelset, type Bevinding } from "@elentrik/arei";
 import type { InstallatieDocument } from "@elentrik/model";
-import { overgeslagenPaginas, printHtml, type PrintOpties } from "@elentrik/render";
+import { overgeslagenPaginas, printHtml, TEKSTEN, type PrintOpties } from "@elentrik/render";
 import { and, desc, eq } from "drizzle-orm";
 import { herkenSoort } from "../../shared/bestandsinhoud";
 import type { ExportInfo, ExportInvoer } from "../../shared/exports";
+import { isStaging, leesOmgeving } from "../../shared/omgeving";
 import { haalBedrijf } from "../bedrijf/repo";
 import { STANDAARD_DOWNLOADNAAM } from "../bestanden/headers";
 import type { BestandOpslag } from "../bestanden/opslag";
@@ -22,6 +23,8 @@ export type { ExportInfo, ExportInvoer };
 export type ExportDeps = {
   maakPdf: (invoer: PdfInvoer) => Promise<Uint8Array>;
   nu?: () => Date;
+  /** De omgevingsvariabelen; standaard `process.env`, op het moment van de aanroep. Staging zet een watermerk op de pdf. */
+  env?: Record<string, string | undefined>;
 };
 
 type MeeTeGeven = PdfInvoer["bestanden"][number];
@@ -180,13 +183,16 @@ export async function maakExport(
     }
   }
 
+  // De taal van het dossier (het snapshot-document), nooit die van wie toevallig exporteert.
+  const taal = doc.meta.dossierTaal ?? "nl";
+  const staging = isStaging(leesOmgeving(deps.env ?? process.env));
   const opties: PrintOpties = {
     papier: invoer.papier,
     onderdelen,
     versieLabel: invoer.versieLabel,
     datum: doc.meta.datum.trim() !== "" ? doc.meta.datum : lokaleDatum(nu),
-    // De taal van het dossier (het snapshot-document), nooit die van wie toevallig exporteert.
-    taal: doc.meta.dossierTaal ?? "nl",
+    taal,
+    ...(staging ? { watermerk: TEKSTEN[taal].watermerk } : {}),
     installateur,
     afbeeldingen,
     ...(logo !== undefined ? { logo } : {}),
