@@ -15,7 +15,6 @@ import {
   appendResponseHeader,
   createError,
   getRequestHeader,
-  getRequestIP,
   getRouterParam,
   setResponseHeader,
   setResponseStatus,
@@ -29,6 +28,7 @@ import type { Toegang } from "../../shared/abonnement";
 import type { Foutcode } from "../../shared/foutcodes";
 import { isTaal, TAAL_HEADER, type Taal } from "../../shared/taal";
 import { gebruikAuth } from "../auth";
+import { verzoekIp } from "../auth/ip";
 import { gebruikDb } from "../db";
 import { nietGevondenFout } from "../fouten";
 import { account, invitation, member, organization, session, user } from "../db/schema";
@@ -489,7 +489,7 @@ function isUniekeSleutelFout(f: unknown): boolean {
  * `ACCOUNT_BESTAAT` (de pagina biedt dan inloggen aan). Meer dan 5 pogingen per minuut: 429.
  */
 export async function registreerViaUitnodiging(event: H3Event): Promise<{ organisatieId: string }> {
-  const ip = getRequestIP(event) ?? "onbekend";
+  const ip = verzoekIp(event) ?? "onbekend";
   const poging = registratieLimiet.probeer(ip);
   if (!poging.toegelaten) {
     setResponseHeader(event, "retry-after", poging.wachtSeconden);

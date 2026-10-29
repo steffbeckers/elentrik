@@ -18,6 +18,7 @@ export const PUBLIEKE_ROUTES = [
   "uitnodigingen/[token].get.ts",
   "uitnodigingen/[token]/registreer.post.ts",
   "stripe/webhook.post.ts",
+  "gezondheid.get.ts",
 ];
 
 export function bestandenIn(map: string): string[] {
