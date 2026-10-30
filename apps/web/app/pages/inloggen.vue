@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { vertaalFout } from "~/fouten";
 import { INLOGLINK_MISLUKT } from "../../shared/inloglink";
-import { terugZonderFout, veiligTerug } from "~/sessie/bestemming";
+import { veiligTerugpad } from "../../shared/terugpad";
+import { terugZonderFout } from "~/sessie/bestemming";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isEmail } from "~/sessie/invoer";
 import { useSessieStore } from "~/stores/sessie";
@@ -15,8 +16,9 @@ useHead({ title: () => `${t("inloggen.titel")} · ${t("app.naam")}` });
 /**
  * Waar je na het inloggen heen gaat: alleen een lokaal pad, anders de start. Meldde Better Auth
  * daarin een mislukte link (bv. een verlopen bevestigingslink: `/?error=…`), dan zonder die melding.
+ * Ook de server zet hier de bestemming van een mislukte link in (`&terug=`); dezelfde controle als daar.
  */
-const terugInfo = computed(() => terugZonderFout(veiligTerug(route.query.terug) ?? "/"));
+const terugInfo = computed(() => terugZonderFout(veiligTerugpad(route.query.terug) ?? "/"));
 const terug = computed(() => terugInfo.value.pad);
 
 /** `nieuweLink`: de melding biedt de knop "Stuur een nieuwe link" aan (een mislukte inloglink). */

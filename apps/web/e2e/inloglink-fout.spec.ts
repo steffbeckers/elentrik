@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { ga } from "./hulp/hydratatie";
 import { uniekAdres } from "./hulp/inloggen";
 
@@ -19,6 +19,27 @@ test("na een mislukte inloglink: een vertaalde melding en de knop voor een nieuw
   await knop.click();
   await expect(melding).toContainText("Als dit adres bekend is, ontvang je een link.");
   await expect(melding.getByRole("button", { name: "Stuur een nieuwe link" })).toHaveCount(0);
+});
+
+/** De `callbackURL` van het verzoek dat "Stuur een nieuwe link" doet. */
+async function callbackVanNieuweLink(page: Page, pad: string): Promise<string | undefined> {
+  await ga(page, pad);
+  await page.getByTestId("inloggen-email").fill(uniekAdres("terug"));
+  const verzoek = page.waitForRequest((v) => v.url().endsWith("/api/auth/sign-in/magic-link") && v.method() === "POST");
+  await page.getByTestId("inloggen-melding").getByRole("button", { name: "Stuur een nieuwe link" }).click();
+  return ((await verzoek).postDataJSON() as { callbackURL?: string }).callbackURL;
+}
+
+test("de nieuwe link gaat naar de bestemming van de mislukte link", async ({ page }) => {
+  expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT&terug=%2Fuitnodiging%2Fabc")).toBe(
+    "/uitnodiging/abc",
+  );
+});
+
+test("zonder geldige bestemming gaat de nieuwe link naar de start", async ({ page }) => {
+  expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT")).toBe("/");
+  expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT&terug=%2F%2Fevil.example")).toBe("/");
+  expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT&terug=https%3A%2F%2Fevil.example")).toBe("/");
 });
 
 test("een andere waarde in ?fout= toont niets (alleen de vaste code telt)", async ({ page }) => {

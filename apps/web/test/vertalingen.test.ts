@@ -109,4 +109,10 @@ describe("de vertaalbestanden", () => {
       for (const sleutel of ["taal.kiezen", "taal.bewarenMislukt"]) expect(bestand.has(sleutel), sleutel).toBe(true);
     });
   });
+
+  // docs/vertalingen.md: "inloglink" is "lien de connexion" / "sign-in link".
+  test("inloggen.nieuweLink volgt de woordenlijst", () => {
+    expect(plat(lees("fr")).get("inloggen.nieuweLink")).toBe("Envoyer un nouveau lien de connexion");
+    expect(plat(lees("en")).get("inloggen.nieuweLink")).toBe("Send a new sign-in link");
+  });
 });
