@@ -51,3 +51,40 @@ export function routeUit(bestand: string): Route {
   const methode = treffer[2] as RouterMethod;
   return { sleutel: `${methode.toUpperCase()} ${pad}`, methode, pad, bestand };
 }
+
+/**
+ * De bron zonder commentaar en zonder de inhoud van teksten (`"..."`, `'...'` en `` `...` ``): zo telt een
+ * aanroep die alleen in commentaar of in een tekst staat niet mee. Lengte en regelovergangen blijven
+ * gelijk (alles wat wegvalt wordt een spatie). Een eenvoudige scanner, geen volledige parser: een
+ * regex-literal met een ongeëscapete `//` of aanhalingsteken erin valt buiten wat ze begrijpt.
+ */
+export function zonderCommentaar(bron: string): string {
+  const wis = (tekst: string) => tekst.replace(/[^\n]/g, " ");
+  let uit = "";
+  let i = 0;
+  while (i < bron.length) {
+    const c = bron[i]!;
+    const volgende = bron[i + 1];
+    if (c === "/" && volgende === "/") {
+      const einde = bron.indexOf("\n", i);
+      const stuk = bron.slice(i, einde < 0 ? bron.length : einde);
+      uit += wis(stuk);
+      i += stuk.length;
+    } else if (c === "/" && volgende === "*") {
+      const einde = bron.indexOf("*/", i + 2);
+      const stuk = bron.slice(i, einde < 0 ? bron.length : einde + 2);
+      uit += wis(stuk);
+      i += stuk.length;
+    } else if (c === '"' || c === "'" || c === "`") {
+      let j = i + 1;
+      while (j < bron.length && bron[j] !== c) j += bron[j] === "\\" ? 2 : 1;
+      const stuk = bron.slice(i + 1, Math.min(j, bron.length));
+      uit += c + wis(stuk) + (j < bron.length ? c : "");
+      i = j + 1;
+    } else {
+      uit += c;
+      i++;
+    }
+  }
+  return uit;
+}

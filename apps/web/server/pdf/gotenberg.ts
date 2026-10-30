@@ -30,7 +30,8 @@ export interface PdfOpties {
 }
 
 const STANDAARD_URL = "http://127.0.0.1:3001";
-const STANDAARD_TIMEOUT_MS = 60_000;
+/** De time-out van de client; Gotenberg zelf (`--api-timeout` in de compose-bestanden) is korter. */
+export const STANDAARD_TIMEOUT_MS = 60_000;
 const MM_PER_INCH = 25.4;
 /** Zoveel tekens van een foutantwoord gaan mee naar de log. */
 const MAX_FOUTBODY_TEKENS = 500;

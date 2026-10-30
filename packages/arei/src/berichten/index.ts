@@ -15,6 +15,7 @@ export const LOCALES: Readonly<Record<Taal, string>> = { nl: "nl-BE", fr: "fr-BE
  * De parameters van een bericht die een enumwaarde van het model bevatten (een ruimte of een
  * toestelsoort) en dus vertaald worden. Alle andere tekstparameters (kringlabels, puntlabels)
  * zijn vrije tekst van de gebruiker en blijven zoals ze zijn.
+ * De lijst wordt bewaakt door apps/web/test/arei-vertaalde-parameters.test.ts: een nieuwe parameter in een regel moet daar een soort krijgen.
  */
 export const VERTAALDE_PARAMETERS: readonly string[] = ["reden", "toestel"];
 

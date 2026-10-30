@@ -889,6 +889,21 @@ describe("projecten per organisatie", () => {
     );
     expect(antwoord.status).toBe(409);
   });
+
+  test("een export zonder If-Match, of met een onleesbare, geeft 428 en maakt niets aan", async () => {
+    const id = await projectIn(orgA);
+    const voor = (await db.select({ id: bestanden.id }).from(bestanden).where(eq(bestanden.projectId, id))).length;
+    const zonder = await stuur({ methode: "POST", pad: `/api/projecten/${id}/exports`, json: EXPORT_INVOER }, eigenaarA.cookie);
+    expect(zonder.status).toBe(428);
+    const onleesbaar = await fetch(`${basis}/api/projecten/${id}/exports`, {
+      method: "POST",
+      headers: { cookie: eigenaarA.cookie, "if-match": "geen-getal", "content-type": "application/json" },
+      body: JSON.stringify(EXPORT_INVOER),
+    });
+    expect(onleesbaar.status).toBe(428);
+    const na = (await db.select({ id: bestanden.id }).from(bestanden).where(eq(bestanden.projectId, id))).length;
+    expect(na).toBe(voor);
+  });
 });
 
 describe("bestanden per organisatie", () => {

@@ -50,8 +50,8 @@ services:
     restart: unless-stopped
     environment:
       TZ: Europe/Brussels
-    # Ruimer dan de 60 s van de client (server/pdf/gotenberg.ts): zo vuurt de time-out van de client eerst.
-    command: ["gotenberg", "--api-timeout=65s"]
+    # Korter dan de 60 s van de client (server/pdf/gotenberg.ts): zo krijgt de app de foutmelding van Gotenberg vóór haar eigen time-out afloopt.
+    command: ["gotenberg", "--api-timeout=55s"]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health || exit 1"]
       interval: 10s

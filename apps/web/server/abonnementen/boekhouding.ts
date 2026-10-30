@@ -11,6 +11,7 @@ import { eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { doorgestuurdeFacturen } from "../db/schema";
 import { gebruikVerzender, type Mail } from "../mail/verzend";
+import { LOCALES } from "../../shared/taal";
 import type { StripePoort } from "./stripe";
 
 function esc(waarde: string): string {
@@ -22,9 +23,9 @@ function esc(waarde: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** Het bedrag in euro, bijvoorbeeld "€ 18,15"; Stripe geeft het in cent. */
+/** Het bedrag in euro, bijvoorbeeld "€ 18,15"; Stripe geeft het in cent. De mail aan de boekhouding is altijd Nederlandstalig. */
 function euro(cent: number): string {
-  return (cent / 100).toLocaleString("nl-BE", { style: "currency", currency: "EUR" });
+  return (cent / 100).toLocaleString(LOCALES.nl, { style: "currency", currency: "EUR" });
 }
 
 /**

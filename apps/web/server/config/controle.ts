@@ -6,6 +6,7 @@
 import { leesAbonnementConfig } from "../abonnementen/config";
 import { opslagLimietBytes } from "../bestanden/opslagruimte";
 import { isCidr } from "../net";
+import { isPlaatshouder } from "./plaatshouders";
 import { isStaging, leesOmgeving } from "../../shared/omgeving";
 
 type Env = Record<string, string | undefined>;
@@ -33,9 +34,9 @@ function gezet(env: Env, naam: string): boolean {
   return !!env[naam]?.trim();
 }
 
-/** Nog de plaatshouder uit .env.voorbeeld (`<...>`), zoals `leesGeheim` die ook weigert. */
-function isPlaatshouder(env: Env, naam: string): boolean {
-  return !!env[naam]?.trim().startsWith("<");
+/** Nog exact de plaatshouder uit .env.voorbeeld of .env.example, zoals `leesGeheim` die ook weigert. */
+function isPlaatshouderVan(env: Env, naam: string): boolean {
+  return isPlaatshouder(env[naam]);
 }
 
 /** Een geldig http(s)-adres. */
@@ -64,11 +65,11 @@ export function controleerConfiguratie(env: Env): string[] {
   if (url && !isHttpUrl(url)) meld("BETTER_AUTH_URL");
 
   // Het databasewachtwoord staat in compose in PGPASSWORD; de plaatshouder uit .env.voorbeeld is geen wachtwoord.
-  if (productie && isPlaatshouder(env, "PGPASSWORD")) meld("PGPASSWORD");
+  if (productie && isPlaatshouderVan(env, "PGPASSWORD")) meld("PGPASSWORD");
 
   const verzender = env.MAIL_VERZENDER?.trim();
   if (verzender === "graph") {
-    for (const naam of GRAPH) if (!gezet(env, naam) || isPlaatshouder(env, naam)) meld(naam);
+    for (const naam of GRAPH) if (!gezet(env, naam) || isPlaatshouderVan(env, naam)) meld(naam);
   } else if (verzender && verzender !== "smtp") {
     meld("MAIL_VERZENDER");
   } else if (productie) {

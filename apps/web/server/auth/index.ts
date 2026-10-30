@@ -19,6 +19,7 @@ import { magicLink, organization } from "better-auth/plugins";
 import { memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { and, eq } from "drizzle-orm";
 import { kenProefperiodeToe } from "../abonnementen/proef";
+import { isPlaatshouder } from "../config/plaatshouders";
 import { type Db, gebruikDb } from "../db";
 import * as schema from "../db/schema";
 import { leesGebruikerstaal } from "../gebruikers/taal";
@@ -37,7 +38,6 @@ import {
 import { isTaal, TAAL_HEADER, type Taal } from "../../shared/taal";
 import { basisUrl, vertrouwdeOorsprongen } from "./oorsprong";
 
-const PLAATSHOUDER = "<vervang";
 export const MINIMALE_GEHEIMLENGTE = 32;
 
 /**
@@ -47,7 +47,7 @@ export const MINIMALE_GEHEIMLENGTE = 32;
  */
 export function leesGeheim(env: Record<string, string | undefined> = process.env): string {
   const geheim = env.BETTER_AUTH_SECRET?.trim();
-  if (geheim && !geheim.startsWith(PLAATSHOUDER) && geheim.length >= MINIMALE_GEHEIMLENGTE) {
+  if (geheim && !isPlaatshouder(geheim) && geheim.length >= MINIMALE_GEHEIMLENGTE) {
     return geheim;
   }
   if (env.NODE_ENV === "production") {
