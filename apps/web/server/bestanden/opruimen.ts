@@ -2,9 +2,15 @@
 //
 // 1. Een project dat meer dan 30 dagen in de prullenbak staat, gaat weg met zijn snapshots, zijn
 //    exports, zijn bestandsrijen en zijn bestanden.
-// 2. Een planbestand (origineel of raster) waarnaar niets meer verwijst, gaat na 7 dagen weg.
+//    Is een bestand van zo'n project nog in gebruik door een ander project (een kopie van vroeger,
+//    van voor `dupliceerProject` de bestanden meekopieerde), een snapshot of een export van een
+//    ander project, dan blijft het project staan en telt het als `geblokkeerd`.
+// 2. Een planbestand (origineel of raster) waarnaar niets meer verwijst, gaat na 30 dagen weg. Dat
+//    is bewust ruim: een plan dat in een lokaal concept (browser) staat dat nog niet op de server
+//    bewaard is, mag een maand wachten, gelijk aan de bewaartijd van de prullenbak.
 // 3. Een oud logo (niet meer het logo van de installateur) gaat na 7 dagen weg.
-// 4. Een bestand op schijf zonder rij in `bestanden` gaat na 7 dagen weg.
+// 4. Een bestand op schijf zonder rij in `bestanden` gaat na 7 dagen weg, tenzij dat verdacht veel
+//    is (een lege of verse database naast een volle opslagmap, bv. midden in een herstel).
 //
 // Wat "in gebruik" is: een bestand-id dat voorkomt in het huidige document van een project, in een
 // snapshot, in de bedrijfsgegevens (het logo), in `organization.logo` of in `exports.bestand_id`.
@@ -39,8 +45,15 @@ const DAG_MS = 24 * 3600 * 1000;
 /** Hoe lang een verwijderd project in de prullenbak blijft. */
 export const PRULLENBAK_DAGEN = 30;
 
-/** Hoe oud een verweesd bestand moet zijn voor het gewist wordt. */
+/** Hoe oud een verweesd logo of een bestand op schijf zonder rij moet zijn voor het gewist wordt. */
 export const VERWEESD_DAGEN = 7;
+
+/** Hoe oud een verweesd planbestand moet zijn: een lokaal concept kan er nog naar verwijzen. */
+export const PLAN_VERWEESD_DAGEN = 30;
+
+/** Stap 4 wist niet meer dan dit deel van de oude bestanden op schijf, tenzij het er hoogstens `MAX_ZONDER_REM` zijn. */
+const MAX_DEEL_LOSSE_BESTANDEN = 0.5;
+const MAX_ZONDER_REM = 10;
 
 const PAGINA = 200;
 
@@ -55,6 +68,8 @@ export type OpruimResultaat = {
   logos: number;
   /** Bestanden op schijf zonder rij die gewist zijn. */
   losseBestanden: number;
+  /** Projecten uit de prullenbak die blijven staan omdat een ander project hun bestanden nog gebruikt. */
+  geblokkeerd: number;
 };
 
 export type OpruimAfhankelijkheden = {
@@ -68,15 +83,26 @@ function soortFout(fout: unknown): string {
   return fout instanceof Error ? fout.name : "onbekend";
 }
 
-/** Verzamelt elke UUID in `waarde` (in kleine letters). */
-function verzamelIds(waarde: unknown, naar: Set<string>): void {
-  const tekst = JSON.stringify(waarde ?? null);
-  for (const treffer of tekst.matchAll(UUID)) naar.add(treffer[0].toLowerCase());
+/** Wie naar een bestand verwijst: een project-id, of `ALGEMEEN` (bedrijfsgegevens, organisatie). */
+type Verwijzers = Map<string, Set<string>>;
+const ALGEMEEN = "";
+
+function voegToe(verwijzers: Verwijzers, id: string, door: string): void {
+  const sleutel = id.toLowerCase();
+  const set = verwijzers.get(sleutel);
+  if (set) set.add(door);
+  else verwijzers.set(sleutel, new Set([door]));
 }
 
-/** Alle bestand-id's die ergens nog in gebruik zijn. */
-async function gebruikteIds(db: Db): Promise<Set<string>> {
-  const ids = new Set<string>();
+/** Verzamelt elke UUID in `waarde` (in kleine letters). */
+function verzamelIds(waarde: unknown, verwijzers: Verwijzers, door: string): void {
+  const tekst = JSON.stringify(waarde ?? null);
+  for (const treffer of tekst.matchAll(UUID)) voegToe(verwijzers, treffer[0], door);
+}
+
+/** Alle bestand-id's die ergens nog in gebruik zijn, met wie ernaar verwijst. */
+async function gebruikteIds(db: Db): Promise<Verwijzers> {
+  const verwijzers: Verwijzers = new Map();
 
   let na: string | null = null;
   for (;;) {
@@ -86,32 +112,34 @@ async function gebruikteIds(db: Db): Promise<Set<string>> {
       .where(na === null ? undefined : gt(projecten.id, na))
       .orderBy(projecten.id)
       .limit(PAGINA);
-    for (const rij of rijen) verzamelIds(rij.document, ids);
+    for (const rij of rijen) verzamelIds(rij.document, verwijzers, rij.id);
     if (rijen.length < PAGINA) break;
     na = rijen[rijen.length - 1]!.id;
   }
 
   na = null;
   for (;;) {
-    const rijen: { id: string; document: unknown }[] = await db
-      .select({ id: snapshots.id, document: snapshots.document })
+    const rijen: { id: string; projectId: string; document: unknown }[] = await db
+      .select({ id: snapshots.id, projectId: snapshots.projectId, document: snapshots.document })
       .from(snapshots)
       .where(na === null ? undefined : gt(snapshots.id, na))
       .orderBy(snapshots.id)
       .limit(PAGINA);
-    for (const rij of rijen) verzamelIds(rij.document, ids);
+    for (const rij of rijen) verzamelIds(rij.document, verwijzers, rij.projectId);
     if (rijen.length < PAGINA) break;
     na = rijen[rijen.length - 1]!.id;
   }
 
   for (const rij of await db.select({ installateur: bedrijfsinstellingen.installateur }).from(bedrijfsinstellingen)) {
-    verzamelIds(rij.installateur, ids);
+    verzamelIds(rij.installateur, verwijzers, ALGEMEEN);
   }
   for (const rij of await db.select({ logo: organization.logo }).from(organization).where(isNotNull(organization.logo))) {
-    verzamelIds(rij.logo, ids);
+    verzamelIds(rij.logo, verwijzers, ALGEMEEN);
   }
-  for (const rij of await db.select({ id: exports.bestandId }).from(exports)) ids.add(rij.id.toLowerCase());
-  return ids;
+  for (const rij of await db.select({ id: exports.bestandId, projectId: exports.projectId }).from(exports)) {
+    voegToe(verwijzers, rij.id, rij.projectId);
+  }
+  return verwijzers;
 }
 
 /** Wist een bestand op schijf; een fout wordt geteld, niet gelogd met details. Geeft terug of het gelukt is. */
@@ -136,16 +164,22 @@ class TerugGezet extends Error {
 /** Stap 1: de projecten die langer dan 30 dagen in de prullenbak staan. */
 async function ruimPrullenbakOp(
   { db, opslag, nu }: OpruimAfhankelijkheden,
+  verwijzers: Verwijzers,
   fouten: { aantal: number },
-): Promise<number> {
+): Promise<{ gewist: number; geblokkeerd: number }> {
   const grens = new Date(nu.getTime() - PRULLENBAK_DAGEN * DAG_MS);
-  const teWissen = await db
-    .select({ id: projecten.id })
-    .from(projecten)
-    .where(and(isNotNull(projecten.verwijderd), lt(projecten.verwijderd, grens)));
+  const teWissen = await db.select({ id: projecten.id }).from(projecten).where(lt(projecten.verwijderd, grens));
 
   let gewist = 0;
+  let geblokkeerd = 0;
   for (const { id } of teWissen) {
+    // Een bestand van dit project dat een ander project, een snapshot of een export van een ander
+    // project nog gebruikt (een kopie van vroeger): dan blijft alles staan.
+    const eigen = await db.select({ id: bestanden.id }).from(bestanden).where(eq(bestanden.projectId, id));
+    if (eigen.some((b) => [...(verwijzers.get(b.id.toLowerCase()) ?? [])].some((door) => door !== id))) {
+      geblokkeerd++;
+      continue;
+    }
     let sleutels: string[];
     try {
       // Eerst de rijen, in een transactie: alles of niets. Volgorde door de FK's (NO ACTION).
@@ -158,7 +192,7 @@ async function ruimPrullenbakOp(
         // teruggezet zijn).
         const weg = await tx
           .delete(projecten)
-          .where(and(eq(projecten.id, id), isNotNull(projecten.verwijderd), lt(projecten.verwijderd, grens)))
+          .where(and(eq(projecten.id, id), lt(projecten.verwijderd, grens)))
           .returning({ id: projecten.id });
         if (weg.length === 0) throw new TerugGezet();
         return rijen.map((r) => r.sleutel);
@@ -171,30 +205,35 @@ async function ruimPrullenbakOp(
     // Dan de bestanden. Wat nu faalt, is een bestand zonder rij: stap 4 wist het later.
     for (const sleutel of sleutels) await wisOpSchijf(opslag, sleutel, fouten);
   }
-  return gewist;
+  return { gewist, geblokkeerd };
 }
 
 /** De stappen 2 en 3: rijen van `soorten` die oud zijn en waarnaar niets verwijst. */
 async function ruimVerweesdOp(
   { db, opslag, nu }: OpruimAfhankelijkheden,
   wat: "planbestanden" | "logos",
-  gebruikt: Set<string>,
+  gebruikt: Verwijzers,
   fouten: { aantal: number },
 ): Promise<number> {
-  const grens = new Date(nu.getTime() - VERWEESD_DAGEN * DAG_MS);
   const kandidaten =
     wat === "logos"
       ? await db
           .select({ id: bestanden.id, sleutel: bestanden.sleutel })
           .from(bestanden)
-          .where(and(eq(bestanden.soort, "logo"), lt(bestanden.aangemaakt, grens)))
+          .where(and(eq(bestanden.soort, "logo"), lt(bestanden.aangemaakt, new Date(nu.getTime() - VERWEESD_DAGEN * DAG_MS))))
       : // Een planbestand van een project in de prullenbak hoort bij dat project: het gaat mee als
         // het project gewist wordt, en blijft tot dan staan voor het geval het project terugkomt.
         await db
           .select({ id: bestanden.id, sleutel: bestanden.sleutel })
           .from(bestanden)
           .innerJoin(projecten, eq(projecten.id, bestanden.projectId))
-          .where(and(inArray(bestanden.soort, ["plan-origineel", "plan-raster"]), lt(bestanden.aangemaakt, grens), isNull(projecten.verwijderd)));
+          .where(
+            and(
+              inArray(bestanden.soort, ["plan-origineel", "plan-raster"]),
+              lt(bestanden.aangemaakt, new Date(nu.getTime() - PLAN_VERWEESD_DAGEN * DAG_MS)),
+              isNull(projecten.verwijderd),
+            ),
+          );
 
   let gewist = 0;
   for (const { id, sleutel } of kandidaten) {
@@ -223,9 +262,24 @@ async function ruimLosseBestandenOp(
   if (oud.length === 0) return 0;
   const bekend = new Set((await db.select({ sleutel: bestanden.sleutel }).from(bestanden)).map((r) => r.sleutel));
 
+  // Vangnet tegen een verkeerde combinatie van database en opslagmap: een lege tabel naast oude
+  // bestanden (een verse of net herstelde database), of een run die het grootste deel van de oude
+  // bestanden zou wissen. Dan wordt er niets gewist en komt er een waarschuwing met aantallen.
+  const teWissen = oud.filter((b) => !bekend.has(b.sleutel));
+  if (teWissen.length === 0) return 0;
+  const verdacht =
+    bekend.size === 0 || (teWissen.length > MAX_ZONDER_REM && teWissen.length > oud.length * MAX_DEEL_LOSSE_BESTANDEN);
+  if (verdacht) {
+    console.warn("Opruimtaak: losse bestanden overgeslagen, de database en de opslagmap lijken niet bij elkaar te horen", {
+      oudeBestanden: oud.length,
+      zonderRij: teWissen.length,
+      rijen: bekend.size,
+    });
+    return 0;
+  }
+
   let gewist = 0;
-  for (const { sleutel } of oud) {
-    if (bekend.has(sleutel)) continue;
+  for (const { sleutel } of teWissen) {
     if (await wisOpSchijf(opslag, sleutel, fouten)) gewist++;
   }
   return gewist;
@@ -237,7 +291,7 @@ async function ruimLosseBestandenOp(
  * Een fout in de lockverbinding zelf gooit.
  */
 export async function ruimOp(deps: OpruimAfhankelijkheden): Promise<OpruimResultaat> {
-  const resultaat: OpruimResultaat = { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0 };
+  const resultaat: OpruimResultaat = { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 0 };
   const fouten = { aantal: 0 };
 
   async function stap(werk: () => Promise<void>): Promise<void> {
@@ -250,11 +304,16 @@ export async function ruimOp(deps: OpruimAfhankelijkheden): Promise<OpruimResult
   }
 
   const uitgevoerd = await deps.metLock(async () => {
+    // Stap 1 weet pas of een project nog in gebruik is na een volledige scan; lukt die niet, dan
+    // wordt er niets gewist.
     await stap(async () => {
-      resultaat.projecten = await ruimPrullenbakOp(deps, fouten);
+      const verwijzers = await gebruikteIds(deps.db);
+      const { gewist, geblokkeerd } = await ruimPrullenbakOp(deps, verwijzers, fouten);
+      resultaat.projecten = gewist;
+      resultaat.geblokkeerd = geblokkeerd;
     });
-    // Na stap 1: de documenten van net gewiste projecten tellen niet meer mee.
-    let gebruikt: Set<string> | undefined;
+    // Na stap 1 opnieuw: de documenten van net gewiste projecten tellen niet meer mee.
+    let gebruikt: Verwijzers | undefined;
     await stap(async () => {
       gebruikt = await gebruikteIds(deps.db);
     });
@@ -272,7 +331,7 @@ export async function ruimOp(deps: OpruimAfhankelijkheden): Promise<OpruimResult
       resultaat.losseBestanden = await ruimLosseBestandenOp(deps, fouten);
     });
   });
-  if (!uitgevoerd) return { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0 };
+  if (!uitgevoerd) return { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 0 };
 
   if (fouten.aantal > 0) console.error("Opruimtaak: fouten", { aantal: fouten.aantal });
   console.info("Opruimtaak klaar", resultaat);

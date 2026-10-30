@@ -1,5 +1,6 @@
 import { setResponseStatus } from "h3";
 import { vereisSchrijfrecht } from "../../../abonnementen/handhaving";
+import { gebruikOpslag } from "../../../bestanden/opslag";
 import { gebruikDb } from "../../../db";
 import { dupliceerProject } from "../../../projecten/repo";
 import { metProjectFouten, projectId } from "../../../utils/projecten";
@@ -11,7 +12,7 @@ export default defineBeveiligdeHandler(async (event) => {
   await vereisVerwachteGebruiker(event);
   const { project } = await vereisProjecttoegang(event, projectId(event));
   await vereisSchrijfrecht(project.organisatieId);
-  const kopie = await metProjectFouten(() => dupliceerProject(gebruikDb(), project.organisatieId, project.id));
+  const kopie = await metProjectFouten(() => dupliceerProject(gebruikDb(), gebruikOpslag(), project.organisatieId, project.id));
   setResponseStatus(event, 201);
   return kopie;
 });

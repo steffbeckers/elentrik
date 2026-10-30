@@ -16,7 +16,7 @@ export default defineTask({
     description: "Dagelijks de prullenbak (na 30 dagen) en verweesde bestanden (na 7 dagen) definitief wissen",
   },
   async run() {
-    if (!geplandeTakenAan()) return { result: { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0 } };
+    if (!geplandeTakenAan()) return { result: { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 0 } };
     const resultaat = await ruimOp({
       db: gebruikDb(),
       opslag: gebruikOpslag(),
