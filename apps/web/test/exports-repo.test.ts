@@ -68,8 +68,8 @@ function invoer(extra: Partial<ExportInvoer> = {}): ExportInvoer {
 
 /**
  * Zet het document van een project rechtstreeks in de tabel (versie 2, zoals `opzet`), zonder de controle
- * van `bewaarProject` op nieuwe planverwijzingen: voor documenten met een verwijzing die niet van het
- * project is, zoals oudere documenten die kunnen hebben (de export slaat zo'n plan over).
+ * van `bewaarProject` op nieuwe planverwijzingen: voor documenten met een verwijzing naar een bestand
+ * dat geen plan van het project is, zoals oudere documenten die kunnen hebben (de export slaat zo'n plan over).
  */
 async function zetDocumentZonderControle(db: Db, projectId: string, document: InstallatieDocument) {
   await db.update(projecten).set({ document, versie: VERSIE }).where(eq(projecten.id, projectId));
@@ -274,7 +274,7 @@ describe("maakExport", () => {
     metSituatiePagina(doc, "Kelder", weg.id);
     metSituatiePagina(doc, "Zolder", ONBEKEND);
     metSituatiePagina(doc, "Garage", "geen-uuid");
-    await zetDocumentZonderControle(db, projectId, doc);
+    await bewaarProject(db, org, projectId, 1, { document: doc });
 
     const nep = nepPdf();
     const info = await maakExport(
@@ -309,7 +309,7 @@ describe("maakExport", () => {
     const eigen = await bewaarBestand(db, opslag, { organisatieId: org, projectId, soort: "plan-origineel", data: png(40, 20) });
     const doc = structuredClone(referentieWoning());
     metSituatiePagina(doc, "Gelijkvloers", eigen.id);
-    await zetDocumentZonderControle(db, projectId, doc);
+    await bewaarProject(db, org, projectId, 1, { document: doc });
 
     const nep = nepPdf();
     await maakExport(
@@ -386,7 +386,7 @@ describe("maakExport", () => {
     const { id: projectId } = await maakProject(db, org, { naam: "Huis", klantnaam: "", stroomtype: "3N400V" });
     const doc = structuredClone(referentieWoning());
     metSituatiePagina(doc, "Kelder", ONBEKEND);
-    await zetDocumentZonderControle(db, projectId, doc);
+    await bewaarProject(db, org, projectId, 1, { document: doc });
 
     const nep = nepPdf();
     await maakExport(db, opslag, org, projectId, VERSIE, invoer(), { maakPdf: nep.maakPdf });

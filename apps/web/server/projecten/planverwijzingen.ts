@@ -5,13 +5,13 @@
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks (ruling E1).
 import type { InstallatieDocument } from "@elentrik/model";
-import { and, eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import type { Db } from "../db";
 import { bestanden } from "../db/schema";
 import { maakFout } from "../fouten";
 
 /** Een id in een uuid-kolom: een ander id zou de query laten falen in plaats van niets te vinden. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * De planbestanden (origineel en raster) waarnaar de situatiepagina's van een document verwijzen. Een
@@ -30,29 +30,24 @@ export function nieuwePlanIds(bewaard: InstallatieDocument, nieuw: InstallatieDo
 }
 
 /**
- * Elk id moet een `plan-origineel` of `plan-raster` van project `projectId` zijn. Anders volgt 422
- * `PLANBESTAND_ONBEKEND`, voor een plan van een ander project of bedrijf, een onbekend of ongeldig id
- * en een bestand dat geen plan is (een logo, een export). Eén fout voor al die gevallen: de reden
- * verraadt anders het bestaan van andermans bestanden.
+ * Een nieuw id mag een `plan-origineel` of `plan-raster` van project `projectId` zijn, of naar niets
+ * wijzen: een id zonder bestand (een onbekende uuid, een tekst die geen uuid is) is onschadelijk. Dat
+ * laatste is nodig omdat ongedaan maken over een bewaring heen een verwijzing herstelt die al niet meer
+ * naar een bestand wees. Bestaat er wél een bestand met dat id dat geen plan van dit project is (een
+ * plan van een ander project of bedrijf, een logo, een export), dan volgt 422 `PLANBESTAND_ONBEKEND`.
+ * Eén fout voor al die gevallen: de reden verraadt anders het bestaan van andermans bestanden.
  */
 export async function controleerPlanverwijzingen(db: Db, projectId: string, ids: string[]): Promise<void> {
-  const unieke = [...new Set(ids)];
-  if (unieke.length === 0) return;
-  const geldig = unieke.filter((id) => UUID.test(id));
-  const gevonden =
-    geldig.length === 0
-      ? []
-      : await db
-          .select({ id: bestanden.id })
-          .from(bestanden)
-          .where(
-            and(
-              inArray(bestanden.id, geldig),
-              eq(bestanden.projectId, projectId),
-              inArray(bestanden.soort, ["plan-origineel", "plan-raster"]),
-            ),
-          );
-  if (gevonden.length !== unieke.length) {
-    throw maakFout(422, "Het document verwijst naar een planbestand dat niet van dit project is", "PLANBESTAND_ONBEKEND");
+  const geldig = [...new Set(ids)].filter((id) => UUID.test(id));
+  if (geldig.length === 0) return;
+  const rijen = await db
+    .select({ projectId: bestanden.projectId, soort: bestanden.soort })
+    .from(bestanden)
+    .where(inArray(bestanden.id, geldig));
+  const vreemd = rijen.some(
+    (rij) => rij.projectId !== projectId || (rij.soort !== "plan-origineel" && rij.soort !== "plan-raster"),
+  );
+  if (vreemd) {
+    throw maakFout(422, "Het document verwijst naar een bestand dat geen plan van dit project is", "PLANBESTAND_ONBEKEND");
   }
 }

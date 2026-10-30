@@ -168,12 +168,12 @@ describe("bewaarProject: planverwijzingen", () => {
     expect(na.document).toEqual(o.document);
   });
 
-  test("een onbekende uuid, een geen-uuid, een logo en een export geven 422 PLANBESTAND_ONBEKEND", async () => {
+  test("een logo en een export geven 422 PLANBESTAND_ONBEKEND", async () => {
     const o = await opzet();
     const eigen = (await o.bestand(o.id, "plan-raster")).id;
     const logo = (await o.bestand(null, "logo")).id;
     const uitvoer = (await o.bestand(o.id, "export")).id;
-    for (const slecht of [ONBEKEND, "geen-uuid", logo, uitvoer]) {
+    for (const slecht of [logo, uitvoer]) {
       const fout = await vangFout(
         metProjectFouten(() =>
           bewaarProject(o.db, o.org, o.id, 1, { document: metPaginas(o.document, [[eigen, slecht]]) }),
@@ -183,6 +183,20 @@ describe("bewaarProject: planverwijzingen", () => {
       expect(fout.data?.code, slecht).toBe("PLANBESTAND_ONBEKEND");
     }
     expect((await haalProject(o.db, o.org, o.id))!.versie).toBe(1);
+  });
+
+  test("een nieuw id zonder bestand (een onbekende uuid, een geen-uuid) wijst naar niets en wordt aanvaard", async () => {
+    const o = await opzet();
+    const eigen = (await o.bestand(o.id, "plan-raster")).id;
+    // Ongedaan maken over een bewaring heen herstelt zo'n verwijzing: ze mag nooit een blijvende 422 geven.
+    const document = metPaginas(o.document, [
+      [ONBEKEND, eigen],
+      ["geen-uuid", ONBEKEND],
+    ]);
+    expect(await bewaarProject(o.db, o.org, o.id, 1, { document })).toEqual({ versie: 2 });
+    expect((await haalProject(o.db, o.org, o.id))!.document.situatie.paginas[1]!.achtergrond?.origineelBestandId).toBe(
+      "geen-uuid",
+    );
   });
 
   test("een id dat al in het bewaarde document stond, blijft aanvaard, ook als hij naar een ander project of naar niets wijst", async () => {
@@ -205,7 +219,7 @@ describe("bewaarProject: planverwijzingen", () => {
     ]);
     expect(await bewaarProject(o.db, o.org, o.id, 2, { document: uitgebreid })).toEqual({ versie: 3 });
 
-    // Maar een nieuwe vreemde verwijzing naast de oude blijft geweigerd.
+    // Maar een nieuwe verwijzing naar het plan van een ander project naast de oude blijft geweigerd.
     const nogVreemd = (await o.bestand(o.vreemd, "plan-raster")).id;
     const fout = await vangFout(
       metProjectFouten(() =>
@@ -257,6 +271,11 @@ describe("bewaarProject: planverwijzingen", () => {
 });
 
 describe("controleerPlanverwijzingen", () => {
+  test("alleen ids zonder bestand, of geen uuid's: aanvaard", async () => {
+    const db = await maakTestDb();
+    await expect(controleerPlanverwijzingen(db, ONBEKEND, [ONBEKEND, "geen-uuid"])).resolves.toBeUndefined();
+  });
+
   test("geen id's: niets te controleren", async () => {
     const db = await maakTestDb();
     await expect(controleerPlanverwijzingen(db, ONBEKEND, [])).resolves.toBeUndefined();

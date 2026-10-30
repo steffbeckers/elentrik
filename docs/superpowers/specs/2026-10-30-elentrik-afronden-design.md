@@ -28,7 +28,7 @@ Daarnaast is er technische schuld uit de vorige plannen die het onderhoud trager
 
 1. **Planverwijzingen bij het bewaren.**
    - `PUT /api/projecten/:id` controleert de `origineelBestandId` en `rasterBestandId` in het document die **nieuw** zijn, dus die niet al in het bewaarde document van dit project stonden (mijn keuze).
-   - Zo'n nieuwe id moet een bestand van **dit** project zijn, van de soort `plan-origineel` of `plan-raster`. Anders volgt `422` met de nieuwe code `PLANBESTAND_ONBEKEND` (mijn keuze), en de editor toont de vertaalde melding.
+   - Zo'n nieuwe id moet een bestand van **dit** project zijn, van de soort `plan-origineel` of `plan-raster`, of naar niets wijzen: een id zonder bestandsrij (een onbekende uuid, een tekst die geen uuid is) is onschadelijk en blijft aanvaard, omdat ongedaan maken over een bewaring heen zo'n verwijzing kan herstellen (mijn keuze). Alleen als er wél een bestand met dat id bestaat dat geen plan van dit project is (een plan van een ander project of bedrijf, een logo, een export), volgt `422` met de nieuwe code `PLANBESTAND_ONBEKEND` (mijn keuze), en de editor toont de vertaalde melding.
    - Een id die al in het bewaarde document stond, blijft aanvaard, ook als hij naar een ander project of naar niets verwijst (een oude kopie, of een bestand dat niet gekopieerd kon worden). Zo wordt een bestaand project nooit geweigerd, en kan een document geen nieuwe verwijzing naar een vreemd bestand meer krijgen.
    - `dupliceer` en `uit-document` veranderen niet: zij kopiëren wat ze kunnen, en de rest blijft staan zoals in plan 11. Er komt geen controle op hun invoer.
 2. **Opslaglimiet per bedrijf** (mijn keuze):

@@ -16,10 +16,7 @@ import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 import type { Db } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { bestanden, projecten } from "../db/schema";
-import { controleerPlanverwijzingen, nieuwePlanIds, planBestandIdsVan } from "./planverwijzingen";
-
-/** Een id in een uuid-kolom: een ander id zou de query laten falen in plaats van niets te vinden. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { controleerPlanverwijzingen, nieuwePlanIds, planBestandIdsVan, UUID } from "./planverwijzingen";
 
 export type ProjectFoutCode = "NIET_GEVONDEN" | "CONFLICT" | "ONGELDIG";
 
@@ -133,8 +130,9 @@ function valideerDocument(invoer: unknown): InstallatieDocument {
  * de andere krijgt CONFLICT, en tussen de controle en het schrijven kan niets veranderen.
  *
  * Een planverwijzing (`origineelBestandId`, `rasterBestandId`) die niet al in het bewaarde document
- * stond, moet een plan van dit project zijn, anders volgt 422 PLANBESTAND_ONBEKEND (zie
- * planverwijzingen.ts). Een verwijzing die er al stond, blijft aanvaard.
+ * stond, mag niet naar een bestand wijzen dat geen plan van dit project is: dan volgt 422
+ * PLANBESTAND_ONBEKEND (zie planverwijzingen.ts). Een verwijzing die er al stond, of die naar niets
+ * wijst, blijft aanvaard.
  */
 export async function bewaarProject(
   db: Db,

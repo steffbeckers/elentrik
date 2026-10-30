@@ -214,7 +214,6 @@ test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend pla
   await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
   const bewaard = await haalProject(request, projectId);
 
-  // De server weigert een nieuwe verwijzing naar een plan dat niet van dit project is (plan 12).
   const kapot = structuredClone(bewaard.document);
   for (const pagina of kapot.situatie.paginas) {
     pagina.achtergrond = {
@@ -227,18 +226,14 @@ test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend pla
     headers: { "If-Match": String(bewaard.versie) },
     data: { document: kapot },
   });
-  expect(put.status(), await put.text()).toBe(422);
-  expect(((await put.json()) as { data: { code: string } }).data.code).toBe("PLANBESTAND_ONBEKEND");
+  expect(put.ok(), await put.text()).toBe(true);
 
-  // Een rasterbestand dat niet (meer) te laden is, simuleren we in de browser: de bestanden antwoorden 404.
-  await page.route("**/api/bestanden/*", (route) => route.fulfill({ status: 404 }));
   await page.reload();
   await page.waitForLoadState("networkidle");
   await page.getByTestId("tab-situatieschema").click();
   await expect(page.getByTestId("plan-niet-gevonden")).toContainText("Plan niet gevonden");
   await expect(page.getByRole("button", { name: "Plan opnieuw kiezen" })).toBeVisible();
   await expect(planLabel(page, "A1")).toHaveCount(1);
-  await page.unroute("**/api/bestanden/*");
 
   // 8. Een SVG wordt geweigerd met een melding en voegt geen pagina toe.
   const paginas = page.locator('[data-testid^="pagina-tab-"]');
