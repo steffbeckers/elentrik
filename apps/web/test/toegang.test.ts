@@ -817,6 +817,59 @@ describe("bestanden per organisatie", () => {
     expect((await haalBestand(db, id))!.sleutel).toBe(`bedrijf/${id}`);
   });
 
+  test("plan en export van een verwijderd project geven dezelfde 404 als een onbekend id, ook voor een lid", async () => {
+    const projectId = await projectIn(orgA);
+    const plan = (await bewaarBestand(db, opslag, { organisatieId: orgA, projectId, soort: "plan-raster", data: png(10, 10) })).id;
+    const exportInfo = await maakExport(db, opslag, orgA, projectId, 1, EXPORT_INVOER, {
+      maakPdf: async () => new TextEncoder().encode("%PDF-1.7\n%%EOF\n"),
+    });
+    for (const id of [plan, exportInfo.bestandId]) {
+      const voor = await stuur({ methode: "GET", pad: `/api/bestanden/${id}` }, lidA.cookie);
+      await voor.arrayBuffer();
+      expect(voor.status, id).toBe(200);
+    }
+    await verwijderProject(db, orgA, projectId);
+    const onbekend = await stuur({ methode: "GET", pad: `/api/bestanden/${crypto.randomUUID()}` }, lidA.cookie);
+    const verwacht = { status: onbekend.status, body: await onbekend.text() };
+    expect(verwacht.status).toBe(404);
+    for (const id of [plan, exportInfo.bestandId]) {
+      for (const cookie of [lidA.cookie, eigenaarA.cookie]) {
+        const antwoord = await stuur({ methode: "GET", pad: `/api/bestanden/${id}` }, cookie);
+        expect({ status: antwoord.status, body: await antwoord.text() }, id).toEqual(verwacht);
+      }
+    }
+  });
+
+  test("een upload zonder content-length geeft 411 LENGTE_VEREIST, voor een plan en voor het logo", async () => {
+    const projectId = await projectIn(orgA);
+    const grens = "----elentrik-zonder-lengte";
+    const inhoud = Buffer.concat([
+      Buffer.from(
+        `--${grens}\r\nContent-Disposition: form-data; name="soort"\r\n\r\nplan-raster\r\n--${grens}\r\n` +
+          `Content-Disposition: form-data; name="bestand"; filename="plan.png"\r\nContent-Type: image/png\r\n\r\n`,
+      ),
+      Buffer.from(png(10, 10)),
+      Buffer.from(`\r\n--${grens}--\r\n`),
+    ]);
+    for (const pad of [`/api/projecten/${projectId}/bestanden`, "/api/bedrijfsgegevens/logo"]) {
+      // Een stroom als body gaat met `Transfer-Encoding: chunked`, dus zonder content-length.
+      const stroom = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array(inhoud));
+          controller.close();
+        },
+      });
+      const antwoord = await fetch(`${basis}${pad}`, {
+        method: "POST",
+        headers: { cookie: eigenaarA.cookie, "content-type": `multipart/form-data; boundary=${grens}` },
+        body: stroom,
+        duplex: "half",
+      } as RequestInit);
+      const json = (await antwoord.json()) as { data?: { code?: string } };
+      expect([antwoord.status, json.data?.code], pad).toEqual([411, "LENGTE_VEREIST"]);
+    }
+  });
+
   test("een logo zonder organisatie is voor niemand bereikbaar", async () => {
     const id = crypto.randomUUID();
     await opslag.schrijf(`bedrijf/${id}`, png(10, 10));

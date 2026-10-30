@@ -774,6 +774,7 @@
     "BESTAND_TE_GROOT": "This file is too large.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "This file type is not accepted.",
     "RASTER_TE_GROOT": "This plan is too large (more than 8,000 pixels).",
+    "LENGTE_VEREIST": "This file could not be uploaded because its size is missing. Try again.",
     "ONBEREIKBAAR": "The PDF service cannot be reached. Try again shortly.",
     "TIMEOUT": "The PDF service did not respond in time. Try again shortly.",
     "MISLUKT": "The PDF could not be created. Please try again.",

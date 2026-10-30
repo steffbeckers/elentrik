@@ -774,6 +774,7 @@
     "BESTAND_TE_GROOT": "Dit bestand is te groot.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "Dit bestandstype wordt niet aanvaard.",
     "RASTER_TE_GROOT": "Dit plan is te groot (meer dan 8.000 pixels).",
+    "LENGTE_VEREIST": "Dit bestand kon niet verstuurd worden, omdat de grootte ervan ontbreekt. Probeer het opnieuw.",
     "ONBEREIKBAAR": "De PDF-dienst is niet bereikbaar. Probeer het straks opnieuw.",
     "TIMEOUT": "De PDF-dienst antwoordde niet op tijd. Probeer het straks opnieuw.",
     "MISLUKT": "De PDF kon niet gemaakt worden. Probeer het opnieuw.",
