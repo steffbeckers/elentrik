@@ -698,6 +698,17 @@ describe("projecten per organisatie", () => {
     expect(rij!.org).toBe(orgA);
   });
 
+  test("dupliceren met extra bestandsid's: een ongeldige body is 400, een geldige geeft de toewijzing terug", async () => {
+    const id = await projectIn(orgA);
+    const pad = `/api/projecten/${id}/dupliceer`;
+    for (const json of [{ bestandIds: "x" }, { bestandIds: [1] }, { bestandIds: Array.from({ length: 201 }, () => "a") }]) {
+      expect((await stuur({ methode: "POST", pad, json }, lidA.cookie)).status).toBe(400);
+    }
+    const antwoord = await stuur({ methode: "POST", pad, json: { bestandIds: [crypto.randomUUID()] } }, lidA.cookie);
+    expect(antwoord.status).toBe(201);
+    expect(await antwoord.json()).toMatchObject({ bestandIds: {} });
+  });
+
   test("een project zonder organisatie, of een verwijderd project, is voor niemand zichtbaar", async () => {
     const [wees] = await db
       .insert(projecten)

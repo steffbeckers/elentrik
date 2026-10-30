@@ -8,6 +8,7 @@ import {
   valideerFormulier,
   type BedrijfFormulier,
 } from "~/instellingen/formulier";
+import { laadBedrijf } from "~/instellingen/laden";
 import { maakBedrijfBewaarder, type BewaarderToestand } from "~/instellingen/bewaarder";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
@@ -33,10 +34,12 @@ useHead({ title: () => `${t("bedrijf.titel")} · ${t("app.naam")}` });
 // Het bedrijf waarvoor de gegevens geladen werden gaat mee, want daarvoor bewaart het formulier.
 const { data: geladenBedrijf, error, refresh } = useAsyncData(
   "bedrijf",
-  async () => {
-    const organisatieId = sessie.actieveOrganisatieId;
-    return { partij: await api.haal(), organisatieId };
-  },
+  () =>
+    laadBedrijf({
+      haal: (organisatieId) => api.haal(organisatieId),
+      organisatieId: () => sessie.actieveOrganisatieId,
+      herleesSessie: () => sessie.laad(),
+    }),
   {
     server: false,
     default: () => null,

@@ -9,6 +9,7 @@ import {
   valideerFormulier,
   type BedrijfFormulier,
 } from "../app/instellingen/formulier";
+import { laadBedrijf } from "../app/instellingen/laden";
 import { maakBedrijfBewaarder, type BewaarderToestand } from "../app/instellingen/bewaarder";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
@@ -267,6 +268,25 @@ describe("maakBedrijfBewaarder", () => {
     expect(toestand.logoBezig).toBe(false);
   });
 
+  test("hoort het formulier na het bewaren bij een ander bedrijf, dan is het antwoord verlopen en blijft het formulier ongemoeid", async () => {
+    const { bewaar, uploadLogo, toestand, bewaarder } = opzet("org-a");
+    bewaar.mockImplementationOnce(async (partij) => {
+      // Een wissel tijdens de aanvraag: het formulier is voor een ander bedrijf (aan het) laden.
+      toestand.geladenVoor = null;
+      return partij;
+    });
+    expect(await bewaarder.bewaar({ naam: "A" })).toEqual({ status: "verlopen" });
+    expect(toestand.bezig).toBe(false);
+
+    toestand.geladenVoor = "org-a";
+    uploadLogo.mockImplementationOnce(async () => {
+      toestand.geladenVoor = "org-b";
+      return { id: "l1", mime: "image/png", grootte: 1 };
+    });
+    expect(await bewaarder.uploadLogo(new Blob([]), "x.png")).toEqual({ status: "verlopen" });
+    expect(toestand.logoBezig).toBe(false);
+  });
+
   test("een andere fout wordt doorgegeven en laat het formulier geladen", async () => {
     const { bewaar, herlaad, toestand, bewaarder } = opzet("org-a");
     const fout = new Error("netwerk");
@@ -275,5 +295,49 @@ describe("maakBedrijfBewaarder", () => {
     expect(herlaad).not.toHaveBeenCalled();
     expect(toestand.geladenVoor).toBe("org-a");
     expect(toestand.bezig).toBe(false);
+  });
+});
+
+describe("laadBedrijf", () => {
+  const ANDERE = { status: 409, data: { statusCode: 409, data: { code: "ANDERE_ORGANISATIE" } } };
+
+  function opzet(actief: string | null = "org-a") {
+    let huidig = actief;
+    const haal = vi.fn(async (_organisatieId: string | null): Promise<Partij> => ({ naam: "Peeters" }));
+    const herleesSessie = vi.fn(async () => {
+      huidig = "org-b";
+    });
+    const opties = { haal, organisatieId: () => huidig, herleesSessie };
+    return { haal, herleesSessie, opties };
+  }
+
+  test("laadt voor het actieve bedrijf en geeft dat bedrijf terug", async () => {
+    const { haal, herleesSessie, opties } = opzet("org-a");
+    expect(await laadBedrijf(opties)).toEqual({ partij: { naam: "Peeters" }, organisatieId: "org-a" });
+    expect(haal).toHaveBeenCalledExactlyOnceWith("org-a");
+    expect(herleesSessie).not.toHaveBeenCalled();
+  });
+
+  test("een 409 ANDERE_ORGANISATIE: sessie herlezen en nog een keer laden voor het nieuwe bedrijf", async () => {
+    const { haal, herleesSessie, opties } = opzet("org-a");
+    haal.mockRejectedValueOnce(ANDERE);
+    expect(await laadBedrijf(opties)).toEqual({ partij: { naam: "Peeters" }, organisatieId: "org-b" });
+    expect(herleesSessie).toHaveBeenCalledTimes(1);
+    expect(haal.mock.calls.map(([id]) => id)).toEqual(["org-a", "org-b"]);
+  });
+
+  test("een tweede 409 wordt doorgegeven (geen lus)", async () => {
+    const { haal, opties } = opzet("org-a");
+    haal.mockRejectedValue(ANDERE);
+    await expect(laadBedrijf(opties)).rejects.toBe(ANDERE);
+    expect(haal).toHaveBeenCalledTimes(2);
+  });
+
+  test("een andere fout wordt doorgegeven zonder de sessie te herlezen", async () => {
+    const { haal, herleesSessie, opties } = opzet("org-a");
+    const fout = { status: 500 };
+    haal.mockRejectedValueOnce(fout);
+    await expect(laadBedrijf(opties)).rejects.toBe(fout);
+    expect(herleesSessie).not.toHaveBeenCalled();
   });
 });

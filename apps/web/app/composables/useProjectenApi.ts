@@ -95,11 +95,16 @@ export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOptie
       }
     },
 
-    dupliceer: (id: string) =>
+    /**
+     * Dupliceert op de server (de planbestanden worden mee gekopieerd). `bestandIds`: extra planbestanden
+     * van het lokale document; het antwoord geeft voor elk gekopieerd bestand oud -> nieuw.
+     */
+    dupliceer: (id: string, bestandIds: string[] = []) =>
       haal(`/api/projecten/${id}/dupliceer`, {
         method: "POST",
         ...(opties.gebruikerId ? { headers: voorGebruiker } : {}),
-      }) as Promise<{ id: string }>,
+        ...(bestandIds.length > 0 ? { body: { bestandIds } } : {}),
+      }) as Promise<{ id: string; bestandIds?: Record<string, string> }>,
 
     verwijder: async (id: string): Promise<void> => {
       await haal(`/api/projecten/${id}`, { method: "DELETE" });

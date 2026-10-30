@@ -355,6 +355,50 @@ describe("dupliceren met planbestanden", () => {
     expect((await haalBestand(db, b.pdf.id))?.projectId).toBe(id);
   });
 
+  test("dupliceren geeft de oude en nieuwe bestandsid's terug", async () => {
+    const { db, org, id, opslag, bestanden: b } = await opzet();
+    const { id: kopieId, bestandIds } = await dupliceerProject(db, opslag, org, id);
+    expect(Object.keys(bestandIds).sort()).toEqual([b.pdf.id, b.raster.id, b.afbeelding.id].sort());
+    const kopie = (await haalProject(db, org, kopieId))!;
+    const [p1] = kopie.document.situatie.paginas;
+    expect(bestandIds[b.pdf.id]).toBe(p1!.achtergrond!.origineelBestandId);
+    expect(bestandIds[b.raster.id]).toBe(p1!.achtergrond!.rasterBestandId);
+  });
+
+  test("extra bestanden van het bronproject (een plan dat alleen in de editor staat) worden ook gekopieerd", async () => {
+    const { db, org, id, opslag } = await opzet();
+    const [extra] = await db
+      .insert(bestanden)
+      .values({ projectId: id, soort: "plan-origineel", mime: "application/pdf", grootte: 2, sleutel: `${id}/${crypto.randomUUID()}` })
+      .returning();
+    await opslag.schrijf(extra!.sleutel, new Uint8Array([9, 9]));
+
+    const { id: kopieId, bestandIds } = await dupliceerProject(db, opslag, org, id, [extra!.id]);
+
+    const nieuw = await haalBestand(db, bestandIds[extra!.id]!);
+    expect(nieuw?.projectId).toBe(kopieId);
+    expect(nieuw?.sleutel.startsWith(`${kopieId}/`)).toBe(true);
+    expect([...new Uint8Array(await new Response((await opslag.lees(nieuw!.sleutel))!).arrayBuffer())]).toEqual([9, 9]);
+  });
+
+  test("een bestand van een ander project, of een onbekend of ongeldig id, wordt stil genegeerd", async () => {
+    const { db, org, id, opslag } = await opzet();
+    const { id: ander } = await maakProject(db, org, invoer);
+    const [vreemd] = await db
+      .insert(bestanden)
+      .values({ projectId: ander, soort: "plan-origineel", mime: "application/pdf", grootte: 1, sleutel: `${ander}/${crypto.randomUUID()}` })
+      .returning();
+    await opslag.schrijf(vreemd!.sleutel, new Uint8Array([7]));
+    const voor = (await db.select().from(bestanden)).length;
+
+    const { bestandIds } = await dupliceerProject(db, opslag, org, id, [vreemd!.id, crypto.randomUUID(), "geen-uuid"]);
+
+    expect(Object.keys(bestandIds)).not.toContain(vreemd!.id);
+    expect(Object.keys(bestandIds)).toHaveLength(3);
+    // Alleen de drie planbestanden van het bron zijn erbij gekomen.
+    expect((await db.select().from(bestanden)).length).toBe(voor + 3);
+  });
+
   test("mislukt het schrijven van een kopie, dan blijft er geen project, geen rij en geen bestand achter", async () => {
     const { db, org, id, opslag } = await opzet();
     let schrijfbeurten = 0;

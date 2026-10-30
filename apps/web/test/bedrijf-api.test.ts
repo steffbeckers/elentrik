@@ -45,6 +45,18 @@ describe("useBedrijfApi", () => {
     expect([...body.keys()]).toEqual(["bestand"]);
   });
 
+  test("haal stuurt het bedrijf waarvoor geladen wordt mee; zonder bedrijf geen header", async () => {
+    const { api, oproepen } = maakApi({ naam: "X" });
+    await api.haal("org-a");
+    await api.haal(null);
+    await api.haal();
+    expect(oproepen).toEqual([
+      ["/api/bedrijfsgegevens", { headers: { "x-elentrik-organisatie": "org-a" } }],
+      ["/api/bedrijfsgegevens"],
+      ["/api/bedrijfsgegevens"],
+    ]);
+  });
+
   test("bewaar en uploadLogo sturen het meegegeven bedrijf mee, niet het actieve van dit moment", async () => {
     const oproepen: Oproep[] = [];
     const api = maakBedrijfApi(

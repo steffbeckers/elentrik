@@ -24,7 +24,11 @@ export function maakBedrijfApi(haal: BedrijfFetch, opties: BedrijfApiOpties = {}
   const organisatie = (organisatieId?: string | null) =>
     voorOrganisatie(organisatieId !== undefined ? organisatieId : opties.actieveOrganisatieId?.());
   return {
-    haal: () => haal("/api/bedrijfsgegevens") as Promise<Partij>,
+    /** Leest de bedrijfsgegevens; met `organisatieId` weigert de server (409) als het actieve bedrijf intussen een ander is. */
+    haal: (organisatieId?: string | null) =>
+      (organisatieId
+        ? haal("/api/bedrijfsgegevens", voorOrganisatie(organisatieId))
+        : haal("/api/bedrijfsgegevens")) as Promise<Partij>,
 
     bewaar: (partij: Partij, organisatieId?: string | null) =>
       haal("/api/bedrijfsgegevens", { method: "PUT", body: partij, ...organisatie(organisatieId) }) as Promise<Partij>,
