@@ -65,7 +65,9 @@ Docker-image en `deploy/nas/compose.yaml` zetten de meeste van deze waarden zelf
   Die waarden staan alleen in `.env` en worden nooit gelogd. Online op de NAS verstuurt Elentrik
   standaard via Microsoft Graph (`MAIL_VERZENDER=graph`); zie `docs/online.md`, sectie 2.
 - **Geheim:** `BETTER_AUTH_SECRET` is een eigen, lange willekeurige waarde (minstens 32 tekens),
-  alleen in `.env` en nooit in de repo. De sessietokens staan onversleuteld in de database, maar zonder `BETTER_AUTH_SECRET` geven ze geen sessie (het cookie is `token.handtekening`); bewaar back-ups versleuteld.
+  alleen in `.env` en nooit in de repo. De sessietokens staan onversleuteld in de database, maar
+  zonder `BETTER_AUTH_SECRET` geven ze geen sessie (het cookie is `token.handtekening`); bewaar
+  back-ups versleuteld.
 
 ## Talen
 

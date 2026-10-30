@@ -23,7 +23,7 @@
   - een advisory lock;
   - `ELENTRIK_GEPLANDE_TAKEN` (standaard aan in productie, `uit` zet ze altijd uit, `aan` zet ze aan buiten productie);
   - een verwijderd project wordt na **30 dagen** definitief gewist;
-  - verweesde planbestanden, oude logo's en bestanden op schijf zonder rij worden na **7 dagen** gewist;
+  - verweesde planbestanden worden na **30 dagen** gewist (een plan in een lokaal concept in de browser mag een maand wachten); oude logo's en bestanden op schijf zonder rij na **7 dagen**;
   - eerst de rij, dan het bestand;
   - het log bevat alleen aantallen.
 - **Nieuwe foutcodes** komen in `shared/foutcodes.ts`, met `fouten.<CODE>` in nl, fr en en.
@@ -87,7 +87,7 @@
   - **Planbestand:**
     - een planbestand waarnaar het huidige document verwijst, blijft staan;
     - een planbestand waarnaar alleen een snapshot verwijst, blijft staan;
-    - een planbestand waarnaar niets verwijst en dat ouder is dan 7 dagen, wordt gewist; jonger dan 7 dagen blijft het staan.
+    - een planbestand waarnaar niets verwijst en dat ouder is dan 30 dagen, wordt gewist; jonger dan 30 dagen blijft het staan.
   - **Logo:** het huidige logo blijft staan; een oud logo ouder dan 7 dagen wordt gewist.
   - **Bestand op schijf zonder rij:** ouder dan 7 dagen wordt het gewist, jonger blijft het staan.
   - **Lock:** met een bezet lock wordt er niets gewist.
