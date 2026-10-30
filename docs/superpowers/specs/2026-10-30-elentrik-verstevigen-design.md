@@ -1,7 +1,7 @@
 # Elentrik: verstevigen na de livegang (ontwerp)
 
 - **Datum:** 2026-10-30
-- **Status:** ter review
+- **Status:** goedgekeurd
 - **Bouwt voort op:**
   - de opvolgpunten die tijdens de plannen 3 tot en met 10 bewust geparkeerd werden;
   - de live-omgevingen op `elentrik.app` en `staging.elentrik.app`.
