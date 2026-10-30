@@ -1,7 +1,7 @@
 # Elentrik: afronden na plan 11 (ontwerp)
 
 - **Datum:** 2026-10-30
-- **Status:** ter goedkeuring
+- **Status:** goedgekeurd
 - **Bouwt voort op:**
   - plan 11 "verstevigen" (`docs/superpowers/specs/2026-10-30-elentrik-verstevigen-design.md`), live op staging en productie sinds 2026-10-30;
   - de lijst met geparkeerde opvolgpunten uit de plannen 3 tot en met 11.
@@ -46,11 +46,12 @@ Daarnaast is er technische schuld uit de vorige plannen die het onderhoud trager
    - Alleen een relatief pad dat met één `/` begint, wordt aanvaard. Al de rest valt weg.
 5. **Upload in een verwijderd project.** Een 404 bij het uploaden van een plan zet de editor in dezelfde toestand "verwijderd" als een 404 bij het bewaren (plan 11, punt 9), in plaats van een algemene foutmelding.
 6. **Opruimtaak:**
-   - **Opslagmap onbereikbaar:** is de opslagmap er niet, of is ze leeg terwijl er rijen in `bestanden` staan, dan doet de hele run niets en logt ze één waarschuwing met aantallen. Zo ontgrendelt stap 1 geen projecten omdat een niet-aangekoppeld volume de bestanden "ontbrekend" laat lijken.
+   - **Opslagmap onbereikbaar:** staan er rijen in `bestanden` en is de opslagmap er niet, of is ze leeg, dan doet de hele run niets en logt ze één waarschuwing met aantallen. Zonder rijen in `bestanden` loopt de run gewoon door. Zo ontgrendelt stap 1 geen projecten omdat een niet-aangekoppeld volume de bestanden "ontbrekend" laat lijken.
    - **Lege mappen:** na het wissen van de bestanden verdwijnt ook een lege projectmap.
 7. **Kopie na een conflict.** `bewaarAlsKopie` stuurt altijd de plan-id's van het lokale document mee, ook in het pad zonder lokale wijzigingen. Zo verdwijnt het kleine venster waarin een wijziging tijdens het dupliceren naar plannen van het origineel bleef verwijzen.
 8. **Grootte van een JSON-body.**
-   - `leesBody` weigert een verzoek zonder geldige `Content-Length` met `411 LENGTE_VEREIST`, en een body boven **50 MB** met `413` (de grens is beslist met de gebruiker).
+   - `leesBody` weigert een body zonder geldige `Content-Length` met `411 LENGTE_VEREIST`, en een body boven **50 MB** met `413 VERZOEK_TE_GROOT` (de grens is beslist met de gebruiker).
+   - Een verzoek met noch `Content-Length` noch `Transfer-Encoding` telt als een lege body (mijn keuze); 411 geldt dus alleen voor een body zonder lengte.
    - Het grootste echte document moet daar ruim onder blijven. De bouwer meet een groot testproject en noteert de grootte in het rapport.
 
 ### B. Technische schuld
