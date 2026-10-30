@@ -5,12 +5,15 @@
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { createError } from "h3";
 import type { Db } from "../db";
 import { bestanden, projecten } from "../db/schema";
 
-/** De standaardlimiet: 5 GB per bedrijf. */
+/**
+ * De standaardlimiet: 5 GB per bedrijf. In te stellen met `ELENTRIK_OPSLAG_PER_BEDRIJF_MB`
+ * (zie `opslagLimietBytes`).
+ */
 export const STANDAARD_OPSLAG_MB = 5120;
 
 const BYTES_PER_MB = 1024 * 1024;
@@ -34,17 +37,18 @@ export function opslagLimietBytes(env: Record<string, string | undefined> = proc
  * (plannen en exports) plus de logo's (bestanden zonder project met `organisatie_id`).
  */
 export async function gebruikteOpslag(db: Db, organisatieId: string): Promise<number> {
-  const [rij] = await db
+  // Twee sommen die elk een index volgen: de plannen en exports via de levende projecten van het
+  // bedrijf (bestanden.project_id), en de logo's via bestanden.organisatie_id (een kleine verzameling).
+  const [projectBestanden] = await db
+    .select({ totaal: sql<string | number | bigint>`coalesce(sum(${bestanden.grootte}), 0)` })
+    .from(projecten)
+    .innerJoin(bestanden, eq(bestanden.projectId, projecten.id))
+    .where(and(eq(projecten.organisatieId, organisatieId), isNull(projecten.verwijderd)));
+  const [logos] = await db
     .select({ totaal: sql<string | number | bigint>`coalesce(sum(${bestanden.grootte}), 0)` })
     .from(bestanden)
-    .leftJoin(projecten, eq(projecten.id, bestanden.projectId))
-    .where(
-      or(
-        and(eq(projecten.organisatieId, organisatieId), isNull(projecten.verwijderd)),
-        and(isNull(bestanden.projectId), eq(bestanden.organisatieId, organisatieId)),
-      ),
-    );
-  return Number(rij?.totaal ?? 0);
+    .where(and(eq(bestanden.organisatieId, organisatieId), isNull(bestanden.projectId)));
+  return Number(projectBestanden?.totaal ?? 0) + Number(logos?.totaal ?? 0);
 }
 
 /** Gooit 413 `OPSLAG_VOL` als `extraBytes` het bedrijf boven de limiet zou brengen. */
