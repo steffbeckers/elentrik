@@ -2,14 +2,18 @@
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module
 // rechtstreeks (ruling E1).
 import { createReadStream } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import { dirname, resolve, sep } from "node:path";
+import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
+import { dirname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 
 export interface BestandOpslag {
   schrijf(sleutel: string, data: Uint8Array): Promise<void>;
   lees(sleutel: string): Promise<ReadableStream<Uint8Array> | null>;
   bestaat(sleutel: string): Promise<boolean>;
+  /** Alle bestanden in de opslag met hun laatste wijzigingstijd; sleutels met `/`, ongeacht het platform. */
+  lijst(): Promise<{ sleutel: string; gewijzigd: Date }[]>;
+  /** Wist een bestand. Een bestand dat al weg is, is geen fout. */
+  verwijder(sleutel: string): Promise<void>;
 }
 
 const STANDAARD_MAP = ".data/bestanden";
@@ -46,6 +50,41 @@ export function maakLokaleOpslag(map: string): BestandOpslag {
     },
     async bestaat(sleutel) {
       return isBestand(pad(sleutel));
+    },
+    async lijst() {
+      const gevonden: { sleutel: string; gewijzigd: Date }[] = [];
+      async function loop(map: string, voorvoegsel: string): Promise<void> {
+        let items;
+        try {
+          items = await readdir(map, { withFileTypes: true });
+        } catch (fout) {
+          if ((fout as NodeJS.ErrnoException).code === "ENOENT") return;
+          throw fout;
+        }
+        for (const item of items) {
+          const volledig = join(map, item.name);
+          if (item.isDirectory()) {
+            await loop(volledig, `${voorvoegsel}${item.name}/`);
+          } else if (item.isFile()) {
+            try {
+              gevonden.push({ sleutel: `${voorvoegsel}${item.name}`, gewijzigd: (await stat(volledig)).mtime });
+            } catch (fout) {
+              // Tussen het lezen van de map en de stat gewist: dan is het er niet meer.
+              if ((fout as NodeJS.ErrnoException).code !== "ENOENT") throw fout;
+            }
+          }
+        }
+      }
+      await loop(wortel, "");
+      return gevonden;
+    },
+    async verwijder(sleutel) {
+      try {
+        await unlink(pad(sleutel));
+      } catch (fout) {
+        if ((fout as NodeJS.ErrnoException).code === "ENOENT") return;
+        throw fout;
+      }
     },
   };
 }

@@ -202,6 +202,10 @@ describe("bewaarBestand", () => {
       async bestaat() {
         return false;
       },
+      async lijst() {
+        return [];
+      },
+      async verwijder() {},
     };
     await expect(
       bewaarBestand(db, kapot, { organisatieId, projectId, soort: "plan-raster", data: png(10, 10) }),

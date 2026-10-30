@@ -242,6 +242,10 @@ describe("bewaarLogo", () => {
       async bestaat() {
         return false;
       },
+      async lijst() {
+        return [];
+      },
+      async verwijder() {},
     };
     await expect(bewaarLogo(db, kapot, org, png(10, 10))).rejects.toThrow("schijf vol");
     expect(await db.select().from(bestanden)).toHaveLength(0);
