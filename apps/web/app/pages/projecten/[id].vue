@@ -540,6 +540,7 @@ onBeforeUnmount(() => {
     <ConflictDialoog
       v-model:open="conflictOpen"
       :bezig="conflictBezig"
+      :lokale-wijzigingen="autosave.conflict.value?.lokaleWijzigingen ?? true"
       @serverversie="losConflictOp(autosave.laadServerversie)"
       @kopie="losConflictOp(autosave.bewaarAlsKopie)"
     />

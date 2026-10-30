@@ -183,7 +183,13 @@
       "serverversie": "Load server version",
       "serverversieUitleg": "Your local changes will be lost.",
       "kopie": "Save my version as a copy",
-      "kopieUitleg": "Your version becomes a new project; the original stays unchanged."
+      "kopieUitleg": "Your version becomes a new project; the original stays unchanged.",
+      "zonderLokaal": {
+        "beschrijving": "The project has been changed in the meantime, for example in another window. The PDF was not created, because you are looking at an older version than the one on the server.",
+        "serverversieUitleg": "You will then see the latest version; nothing is lost.",
+        "kopie": "Save the latest version as a copy",
+        "kopieUitleg": "The latest version from the server becomes a new project; the original stays unchanged."
+      }
     },
     "fouten": {
       "NIET_TOEGELATEN_KIND": "That component cannot go here.",

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { Partij } from "@elentrik/model";
 import { MAX_LOGO_BYTES } from "../shared/bestandsinhoud";
 import {
@@ -9,6 +9,7 @@ import {
   valideerFormulier,
   type BedrijfFormulier,
 } from "../app/instellingen/formulier";
+import { maakBedrijfBewaarder, type BewaarderToestand } from "../app/instellingen/bewaarder";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0]);
@@ -172,5 +173,107 @@ describe("controleerLogo", () => {
     expect(controleerLogo(10, PDF)).toEqual({ ok: false, reden: "onbekend-type" });
     expect(controleerLogo(10, new TextEncoder().encode("<svg xmlns="))).toEqual({ ok: false, reden: "onbekend-type" });
     expect(controleerLogo(0, new Uint8Array())).toEqual({ ok: false, reden: "onbekend-type" });
+  });
+});
+
+describe("maakBedrijfBewaarder", () => {
+  const ANDERE = { statusCode: 409, data: { code: "ANDERE_ORGANISATIE" } };
+
+  function opzet(geladenVoor: string | null = "org-a") {
+    const toestand: BewaarderToestand = { geladenVoor, bezig: false, logoBezig: false };
+    const bewaar = vi.fn(async (partij: Partij, _organisatieId: string): Promise<Partij> => partij);
+    const uploadLogo = vi.fn(async (_bestand: Blob, _naam: string, _organisatieId: string) => ({
+      id: "l1",
+      mime: "image/png",
+      grootte: 1,
+    }));
+    const andereOrganisatie = vi.fn(async (fout: unknown) => fout === ANDERE);
+    const herlaad = vi.fn(async () => {});
+    const bewaarder = maakBedrijfBewaarder(toestand, { bewaar, uploadLogo, andereOrganisatie, herlaad });
+    return { toestand, bewaar, uploadLogo, andereOrganisatie, herlaad, bewaarder };
+  }
+
+  test("bewaart voor het bedrijf waarvoor het formulier geladen werd", async () => {
+    const { bewaar, bewaarder } = opzet("org-a");
+    const uitkomst = await bewaarder.bewaar({ naam: "Peeters" });
+    expect(uitkomst).toEqual({ status: "gedaan", waarde: { naam: "Peeters" } });
+    expect(bewaar).toHaveBeenCalledWith({ naam: "Peeters" }, "org-a");
+  });
+
+  test("het logo gaat naar hetzelfde bedrijf", async () => {
+    const { uploadLogo, bewaarder } = opzet("org-a");
+    const bestand = new Blob([new Uint8Array([1])]);
+    await bewaarder.uploadLogo(bestand, "logo.png");
+    expect(uploadLogo).toHaveBeenCalledWith(bestand, "logo.png", "org-a");
+  });
+
+  test("zolang er niets geladen is, wordt er niets bewaard", async () => {
+    const { bewaar, uploadLogo, bewaarder } = opzet(null);
+    expect(await bewaarder.bewaar({ naam: "x" })).toEqual({ status: "overgeslagen" });
+    expect(await bewaarder.uploadLogo(new Blob([]), "x.png")).toEqual({ status: "overgeslagen" });
+    expect(bewaar).not.toHaveBeenCalled();
+    expect(uploadLogo).not.toHaveBeenCalled();
+  });
+
+  test("een tweede bewaaractie tijdens een lopende geeft geen tweede verzoek", async () => {
+    const { bewaar, toestand, bewaarder } = opzet();
+    let rond: (() => void) | undefined;
+    bewaar.mockImplementationOnce(
+      (partij) =>
+        new Promise((klaar) => {
+          rond = () => klaar(partij);
+        }),
+    );
+    const eerste = bewaarder.bewaar({ naam: "een" });
+    expect(toestand.bezig).toBe(true);
+    expect(await bewaarder.bewaar({ naam: "twee" })).toEqual({ status: "overgeslagen" });
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    rond?.();
+    expect(await eerste).toEqual({ status: "gedaan", waarde: { naam: "een" } });
+    expect(toestand.bezig).toBe(false);
+    // Daarna kan bewaren weer.
+    await bewaarder.bewaar({ naam: "drie" });
+    expect(bewaar).toHaveBeenCalledTimes(2);
+  });
+
+  test("na een 409 ANDERE_ORGANISATIE wordt eerst herladen; zolang kan er niet bewaard worden", async () => {
+    const { bewaar, toestand, herlaad, andereOrganisatie, bewaarder } = opzet("org-a");
+    bewaar.mockRejectedValueOnce(ANDERE);
+    let tijdensHerladen: Awaited<ReturnType<typeof bewaarder.bewaar>> | undefined;
+    herlaad.mockImplementationOnce(async () => {
+      expect(toestand.geladenVoor).toBeNull();
+      tijdensHerladen = await bewaarder.bewaar({ naam: "te vroeg" });
+      // Het herladen zet het formulier voor het actieve bedrijf klaar.
+      toestand.geladenVoor = "org-b";
+    });
+
+    expect(await bewaarder.bewaar({ naam: "Peeters" })).toEqual({ status: "andereOrganisatie" });
+    expect(andereOrganisatie).toHaveBeenCalledTimes(1);
+    expect(herlaad).toHaveBeenCalledTimes(1);
+    expect(tijdensHerladen).toEqual({ status: "overgeslagen" });
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(toestand.bezig).toBe(false);
+
+    await bewaarder.bewaar({ naam: "Nieuw" });
+    expect(bewaar).toHaveBeenLastCalledWith({ naam: "Nieuw" }, "org-b");
+  });
+
+  test("een 409 ANDERE_ORGANISATIE bij het logo herlaadt ook", async () => {
+    const { uploadLogo, herlaad, toestand, bewaarder } = opzet("org-a");
+    uploadLogo.mockRejectedValueOnce(ANDERE);
+    expect(await bewaarder.uploadLogo(new Blob([]), "x.png")).toEqual({ status: "andereOrganisatie" });
+    expect(herlaad).toHaveBeenCalledTimes(1);
+    expect(toestand.geladenVoor).toBeNull();
+    expect(toestand.logoBezig).toBe(false);
+  });
+
+  test("een andere fout wordt doorgegeven en laat het formulier geladen", async () => {
+    const { bewaar, herlaad, toestand, bewaarder } = opzet("org-a");
+    const fout = new Error("netwerk");
+    bewaar.mockRejectedValueOnce(fout);
+    await expect(bewaarder.bewaar({ naam: "x" })).rejects.toBe(fout);
+    expect(herlaad).not.toHaveBeenCalled();
+    expect(toestand.geladenVoor).toBe("org-a");
+    expect(toestand.bezig).toBe(false);
   });
 });

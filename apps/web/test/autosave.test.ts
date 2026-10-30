@@ -124,7 +124,7 @@ describe("useAutosave", () => {
     await vi.advanceTimersByTimeAsync(2000);
     await leeg();
     expect(autosave.status.value).toBe("conflict");
-    expect(autosave.conflict.value).toEqual({ huidigeVersie: 5 });
+    expect(autosave.conflict.value).toEqual({ huidigeVersie: 5, lokaleWijzigingen: true });
 
     wijzig(store, "b");
     await vi.advanceTimersByTimeAsync(60_000);
@@ -139,7 +139,7 @@ describe("useAutosave", () => {
     const { store, bewaar, autosave } = opzet();
     autosave.meldConflict(7);
     expect(autosave.status.value).toBe("conflict");
-    expect(autosave.conflict.value).toEqual({ huidigeVersie: 7 });
+    expect(autosave.conflict.value).toEqual({ huidigeVersie: 7, lokaleWijzigingen: false });
 
     // Zolang het conflict loopt, gaat er niets naar de server.
     wijzig(store, "a");
@@ -151,6 +151,24 @@ describe("useAutosave", () => {
     expect(store.versie).toBe(7);
     expect(autosave.status.value).toBe("opgeslagen");
     expect(autosave.conflict.value).toBeNull();
+  });
+
+  test("meldConflict zonder lokale wijzigingen: pas bij een wijziging erna zijn er lokale wijzigingen", async () => {
+    const { store, autosave } = opzet();
+    autosave.meldConflict(7);
+    expect(autosave.conflict.value?.lokaleWijzigingen).toBe(false);
+    wijzig(store, "a");
+    await nextTick();
+    expect(autosave.conflict.value).toEqual({ huidigeVersie: 7, lokaleWijzigingen: true });
+  });
+
+  test("meldConflict met onbewaarde wijzigingen: lokale wijzigingen", async () => {
+    const { store, autosave } = opzet();
+    // Zonder te wachten op de autosave: de wijziging is nog niet op de server.
+    wijzig(store, "a");
+    await nextTick();
+    autosave.meldConflict(7);
+    expect(autosave.conflict.value).toEqual({ huidigeVersie: 7, lokaleWijzigingen: true });
   });
 
   test("een netwerkfout geeft status lokaal; na 10 s volgt een nieuwe poging", async () => {
@@ -317,7 +335,7 @@ describe("useAutosave", () => {
   });
 
   test("bewaarAlsKopie dupliceert, bewaart het lokale document in de kopie en navigeert", async () => {
-    const { store, bewaar, dupliceer, naarProject, autosave } = opzet();
+    const { store, bewaar, haal, dupliceer, naarProject, autosave } = opzet();
     bewaar.mockRejectedValueOnce(new ConflictFout(5));
     wijzig(store, "Lokaal");
     const lokaalDocument = store.document;
@@ -327,6 +345,8 @@ describe("useAutosave", () => {
 
     await autosave.bewaarAlsKopie();
     expect(dupliceer).toHaveBeenCalledWith("p1");
+    // Met lokale wijzigingen gaat het om die van de gebruiker: de serverversie wordt niet geladen.
+    expect(haal).not.toHaveBeenCalledWith("p1");
     // De kopie krijgt het document-id van de kopie, niet dat van het origineel.
     expect(bewaar).toHaveBeenLastCalledWith("kopie1", 1, {
       naam: "Lokaal (kopie)",
@@ -334,6 +354,25 @@ describe("useAutosave", () => {
     });
     expect(lokaalDocument?.id).not.toBe(KOPIE_DOC_ID);
     expect(await conceptVan("p1")).toBeUndefined();
+    expect(naarProject).toHaveBeenCalledWith("kopie1");
+  });
+
+  test("bewaarAlsKopie na een exportconflict zonder lokale wijzigingen haalt eerst de actuele serverversie op en kopieert die", async () => {
+    const { store, bewaar, haal, dupliceer, naarProject, autosave } = opzet();
+    // De editor toont de oude versie (1); de server is intussen verder (7, met een andere naam).
+    const verouderd = store.document;
+    autosave.meldConflict(7);
+
+    await autosave.bewaarAlsKopie();
+    expect(haal.mock.calls.map(([id]) => id)).toEqual(["p1", "kopie1"]);
+    expect(haal.mock.invocationCallOrder[0]).toBeLessThan(dupliceer.mock.invocationCallOrder[0] as number);
+    const serverversie = (await haal.mock.results[0]?.value) as Project;
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(bewaar).toHaveBeenLastCalledWith("kopie1", 1, {
+      naam: "Van de server (kopie)",
+      document: { ...serverversie.document, id: KOPIE_DOC_ID },
+    });
+    expect(store.document).not.toBe(verouderd);
     expect(naarProject).toHaveBeenCalledWith("kopie1");
   });
 

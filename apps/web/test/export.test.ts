@@ -1,6 +1,9 @@
 import type { Bevinding, Ernst } from "@elentrik/arei";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import type { AutosaveStatus } from "../app/composables/useAutosave";
+import { conflictSleutels } from "../app/editor/conflict";
 import { magExporteren, onopgelosteFouten, volgendVersieLabel } from "../app/editor/export";
 
 function bevinding(ernst: Ernst, afgeweken = false): Bevinding {
@@ -43,5 +46,40 @@ describe("onopgelosteFouten", () => {
       bevinding("waarschuwing", true),
     ];
     expect(onopgelosteFouten(bevindingen)).toBe(2);
+  });
+});
+
+describe("conflictSleutels", () => {
+  type Boom = { [sleutel: string]: string | Boom };
+  const teksten = (taal: string) =>
+    JSON.parse(readFileSync(join(import.meta.dirname, "..", "i18n", "locales", `${taal}.json`), "utf8")) as Boom;
+  function tekst(boom: Boom, sleutel: string): string {
+    const waarde = sleutel.split(".").reduce<string | Boom | undefined>((b, deel) => (typeof b === "object" ? b[deel] : undefined), boom);
+    if (typeof waarde !== "string") throw new Error(`${sleutel} ontbreekt`);
+    return waarde;
+  }
+
+  test("met lokale wijzigingen de bestaande teksten van de autosave", () => {
+    expect(conflictSleutels(true)).toEqual({
+      beschrijving: "editor.conflict.beschrijving",
+      serverversieUitleg: "editor.conflict.serverversieUitleg",
+      kopie: "editor.conflict.kopie",
+      kopieUitleg: "editor.conflict.kopieUitleg",
+    });
+  });
+
+  test.each(["nl", "fr", "en"])("zonder lokale wijzigingen (%s) staat er niets over lokale wijzigingen", (taal) => {
+    const sleutels = conflictSleutels(false);
+    expect(Object.values(sleutels).every((s) => s.startsWith("editor.conflict.zonderLokaal."))).toBe(true);
+    for (const sleutel of Object.values(sleutels)) {
+      expect(tekst(teksten(taal), sleutel)).not.toMatch(/lokaa?l|local|locale/i);
+    }
+  });
+
+  test("de kopie en de serverversie uitleg zeggen het juiste zonder lokale wijzigingen", () => {
+    const sleutels = conflictSleutels(false);
+    const nl = teksten("nl");
+    expect(tekst(nl, sleutels.kopie)).toMatch(/nieuwste|actuele/i);
+    expect(tekst(nl, sleutels.beschrijving)).toMatch(/PDF/);
   });
 });

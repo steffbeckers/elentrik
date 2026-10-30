@@ -183,7 +183,13 @@
       "serverversie": "Charger la version du serveur",
       "serverversieUitleg": "Vos modifications locales seront perdues.",
       "kopie": "Enregistrer ma version comme copie",
-      "kopieUitleg": "Votre version devient un nouveau projet ; l'original reste inchangé."
+      "kopieUitleg": "Votre version devient un nouveau projet ; l'original reste inchangé.",
+      "zonderLokaal": {
+        "beschrijving": "Le projet a été modifié entre-temps, par exemple dans une autre fenêtre. Le PDF n'a pas été créé, car vous voyez une version plus ancienne que celle du serveur.",
+        "serverversieUitleg": "Vous verrez ensuite la version la plus récente ; rien n'est perdu.",
+        "kopie": "Enregistrer la version la plus récente comme copie",
+        "kopieUitleg": "La version la plus récente du serveur devient un nouveau projet ; l'original reste inchangé."
+      }
     },
     "fouten": {
       "NIET_TOEGELATEN_KIND": "Cet élément ne peut pas être placé ici.",

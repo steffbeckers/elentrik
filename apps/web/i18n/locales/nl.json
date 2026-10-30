@@ -183,7 +183,13 @@
       "serverversie": "Serverversie laden",
       "serverversieUitleg": "Je lokale wijzigingen gaan verloren.",
       "kopie": "Mijn versie als kopie bewaren",
-      "kopieUitleg": "Je versie komt in een nieuw project; het origineel blijft ongewijzigd."
+      "kopieUitleg": "Je versie komt in een nieuw project; het origineel blijft ongewijzigd.",
+      "zonderLokaal": {
+        "beschrijving": "Het project is intussen gewijzigd, bijvoorbeeld in een ander venster. De PDF is niet gemaakt, want je ziet een oudere versie dan die op de server.",
+        "serverversieUitleg": "Je ziet daarna de nieuwste versie; er gaat niets verloren.",
+        "kopie": "Nieuwste versie als kopie bewaren",
+        "kopieUitleg": "De nieuwste versie van de server komt in een nieuw project; het origineel blijft ongewijzigd."
+      }
     },
     "fouten": {
       "NIET_TOEGELATEN_KIND": "Dat onderdeel kan hier niet komen.",

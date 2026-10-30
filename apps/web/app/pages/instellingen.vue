@@ -8,6 +8,7 @@ import {
   valideerFormulier,
   type BedrijfFormulier,
 } from "~/instellingen/formulier";
+import { maakBedrijfBewaarder, type BewaarderToestand } from "~/instellingen/bewaarder";
 import { useAndereOrganisatie } from "~/composables/useAndereOrganisatie";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { vertaalFout } from "~/fouten";
@@ -18,9 +19,9 @@ const api = useBedrijfApi();
 const bestanden = useBestandenApi();
 const toast = useToast();
 const sessie = useSessieStore();
-// Bewaren en het logo sturen de actieve organisatie van deze pagina mee; wisselde een ander
-// tabblad intussen, dan meldt dit dat (409 ANDERE_ORGANISATIE) en gaat er niets verloren aan
-// de serverkant.
+// Bewaren en het logo sturen het bedrijf mee waarvoor het formulier geladen werd; wisselde het
+// actieve bedrijf intussen (in dit of een ander tabblad), dan meldt dit dat (409 ANDERE_ORGANISATIE)
+// en gaat er niets verloren aan de serverkant.
 const andereOrganisatie = useAndereOrganisatie();
 
 /** Alleen een eigenaar wijzigt de bedrijfsgegevens; een lid ziet ze (de server weigert met 403). */
@@ -29,58 +30,72 @@ const alleenLezen = computed(() => sessie.rol !== "eigenaar");
 useHead({ title: () => `${t("bedrijf.titel")} · ${t("app.naam")}` });
 
 // Enkel op de client geladen, zoals de projectenlijst; opnieuw bij een andere actieve organisatie.
-const { data: bedrijf, status, error, refresh } = useAsyncData("bedrijf", () => api.haal(), {
-  server: false,
-  default: () => null,
-  watch: [() => sessie.actieveOrganisatieId],
-});
+// Het bedrijf waarvoor de gegevens geladen werden gaat mee, want daarvoor bewaart het formulier.
+const { data: geladenBedrijf, error, refresh } = useAsyncData(
+  "bedrijf",
+  async () => {
+    const organisatieId = sessie.actieveOrganisatieId;
+    return { partij: await api.haal(), organisatieId };
+  },
+  {
+    server: false,
+    default: () => null,
+    watch: [() => sessie.actieveOrganisatieId],
+  },
+);
 
 // Verlopen sessie of niet meer lid van de actieve organisatie (spec 5b.5).
 watch(error, useSessieHerstel());
 
 const formulier = reactive<BedrijfFormulier>(leegFormulier());
 const logoBestandId = ref<string | undefined>(undefined);
-const geladen = ref(false);
+
+const toestand = reactive<BewaarderToestand>({ geladenVoor: null, bezig: false, logoBezig: false });
+const bewaarder = maakBedrijfBewaarder(toestand, {
+  bewaar: (partij, organisatieId) => api.bewaar(partij, organisatieId),
+  uploadLogo: (bestand, naam, organisatieId) => api.uploadLogo(bestand, naam, organisatieId),
+  andereOrganisatie,
+  herlaad: () => refresh(),
+});
+
+// Het formulier toont nog gegevens van het vorige bedrijf: pas weer bewaarbaar als die van het
+// nieuwe geladen zijn.
+watch(
+  () => sessie.actieveOrganisatieId,
+  () => (toestand.geladenVoor = null),
+);
 
 watch(
-  bedrijf,
-  (partij) => {
-    if (!partij) return;
-    Object.assign(formulier, formulierUitPartij(partij));
-    logoBestandId.value = partij.logoBestandId;
-    geladen.value = true;
+  geladenBedrijf,
+  (geladen) => {
+    if (!geladen) return;
+    Object.assign(formulier, formulierUitPartij(geladen.partij));
+    logoBestandId.value = geladen.partij.logoBestandId;
+    toestand.geladenVoor = geladen.organisatieId;
   },
   { immediate: true },
 );
 
-const gemount = ref(false);
-onMounted(() => (gemount.value = true));
-const laadt = computed(() => !geladen.value && !error.value && (!gemount.value || status.value === "pending"));
+const laadt = computed(() => toestand.geladenVoor === null && !error.value);
 
 function valideer(waarden: BedrijfFormulier) {
   return valideerFormulier(waarden).map(({ name, fout }) => ({ name, message: t(`bedrijf.fouten.${fout}`) }));
 }
 
-const bezig = ref(false);
-
 async function bewaar() {
-  if (bezig.value || !geladen.value || alleenLezen.value) return;
-  bezig.value = true;
+  if (alleenLezen.value) return;
   try {
-    const bewaard = await api.bewaar(partijUitFormulier(formulier));
-    Object.assign(formulier, formulierUitPartij(bewaard));
-    logoBestandId.value = bewaard.logoBestandId;
+    const uitkomst = await bewaarder.bewaar(partijUitFormulier(formulier));
+    if (uitkomst.status !== "gedaan") return;
+    Object.assign(formulier, formulierUitPartij(uitkomst.waarde));
+    logoBestandId.value = uitkomst.waarde.logoBestandId;
     toast.add({ title: t("bedrijf.bewaard"), color: "success" });
   } catch (fout) {
-    if (await andereOrganisatie(fout)) return;
     toast.add({ title: vertaalFout(fout, t), color: "error" });
-  } finally {
-    bezig.value = false;
   }
 }
 
 const invoer = ref<HTMLInputElement | null>(null);
-const logoBezig = ref(false);
 const logoUrl = computed(() => (logoBestandId.value ? bestanden.url(logoBestandId.value) : null));
 
 function meldLogoFout(sleutel: "onbekendType" | "teGroot" | "mislukt") {
@@ -92,7 +107,7 @@ async function opLogoGekozen(gebeurtenis: Event) {
   const gekozen = veld.files?.[0];
   // Zodat dezelfde keuze opnieuw kan na een afkeuring.
   veld.value = "";
-  if (!gekozen || logoBezig.value || alleenLezen.value) return;
+  if (!gekozen || toestand.logoBezig || alleenLezen.value) return;
 
   // De eerste 16 bytes volstaan voor het type; zo gaat er niets over het netwerk bij een afkeuring.
   const kop = new Uint8Array(await gekozen.slice(0, 16).arrayBuffer());
@@ -102,17 +117,14 @@ async function opLogoGekozen(gebeurtenis: Event) {
     return;
   }
 
-  logoBezig.value = true;
   try {
-    const info = await api.uploadLogo(gekozen, gekozen.name);
-    logoBestandId.value = info.id;
+    const uitkomst = await bewaarder.uploadLogo(gekozen, gekozen.name);
+    if (uitkomst.status !== "gedaan") return;
+    logoBestandId.value = uitkomst.waarde.id;
     toast.add({ title: t("bedrijf.logo.bewaard"), color: "success" });
   } catch (fout) {
-    if (await andereOrganisatie(fout)) return;
     const code = httpStatus(fout);
     meldLogoFout(code === 413 ? "teGroot" : code === 415 ? "onbekendType" : "mislukt");
-  } finally {
-    logoBezig.value = false;
   }
 }
 </script>
@@ -190,8 +202,8 @@ async function opLogoGekozen(gebeurtenis: Event) {
                 color="neutral"
                 variant="outline"
                 :label="logoUrl ? $t('bedrijf.logo.vervang') : $t('bedrijf.logo.kies')"
-                :loading="logoBezig"
-                :disabled="logoBezig"
+                :loading="toestand.logoBezig"
+                :disabled="toestand.logoBezig"
                 @click="invoer?.click()"
               />
             </div>
@@ -253,8 +265,8 @@ async function opLogoGekozen(gebeurtenis: Event) {
             <UButton
               type="submit"
               :label="$t('bedrijf.bewaren')"
-              :loading="bezig"
-              :disabled="bezig || laadt"
+              :loading="toestand.bezig"
+              :disabled="toestand.bezig || laadt"
               data-testid="bedrijf-bewaar"
             />
           </div>
