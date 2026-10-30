@@ -50,8 +50,8 @@ describe("maakStrook: een keten", () => {
   test("elke node staat in kolom 0 en de breedte is een kolom plus marges", () => {
     expect(Object.keys(strook.kolomVan)).toHaveLength(9);
     for (const kolom of Object.values(strook.kolomVan)) expect(kolom).toBe(0);
-    // Links 12 (puntlabel "A1" plus 1 mm), rechts 17,6 ("300 mA A" naast het differentieel).
-    expect(strook.breedte).toBeCloseTo(2 * STROOK_MARGE_MM + 12 + 17.6, 9);
+    // Links 12 (puntlabel "A1" plus 1 mm), rechts 15,6 ("300 mA A" naast het differentieel).
+    expect(strook.breedte).toBeCloseTo(2 * STROOK_MARGE_MM + 12 + 15.6, 9);
     expect(strook.kolomGrenzen).toEqual([STROOK_MARGE_MM, strook.breedte]);
   });
 
@@ -100,8 +100,8 @@ describe("maakStrook: kringen naast elkaar", () => {
   });
 
   test("breedte is de marges plus de twee kolombudgetten", () => {
-    // Kolom 0: 12 + 17,6 ("300 mA A"); kolom 1: 12 + 13,2 ("16 A B").
-    expect(strook.breedte).toBeCloseTo(2 * 4 + 29.6 + 25.2, 9);
+    // Kolom 0: 12 + 15,6 ("300 mA A"); kolom 1: 12 + 13,2 ("16 A B").
+    expect(strook.breedte).toBeCloseTo(2 * 4 + 27.6 + 25.2, 9);
   });
 
   test("een bord met twee kinderen geeft vier segmenten: stam, rail en een stuk per kind", () => {
@@ -113,7 +113,7 @@ describe("maakStrook: kringen naast elkaar", () => {
     expect(k1.y + k1.symbool.maat.hoogte).toBeCloseTo(yRail - RAIL_AFSTAND_MM, 10);
     expect(k2.y + k2.symbool.maat.hoogte).toBeCloseTo(yRail - RAIL_AFSTAND_MM, 10);
     // Rechterbudget van kolom 0 plus linkerbudget van kolom 1.
-    expect(cx(k2) - cx(k1)).toBeCloseTo(17.6 + 12, 10);
+    expect(cx(k2) - cx(k1)).toBeCloseTo(15.6 + 12, 10);
     expect(cx(k2) - strook.kolomGrenzen[1]!).toBeCloseTo(12, 10);
 
     // De rail ligt tussen de bovenkant van het bord en de onderkant van de kinderen.
@@ -149,9 +149,9 @@ describe("maakStrook: kringGrenzen en kolomGrenzen", () => {
       .bouw();
     const strook = maakStrook(doc);
     // Links in elke kolom: puntlabel "A1" eindigt 8 mm links van de lijn en is 2 × 2,5 × 0,6 = 3 mm
-    // breed, plus 1 mm: 12. Rechts in kolom 0: "300 mA A" begint 8 mm rechts en is 9,6 mm breed: 17,6.
+    // breed, plus 1 mm: 12. Rechts in kolom 0: "300 mA A" begint 6 mm rechts en is 9,6 mm breed: 15,6.
     // Rechts in de andere kolommen: "16 A B" begint 6 mm rechts en is 7,2 mm breed: 13,2.
-    benadert(strook.kolomGrenzen, [4, 4 + 29.6, 4 + 29.6 + 25.2, 4 + 29.6 + 2 * 25.2 + 4]);
+    benadert(strook.kolomGrenzen, [4, 4 + 27.6, 4 + 27.6 + 25.2, 4 + 27.6 + 2 * 25.2 + 4]);
     benadert(strook.kringGrenzen, strook.kolomGrenzen.slice(0, 3));
     expect(strook.breedte).toBe(strook.kolomGrenzen[3]);
   });
@@ -211,8 +211,8 @@ describe("maakStrook: vertakkingen en randgevallen", () => {
     }
     expect(valideerStructuur(groot)).toEqual([]);
     const strook = maakStrook(groot);
-    // Kolom 0: 12 + 17,6 ("300 mA A"); kolom 1 heeft alleen een contactdoos en "A3": 12 + 12.
-    expect(strook.breedte).toBeCloseTo(2 * 4 + 29.6 + 24, 9);
+    // Kolom 0: 12 + 15,6 ("300 mA A"); kolom 1 heeft alleen een contactdoos en "A3": 12 + 12.
+    expect(strook.breedte).toBeCloseTo(2 * 4 + 27.6 + 24, 9);
     const kinderen = groot.nodes[cdId]!.kinderen;
     expect(kinderen.map((id) => strook.kolomVan[id])).toEqual([0, 1]);
   });
@@ -277,8 +277,8 @@ describe("maakStrook: vertakkingen en randgevallen", () => {
     expect(valideerStructuur(groot)).toEqual([]);
     const strook = maakStrook(groot);
     expect(symbolen(strook.elementen).length).toBeGreaterThanOrEqual(5000);
-    // Links: "A5001" is 5 × 1,5 = 7,5 mm, eindigend 8 mm links van de lijn, plus 1 mm. Rechts: 17,6.
-    expect(strook.breedte).toBeCloseTo(2 * 4 + 16.5 + 17.6, 9);
+    // Links: "A5001" is 5 × 1,5 = 7,5 mm, eindigend 8 mm links van de lijn, plus 1 mm. Rechts: 15,6.
+    expect(strook.breedte).toBeCloseTo(2 * 4 + 16.5 + 15.6, 9);
   });
 });
 
@@ -350,7 +350,7 @@ describe("maakStrook: splitsing onder een node die geen bord is", () => {
     expect(k2.y + k2.symbool.maat.hoogte).toBeCloseTo(yRail - RAIL_AFSTAND_MM, 10);
     expect(cx(k1)).toBeCloseTo(cx(ouder), 10);
     // Rechterbudget van kolom 0 ("300 mA A") plus linkerbudget van kolom 1.
-    expect(cx(k2) - cx(k1)).toBeCloseTo(17.6 + 12, 10);
+    expect(cx(k2) - cx(k1)).toBeCloseTo(15.6 + 12, 10);
     expect(strook.kolomVan[k2.nodeId]).toBe(strook.kolomVan[k1.nodeId]! + 1);
   });
 

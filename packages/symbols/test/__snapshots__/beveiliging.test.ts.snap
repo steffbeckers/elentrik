@@ -32,7 +32,7 @@ exports[`symbolen voor voeding en beveiliging > snapshot: automaat 1 pool 1`] = 
       "y": 0,
     },
   },
-  "svg": "<line x1="5" y1="14" x2="5" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="6.8" x2="5.8" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="5.2" x2="5.8" y2="6.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="3.4" y2="5.4" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="11.2" x2="5.7" y2="9.8" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+  "svg": "<line x1="5" y1="14" x2="5" y2="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="9" x2="2.2" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M1.88 5.44 L1.28 4.63 L1.93 4.16 L2.52 4.96 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="blokje"/><line x1="5" y1="4.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -50,7 +50,7 @@ exports[`symbolen voor voeding en beveiliging > snapshot: automaat 2 polen 1`] =
       "y": 0,
     },
   },
-  "svg": "<line x1="5" y1="14" x2="5" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="6.8" x2="5.8" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="5.2" x2="5.8" y2="6.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="3.4" y2="5.4" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="11.95" x2="5.7" y2="10.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="10.45" x2="5.7" y2="9.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+  "svg": "<line x1="5" y1="14" x2="5" y2="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="9" x2="2.2" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M1.88 5.44 L1.28 4.63 L1.93 4.16 L2.52 4.96 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="blokje"/><line x1="5" y1="4.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -68,7 +68,7 @@ exports[`symbolen voor voeding en beveiliging > snapshot: automaat 3 polen 1`] =
       "y": 0,
     },
   },
-  "svg": "<line x1="5" y1="14" x2="5" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="6.8" x2="5.8" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="5.2" x2="5.8" y2="6.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="3.4" y2="5.4" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="12.7" x2="5.7" y2="11.3" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="11.2" x2="5.7" y2="9.8" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="9.7" x2="5.7" y2="8.3" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+  "svg": "<line x1="5" y1="14" x2="5" y2="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="9" x2="2.2" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M1.88 5.44 L1.28 4.63 L1.93 4.16 L2.52 4.96 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="blokje"/><line x1="5" y1="4.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
@@ -86,43 +86,43 @@ exports[`symbolen voor voeding en beveiliging > snapshot: automaat 4 polen 1`] =
       "y": 0,
     },
   },
-  "svg": "<line x1="5" y1="14" x2="5" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="6.8" x2="5.8" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.2" y1="5.2" x2="5.8" y2="6.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="3.4" y2="5.4" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="4.3" y1="13.45" x2="5.7" y2="12.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="11.95" x2="5.7" y2="10.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="10.45" x2="5.7" y2="9.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="4.3" y1="8.95" x2="5.7" y2="7.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/>",
+  "svg": "<line x1="5" y1="14" x2="5" y2="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="9" x2="2.2" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M1.88 5.44 L1.28 4.63 L1.93 4.16 L2.52 4.96 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="blokje"/><line x1="5" y1="4.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
 exports[`symbolen voor voeding en beveiliging > snapshot: differentieel 2 polen 1`] = `
 {
   "maat": {
-    "breedte": 14,
+    "breedte": 10,
     "hoogte": 14,
     "in": {
-      "x": 7,
+      "x": 5,
       "y": 14,
     },
     "uit": {
-      "x": 7,
+      "x": 5,
       "y": 0,
     },
   },
-  "svg": "<line x1="7" y1="14" x2="7" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="6.8" x2="7.8" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="5.2" x2="7.8" y2="6.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="1.5" x2="5.4" y2="5.4" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="1.5" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.3" y1="11.95" x2="7.7" y2="10.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="10.45" x2="7.7" y2="9.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><rect x="9" y="4.4" width="4.6" height="3" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="11.3" y="6.6" font-size="2" text-anchor="middle" font-family="sans-serif" fill="currentColor">ΔI</text>",
+  "svg": "<line x1="5" y1="14" x2="5" y2="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="9" x2="2.2" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M1.88 5.44 L1.28 4.63 L1.93 4.16 L2.52 4.96 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="blokje"/><line x1="5" y1="4.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
 exports[`symbolen voor voeding en beveiliging > snapshot: differentieel 4 polen 1`] = `
 {
   "maat": {
-    "breedte": 14,
+    "breedte": 10,
     "hoogte": 14,
     "in": {
-      "x": 7,
+      "x": 5,
       "y": 14,
     },
     "uit": {
-      "x": 7,
+      "x": 5,
       "y": 0,
     },
   },
-  "svg": "<line x1="7" y1="14" x2="7" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="6.8" x2="7.8" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.2" y1="5.2" x2="7.8" y2="6.8" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="1.5" x2="5.4" y2="5.4" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="1.5" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6.3" y1="13.45" x2="7.7" y2="12.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="11.95" x2="7.7" y2="10.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="10.45" x2="7.7" y2="9.05" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><line x1="6.3" y1="8.95" x2="7.7" y2="7.55" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pool"/><rect x="9" y="4.4" width="4.6" height="3" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="11.3" y="6.6" font-size="2" text-anchor="middle" font-family="sans-serif" fill="currentColor">ΔI</text>",
+  "svg": "<line x1="5" y1="14" x2="5" y2="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="9" x2="2.2" y2="5.2" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M1.88 5.44 L1.28 4.63 L1.93 4.16 L2.52 4.96 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="blokje"/><line x1="5" y1="4.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 

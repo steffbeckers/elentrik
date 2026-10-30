@@ -196,9 +196,9 @@ describe("opmaak: kringen op A4", () => {
 
     test("schaal 1 en het aantal pagina's volgt de knipregel", () => {
       expect(opm.strook.hoogte).toBeLessThanOrEqual(bruikbaar(STANDAARD_PAPIER_A4).hoogte);
-      // De kolom van kring 0 is 12 + 17,6 mm breed ("300 mA A" van het differentieel erboven), die
+      // De kolom van kring 0 is 12 + 15,6 mm breed ("300 mA A" van het differentieel erboven), die
       // van elke andere kring 12 + 13,2 mm ("16 A B").
-      const EERSTE = 29.6;
+      const EERSTE = 27.6;
       const KRING = 25.2;
       expect(opm.strook.breedte).toBeCloseTo(2 * STROOK_MARGE_MM + EERSTE + 19 * KRING, 9);
       // Kring i ≥ 1 begint op STROOK_MARGE_MM + EERSTE + (i - 1) × KRING. De eerste pagina knipt bij de
