@@ -11,6 +11,7 @@ import {
 } from "./concepten";
 import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
 import { foutCode } from "../sessie/fouten";
+import { metNieuweBestandIds, planBestandIds } from "../editor/kopie";
 import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./useProjectenApi";
 
 /**
@@ -46,7 +47,11 @@ export type AutosaveOpties = {
   store: AutosaveStore;
   bewaar: (id: string, versie: number, invoer: BewaarInvoer) => Promise<{ versie: number }>;
   haal: (id: string) => Promise<Project>;
-  dupliceer: (id: string) => Promise<{ id: string }>;
+  /**
+   * Dupliceert op de server. `bestandIds`: de planbestanden van het lokale document; het antwoord
+   * geeft voor de gekopieerde bestanden oud -> nieuw (`bestandIds`).
+   */
+  dupliceer: (id: string, bestandIds?: string[]) => Promise<{ id: string; bestandIds?: Record<string, string> }>;
   /** Navigeert naar een ander project (de kopie). */
   naarProject: (id: string) => void | Promise<void>;
   /** Wachttijd na de laatste wijziging. */
@@ -397,34 +402,39 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   }
 
   /**
-   * Een kopie van de editor met zijn lokale wijzigingen. Zonder lokale wijzigingen (een conflict bij
-   * de export) toont de editor een verouderde versie: dan wordt eerst de actuele versie van de server
-   * geladen, en dat is de versie die gekopieerd wordt.
+   * Zonder lokale wijzigingen (een conflict bij de export) is de kopie gewoon een server-side
+   * duplicaat van de actuele serverversie, met eigen planbestanden: daar wordt niets over geschreven.
+   * Met lokale wijzigingen wordt het lokale document in de kopie bewaard; de planbestanden daarvan
+   * staan dan op hun nieuwe id's uit het duplicaat.
    */
   async function bewaarAlsKopie(): Promise<void> {
     while (lopend) await lopend;
-    if (conflict.value?.lokaleWijzigingen === false) await laadServerversie();
     const id = store.projectId;
     if (id === null || store.document === null) return;
     wisTimer();
+    const zonderLokaal = conflict.value?.lokaleWijzigingen === false;
     await startLopend(async () => {
-      const kopie = await dupliceer(id);
-      // De kopie heeft een eigen document-id; die nemen we over, anders delen origineel en kopie er één.
-      const kopieDocId = (await haal(kopie.id)).document.id;
-      let versie = 1;
-      let teller: number;
-      do {
-        teller = store.gewijzigdSindsOpslaan;
-        const document = store.document;
-        if (document === null) return;
-        const resultaat = await bewaar(kopie.id, versie, {
-          naam: `${store.naam} (kopie)`,
-          document: { ...document, id: kopieDocId },
-        });
-        versie = resultaat.versie;
-        // Kwam er tijdens het bewaar nog een wijziging bij, dan gaat die ook naar de kopie.
-      } while (store.gewijzigdSindsOpslaan !== teller);
-      bewaardeTeller = store.gewijzigdSindsOpslaan;
+      const kopie = zonderLokaal ? await dupliceer(id) : await dupliceer(id, planBestandIds(store.document!));
+      // Kwam er tijdens het dupliceren toch een wijziging bij, dan gaat die mee naar de kopie.
+      if (!zonderLokaal || onbewaard()) {
+        const nieuweIds = kopie.bestandIds ?? {};
+        // De kopie heeft een eigen document-id; die nemen we over, anders delen origineel en kopie er één.
+        const kopieDocId = (await haal(kopie.id)).document.id;
+        let versie = 1;
+        let teller: number;
+        do {
+          teller = store.gewijzigdSindsOpslaan;
+          const document = store.document;
+          if (document === null) return;
+          const resultaat = await bewaar(kopie.id, versie, {
+            naam: `${store.naam} (kopie)`,
+            document: { ...metNieuweBestandIds(document, nieuweIds), id: kopieDocId },
+          });
+          versie = resultaat.versie;
+          // Kwam er tijdens het bewaar nog een wijziging bij, dan gaat die ook naar de kopie.
+        } while (store.gewijzigdSindsOpslaan !== teller);
+        bewaardeTeller = store.gewijzigdSindsOpslaan;
+      }
       afgemeld.value = false;
       alleenLezen.value = false;
       await wisConceptVeilig(id);

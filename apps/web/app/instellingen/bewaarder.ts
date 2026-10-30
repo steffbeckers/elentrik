@@ -29,6 +29,8 @@ export type BewaarUitkomst<T> =
   | { status: "gedaan"; waarde: T }
   /** Niets verstuurd: er loopt al een actie, of het formulier is niet (meer) geladen. */
   | { status: "overgeslagen" }
+  /** Verstuurd, maar het formulier hoort intussen bij een ander bedrijf: het antwoord is niet voor dit formulier. */
+  | { status: "verlopen" }
   /** Het actieve bedrijf bleek een ander: de melding staat er en het formulier is herladen. */
   | { status: "andereOrganisatie" };
 
@@ -41,7 +43,9 @@ export function maakBedrijfBewaarder(toestand: BewaarderToestand, opties: Bewaar
     if (toestand[vlag] || organisatieId === null) return { status: "overgeslagen" };
     toestand[vlag] = true;
     try {
-      return { status: "gedaan", waarde: await actie(organisatieId) };
+      const waarde = await actie(organisatieId);
+      if (toestand.geladenVoor !== organisatieId) return { status: "verlopen" };
+      return { status: "gedaan", waarde };
     } catch (fout) {
       if (!isAndereOrganisatie(fout)) throw fout;
       // Meteen niet meer bewaarbaar, nog vóór de melding en het herladen.

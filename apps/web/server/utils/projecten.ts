@@ -26,6 +26,14 @@ export const BewaarProjectSchema = z.object({
   document: z.record(z.string(), z.unknown()),
 });
 
+/**
+ * De body van het dupliceren is optioneel: de planbestanden die de editor kent maar het opgeslagen
+ * document niet. Begrensd; wat geen bestand van het project is, negeert de repo.
+ */
+export const DupliceerSchema = z
+  .object({ bestandIds: z.array(z.string().max(100)).max(200).default([]) })
+  .default({ bestandIds: [] });
+
 /** Een id dat geen uuid is, kan nooit een bestaand project zijn: 404. */
 export function projectId(event: H3Event): string {
   const id = IdSchema.safeParse(getRouterParam(event, "id"));

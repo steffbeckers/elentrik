@@ -59,7 +59,7 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
     document: id === "kopie1" ? { ...startDocument(), id: KOPIE_DOC_ID } : startDocument(),
     versie: 7,
   }));
-  const dupliceer = vi.fn(async (_id: string) => ({ id: "kopie1" }));
+  const dupliceer = vi.fn<AutosaveOpties["dupliceer"]>(async (_id, _bestandIds) => ({ id: "kopie1" }));
   const naarProject = vi.fn(async (_id: string) => {});
   const autosave = useAutosave({
     store,
@@ -344,7 +344,7 @@ describe("useAutosave", () => {
     expect(autosave.status.value).toBe("conflict");
 
     await autosave.bewaarAlsKopie();
-    expect(dupliceer).toHaveBeenCalledWith("p1");
+    expect(dupliceer).toHaveBeenCalledWith("p1", []);
     // Met lokale wijzigingen gaat het om die van de gebruiker: de serverversie wordt niet geladen.
     expect(haal).not.toHaveBeenCalledWith("p1");
     // De kopie krijgt het document-id van de kopie, niet dat van het origineel.
@@ -357,23 +357,99 @@ describe("useAutosave", () => {
     expect(naarProject).toHaveBeenCalledWith("kopie1");
   });
 
-  test("bewaarAlsKopie na een exportconflict zonder lokale wijzigingen haalt eerst de actuele serverversie op en kopieert die", async () => {
+  test("bewaarAlsKopie na een exportconflict zonder lokale wijzigingen: alleen dupliceren, niets overschrijven, navigeren", async () => {
     const { store, bewaar, haal, dupliceer, naarProject, autosave } = opzet();
-    // De editor toont de oude versie (1); de server is intussen verder (7, met een andere naam).
-    const verouderd = store.document;
+    const voor = store.document;
     autosave.meldConflict(7);
 
     await autosave.bewaarAlsKopie();
-    expect(haal.mock.calls.map(([id]) => id)).toEqual(["p1", "kopie1"]);
-    expect(haal.mock.invocationCallOrder[0]).toBeLessThan(dupliceer.mock.invocationCallOrder[0] as number);
-    const serverversie = (await haal.mock.results[0]?.value) as Project;
-    expect(bewaar).toHaveBeenCalledTimes(1);
-    expect(bewaar).toHaveBeenLastCalledWith("kopie1", 1, {
-      naam: "Van de server (kopie)",
-      document: { ...serverversie.document, id: KOPIE_DOC_ID },
-    });
-    expect(store.document).not.toBe(verouderd);
+    // Het duplicaat op de server is al de actuele versie, met eigen planbestanden.
+    expect(dupliceer).toHaveBeenCalledTimes(1);
+    expect(dupliceer).toHaveBeenCalledWith("p1");
+    expect(haal).not.toHaveBeenCalled();
+    expect(bewaar).not.toHaveBeenCalled();
+    expect(store.document).toBe(voor);
+    expect(await conceptVan("p1")).toBeUndefined();
     expect(naarProject).toHaveBeenCalledWith("kopie1");
+  });
+
+  test("bewaarAlsKopie zonder lokale wijzigingen, maar met een wijziging tijdens het dupliceren: die gaat mee naar de kopie", async () => {
+    const { store, bewaar, dupliceer, naarProject, autosave } = opzet();
+    autosave.meldConflict(7);
+    dupliceer.mockImplementationOnce(async () => {
+      wijzig(store, "Net veranderd");
+      return { id: "kopie1" };
+    });
+
+    await autosave.bewaarAlsKopie();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(bewaar).toHaveBeenLastCalledWith("kopie1", 1, expect.objectContaining({ naam: "Net veranderd (kopie)" }));
+    expect(naarProject).toHaveBeenCalledWith("kopie1");
+  });
+
+  describe("planbestanden in de kopie", () => {
+    function metPlan(document: InstallatieDocument, origineel: string, raster: string): InstallatieDocument {
+      return {
+        ...document,
+        situatie: {
+          ...document.situatie,
+          paginas: [
+            {
+              id: "pg",
+              titel: "Gelijkvloers",
+              plaatsingen: [],
+              achtergrond: { origineelBestandId: origineel, rasterBestandId: raster, breedte_px: 1, hoogte_px: 1 },
+            },
+          ],
+        },
+      };
+    }
+    const plannen = (document: InstallatieDocument | null) =>
+      document?.situatie.paginas.map((p) => [p.achtergrond?.origineelBestandId, p.achtergrond?.rasterBestandId]);
+
+    async function opzetMetPlan() {
+      const o = opzet();
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
+      o.dupliceer.mockImplementation(async () => ({ id: "kopie1", bestandIds: { "oud-o": "nieuw-o", "oud-r": "nieuw-r" } }));
+      o.bewaar.mockRejectedValueOnce(new ConflictFout(5));
+      wijzig(o.store, "Lokaal");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(o.autosave.status.value).toBe("conflict");
+      return o;
+    }
+
+    test("de server krijgt de planbestanden van het lokale document en de kopie bewaart de nieuwe id's", async () => {
+      const { store, bewaar, dupliceer, autosave } = await opzetMetPlan();
+      await autosave.bewaarAlsKopie();
+      expect(dupliceer).toHaveBeenCalledWith("p1", ["oud-o", "oud-r"]);
+      const invoer = bewaar.mock.lastCall?.[2];
+      expect(bewaar.mock.lastCall?.[0]).toBe("kopie1");
+      expect(plannen(invoer?.document as InstallatieDocument)).toEqual([["nieuw-o", "nieuw-r"]]);
+      // Het document van de editor zelf blijft ongemoeid.
+      expect(plannen(store.document)).toEqual([["oud-o", "oud-r"]]);
+    });
+
+    test("ook bij een wijziging tijdens het kopiëren hebben alle bewaringen de nieuwe id's", async () => {
+      const { store, bewaar, autosave } = await opzetMetPlan();
+      bewaar.mockImplementation(async (id, versie) => {
+        if (id === "kopie1" && versie === 1) wijzig(store, "Nog nieuwer");
+        return { versie: versie + 1 };
+      });
+      await autosave.bewaarAlsKopie();
+      const kopieBewaringen = bewaar.mock.calls.filter(([id]) => id === "kopie1");
+      expect(kopieBewaringen).toHaveLength(2);
+      for (const [, , invoer] of kopieBewaringen) {
+        expect(plannen(invoer.document as InstallatieDocument)).toEqual([["nieuw-o", "nieuw-r"]]);
+      }
+    });
+
+    test("een id zonder toewijzing blijft staan", async () => {
+      const { bewaar, dupliceer, autosave } = await opzetMetPlan();
+      dupliceer.mockImplementation(async () => ({ id: "kopie1", bestandIds: { "oud-o": "nieuw-o" } }));
+      await autosave.bewaarAlsKopie();
+      expect(plannen(bewaar.mock.lastCall?.[2].document as InstallatieDocument)).toEqual([["nieuw-o", "oud-r"]]);
+    });
   });
 
   test("bewaarAlsKopie: een wijziging tijdens het kopiëren gaat ook naar de kopie en het concept wordt pas daarna gewist", async () => {

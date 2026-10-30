@@ -17,6 +17,9 @@ import type { Db } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { bestanden, projecten } from "../db/schema";
 
+/** Een id in een uuid-kolom: een ander id zou de query laten falen in plaats van niets te vinden. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type ProjectFoutCode = "NIET_GEVONDEN" | "CONFLICT" | "ONGELDIG";
 
 export class ProjectFout extends Error {
@@ -166,20 +169,29 @@ export async function bewaarProject(
  * Eerst de bestanden, dan het project en de rijen in een transactie; mislukt het, dan worden de
  * gekopieerde bestanden weer gewist. Een planbestand dat op schijf ontbreekt, wordt niet gekopieerd:
  * die verwijzing blijft zoals ze was (ze wees al naar niets).
+ *
+ * `extraBestandIds`: bestanden die de editor kent maar het opgeslagen document niet (een plan dat
+ * tijdens een conflict werd opgeladen). Ze worden alleen gekopieerd als ze bij het bronproject horen;
+ * een vreemd, onbekend of ongeldig id wordt stil genegeerd. Het resultaat geeft voor elk gekopieerd
+ * bestand het oude en het nieuwe id, zodat de editor zijn eigen document kan bijwerken.
  */
 export async function dupliceerProject(
   db: Db,
   opslag: BestandOpslag,
   organisatieId: string,
   id: string,
-): Promise<{ id: string }> {
+  extraBestandIds: string[] = [],
+): Promise<{ id: string; bestandIds: Record<string, string> }> {
   const bron = await haalProject(db, organisatieId, id);
   if (!bron) throw new ProjectFout("NIET_GEVONDEN");
 
   const kopieId = randomUUID();
   const paginas = bron.document.situatie.paginas;
   const bestandIds = [
-    ...new Set(paginas.flatMap((p) => (p.achtergrond ? [p.achtergrond.origineelBestandId, p.achtergrond.rasterBestandId] : []))),
+    ...new Set([
+      ...paginas.flatMap((p) => (p.achtergrond ? [p.achtergrond.origineelBestandId, p.achtergrond.rasterBestandId] : [])),
+      ...extraBestandIds.filter((bestandId) => UUID.test(bestandId)),
+    ]),
   ];
   // Alleen bestanden van het bronproject zelf (ook als het document een vreemd id bevat).
   const bronnen = bestandIds.length
@@ -253,7 +265,7 @@ export async function dupliceerProject(
     }
     throw fout;
   }
-  return { id: kopieId };
+  return { id: kopieId, bestandIds: Object.fromEntries(nieuweIds) };
 }
 
 export async function verwijderProject(db: Db, organisatieId: string, id: string): Promise<void> {

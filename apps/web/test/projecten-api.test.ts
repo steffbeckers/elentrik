@@ -70,6 +70,20 @@ describe("useProjectenApi", () => {
     ]);
   });
 
+  test("dupliceer met planbestanden stuurt hun id's als body mee; zonder bestanden geen body", async () => {
+    const oproepen: Parameters<ProjectenFetch>[] = [];
+    const api = maakProjectenApi(async (...argumenten) => {
+      oproepen.push(argumenten);
+      return { id: "kopie" };
+    });
+    await api.dupliceer("abc", ["b1", "b2"]);
+    await api.dupliceer("abc", []);
+    expect(oproepen).toEqual([
+      ["/api/projecten/abc/dupliceer", { method: "POST", body: { bestandIds: ["b1", "b2"] } }],
+      ["/api/projecten/abc/dupliceer", { method: "POST" }],
+    ]);
+  });
+
   test("dupliceer en verwijder gebruiken de juiste routes", async () => {
     const { api, oproepen } = maakApi({ id: "kopie" });
     expect(await api.dupliceer("abc")).toEqual({ id: "kopie" });
