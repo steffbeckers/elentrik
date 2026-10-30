@@ -746,9 +746,46 @@ describe("projecten per organisatie", () => {
     expect((await stuur({ methode: "GET", pad: `/api/projecten/${bron}` }, lidA.cookie)).status).toBe(404);
   });
 
+  test("een nieuw project uit een document: elke projectnaam kan (geen maximum), en hoogstens 200 verschillende planbestanden", async () => {
+    const pad = "/api/projecten/uit-document";
+    const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+    const metPlannen = (aantalPaginas: number) => ({
+      ...document,
+      situatie: {
+        ...document.situatie,
+        paginas: Array.from({ length: aantalPaginas }, (_, i) => ({
+          id: `p${i}`,
+          titel: `Pagina ${i}`,
+          plaatsingen: [],
+          achtergrond: {
+            origineelBestandId: crypto.randomUUID(),
+            rasterBestandId: crypto.randomUUID(),
+            breedte_px: 10,
+            hoogte_px: 10,
+          },
+        })),
+      },
+    });
+
+    // Een naam van meer dan 300 tekens (zoals een bestaand project kan hebben) is geen probleem.
+    const lang = await stuur({ methode: "POST", pad, json: { naam: "L".repeat(500), document } }, lidA.cookie);
+    expect(lang.status).toBe(201);
+    await lang.arrayBuffer();
+    // 100 pagina's met elk twee ids: precies 200 verschillende ids is toegelaten.
+    const grens = await stuur({ methode: "POST", pad, json: { naam: "Grens", document: metPlannen(100) } }, lidA.cookie);
+    expect(grens.status).toBe(201);
+    await grens.arrayBuffer();
+    // Eén pagina meer: 202 verschillende ids is 400 ONGELDIGE_INVOER, en er wordt niets aangemaakt.
+    const voor = (await db.select({ id: projecten.id }).from(projecten)).length;
+    const teVeel = await stuur({ methode: "POST", pad, json: { naam: "Te veel", document: metPlannen(101) } }, lidA.cookie);
+    expect(teVeel.status).toBe(400);
+    expect(((await teVeel.json()) as { data?: { code?: string } }).data?.code).toBe("ONGELDIGE_INVOER");
+    expect((await db.select({ id: projecten.id }).from(projecten)).length).toBe(voor);
+  });
+
   test("een nieuw project uit een document: een ongeldige body is 400, een ongeldig document 422", async () => {
     const pad = "/api/projecten/uit-document";
-    for (const json of [{}, { naam: "", document: {} }, { naam: "x".repeat(301), document: {} }, { naam: "X", document: "x" }]) {
+    for (const json of [{}, { naam: "", document: {} }, { naam: "   ", document: {} }, { naam: "X", document: "x" }]) {
       expect((await stuur({ methode: "POST", pad, json }, lidA.cookie)).status).toBe(400);
     }
     expect((await stuur({ methode: "POST", pad, json: { naam: "X", document: { onzin: true } } }, lidA.cookie)).status).toBe(422);

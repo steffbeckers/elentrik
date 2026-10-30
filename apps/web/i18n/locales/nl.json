@@ -92,6 +92,7 @@
     "verwijderd": {
       "melding": "Dit project werd verwijderd.",
       "uitleg": "Je wijzigingen staan nog lokaal. Bewaar ze als nieuw project, of ga terug naar de projecten.",
+      "uitlegNietLokaal": "Je wijzigingen konden ook niet lokaal bewaard worden en staan alleen nog in het geheugen. Bewaar ze nu als nieuw project en sluit dit venster niet.",
       "nieuwProject": "Bewaar als nieuw project",
       "terug": "Terug naar de projecten"
     },
