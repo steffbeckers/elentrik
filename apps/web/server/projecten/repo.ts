@@ -10,10 +10,12 @@ import {
   type Stroomtype,
   type Taal,
 } from "@elentrik/model";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 import type { Db } from "../db";
-import { projecten } from "../db/schema";
+import type { BestandOpslag } from "../bestanden/opslag";
+import { bestanden, projecten } from "../db/schema";
 
 export type ProjectFoutCode = "NIET_GEVONDEN" | "CONFLICT" | "ONGELDIG";
 
@@ -155,20 +157,103 @@ export async function bewaarProject(
   throw new ProjectFout("CONFLICT", { versie: huidig.versie });
 }
 
-/** Een kopie in dezelfde organisatie als het bronproject. */
-export async function dupliceerProject(db: Db, organisatieId: string, id: string): Promise<{ id: string }> {
+/**
+ * Een kopie in dezelfde organisatie als het bronproject. De planbestanden waarnaar de situatiepagina's
+ * van het bronproject verwijzen, worden mee gekopieerd (nieuw bestand, nieuwe rij met het kopieproject
+ * als eigenaar, nieuwe id's in het document van de kopie). Zo hangt de kopie niet af van bestanden
+ * van het bronproject, die met dat project definitief gewist worden (server/bestanden/opruimen.ts).
+ *
+ * Eerst de bestanden, dan het project en de rijen in een transactie; mislukt het, dan worden de
+ * gekopieerde bestanden weer gewist. Een planbestand dat op schijf ontbreekt, wordt niet gekopieerd:
+ * die verwijzing blijft zoals ze was (ze wees al naar niets).
+ */
+export async function dupliceerProject(
+  db: Db,
+  opslag: BestandOpslag,
+  organisatieId: string,
+  id: string,
+): Promise<{ id: string }> {
   const bron = await haalProject(db, organisatieId, id);
   if (!bron) throw new ProjectFout("NIET_GEVONDEN");
-  const [rij] = await db
-    .insert(projecten)
-    .values({
-      organisatieId,
-      naam: `${bron.naam} (kopie)`,
-      klantnaam: bron.klantnaam,
-      document: { ...bron.document, id: nieuwId() },
-    })
-    .returning({ id: projecten.id });
-  return rij!;
+
+  const kopieId = randomUUID();
+  const paginas = bron.document.situatie.paginas;
+  const bestandIds = [
+    ...new Set(paginas.flatMap((p) => (p.achtergrond ? [p.achtergrond.origineelBestandId, p.achtergrond.rasterBestandId] : []))),
+  ];
+  // Alleen bestanden van het bronproject zelf (ook als het document een vreemd id bevat).
+  const bronnen = bestandIds.length
+    ? await db
+        .select()
+        .from(bestanden)
+        .where(and(inArray(bestanden.id, bestandIds), eq(bestanden.projectId, bron.id)))
+    : [];
+
+  const nieuweIds = new Map<string, string>();
+  const nieuweRijen: (typeof bestanden.$inferInsert)[] = [];
+  const gekopieerd: string[] = [];
+  try {
+    for (const bronRij of bronnen) {
+      const stroom = await opslag.lees(bronRij.sleutel);
+      if (!stroom) continue;
+      const data = new Uint8Array(await new Response(stroom).arrayBuffer());
+      const bestandId = randomUUID();
+      const sleutel = `${kopieId}/${bestandId}`;
+      await opslag.schrijf(sleutel, data);
+      gekopieerd.push(sleutel);
+      nieuweIds.set(bronRij.id, bestandId);
+      nieuweRijen.push({
+        id: bestandId,
+        projectId: kopieId,
+        organisatieId: null,
+        soort: bronRij.soort,
+        mime: bronRij.mime,
+        grootte: bronRij.grootte,
+        sleutel,
+      });
+    }
+
+    const document = {
+      ...bron.document,
+      id: nieuwId(),
+      situatie: {
+        ...bron.document.situatie,
+        paginas: paginas.map((p) =>
+          p.achtergrond
+            ? {
+                ...p,
+                achtergrond: {
+                  ...p.achtergrond,
+                  origineelBestandId: nieuweIds.get(p.achtergrond.origineelBestandId) ?? p.achtergrond.origineelBestandId,
+                  rasterBestandId: nieuweIds.get(p.achtergrond.rasterBestandId) ?? p.achtergrond.rasterBestandId,
+                },
+              }
+            : p,
+        ),
+      },
+    };
+
+    await db.transaction(async (tx) => {
+      await tx.insert(projecten).values({
+        id: kopieId,
+        organisatieId,
+        naam: `${bron.naam} (kopie)`,
+        klantnaam: bron.klantnaam,
+        document,
+      });
+      if (nieuweRijen.length > 0) await tx.insert(bestanden).values(nieuweRijen);
+    });
+  } catch (fout) {
+    for (const sleutel of gekopieerd) {
+      try {
+        await opslag.verwijder(sleutel);
+      } catch {
+        // Een achtergebleven kopie zonder rij ruimt de opruimtaak op.
+      }
+    }
+    throw fout;
+  }
+  return { id: kopieId };
 }
 
 export async function verwijderProject(db: Db, organisatieId: string, id: string): Promise<void> {

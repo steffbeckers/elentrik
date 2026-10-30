@@ -11,7 +11,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 import { ruimOp } from "../server/bestanden/opruimen";
 import { maakLokaleOpslag, type BestandOpslag } from "../server/bestanden/opslag";
 import type { Db } from "../server/db";
-import { bedrijfsinstellingen, bestanden, exports, projecten, snapshots } from "../server/db/schema";
+import { bedrijfsinstellingen, bestanden, exports, organization, projecten, snapshots } from "../server/db/schema";
+import { dupliceerProject, haalProject, maakProject as maakRepoProject } from "../server/projecten/repo";
 import type { MetLock } from "../server/taken/lock";
 import { maakTestDb, maakTestOrganisatie } from "./db";
 
@@ -109,6 +110,14 @@ async function maakLosBestand(leeftijdDagen: number): Promise<string> {
   return sleutel;
 }
 
+/** Een levend project met een gebruikt planbestand: zorgt dat `bestanden` niet leeg is. */
+async function omstander(): Promise<{ id: string; sleutel: string }> {
+  const projectId = await maakProject({});
+  const bestand = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 100 });
+  await db.update(projecten).set({ document: document(bestand.id) }).where(eq(projecten.id, projectId));
+  return bestand;
+}
+
 async function maakExport(projectId: string, bestandId: string): Promise<void> {
   const [snapshot] = await db
     .insert(snapshots)
@@ -159,7 +168,7 @@ describe("de prullenbak", () => {
 
     const resultaat = await opruimen();
 
-    expect(resultaat).toEqual({ projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0 });
+    expect(resultaat).toEqual({ projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 0 });
     expect(await projectBestaat(projectId)).toBe(true);
     expect(await rijBestaat(plan.id)).toBe(true);
     expect(await opslag.bestaat(plan.sleutel)).toBe(true);
@@ -255,9 +264,9 @@ describe("planbestanden", () => {
     expect(await rijBestaat(plan.id)).toBe(true);
   });
 
-  test("een planbestand waarnaar niets verwijst en dat ouder is dan 7 dagen, wordt gewist", async () => {
+  test("een planbestand waarnaar niets verwijst en dat ouder is dan 30 dagen, wordt gewist", async () => {
     const projectId = await maakProject({});
-    const wees = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 8 });
+    const wees = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 31 });
 
     const resultaat = await opruimen();
 
@@ -266,15 +275,18 @@ describe("planbestanden", () => {
     expect(await opslag.bestaat(wees.sleutel)).toBe(false);
   });
 
-  test("een planbestand waarnaar niets verwijst maar dat jonger is dan 7 dagen, blijft staan", async () => {
+  test("een planbestand waarnaar niets verwijst maar dat jonger is dan 30 dagen, blijft staan (een lokaal concept kan er nog naar verwijzen)", async () => {
     const projectId = await maakProject({});
-    const jong = await maakBestand({ projectId, soort: "plan-origineel", leeftijdDagen: 6 });
+    const jong = await maakBestand({ projectId, soort: "plan-origineel", leeftijdDagen: 29 });
+    const week = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 8 });
 
     const resultaat = await opruimen();
 
     expect(resultaat.planbestanden).toBe(0);
-    expect(await rijBestaat(jong.id)).toBe(true);
-    expect(await opslag.bestaat(jong.sleutel)).toBe(true);
+    for (const bestand of [jong, week]) {
+      expect(await rijBestaat(bestand.id)).toBe(true);
+      expect(await opslag.bestaat(bestand.sleutel)).toBe(true);
+    }
   });
 
   test("het bestand blijft ook staan als alleen een ander project ernaar verwijst", async () => {
@@ -317,6 +329,19 @@ describe("logos", () => {
     expect(await opslag.bestaat(oud.sleutel)).toBe(false);
   });
 
+  test("een logo waarnaar organization.logo verwijst, blijft staan", async () => {
+    const logo = await maakBestand({ projectId: null, soort: "logo", leeftijdDagen: 100 });
+    await db.update(organization).set({ logo: `/api/bestanden/${logo.id}` }).where(eq(organization.id, org));
+    try {
+      const resultaat = await opruimen();
+      expect(resultaat.logos).toBe(0);
+      expect(await rijBestaat(logo.id)).toBe(true);
+      expect(await opslag.bestaat(logo.sleutel)).toBe(true);
+    } finally {
+      await db.update(organization).set({ logo: null }).where(eq(organization.id, org));
+    }
+  });
+
   test("een oud logo jonger dan 7 dagen blijft staan", async () => {
     const huidig = await maakBestand({ projectId: null, soort: "logo", leeftijdDagen: 100 });
     const vers = await maakBestand({ projectId: null, soort: "logo", leeftijdDagen: 6 });
@@ -334,6 +359,7 @@ describe("logos", () => {
 
 describe("bestanden op schijf zonder rij", () => {
   test("ouder dan 7 dagen wordt het gewist, jonger blijft het staan", async () => {
+    await omstander();
     const oud = await maakLosBestand(8);
     const jong = await maakLosBestand(6);
 
@@ -342,6 +368,52 @@ describe("bestanden op schijf zonder rij", () => {
     expect(resultaat.losseBestanden).toBe(1);
     expect(await opslag.bestaat(oud)).toBe(false);
     expect(await opslag.bestaat(jong)).toBe(true);
+  });
+
+  test("met een lege bestanden-tabel naast oude bestanden wordt er niets gewist en komt er een waarschuwing met aantallen", async () => {
+    const oud = [await maakLosBestand(40), await maakLosBestand(50)];
+    const waarschuwingen: unknown[][] = [];
+    vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => void waarschuwingen.push(args));
+
+    const resultaat = await opruimen();
+
+    expect(resultaat.losseBestanden).toBe(0);
+    for (const sleutel of oud) expect(await opslag.bestaat(sleutel)).toBe(true);
+    expect(waarschuwingen).toHaveLength(1);
+    const log = JSON.stringify(waarschuwingen);
+    for (const sleutel of oud) expect(log).not.toContain(sleutel);
+    expect(log).toContain('"zonderRij":2');
+  });
+
+  test("een run die meer dan de helft van de oude bestanden (en meer dan 10) zou wissen, wist niets", async () => {
+    const bekend = [await omstander(), await omstander()];
+    const wezen: string[] = [];
+    for (let i = 0; i < 11; i++) wezen.push(await maakLosBestand(10 + i));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const resultaat = await opruimen();
+
+    expect(resultaat.losseBestanden).toBe(0);
+    for (const sleutel of wezen) expect(await opslag.bestaat(sleutel)).toBe(true);
+    for (const b of bekend) expect(await opslag.bestaat(b.sleutel)).toBe(true);
+  });
+
+  test("11 losse bestanden naast 12 bestanden met een rij: wel gewist (niet meer dan de helft)", async () => {
+    for (let i = 0; i < 12; i++) await omstander();
+    const wezen: string[] = [];
+    for (let i = 0; i < 11; i++) wezen.push(await maakLosBestand(10 + i));
+
+    const resultaat = await opruimen();
+
+    expect(resultaat.losseBestanden).toBe(11);
+    for (const sleutel of wezen) expect(await opslag.bestaat(sleutel)).toBe(false);
+  });
+
+  test("10 losse bestanden naast 1 bestand met een rij: wel gewist (niet meer dan 10)", async () => {
+    await omstander();
+    for (let i = 0; i < 10; i++) await maakLosBestand(10 + i);
+
+    expect((await opruimen()).losseBestanden).toBe(10);
   });
 
   test("een bestand met een rij wordt nooit als los bestand gewist", async () => {
@@ -366,7 +438,7 @@ describe("lock", () => {
 
     const resultaat = await opruimen({ metLock: bezetLock });
 
-    expect(resultaat).toEqual({ projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0 });
+    expect(resultaat).toEqual({ projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 0 });
     expect(await projectBestaat(weg)).toBe(true);
     expect(await opslag.bestaat(wees.sleutel)).toBe(true);
     expect(await rijBestaat(orphan.id)).toBe(true);
@@ -389,8 +461,9 @@ describe("volgorde: eerst de rij, dan het bestand", () => {
   }
 
   test("faalt het wissen op schijf, dan is de rij al weg en wist de volgende run het bestand", async () => {
+    await omstander();
     const projectId = await maakProject({});
-    const wees = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 20 });
+    const wees = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 40 });
     const stuk = kapotteVerwijdering();
     vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -408,6 +481,7 @@ describe("volgorde: eerst de rij, dan het bestand", () => {
   });
 
   test("faalt het wissen op schijf bij een project uit de prullenbak, dan is het project al weg en wist de volgende run het bestand", async () => {
+    await omstander();
     const projectId = await maakProject({ verwijderdDagen: 31 });
     const plan = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 40 });
     const stuk = kapotteVerwijdering();
@@ -434,6 +508,7 @@ describe("het log", () => {
     const actief = await maakProject({ naam: "Woning Privenaam" });
     const b = await maakBestand({ projectId: actief, soort: "plan-origineel", leeftijdDagen: 40 });
     const los = await maakLosBestand(40);
+    await omstander();
     const kapot: BestandOpslag = {
       ...opslag,
       async verwijder(sleutel) {
@@ -450,5 +525,85 @@ describe("het log", () => {
     }
     // Er staat wel een samenvatting met aantallen in.
     expect(log).toContain('"projecten":1');
+  });
+});
+
+describe("een project in de prullenbak waarvan een ander project bestanden gebruikt", () => {
+  test("een kopie van vroeger (verwijst naar het plan van het bron): bron blijft staan en telt als geblokkeerd", async () => {
+    const bron = await maakProject({ verwijderdDagen: 31 });
+    const plan = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
+    await maakProject({ document: document(plan.id), naam: "Kopie" });
+
+    const resultaat = await opruimen();
+
+    expect(resultaat).toEqual({ projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 1 });
+    expect(await projectBestaat(bron)).toBe(true);
+    expect(await rijBestaat(plan.id)).toBe(true);
+    expect(await opslag.bestaat(plan.sleutel)).toBe(true);
+  });
+
+  test("een snapshot van een ander project dat ernaar verwijst, blokkeert ook", async () => {
+    const bron = await maakProject({ verwijderdDagen: 31 });
+    const plan = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
+    const ander = await maakProject({});
+    await db.insert(snapshots).values({ projectId: ander, versie: 1, document: document(plan.id), reden: "export" });
+
+    expect((await opruimen()).geblokkeerd).toBe(1);
+    expect(await projectBestaat(bron)).toBe(true);
+    expect(await rijBestaat(plan.id)).toBe(true);
+  });
+
+  test("een eigen verwijzing (eigen document of snapshot) blokkeert niet", async () => {
+    const bron = await maakProject({ verwijderdDagen: 31 });
+    const plan = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
+    await db.update(projecten).set({ document: document(plan.id) }).where(eq(projecten.id, bron));
+    await db.insert(snapshots).values({ projectId: bron, versie: 1, document: document(plan.id), reden: "export" });
+
+    const resultaat = await opruimen();
+
+    expect(resultaat.projecten).toBe(1);
+    expect(resultaat.geblokkeerd).toBe(0);
+    expect(await projectBestaat(bron)).toBe(false);
+  });
+
+  test("een gedupliceerd project heeft eigen bestanden: het bron wissen laat de kopie intact", async () => {
+    // Een echt, geldig document via de repo; dupliceerProject parst het document van het bron.
+    const { id: bron } = await maakRepoProject(db, org, { naam: "Bron", klantnaam: "K", stroomtype: "3N400V" });
+    const origineel = await maakBestand({ projectId: bron, soort: "plan-origineel", leeftijdDagen: 60 });
+    const raster = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
+    const basis = (await haalProject(db, org, bron))!.document;
+    await db
+      .update(projecten)
+      .set({
+        document: {
+          ...basis,
+          situatie: {
+            ...basis.situatie,
+            paginas: [
+              {
+                id: "p",
+                titel: "t",
+                plaatsingen: [],
+                achtergrond: { origineelBestandId: origineel.id, rasterBestandId: raster.id, breedte_px: 1, hoogte_px: 1 },
+              },
+            ],
+          },
+        },
+      })
+      .where(eq(projecten.id, bron));
+
+    const { id: kopie } = await dupliceerProject(db, opslag, org, bron);
+    await db.update(projecten).set({ verwijderd: geleden(31) }).where(eq(projecten.id, bron));
+
+    const resultaat = await opruimen();
+
+    expect(resultaat.projecten).toBe(1);
+    expect(resultaat.geblokkeerd).toBe(0);
+    expect(await projectBestaat(bron)).toBe(false);
+    expect(await opslag.bestaat(origineel.sleutel)).toBe(false);
+    expect(await projectBestaat(kopie)).toBe(true);
+    const eigen = await db.select().from(bestanden).where(eq(bestanden.projectId, kopie));
+    expect(eigen).toHaveLength(2);
+    for (const rij of eigen) expect(await opslag.bestaat(rij.sleutel)).toBe(true);
   });
 });
