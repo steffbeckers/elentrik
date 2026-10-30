@@ -12,7 +12,14 @@ import { member } from "../db/schema";
 /** De foutcode wanneer een actie de organisatie zonder eigenaar zou laten. */
 export const LAATSTE_EIGENAAR = "LAATSTE_EIGENAAR";
 
+/** De boodschap van de `APIError` in server/auth (mag accenten bevatten). */
 export const LAATSTE_EIGENAAR_BOODSCHAP = "Er moet minstens één eigenaar blijven.";
+
+/**
+ * Dezelfde boodschap als `statusMessage` van een h3-fout (`maakFout`): puur ASCII, want h3 haalt
+ * tekens buiten ASCII uit een statusMessage.
+ */
+export const LAATSTE_EIGENAAR_FOUTTEKST = "Er moet minstens een eigenaar blijven.";
 
 /** Een organisatienaam: 1 tot 80 tekens na trimmen. */
 export const MAX_NAAMLENGTE = 80;

@@ -320,6 +320,43 @@ describe("foutcodes in de server (statisch)", () => {
     }
   });
 
+  test("elke tekst die naar maakFout gaat is printbare ASCII (h3 haalt andere tekens uit een statusMessage)", () => {
+    const tekstConstanten = new Map<string, string>();
+    for (const bestand of [...tsBestanden(SERVER), ...tsBestanden(SHARED)]) {
+      const bron = zonderCommentaar(readFileSync(bestand, "utf8"));
+      for (const m of bron.matchAll(/\bconst\s+(\w+)\s*=\s*"([^"\n]*)"/g)) tekstConstanten.set(m[1]!, m[2]!);
+    }
+    const ascii = (tekst: string) => /^[\x20-\x7e]*$/.test(tekst);
+    let aanroepen = 0;
+    const fouten: string[] = [];
+    for (const pad of tsBestanden(SERVER)) {
+      const naam = pad.slice(SERVER.length + 1).replaceAll("\\", "/");
+      const bron = zonderCommentaar(readFileSync(pad, "utf8"));
+      for (const m of bron.matchAll(/(?<![\w.])maakFout\(/g)) {
+        if (/function\s+$/.test(bron.slice(Math.max(0, m.index! - 10), m.index!))) continue;
+        const { argumenten } = lees(bron, m.index! + m[0].length - 1);
+        aanroepen++;
+        const tekst = argumenten[1] ?? "";
+        const letterlijk = tekst.match(/^["'`]([^"'`]*)["'`]$/)?.[1];
+        if (letterlijk !== undefined) {
+          if (!ascii(letterlijk)) fouten.push(`${naam}: ${letterlijk}`);
+        } else if (tekst === "bekend[1]") {
+          // De tuples van AUTH_CODES: hun boodschappen staan in het blok zelf.
+          const start = bron.indexOf("const AUTH_CODES");
+          const blok = bron.slice(start, bron.indexOf("\n};", start));
+          for (const l of blok.matchAll(/"([^"\n]*)"/g)) if (!ascii(l[1]!)) fouten.push(`${naam}: ${l[1]}`);
+        } else if (tekst !== "statusMessage") {
+          // (statusMessage: de definitie van maakFout zelf, in server/fouten.ts.)
+          const waarde = tekstConstanten.get(tekst);
+          if (waarde === undefined) fouten.push(`${naam}: niet te lezen: ${tekst}`);
+          else if (!ascii(waarde)) fouten.push(`${naam}: ${tekst} = ${waarde}`);
+        }
+      }
+    }
+    expect(aanroepen).toBeGreaterThanOrEqual(15);
+    expect(fouten).toEqual([]);
+  });
+
   test("geen lokale fout()-hulp meer: alle servercode gebruikt maakFout uit server/fouten.ts", () => {
     const lokaal = tsBestanden(SERVER)
       .filter((pad) => !pad.endsWith("fouten.ts"))

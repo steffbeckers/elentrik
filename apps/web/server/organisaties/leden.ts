@@ -38,7 +38,7 @@ import {
   haaltLaatsteEigenaarWeg,
   isEigenaarRol,
   LAATSTE_EIGENAAR,
-  LAATSTE_EIGENAAR_BOODSCHAP,
+  LAATSTE_EIGENAAR_FOUTTEKST,
   MAX_NAAMLENGTE,
 } from "./regels";
 import { uitnodigingVanToken, wisUitnodigingstokens } from "./uitnodigingstoken";
@@ -51,7 +51,7 @@ import { uitnodigingVanToken, wisUitnodigingstokens } from "./uitnodigingstoken"
 
 const nietGevonden = () => nietGevondenFout();
 const nietMeerGeldig = () => maakFout(410, "Deze uitnodiging is niet meer geldig", "UITNODIGING_VERVALLEN");
-const laatsteEigenaar = () => maakFout(409, LAATSTE_EIGENAAR_BOODSCHAP, LAATSTE_EIGENAAR);
+const laatsteEigenaar = () => maakFout(409, LAATSTE_EIGENAAR_FOUTTEKST, LAATSTE_EIGENAAR);
 
 /** Een aanroep van `auth.api.*` met `returnHeaders`: nieuwe cookies gaan mee in het antwoord. */
 async function viaAuth<T>(event: H3Event, aanroep: () => Promise<{ headers: Headers; response: T }>): Promise<T> {
