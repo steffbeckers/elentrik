@@ -160,21 +160,6 @@ export async function bewaarProject(
   throw new ProjectFout("CONFLICT", { versie: huidig.versie });
 }
 
-/**
- * Een kopie in dezelfde organisatie als het bronproject. De planbestanden waarnaar de situatiepagina's
- * van het bronproject verwijzen, worden mee gekopieerd (nieuw bestand, nieuwe rij met het kopieproject
- * als eigenaar, nieuwe id's in het document van de kopie). Zo hangt de kopie niet af van bestanden
- * van het bronproject, die met dat project definitief gewist worden (server/bestanden/opruimen.ts).
- *
- * Eerst de bestanden, dan het project en de rijen in een transactie; mislukt het, dan worden de
- * gekopieerde bestanden weer gewist. Een planbestand dat op schijf ontbreekt, wordt niet gekopieerd:
- * die verwijzing blijft zoals ze was (ze wees al naar niets).
- *
- * `extraBestandIds`: bestanden die de editor kent maar het opgeslagen document niet (een plan dat
- * tijdens een conflict werd opgeladen). Ze worden alleen gekopieerd als ze bij het bronproject horen;
- * een vreemd, onbekend of ongeldig id wordt stil genegeerd. Het resultaat geeft voor elk gekopieerd
- * bestand het oude en het nieuwe id, zodat de editor zijn eigen document kan bijwerken.
- */
 type BestandRij = typeof bestanden.$inferSelect;
 
 /** De planbestanden (origineel en raster) waarnaar de situatiepagina's van een document verwijzen. */
@@ -182,6 +167,27 @@ function planBestandIdsVan(document: InstallatieDocument): string[] {
   return document.situatie.paginas.flatMap((p) =>
     p.achtergrond ? [p.achtergrond.origineelBestandId, p.achtergrond.rasterBestandId] : [],
   );
+}
+
+/**
+ * De planbestanden (origineel of raster) met deze id's die bij een project van `organisatieId` horen,
+ * levend of verwijderd (zolang het project niet definitief gewist is). Bestanden van een andere
+ * organisatie, onbekende id's en bestanden die geen plan zijn, ontbreken in het resultaat. Zo kopieert
+ * ook een kopie van vóór deze fix (die nog naar de planbestanden van haar bron verwijst) die mee.
+ */
+async function planBestandenVanOrganisatie(db: Db, organisatieId: string, ids: string[]): Promise<BestandRij[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select(getTableColumns(bestanden))
+    .from(bestanden)
+    .innerJoin(projecten, eq(projecten.id, bestanden.projectId))
+    .where(
+      and(
+        inArray(bestanden.id, ids),
+        inArray(bestanden.soort, ["plan-origineel", "plan-raster"]),
+        eq(projecten.organisatieId, organisatieId),
+      ),
+    );
 }
 
 /** Het document met nieuwe planbestand-id's (oud -> nieuw); een id zonder toewijzing blijft staan. */
@@ -274,10 +280,14 @@ async function kopieerPlanbestanden(
  * gekopieerde bestanden weer gewist. Een planbestand dat op schijf ontbreekt, wordt niet gekopieerd:
  * die verwijzing blijft zoals ze was (ze wees al naar niets).
  *
+ * Gekopieerd wordt elk planbestand van een project van dezelfde organisatie (zoals bij
+ * `maakProjectUitDocument`), niet alleen van het bronproject: een kopie van vóór deze aanpak, die nog
+ * naar de bestanden van haar eigen bron verwijst, krijgt zo alsnog eigen bestanden.
+ *
  * `extraBestandIds`: bestanden die de editor kent maar het opgeslagen document niet (een plan dat
- * tijdens een conflict werd opgeladen). Ze worden alleen gekopieerd als ze bij het bronproject horen;
- * een vreemd, onbekend of ongeldig id wordt stil genegeerd. Het resultaat geeft voor elk gekopieerd
- * bestand het oude en het nieuwe id, zodat de editor zijn eigen document kan bijwerken.
+ * tijdens een conflict werd opgeladen). Ze volgen dezelfde regel; een bestand van een andere
+ * organisatie, een onbekend of ongeldig id wordt stil genegeerd. Het resultaat geeft voor elk
+ * gekopieerd bestand het oude en het nieuwe id, zodat de editor zijn eigen document kan bijwerken.
  */
 export async function dupliceerProject(
   db: Db,
@@ -293,13 +303,9 @@ export async function dupliceerProject(
   const bestandIds = [
     ...new Set([...planBestandIdsVan(bron.document), ...extraBestandIds.filter((bestandId) => UUID.test(bestandId))]),
   ];
-  // Alleen bestanden van het bronproject zelf (ook als het document een vreemd id bevat).
-  const bronnen = bestandIds.length
-    ? await db
-        .select()
-        .from(bestanden)
-        .where(and(inArray(bestanden.id, bestandIds), eq(bestanden.projectId, bron.id)))
-    : [];
+  // Elk planbestand van de organisatie, niet alleen die van het bronproject: een kopie van vóór deze fix
+  // verwijst nog naar de bestanden van haar eigen bron en krijgt zo alsnog eigen bestanden.
+  const bronnen = await planBestandenVanOrganisatie(db, organisatieId, bestandIds);
 
   const kopieen = await kopieerPlanbestanden(opslag, bronnen, kopieId);
   try {
@@ -346,22 +352,7 @@ export async function maakProjectUitDocument(
   const documentId = nieuwId();
 
   const bestandIds = [...new Set(planBestandIdsVan(bronDocument).filter((bestandId) => UUID.test(bestandId)))];
-  // Alleen plannen van projecten van deze organisatie, levend of verwijderd.
-  const bronnen = bestandIds.length
-    ? (
-        await db
-          .select(getTableColumns(bestanden))
-          .from(bestanden)
-          .innerJoin(projecten, eq(projecten.id, bestanden.projectId))
-          .where(
-            and(
-              inArray(bestanden.id, bestandIds),
-              inArray(bestanden.soort, ["plan-origineel", "plan-raster"]),
-              eq(projecten.organisatieId, organisatieId),
-            ),
-          )
-      )
-    : [];
+  const bronnen = await planBestandenVanOrganisatie(db, organisatieId, bestandIds);
 
   const kopieen = await kopieerPlanbestanden(opslag, bronnen, kopieId);
   try {

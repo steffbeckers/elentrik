@@ -4,7 +4,8 @@
 //    exports, zijn bestandsrijen en zijn bestanden.
 //    Is een bestand van zo'n project nog in gebruik door een ander project (een kopie van vroeger,
 //    van voor `dupliceerProject` de bestanden meekopieerde), een snapshot of een export van een
-//    ander project, dan blijft het project staan en telt het als `geblokkeerd`.
+//    ander project, dan blijft het project staan en telt het als `geblokkeerd`. Een bestand dat niet
+//    meer op schijf staat, blokkeert niet: zijn verwijzing wijst al naar niets.
 // 2. Een planbestand (origineel of raster) waarnaar niets meer verwijst, gaat na 30 dagen weg. Dat
 //    is bewust ruim: een plan dat in een lokaal concept (browser) staat dat nog niet op de server
 //    bewaard is, mag een maand wachten, gelijk aan de bewaartijd van de prullenbak.
@@ -174,9 +175,22 @@ async function ruimPrullenbakOp(
   let geblokkeerd = 0;
   for (const { id } of teWissen) {
     // Een bestand van dit project dat een ander project, een snapshot of een export van een ander
-    // project nog gebruikt (een kopie van vroeger): dan blijft alles staan.
-    const eigen = await db.select({ id: bestanden.id }).from(bestanden).where(eq(bestanden.projectId, id));
-    if (eigen.some((b) => [...(verwijzers.get(b.id.toLowerCase()) ?? [])].some((door) => door !== id))) {
+    // project nog gebruikt (een kopie van vroeger): dan blijft alles staan. Behalve als het bestand
+    // niet meer op schijf staat: dan wijst die verwijzing al naar niets en blokkeert ze niet eeuwig.
+    const eigen = await db
+      .select({ id: bestanden.id, sleutel: bestanden.sleutel })
+      .from(bestanden)
+      .where(eq(bestanden.projectId, id));
+    let blokkeert = false;
+    for (const b of eigen) {
+      if (![...(verwijzers.get(b.id.toLowerCase()) ?? [])].some((door) => door !== id)) continue;
+      // Kunnen we het niet nagaan, dan blijft het staan.
+      if (await opslag.bestaat(b.sleutel).catch(() => true)) {
+        blokkeert = true;
+        break;
+      }
+    }
+    if (blokkeert) {
       geblokkeerd++;
       continue;
     }

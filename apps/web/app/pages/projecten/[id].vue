@@ -23,6 +23,7 @@ import { useNodeTekst } from "~/composables/useNodeTekst";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import {
   opnieuwProberen as probeerOpnieuw,
+  slaVertrekvraagOver,
   toonAfgemeld,
   vertrekBevestiging,
   type SessieControle,
@@ -190,6 +191,11 @@ async function laadConcept(): Promise<void> {
   if (await autosave.wachtOpConcept()) await wisAangebodenConcept(aangeboden).catch(() => {});
 }
 
+/** Alleen-lezen: het concept blijft in het archief staan voor later; de dialoog gaat weg zonder iets te wissen. */
+function laterConcept(): void {
+  concept.value = null;
+}
+
 async function verwerpConcept(): Promise<void> {
   const aangeboden = concept.value;
   concept.value = null;
@@ -224,10 +230,12 @@ const nieuwProjectBezig = ref(false);
 /**
  * "Terug naar de projecten" in de melding is een uitdrukkelijke keuze om het werk los te laten: alleen
  * die knop slaat de vertrekvraag over. Het tabblad sluiten, de pijl in de balk, van bedrijf wisselen en
- * uitloggen vragen nog wel, want het concept van een verwijderd project is nooit meer te openen.
+ * uitloggen vragen nog wel, want het concept van een verwijderd project is nooit meer te openen. Ook
+ * bij `onbewaard` (het werk staat alleen in het geheugen) en bij een klik die elders opent (ctrl, cmd,
+ * shift, middelste knop) blijft de vraag (zie `slaVertrekvraagOver`).
  */
-function terugNaarProjecten(): void {
-  vertrekBevestigd = true;
+function terugNaarProjecten(klik: MouseEvent): void {
+  if (slaVertrekvraagOver(autosave.status.value, klik)) vertrekBevestigd = true;
 }
 
 /** Bij een mislukte conceptschrijfactie (status onbewaard) staat het werk alleen nog in het geheugen. */
@@ -600,6 +608,7 @@ onBeforeUnmount(() => {
       v-model:open="conceptOpen"
       :tijd="concept.concept.tijd"
       @laden="laadConcept"
+      @later="laterConcept"
       @verwerpen="verwerpConcept"
     />
     <ExportDialoog

@@ -4,7 +4,13 @@ import { clear } from "idb-keyval";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { nextTick } from "vue";
-import { opnieuwProberen, toonAfgemeld, vertrekBevestiging, type SessieControle } from "../app/editor/aanmelding";
+import {
+  opnieuwProberen,
+  slaVertrekvraagOver,
+  toonAfgemeld,
+  vertrekBevestiging,
+  type SessieControle,
+} from "../app/editor/aanmelding";
 import { useAutosave, type AutosaveOpties } from "../app/composables/useAutosave";
 import type { Project } from "../app/composables/useProjectenApi";
 import { useEditorStore } from "../app/stores/editor";
@@ -111,6 +117,29 @@ describe("vertrekBevestiging", () => {
 
   test.each(["bezig", "lokaal", "conflict", "fout", "alleen-lezen"] as const)("%s: de gewone vraag", (status) => {
     expect(vertrekBevestiging(status)).toBe("editor.vertrek.bevestiging");
+  });
+});
+
+describe("slaVertrekvraagOver ('Terug naar de projecten' bij een verwijderd project)", () => {
+  const gewoneKlik = { button: 0, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false };
+
+  test("een gewone linkerklik bij status verwijderd: de vraag wordt overgeslagen", () => {
+    expect(slaVertrekvraagOver("verwijderd", gewoneKlik)).toBe(true);
+  });
+
+  test("onbewaard: het werk staat alleen in het geheugen, dus toch vragen", () => {
+    expect(slaVertrekvraagOver("onbewaard", gewoneKlik)).toBe(false);
+  });
+
+  test.each([
+    ["ctrl", { ctrlKey: true }],
+    ["cmd", { metaKey: true }],
+    ["shift", { shiftKey: true }],
+    ["alt", { altKey: true }],
+    ["middelste muisknop", { button: 1 }],
+    ["rechter muisknop", { button: 2 }],
+  ])("%s: opent elders of wisselt niet van pagina, dus de vraag blijft", (_naam, wijziging) => {
+    expect(slaVertrekvraagOver("verwijderd", { ...gewoneKlik, ...wijziging })).toBe(false);
   });
 });
 

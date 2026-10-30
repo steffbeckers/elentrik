@@ -68,6 +68,21 @@ describe("lokale opslag: oplijsten en verwijderen", () => {
     expect(lijst.find((b) => b.sleutel === "project-a/bestand-1")!.gewijzigd).toEqual(oud);
   });
 
+  test("lijst slaat NAS-metadata over: namen met @ of . aan het begin, bestanden en mappen", async () => {
+    const opslag = maakLokaleOpslag(map);
+    await opslag.schrijf("project-a/bestand-1", new Uint8Array([1]));
+    await writeFile(join(map, ".DS_Store"), "x");
+    await writeFile(join(map, "project-a", ".verborgen"), "x");
+    await mkdir(join(map, "@eaDir", "project-a"), { recursive: true });
+    await writeFile(join(map, "@eaDir", "project-a", "bestand-1@SynoEAStream"), "x");
+    await mkdir(join(map, "project-a", "@eaDir"));
+    await writeFile(join(map, "project-a", "@eaDir", "miniatuur"), "x");
+    await mkdir(join(map, ".AppleDouble"));
+    await writeFile(join(map, ".AppleDouble", "x"), "x");
+
+    expect((await opslag.lijst()).map((b) => b.sleutel)).toEqual(["project-a/bestand-1"]);
+  });
+
   test("lijst op een ontbrekende of lege map geeft een lege lijst, mappen zijn geen bestanden", async () => {
     expect(await maakLokaleOpslag(join(map, "bestaat-niet")).lijst()).toEqual([]);
     await mkdir(join(map, "lege-submap"));

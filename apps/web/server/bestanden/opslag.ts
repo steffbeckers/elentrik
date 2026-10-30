@@ -10,13 +10,19 @@ export interface BestandOpslag {
   schrijf(sleutel: string, data: Uint8Array): Promise<void>;
   lees(sleutel: string): Promise<ReadableStream<Uint8Array> | null>;
   bestaat(sleutel: string): Promise<boolean>;
-  /** Alle bestanden in de opslag met hun laatste wijzigingstijd; sleutels met `/`, ongeacht het platform. */
+  /**
+   * Alle bestanden in de opslag met hun laatste wijzigingstijd; sleutels met `/`, ongeacht het platform.
+   * Bestanden en mappen waarvan de naam met `@` of `.` begint (NAS-metadata zoals `@eaDir`), tellen niet mee.
+   */
   lijst(): Promise<{ sleutel: string; gewijzigd: Date }[]>;
   /** Wist een bestand. Een bestand dat al weg is, is geen fout. */
   verwijder(sleutel: string): Promise<void>;
 }
 
 const STANDAARD_MAP = ".data/bestanden";
+
+/** Namen die met `@` of `.` beginnen zijn metadata van de NAS of het besturingssysteem, nooit onze sleutels. */
+const METADATA = /^[@.]/;
 
 export function maakLokaleOpslag(map: string): BestandOpslag {
   const wortel = resolve(map);
@@ -62,6 +68,9 @@ export function maakLokaleOpslag(map: string): BestandOpslag {
           throw fout;
         }
         for (const item of items) {
+          // NAS-metadata (Synology `@eaDir`, `@tmp`, macOS `.DS_Store`, `.AppleDouble`): geen bestand van ons.
+          // Zo ziet de opruimtaak het niet als "bestand zonder rij" en wist ze het niet.
+          if (METADATA.test(item.name)) continue;
           const volledig = join(map, item.name);
           if (item.isDirectory()) {
             await loop(volledig, `${voorvoegsel}${item.name}/`);

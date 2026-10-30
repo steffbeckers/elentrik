@@ -100,7 +100,7 @@
       "bewaardLokaal": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
       "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire.",
       "dialoogTitel": "Lecture seule",
-      "dialoogBeschrijving": "Votre entreprise n'a pas d'abonnement actif. Les modifications de cette fenêtre ne peuvent plus être enregistrées."
+      "dialoogBeschrijving": "Votre entreprise n'a pas d'abonnement actif. Les modifications de cette boîte de dialogue ne peuvent plus être enregistrées."
     },
     "onderdelenPaneel": {
       "titel": "Éléments",
@@ -182,6 +182,7 @@
       "titel": "Brouillon local trouvé",
       "beschrijving": "Cet appareil contient un brouillon de ce projet avec des modifications qui ne sont pas encore sur le serveur ({tijd}).",
       "laden": "Charger le brouillon",
+      "later": "Plus tard",
       "verwerpen": "Ignorer"
     },
     "verlaten": {
