@@ -22,29 +22,9 @@ const KEER = "×";
 const AANTAL_GROOTTE_MM = 2;
 /** Afstand tussen de rechterrand van de aantaltekst en de linkerrand van het symbool, in mm. */
 const AANTAL_X_MM = 3.4;
-/** Zijde van de driehoek voor "waterdicht" en afstand tot de rand van het vak, in mm. */
-const DRIEHOEK_MM = 1.6;
-const DRIEHOEK_RAND_MM = 0.4;
 
 function punten(...coordinaten: Array<[number, number]>): string {
   return coordinaten.map(([x, y], i) => `${i === 0 ? "M" : "L"}${getal(x)} ${getal(y)}`).join(" ") + " Z";
-}
-
-/**
- * Kleine gevulde driehoek rechtsonder in een vak van `breedte` × `hoogte` mm, dichtbij `in`. De
- * driehoek is een markering en blijft net als tekst rechtop: de punt wijst omhoog.
- */
-function waterdichtDriehoek(breedte: number, hoogte: number): string {
-  const rechts = breedte - DRIEHOEK_RAND_MM;
-  const boven = hoogte - DRIEHOEK_RAND_MM - DRIEHOEK_MM;
-  return pad(
-    punten(
-      [rechts - DRIEHOEK_MM / 2, boven],
-      [rechts, boven + DRIEHOEK_MM],
-      [rechts - DRIEHOEK_MM, boven + DRIEHOEK_MM],
-    ),
-    { gevuld: true, data: { rol: "waterdicht" } },
-  );
 }
 
 /** Het aantal als tekst; `y` is de basislijn. Leeg bij 1 stuk. */
@@ -180,56 +160,87 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
   return { maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
 }
 
+/** Lengte van het streepje van een haak, in mm. */
+const HAAK_MM = 1;
+
 /**
- * Schakelaar: een cirkel (r = 2) met een schuine hendel naar rechtsonder (naar `in` toe). "dubbel"
- * heeft een tweede, parallelle hendel, "wissel" een hendel in beide richtingen, "kruis" een hendel
- * in vier richtingen, "dimmer" een pijltje naast de hendel en "drukknop" een dwarsstreepje op de
- * hendel. 12 × 10 mm.
+ * Een haak: een kort streepje aan het uiteinde (x2, y2) van een hendel die in (x1, y1) begint,
+ * haaks op de hendel en naar buiten gericht, dus weg van de verticale lijn door de cirkel, aan de
+ * kant van de hendel (AREI tabel 2.23, E).
+ */
+function haak(x1: number, y1: number, x2: number, y2: number): string {
+  const lengte = Math.hypot(x2 - x1, y2 - y1);
+  const dx = (x2 - x1) / lengte;
+  const dy = (y2 - y1) / lengte;
+  // Twee haakse richtingen; kies die aan dezelfde kant als de hendel wijst.
+  const [px, py] = dy * dx > 0 ? [dy, -dx] : [-dy, dx];
+  return lijn(x2, y2, x2 + px * HAAK_MM, y2 + py * HAAK_MM, { data: { rol: "haak" } });
+}
+
+/**
+ * Schakelaar volgens E in AREI tabel 2.23, 14 × 12 mm: een cirkel (r = 2) met een of meer hendels,
+ * zonder dat de hendels de leiding raken. De leiding loopt van `in` naar de cirkel en van de
+ * cirkel verder naar `uit`. Een hendel begint op de rand van de cirkel en wijst schuin van de
+ * voeding weg (hier naar rechtsboven), onder 35° met de verticale lijn. Een haak is een streepje
+ * haaks op het uiteinde van de hendel. De soort bepaalt de hendels:
+ * - "enkel": het algemene symbool, één hendel zonder haak;
+ * - "dubbel": de eenpolige omschakelaar (dubbele aansteking), twee hendels in een V naar `uit`,
+ *   elk met een haak;
+ * - "wissel": de eenpolige wisselschakelaar, twee hendels in tegengestelde richting (rechtsboven
+ *   en linksonder), elk met een haak;
+ * - "kruis": de kruisschakelaar, vier hendels in een X, elk met een haak;
+ * - "dimmer": één hendel met een klein open driehoekje (vlag) op het uiteinde;
+ * - "drukknop": een cirkel in een cirkel, zonder hendel.
+ * Waterdicht is de letter h rechts naast het symbool.
  */
 export function tekenSchakelaar(node: NodeVan<"schakelaar">): Symbool {
-  const breedte = 12;
-  const hoogte = 10;
+  const breedte = 14;
+  const hoogte = 12;
   const x = breedte / 2;
-  const cy = 4;
+  const cy = 6;
   const r = 2;
-  const d = r * Math.SQRT1_2;
-  const hendel = (x1: number, y1: number, x2: number, y2: number) => lijn(x1, y1, x2, y2, { data: { rol: "hendel" } });
-  // Hendel vanaf de rand van de cirkel, onder 45 graden naar rechtsonder.
-  const rechtsonder = hendel(x + d, cy + d, x + d + 2, cy + d + 2);
-  let svg = lijn(x, hoogte, x, cy + r) + cirkel(x, cy, r) + lijn(x, cy - r, x, 0);
+  /** Hoek van de hendels met de verticale lijn en lengte van de hendel buiten de cirkel, in mm. */
+  const hoek = (35 * Math.PI) / 180;
+  const buiten = 3.5;
+  const [s, c] = [Math.sin(hoek), Math.cos(hoek)];
+  /**
+   * Hendel vanaf de cirkelrand in richting (zx, zy): zx = 1 naar rechts, -1 naar links; zy = -1
+   * naar boven, 1 naar onder. Met `metHaak` komt er een haak op het uiteinde.
+   */
+  const hendel = (zx: 1 | -1, zy: 1 | -1, metHaak: boolean) => {
+    const [dx, dy] = [zx * s, zy * c];
+    const [x1, y1, x2, y2] = [x + r * dx, cy + r * dy, x + (r + buiten) * dx, cy + (r + buiten) * dy];
+    return lijn(x1, y1, x2, y2, { data: { rol: "hendel" } }) + (metHaak ? haak(x1, y1, x2, y2) : "");
+  };
+  let svg = lijn(x, hoogte, x, cy + r) + cirkel(x, cy, r);
+  svg += lijn(x, cy - r, x, 0);
   switch (node.soort) {
     case "enkel":
-      svg += rechtsonder;
+      svg += hendel(1, -1, false);
       break;
-    case "dubbel": {
-      const hoek = (70 * Math.PI) / 180;
-      const x1 = x + r * Math.cos(hoek);
-      const y1 = cy + r * Math.sin(hoek);
-      svg += rechtsonder + hendel(x1, y1, x1 + 2.4, y1 + 2.4);
+    case "dubbel":
+      svg += hendel(-1, -1, true) + hendel(1, -1, true);
       break;
-    }
     case "wissel":
-      svg += rechtsonder + hendel(x - d, cy + d, x - d - 2, cy + d + 2);
+      svg += hendel(1, -1, true) + hendel(-1, 1, true);
       break;
     case "kruis":
-      svg +=
-        rechtsonder +
-        hendel(x - d, cy + d, x - d - 2, cy + d + 2) +
-        hendel(x + d, cy - d, x + d + 2, cy - d - 2) +
-        hendel(x - d, cy - d, x - d - 2, cy - d - 2);
+      svg += hendel(1, -1, true) + hendel(-1, 1, true) + hendel(-1, -1, true) + hendel(1, 1, true);
       break;
-    case "dimmer":
-      svg +=
-        rechtsonder +
-        lijn(7.6, 1.4, 10.6, 4.4, { data: { rol: "pijl" } }) +
-        lijn(10.6, 4.4, 9.6, 4.4, { data: { rol: "pijl" } }) +
-        lijn(10.6, 4.4, 10.6, 3.4, { data: { rol: "pijl" } });
+    case "dimmer": {
+      // Het vlagje is een driehoek met één zijde langs het eind van de hendel (1,8 mm) en de punt 1,1 mm opzij.
+      const [dx, dy] = [s, -c];
+      const [ex, ey] = [x + (r + buiten) * dx, cy + (r + buiten) * dy];
+      const basis: [number, number] = [ex - 1.8 * dx, ey - 1.8 * dy];
+      const punt: [number, number] = [ex - 0.9 * dx - 1.1 * dy, ey - 0.9 * dy + 1.1 * dx];
+      svg += hendel(1, -1, false) + pad(punten([ex, ey], basis, punt), { data: { rol: "vlag" } });
       break;
+    }
     case "drukknop":
-      svg += rechtsonder + lijn(x + d + 1, cy + d + 2, x + d + 3, cy + d + 2, { data: { rol: "knop" } });
+      svg += cirkel(x, cy, 1.1);
       break;
   }
-  if (node.waterdicht) svg += waterdichtDriehoek(breedte, hoogte);
+  if (node.waterdicht) svg += letterH(x + r + 1.6, cy + 1.2);
   return { maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
 }
 

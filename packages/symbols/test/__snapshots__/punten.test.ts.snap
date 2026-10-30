@@ -327,126 +327,126 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: lichtpunt zonder
 exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar dimmer 1`] = `
 {
   "maat": {
-    "breedte": 12,
-    "hoogte": 10,
+    "breedte": 14,
+    "hoogte": 12,
     "in": {
-      "x": 6,
-      "y": 10,
+      "x": 7,
+      "y": 12,
     },
     "uit": {
-      "x": 6,
+      "x": 7,
       "y": 0,
     },
   },
-  "svg": "<line x1="6" y1="10" x2="6" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="2" x2="6" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="5.41" x2="9.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="7.6" y1="1.4" x2="10.6" y2="4.4" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/><line x1="10.6" y1="4.4" x2="9.6" y2="4.4" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/><line x1="10.6" y1="4.4" x2="10.6" y2="3.4" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="pijl"/>",
+  "svg": "<line x1="7" y1="12" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="4" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="8.15" y1="4.36" x2="10.15" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><path d="M10.15 1.49 L9.12 2.97 L10.54 2.86 Z" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="vlag"/>",
 }
 `;
 
 exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar drukknop 1`] = `
 {
   "maat": {
-    "breedte": 12,
-    "hoogte": 10,
+    "breedte": 14,
+    "hoogte": 12,
     "in": {
-      "x": 6,
-      "y": 10,
+      "x": 7,
+      "y": 12,
     },
     "uit": {
-      "x": 6,
+      "x": 7,
       "y": 0,
     },
   },
-  "svg": "<line x1="6" y1="10" x2="6" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="2" x2="6" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="5.41" x2="9.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="8.41" y1="7.41" x2="10.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="knop"/>",
+  "svg": "<line x1="7" y1="12" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="4" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="1.1" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
 
 exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar dubbel 1`] = `
 {
   "maat": {
-    "breedte": 12,
-    "hoogte": 10,
+    "breedte": 14,
+    "hoogte": 12,
     "in": {
-      "x": 6,
-      "y": 10,
+      "x": 7,
+      "y": 12,
     },
     "uit": {
-      "x": 6,
+      "x": 7,
       "y": 0,
     },
   },
-  "svg": "<line x1="6" y1="10" x2="6" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="2" x2="6" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="5.41" x2="9.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="6.68" y1="5.88" x2="9.08" y2="8.28" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="7" y1="12" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="4" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5.85" y1="4.36" x2="3.85" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="3.85" y1="1.49" x2="3.03" y2="2.07" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/><line x1="8.15" y1="4.36" x2="10.15" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="10.15" y1="1.49" x2="10.97" y2="2.07" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/>",
 }
 `;
 
 exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar enkel 1`] = `
 {
   "maat": {
-    "breedte": 12,
-    "hoogte": 10,
+    "breedte": 14,
+    "hoogte": 12,
     "in": {
-      "x": 6,
-      "y": 10,
+      "x": 7,
+      "y": 12,
     },
     "uit": {
-      "x": 6,
+      "x": 7,
       "y": 0,
     },
   },
-  "svg": "<line x1="6" y1="10" x2="6" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="2" x2="6" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="5.41" x2="9.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="7" y1="12" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="4" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="8.15" y1="4.36" x2="10.15" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
 }
 `;
 
 exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar enkel waterdicht 1`] = `
 {
   "maat": {
-    "breedte": 12,
-    "hoogte": 10,
+    "breedte": 14,
+    "hoogte": 12,
     "in": {
-      "x": 6,
-      "y": 10,
+      "x": 7,
+      "y": 12,
     },
     "uit": {
-      "x": 6,
+      "x": 7,
       "y": 0,
     },
   },
-  "svg": "<line x1="6" y1="10" x2="6" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="2" x2="6" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="5.41" x2="9.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><path d="M10.8 8 L11.6 9.6 L10 9.6 Z" stroke="currentColor" stroke-width="0.35" fill="currentColor" data-rol="waterdicht"/>",
+  "svg": "<line x1="7" y1="12" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="4" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="8.15" y1="4.36" x2="10.15" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><text x="10.6" y="7.2" font-size="2.5" text-anchor="start" font-family="sans-serif" fill="currentColor" data-rol="waterdicht">h</text>",
 }
 `;
 
 exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar kruis 1`] = `
 {
   "maat": {
-    "breedte": 12,
-    "hoogte": 10,
+    "breedte": 14,
+    "hoogte": 12,
     "in": {
-      "x": 6,
-      "y": 10,
+      "x": 7,
+      "y": 12,
     },
     "uit": {
-      "x": 6,
+      "x": 7,
       "y": 0,
     },
   },
-  "svg": "<line x1="6" y1="10" x2="6" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="2" x2="6" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="5.41" x2="9.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="5.41" x2="2.59" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="7.41" y1="2.59" x2="9.41" y2="0.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="2.59" x2="2.59" y2="0.59" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="7" y1="12" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="4" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="8.15" y1="4.36" x2="10.15" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="10.15" y1="1.49" x2="10.97" y2="2.07" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/><line x1="5.85" y1="7.64" x2="3.85" y2="10.51" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="3.85" y1="10.51" x2="3.03" y2="9.93" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/><line x1="5.85" y1="4.36" x2="3.85" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="3.85" y1="1.49" x2="3.03" y2="2.07" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/><line x1="8.15" y1="7.64" x2="10.15" y2="10.51" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="10.15" y1="10.51" x2="10.97" y2="9.93" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/>",
 }
 `;
 
 exports[`symbolen voor punten, leiding en onderbord > snapshot: schakelaar wissel 1`] = `
 {
   "maat": {
-    "breedte": 12,
-    "hoogte": 10,
+    "breedte": 14,
+    "hoogte": 12,
     "in": {
-      "x": 6,
-      "y": 10,
+      "x": 7,
+      "y": 12,
     },
     "uit": {
-      "x": 6,
+      "x": 7,
       "y": 0,
     },
   },
-  "svg": "<line x1="6" y1="10" x2="6" y2="6" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="6" y1="2" x2="6" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7.41" y1="5.41" x2="9.41" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="4.59" y1="5.41" x2="2.59" y2="7.41" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/>",
+  "svg": "<line x1="7" y1="12" x2="7" y2="8" stroke="currentColor" stroke-width="0.35" fill="none"/><circle cx="7" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="7" y1="4" x2="7" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="8.15" y1="4.36" x2="10.15" y2="1.49" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="10.15" y1="1.49" x2="10.97" y2="2.07" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/><line x1="5.85" y1="7.64" x2="3.85" y2="10.51" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="hendel"/><line x1="3.85" y1="10.51" x2="3.03" y2="9.93" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="haak"/>",
 }
 `;
 

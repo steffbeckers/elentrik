@@ -127,7 +127,7 @@ describe("symbolen voor punten, leiding en onderbord", () => {
     };
     expect(maat(doos())).toEqual([14, 10]);
     expect(maat(licht())).toEqual([14, 10]);
-    expect(maat(schakelaar("enkel"))).toEqual([12, 10]);
+    expect(maat(schakelaar("enkel"))).toEqual([14, 12]);
     expect(maat(toestel("oven"))).toEqual([12, 12]);
     expect(maat(leiding)).toEqual([2, 12]);
     expect(maat(verdeelbord)).toEqual([12, 6]);
@@ -400,34 +400,178 @@ describe("symbolen voor punten, leiding en onderbord", () => {
   describe("schakelaar", () => {
     const svgVan = (soort: NodeVan<"schakelaar">["soort"], waterdicht = false) =>
       tekenSymbool(schakelaar(soort, waterdicht)).svg;
-    const hendels = (svg: string) => svg.match(/data-rol="hendel"/g)?.length ?? 0;
+    const breedteVan = (soort: NodeVan<"schakelaar">["soort"]) => tekenSymbool(schakelaar(soort)).maat.breedte;
+    const aantalCirkels = (svg: string) => svg.match(/<circle/g)?.length ?? 0;
+    type Cirkel = { cx: number; cy: number; r: number };
+    const cirkels = (svg: string): Cirkel[] =>
+      [...svg.matchAll(/<circle cx="([^"]*)" cy="([^"]*)" r="([^"]*)"/g)].map(([, cx, cy, r]) => ({
+        cx: Number(cx),
+        cy: Number(cy),
+        r: Number(r),
+      }));
+    /** Middelpunt en straal van de eerste (buitenste) cirkel. */
+    function cirkelVan(svg: string): Cirkel {
+      const [eerste] = cirkels(svg);
+      if (!eerste) throw new Error("geen cirkel gevonden");
+      return eerste;
+    }
+    const hendelsVan = (svg: string) => metRol(svg, "hendel");
+    const haken = (svg: string) => metRol(svg, "haak");
+    const richting = (l: Lijn) => ({ dx: l.x2 - l.x1, dy: l.y2 - l.y1 });
+    /** Kwadrant van het uiteinde van de hendel ten opzichte van het middelpunt van de cirkel. */
+    const kwadrant = (svg: string, l: Lijn) => {
+      const { cx, cy } = cirkelVan(svg);
+      return `${l.x2 > cx ? "rechts" : "links"}${l.y2 < cy ? "boven" : "onder"}`;
+    };
 
-    test("is een cirkel met r = 2 en een geleider naar uit", () => {
-      expect(svgVan("enkel")).toContain('r="2"');
-      expect(svgVan("enkel")).toContain('<line x1="6" y1="2" x2="6" y2="0"');
+    test("is een cirkel met r = 2 en een geleider van in en naar uit", () => {
+      const symbool = tekenSymbool(schakelaar("enkel"));
+      const { cx, cy, r } = cirkelVan(symbool.svg);
+      expect(r).toBe(2);
+      expect(cx).toBe(symbool.maat.breedte / 2);
+      const geleiders = lijnen(symbool.svg).filter((l) => l.rol === undefined && l.x1 === cx && l.x2 === cx);
+      expect(geleiders.some((l) => l.y1 === cy - r && l.y2 === 0)).toBe(true);
+      expect(geleiders.some((l) => l.y1 === symbool.maat.hoogte && l.y2 === cy + r)).toBe(true);
+    });
+
+    test("de breedte blijft binnen 20 mm", () => {
+      for (const soort of ["enkel", "dubbel", "wissel", "kruis", "dimmer", "drukknop"] as const) {
+        expect(breedteVan(soort)).toBeLessThanOrEqual(KOLOM_BREEDTE_MM - 4);
+      }
     });
 
     test.each([
-      ["enkel", 1],
-      ["dubbel", 2],
-      ["wissel", 2],
-      ["kruis", 4],
-      ["dimmer", 1],
-      ["drukknop", 1],
-    ] as const)("%s heeft %i hendel(s)", (soort, aantal) => {
-      expect(hendels(svgVan(soort))).toBe(aantal);
+      ["enkel", 1, 0],
+      ["dubbel", 2, 2],
+      ["wissel", 2, 2],
+      ["kruis", 4, 4],
+      ["dimmer", 1, 0],
+      ["drukknop", 0, 0],
+    ] as const)("%s heeft %i hendel(s) en %i haken", (soort, aantalHendels, aantalHaken) => {
+      const svg = svgVan(soort);
+      expect(hendelsVan(svg)).toHaveLength(aantalHendels);
+      expect(haken(svg)).toHaveLength(aantalHaken);
     });
 
-    test("dimmer heeft een pijl, drukknop een dwarsstreepje", () => {
-      expect(svgVan("dimmer")).toContain('data-rol="pijl"');
-      expect(svgVan("enkel")).not.toContain('data-rol="pijl"');
-      expect(svgVan("drukknop")).toContain('data-rol="knop"');
-      expect(svgVan("enkel")).not.toContain('data-rol="knop"');
+    test("enkel: één hendel naar rechtsboven, weg van de voeding", () => {
+      const svg = svgVan("enkel");
+      const { cx, cy } = cirkelVan(svg);
+      const [h] = hendelsVan(svg) as [Lijn];
+      expect(h.x2).toBeGreaterThan(cx);
+      expect(h.y2).toBeLessThan(cy);
     });
 
-    test("de waterdichtdriehoek verschijnt alleen als waterdicht aan staat", () => {
-      expect(svgVan("enkel", true)).toContain('data-rol="waterdicht"');
-      expect(svgVan("enkel", false)).not.toContain('data-rol="waterdicht"');
+    test("dubbel: twee hendels in een V aan de kant van uit", () => {
+      const svg = svgVan("dubbel");
+      const { cx, cy } = cirkelVan(svg);
+      const hs = hendelsVan(svg);
+      expect(hs.every((h) => h.y2 < cy)).toBe(true);
+      expect(hs.filter((h) => h.x2 < cx)).toHaveLength(1);
+      expect(hs.filter((h) => h.x2 > cx)).toHaveLength(1);
+    });
+
+    test("wissel: één hendel rechtsboven en één linksonder", () => {
+      const svg = svgVan("wissel");
+      expect(hendelsVan(svg).map((h) => kwadrant(svg, h)).sort()).toEqual(["linksonder", "rechtsboven"]);
+    });
+
+    test("kruis: één hendel per kwadrant", () => {
+      const svg = svgVan("kruis");
+      expect(hendelsVan(svg).map((h) => kwadrant(svg, h)).sort()).toEqual([
+        "linksboven",
+        "linksonder",
+        "rechtsboven",
+        "rechtsonder",
+      ]);
+    });
+
+    test("hendels beginnen op de rand van de cirkel", () => {
+      for (const soort of ["enkel", "dubbel", "wissel", "kruis", "dimmer"] as const) {
+        const svg = svgVan(soort);
+        const { cx, cy, r } = cirkelVan(svg);
+        for (const h of hendelsVan(svg)) expect(Math.hypot(h.x1 - cx, h.y1 - cy)).toBeCloseTo(r, 2);
+      }
+    });
+
+    test.each(["dubbel", "wissel", "kruis"] as const)("%s: elke haak staat haaks op het uiteinde van zijn hendel", (soort) => {
+      const svg = svgVan(soort);
+      const { cx } = cirkelVan(svg);
+      for (const h of hendelsVan(svg)) {
+        const k = haken(svg).find((l) => Math.abs(l.x1 - h.x2) < 1e-2 && Math.abs(l.y1 - h.y2) < 1e-2);
+        expect(k, "haak begint op het uiteinde van de hendel").toBeDefined();
+        const a = richting(h);
+        const b = richting(k!);
+        const inproduct = (a.dx * b.dx + a.dy * b.dy) / (Math.hypot(a.dx, a.dy) * Math.hypot(b.dx, b.dy));
+        expect(Math.abs(inproduct)).toBeLessThan(0.02);
+        // Naar buiten: weg van de verticale lijn, aan de kant van de hendel.
+        expect(Math.sign(k!.x2 - k!.x1)).toBe(Math.sign(h.x2 - cx));
+        const lengte = Math.hypot(b.dx, b.dy);
+        expect(lengte).toBeGreaterThan(0.7);
+        expect(lengte).toBeLessThan(1.5);
+      }
+    });
+
+    test("een tweede hendel aan dezelfde kant ligt minstens 30° van de verticale lijn", () => {
+      for (const soort of ["dubbel", "wissel", "kruis"] as const) {
+        for (const h of hendelsVan(svgVan(soort))) {
+          const { dx, dy } = richting(h);
+          expect((Math.atan2(Math.abs(dx), Math.abs(dy)) * 180) / Math.PI).toBeGreaterThanOrEqual(30);
+        }
+      }
+    });
+
+    test("hendels raken de geleider niet", () => {
+      for (const soort of ["enkel", "dubbel", "wissel", "kruis", "dimmer"] as const) {
+        const svg = svgVan(soort);
+        const { cx } = cirkelVan(svg);
+        for (const l of [...hendelsVan(svg), ...haken(svg)]) {
+          // Alle punten, op het beginpunt van een hendel (op de cirkel) na, liggen ver van x = cx.
+          for (let t = 0; t <= 1; t += 0.05) {
+            if (t === 0 && l.rol === "hendel") continue;
+            const x = l.x1 + (l.x2 - l.x1) * t;
+            expect(Math.abs(x - cx), `${soort} ${l.rol} t=${t}`).toBeGreaterThan(0.3);
+          }
+        }
+      }
+    });
+
+    test("dimmer: een open driehoekje op het uiteinde van de hendel", () => {
+      const svg = svgVan("dimmer");
+      const m = svg.match(/<path d="([^"]*)"[^>]*data-rol="vlag"/);
+      expect(m).not.toBeNull();
+      expect(svg).not.toMatch(/<path [^>]*fill="currentColor"/);
+      const [h] = hendelsVan(svg) as [Lijn];
+      const hoeken = [...m![1]!.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(([, x, y]) => [Number(x), Number(y)] as const);
+      expect(hoeken).toHaveLength(3);
+      expect(hoeken.some(([x, y]) => Math.abs(x - h.x2) < 1e-2 && Math.abs(y - h.y2) < 1e-2)).toBe(true);
+      expect(svgVan("enkel")).not.toContain('data-rol="vlag"');
+      expect(svg).not.toContain('data-rol="pijl"');
+    });
+
+    test("drukknop: een cirkel in een cirkel, zonder hendel", () => {
+      const svg = svgVan("drukknop");
+      expect(aantalCirkels(svg)).toBe(2);
+      const [buiten, binnen] = cirkels(svg) as [Cirkel, Cirkel];
+      expect(binnen.cx).toBeCloseTo(buiten.cx, 9);
+      expect(binnen.cy).toBeCloseTo(buiten.cy, 9);
+      expect(binnen.r).toBeLessThan(buiten.r);
+      expect(hendelsVan(svg)).toHaveLength(0);
+      expect(svg).not.toContain('data-rol="knop"');
+    });
+
+    test("de andere soorten hebben één cirkel", () => {
+      for (const soort of ["enkel", "dubbel", "wissel", "kruis", "dimmer"] as const) {
+        expect(aantalCirkels(svgVan(soort))).toBe(1);
+      }
+    });
+
+    test("waterdicht is de letter h en geen gevuld pad", () => {
+      for (const soort of ["enkel", "dubbel", "wissel", "kruis", "dimmer", "drukknop"] as const) {
+        const svg = svgVan(soort, true);
+        expect(svg).not.toMatch(/<path [^>]*fill="currentColor"/);
+        expect(svg).toMatch(/<text [^>]*data-rol="waterdicht"[^>]*>h<\/text>/);
+        expect(svgVan(soort, false)).not.toContain('data-rol="waterdicht"');
+      }
     });
   });
 
