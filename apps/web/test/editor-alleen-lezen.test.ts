@@ -282,3 +282,31 @@ describe("een plan uploaden zonder abonnement", () => {
     expect(alleenLezen).not.toHaveBeenCalled();
   });
 });
+
+describe("een plan uploaden in een verwijderd project", () => {
+  const fetchFout = (status: number, code: string) => Object.assign(new Error(`HTTP ${status}`), { status, data: { data: { code } } });
+
+  test("een 404 meldt het project als verwijderd: niets meer te melden", async () => {
+    const alleenLezen = vi.fn(async () => true);
+    const verwijderd = vi.fn();
+    expect(await uploadFoutMelding(fetchFout(404, "NIET_GEVONDEN"), alleenLezen, verwijderd)).toBeNull();
+    expect(verwijderd).toHaveBeenCalledTimes(1);
+    expect(alleenLezen).not.toHaveBeenCalled();
+  });
+
+  test("een 404 zonder foutcode telt ook", async () => {
+    const verwijderd = vi.fn();
+    const fout = Object.assign(new Error("weg"), { statusCode: 404 });
+    expect(await uploadFoutMelding(fout, async () => false, verwijderd)).toBeNull();
+    expect(verwijderd).toHaveBeenCalledTimes(1);
+  });
+
+  test("andere fouten roepen verwijderd niet aan", async () => {
+    const verwijderd = vi.fn();
+    expect(await uploadFoutMelding(fetchFout(422, "X"), async () => false, verwijderd)).toBe("tePixels");
+    expect(await uploadFoutMelding(fetchFout(402, "ABONNEMENT_VEREIST"), async () => false, verwijderd)).toBe("mislukt");
+    expect(await uploadFoutMelding(new Error("netwerk"), async () => false, verwijderd)).toBe("mislukt");
+    expect(verwijderd).not.toHaveBeenCalled();
+  });
+});
+

@@ -374,7 +374,7 @@ describe("useAutosave", () => {
     await autosave.bewaarAlsKopie();
     // Het duplicaat op de server is al de actuele versie, met eigen planbestanden.
     expect(dupliceer).toHaveBeenCalledTimes(1);
-    expect(dupliceer).toHaveBeenCalledWith("p1");
+    expect(dupliceer).toHaveBeenCalledWith("p1", []);
     expect(haal).not.toHaveBeenCalled();
     expect(bewaar).not.toHaveBeenCalled();
     expect(store.document).toBe(voor);
@@ -467,6 +467,42 @@ describe("useAutosave", () => {
       for (const [, , invoer] of kopieBewaringen) {
         expect(plannen(invoer.document as InstallatieDocument)).toEqual([["nieuw-o", "nieuw-r"]]);
       }
+    });
+
+    test("zonder lokale wijzigingen (een exportconflict) krijgt dupliceer toch de planbestanden van het lokale document", async () => {
+      const o = opzet();
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
+      o.autosave.meldConflict(7);
+      await o.autosave.bewaarAlsKopie();
+      expect(o.dupliceer).toHaveBeenCalledWith("p1", ["oud-o", "oud-r"]);
+      expect(o.bewaar).not.toHaveBeenCalled();
+    });
+
+    test("de plan-id's komen uit het document van vlak vóór het dupliceren, ook als dat na het conflict veranderde", async () => {
+      const o = opzet();
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
+      o.autosave.meldConflict(7);
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "nieuwer-o", "nieuwer-r") });
+      o.autosave.meldConflict(7);
+      await o.autosave.bewaarAlsKopie();
+      expect(o.dupliceer).toHaveBeenCalledWith("p1", ["nieuwer-o", "nieuwer-r"]);
+    });
+
+    test("zonder lokale wijzigingen, maar met een wijziging tijdens het dupliceren: het bewaarde document heeft alleen nieuwe plan-id's uit de mapping", async () => {
+      const o = opzet();
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
+      o.autosave.meldConflict(7);
+      o.dupliceer.mockImplementationOnce(async () => {
+        wijzig(o.store, "Net veranderd");
+        return { id: "kopie1", bestandIds: { "oud-o": "nieuw-o", "oud-r": "nieuw-r" } };
+      });
+      await o.autosave.bewaarAlsKopie();
+      expect(o.dupliceer).toHaveBeenCalledWith("p1", ["oud-o", "oud-r"]);
+      expect(o.bewaar).toHaveBeenCalledTimes(1);
+      const invoer = o.bewaar.mock.lastCall?.[2];
+      expect(o.bewaar.mock.lastCall?.[0]).toBe("kopie1");
+      expect(plannen(invoer?.document as InstallatieDocument)).toEqual([["nieuw-o", "nieuw-r"]]);
+      expect(plannen(o.store.document)).toEqual([["oud-o", "oud-r"]]);
     });
 
     test("een id zonder toewijzing blijft staan", async () => {
@@ -1366,6 +1402,64 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     await nextTick();
     expect(autosave.status.value).toBe("opgeslagen");
     expect(autosave.verwijderd.value).toBe(false);
+  });
+
+  describe("meldVerwijderd (een 404 buiten het bewaren, bv. bij het uploaden van een plan)", () => {
+    test("zet dezelfde toestand als een 404 bij het bewaren: verwijderd, concept lokaal, geen nieuwe poging", async () => {
+      const { store, bewaar, autosave } = opzet();
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(500);
+      autosave.meldVerwijderd();
+      expect(autosave.status.value).toBe("verwijderd");
+      expect(autosave.verwijderd.value).toBe(true);
+      expect(autosave.fout.value).toBeNull();
+      // De lopende debounce is weg en er wordt niets meer bewaard.
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await leeg();
+      await autosave.nuOpslaan();
+      expect(bewaar).not.toHaveBeenCalled();
+      expect((await autosave.wachtOpConcept()) && (await conceptVan("p1"))?.naam).toBe("a");
+      expect(waarschuwBijVerlaten(autosave.status.value)).toBe(true);
+    });
+
+    test("zonder wijzigingen staat het document toch in het concept", async () => {
+      const { store, autosave } = opzet();
+      autosave.meldVerwijderd();
+      expect(autosave.status.value).toBe("verwijderd");
+      expect(await autosave.wachtOpConcept()).toBe(true);
+      expect((await conceptVan("p1"))?.document).toEqual(store.document);
+    });
+
+    test("een kapot conceptarchief: onbewaard, verwijderd blijft true", async () => {
+      const concepten = {
+        bewaarConcept: vi.fn(async () => {
+          throw new Error("IndexedDB kapot");
+        }),
+        wisConcept: vi.fn(async () => {}),
+      };
+      const { autosave } = opzet({ concepten });
+      autosave.meldVerwijderd();
+      await autosave.wachtOpConcept();
+      expect(autosave.status.value).toBe("onbewaard");
+      expect(autosave.verwijderd.value).toBe(true);
+    });
+
+    test("tijdens een conflict: het conflict vervalt, het project is verwijderd", async () => {
+      const { autosave } = opzet();
+      autosave.meldConflict(7);
+      autosave.meldVerwijderd();
+      expect(autosave.conflict.value).toBeNull();
+      expect(autosave.status.value).toBe("verwijderd");
+    });
+
+    test("daarna maakt bewaarAlsNieuwProject een nieuw project", async () => {
+      const { maakNieuw, naarProject, autosave } = opzet();
+      autosave.meldVerwijderd();
+      await autosave.bewaarAlsNieuwProject();
+      expect(maakNieuw).toHaveBeenCalledTimes(1);
+      expect(naarProject).toHaveBeenCalledWith("nieuw1");
+    });
   });
 
   test("bewaarAlsNieuwProject maakt een nieuw project met het huidige document en navigeert", async () => {

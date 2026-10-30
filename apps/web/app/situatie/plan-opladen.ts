@@ -83,13 +83,21 @@ export function foutSleutel(fout: unknown): UploadFoutSleutel {
 /**
  * Wat een mislukte upload de gebruiker meldt. Een 402 `ABONNEMENT_VEREIST` (de organisatie mag niet
  * meer schrijven) gaat eerst langs `alleenLezen`, de bestaande alleen-lezenafhandeling (de sessie
- * opnieuw lezen en de alleen-lezenmelding tonen): dan is er niets meer te melden (null). Anders de
- * sleutel onder `editor.situatie.toevoegen.fout`.
+ * opnieuw lezen en de alleen-lezenmelding tonen): dan is er niets meer te melden (null). Een 404
+ * (het project is verwijderd) gaat naar `verwijderd`, de verwijderd-toestand van de editor: ook null.
+ * Anders de sleutel onder `editor.situatie.toevoegen.fout`.
  */
 export async function uploadFoutMelding(
   fout: unknown,
   alleenLezen: (fout: unknown) => Promise<boolean>,
+  verwijderd?: () => void,
 ): Promise<UploadFoutSleutel | null> {
   if (httpStatus(fout) === 402 && foutCode(fout) === ABONNEMENT_VEREIST && (await alleenLezen(fout))) return null;
+  // Een 404 op het uploaden betekent dat het project elders verwijderd werd: de editor toont zijn
+  // verwijderd-melding en er is niets algemeens meer te melden.
+  if (httpStatus(fout) === 404 && verwijderd) {
+    verwijderd();
+    return null;
+  }
   return foutSleutel(fout);
 }

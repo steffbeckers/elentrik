@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { fileURLToPath } from "node:url";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
@@ -6,6 +7,7 @@ gebruikTestgebruiker(test, { voorvoegsel: "verwijderd" });
 
 // Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
 const naam = `Test Verwijderd ${Date.now()}`;
+const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const bevestiging = "Je wijzigingen staan nog niet op de server. Wil je de editor toch verlaten?";
 
 type Samenvatting = { id: string; naam: string };
@@ -150,4 +152,48 @@ test("de pijl in de balk vraagt nog wel om bevestiging: het concept van een verw
   await pijl.click();
   await expect(page).toHaveURL(/\/$/);
   expect(dialogen).toEqual([bevestiging, bevestiging]);
+});
+
+test("een plan uploaden in een project dat elders verwijderd werd: de verwijderd-melding, geen foutmelding, het concept blijft lokaal", async ({
+  page,
+  request,
+}) => {
+  const aangemaakt = await request.post("/api/projecten", {
+    data: { naam: `${naam} upload`, klantnaam: "Janssens", stroomtype: "2x230V" },
+  });
+  const { id } = (await aangemaakt.json()) as { id: string };
+  await page.goto(`/projecten/${id}`);
+  await page.waitForLoadState("networkidle");
+  await page.getByTestId("tab-situatieschema").click();
+  await page.getByTestId("plan-toevoegen-leeg").click();
+  const dialoog = page.getByRole("dialog");
+  await dialoog.getByTestId("plan-bestand").setInputFiles(PLAN_PNG);
+
+  // Het project verdwijnt elders, vóór de upload.
+  expect((await request.delete(`/api/projecten/${id}`)).status()).toBe(204);
+  await dialoog.getByTestId("plan-toevoegen-bevestig").click();
+
+  const melding = page.getByTestId("verwijderd-melding");
+  await expect(melding).toContainText("Dit project werd verwijderd.", { timeout: 15_000 });
+  await expect(melding.getByRole("button", { name: "Bewaar als nieuw project" })).toBeVisible();
+  await expect(melding.getByRole("link", { name: "Terug naar de projecten" })).toBeVisible();
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Project verwijderd");
+  // De dialoog is gesloten en er is geen algemene fouttoast.
+  await expect(dialoog).toHaveCount(0);
+  await expect(page.getByText("Het plan kon niet worden opgeladen")).toHaveCount(0);
+
+  // Het concept van het verwijderde project staat in IndexedDB.
+  const sleutels = await page.evaluate(
+    () =>
+      new Promise<string[]>((klaar, fout) => {
+        const open = indexedDB.open("keyval-store");
+        open.onerror = () => fout(open.error);
+        open.onsuccess = () => {
+          const vraag = open.result.transaction("keyval").objectStore("keyval").getAllKeys();
+          vraag.onsuccess = () => klaar(vraag.result.map(String));
+          vraag.onerror = () => fout(vraag.error);
+        };
+      }),
+  );
+  expect(sleutels.some((sleutel) => sleutel.includes(id))).toBe(true);
 });

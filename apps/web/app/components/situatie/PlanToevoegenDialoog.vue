@@ -16,7 +16,11 @@ const props = defineProps<{
 }>();
 
 const open = defineModel<boolean>("open", { default: false });
-const emit = defineEmits<{ klaar: [paginaId: string] }>();
+const emit = defineEmits<{
+  klaar: [paginaId: string];
+  /** Het project bleek elders verwijderd (404 bij het uploaden): de editor toont zijn verwijderd-melding. */
+  verwijderd: [];
+}>();
 
 /** Lange zijde (px) van een voorbeeld in het paginaraster. */
 const VOORBEELD_PX = 160;
@@ -201,7 +205,11 @@ async function bevestig() {
     emit("klaar", paginaId);
   } catch (fout) {
     if (afbreker.signal.aborted || isAfgebroken(fout) || dezeSessie !== sessie) return;
-    const sleutel = await uploadFoutMelding(fout, alleenLezen);
+    const sleutel = await uploadFoutMelding(fout, alleenLezen, () => {
+      // De dialoog sluit, zodat de melding van de editor te zien is.
+      emit("verwijderd");
+      open.value = false;
+    });
     if (sleutel && dezeSessie === sessie) meld(sleutel);
   } finally {
     if (dezeSessie === sessie) {

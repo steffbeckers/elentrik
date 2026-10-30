@@ -605,7 +605,12 @@ onBeforeUnmount(() => {
       {{ $t("editor.pagina.laden") }}
     </div>
 
-    <PlanToevoegenDialoog v-model:open="planDialoogOpen" :vervang-pagina-id="vervangPaginaId" @klaar="planKlaar" />
+    <PlanToevoegenDialoog
+      v-model:open="planDialoogOpen"
+      :vervang-pagina-id="vervangPaginaId"
+      @klaar="planKlaar"
+      @verwijderd="autosave.meldVerwijderd"
+    />
     <SchaalDialoog v-model:open="schaalOpen" :pagina-id="meetPaginaId" :afstand-px="schaalAfstandPx" />
 
     <ConceptDialoog
