@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import { useSituatieStore } from "~/stores/situatie";
 import { useEditorStore } from "~/stores/editor";
 
@@ -23,7 +24,7 @@ function valideer(waarden: typeof formulier) {
 
 function bewaar(): void {
   const paginaId = props.paginaId;
-  if (paginaId === null) return;
+  if (paginaId === null || editor.alleenLezen) return;
   if (voerUit(() => situatie.hernoem(paginaId, formulier.titel.trim()))) open.value = false;
 }
 </script>
@@ -31,7 +32,14 @@ function bewaar(): void {
 <template>
   <UModal v-model:open="open" :title="$t('editor.situatie.hernoemen.titel')">
     <template #body>
-      <UForm id="pagina-hernoemen-formulier" :state="formulier" :validate="valideer" @submit="bewaar">
+      <AlleenLezenMelding class="mb-4" />
+      <UForm
+        id="pagina-hernoemen-formulier"
+        :state="formulier"
+        :validate="valideer"
+        :disabled="editor.alleenLezen"
+        @submit="bewaar"
+      >
         <UFormField name="titel" :label="$t('editor.situatie.hernoemen.veld')" required>
           <UInput v-model="formulier.titel" class="w-full" autofocus data-testid="pagina-titel" />
         </UFormField>
@@ -43,6 +51,7 @@ function bewaar(): void {
         <UButton
           type="submit"
           form="pagina-hernoemen-formulier"
+          :disabled="editor.alleenLezen"
           data-testid="pagina-hernoemen-bevestig"
           :label="$t('editor.situatie.hernoemen.bewaren')"
         />

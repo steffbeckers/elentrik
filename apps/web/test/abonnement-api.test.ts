@@ -14,6 +14,7 @@ import { abonnementen, member, organization, user } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
 import type { AbonnementOverzicht, AbonnementStatus } from "../shared/abonnement";
 import { maakTestDb } from "./db";
+import Stripe from "stripe";
 import { maakNepStripe, type NepStripe } from "./nep-stripe";
 import { beveiligdeRoutebestanden, routeUit } from "./routes";
 
@@ -285,6 +286,82 @@ describe("checkout", () => {
     const [rij] = await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId));
     expect(rij?.stripeKlantId).toBe("cus_nep_1");
     expect(rij?.openCheckoutSessie).toBe("cs_nep_1");
+  });
+
+  test("zonder klantrij maar met een bestaande Stripe-klant: die klant wordt hergebruikt en bewaard", async () => {
+    // Een eerdere Checkout liet de klant in Stripe achter, maar de transactie rolde de rij terug.
+    stripe.klanten.set(eigenaarA.organisatieId, "cus_bestaand");
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    expect(aanroepen("zoekKlant").map((a) => a.invoer)).toEqual([eigenaarA.organisatieId]);
+    expect(aanroepen("maakKlant")).toEqual([]);
+    expect((aanroepen("maakCheckout")[0]!.invoer as { klantId: string }).klantId).toBe("cus_bestaand");
+    const [rij] = await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId));
+    expect(rij?.stripeKlantId).toBe("cus_bestaand");
+  });
+
+  test("een bedrijf via 'Nieuw bedrijf' (Better Auth, geen uuid) kan afrekenen", async () => {
+    const tweede = await auth.api.createOrganization({
+      body: { name: "Via Better Auth", slug: `via-ba-${Date.now()}` },
+      headers: new Headers({ ...Object.fromEntries(authHeaders()), cookie: eigenaarA.cookie }),
+    });
+    expect(tweede!.id).not.toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/);
+    await zetProefEinde(tweede!.id, new Date(Date.now() + 20 * DAG_MS));
+    const wissel = await stuur(
+      { methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: tweede!.id } },
+      eigenaarA.cookie,
+    );
+    expect(wissel.status).toBe(200);
+    try {
+      expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+      expect(aanroepen("zoekKlant").map((a) => a.invoer)).toEqual([tweede!.id]);
+      expect(aanroepen("maakKlant")).toHaveLength(1);
+    } finally {
+      await stuur(
+        { methode: "POST", pad: "/api/organisaties/actief", json: { organisatieId: eigenaarA.organisatieId } },
+        eigenaarA.cookie,
+      );
+    }
+  });
+
+  test("maakKlant met een bekende idempotency key en andere gegevens: nog één keer zoeken en die klant hergebruiken", async () => {
+    stripe.idempotentieFout = new Stripe.errors.StripeIdempotencyError({
+      type: "idempotency_error",
+      message: "Keys for idempotent requests can only be used with the same parameters",
+    });
+    // De eerste zoekopdracht mist (eventually consistent); de tweede, na de idempotentiefout, vindt de klant.
+    const echt = stripe.zoekKlant.bind(stripe);
+    let keer = 0;
+    stripe.zoekKlant = async (id) => {
+      keer++;
+      if (keer === 1) {
+        stripe.aanroepen.push({ methode: "zoekKlant", invoer: id });
+        return null;
+      }
+      stripe.klanten.set(id, "cus_na_idempotentie");
+      return echt(id);
+    };
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    expect(aanroepen("zoekKlant")).toHaveLength(2);
+    expect((aanroepen("maakCheckout")[0]!.invoer as { klantId: string }).klantId).toBe("cus_na_idempotentie");
+  });
+
+  test("een idempotentiefout zonder bestaande klant wordt doorgegeven (500) en laat geen rij achter", async () => {
+    stripe.idempotentieFout = new Stripe.errors.StripeIdempotencyError({ type: "idempotency_error", message: "x" });
+    expect((await checkout(eigenaarA.cookie)).status).toBe(500);
+    expect(aanroepen("zoekKlant")).toHaveLength(2);
+    expect(await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId))).toEqual([]);
+  });
+
+  test("een mislukte Checkout laat geen rij achter; de volgende poging zoekt de klant weer op", async () => {
+    stripe.faalCheckout = true;
+    expect((await checkout(eigenaarA.cookie)).status).toBe(500);
+    expect(await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId))).toEqual([]);
+    // Stripe heeft de klant wel gemaakt (maakKlant liep voor de fout).
+    stripe.klanten.set(eigenaarA.organisatieId, "cus_nep_1");
+    stripe.faalCheckout = false;
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    expect(aanroepen("maakKlant")).toHaveLength(1);
+    expect((aanroepen("maakCheckout").at(-1)!.invoer as { klantId: string }).klantId).toBe("cus_nep_1");
   });
 
   test("twee gelijktijdige checkouts geven één klant en hoogstens één open sessie", async () => {

@@ -20,10 +20,16 @@ export function bestandId(event: H3Event): string {
   return id.data;
 }
 
-/** Weigert een te grote upload (413) op basis van `content-length`, vóór de body gelezen wordt. */
+/**
+ * Eist een geldige `content-length` (411 LENGTE_VEREIST) en weigert een te grote upload (413) op
+ * basis daarvan, vóór de body gelezen wordt. Zonder lengte (bv. `Transfer-Encoding: chunked`)
+ * zou de limiet te omzeilen zijn; de browser stuurt de lengte van een FormData altijd mee.
+ */
 export function controleerUploadGrootte(event: H3Event, maxBytes: number = MAX_UPLOAD_BYTES): void {
   const waarde = getHeader(event, "content-length")?.trim();
-  if (waarde === undefined || !/^\d+$/.test(waarde)) return;
+  if (waarde === undefined || !/^\d+$/.test(waarde)) {
+    throw createError({ statusCode: 411, statusMessage: "Lengte vereist", data: { code: "LENGTE_VEREIST" } });
+  }
   if (Number(waarde) > maxBytes + MULTIPART_OVERHEAD_BYTES) {
     throw createError({ statusCode: 413, statusMessage: "Bestand te groot", data: { code: "BESTAND_TE_GROOT" } });
   }

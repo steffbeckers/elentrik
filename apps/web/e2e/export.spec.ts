@@ -143,7 +143,8 @@ test("een ander venster bewaarde intussen: de export geeft het conflictscherm en
   const conflict = page.getByRole("dialog");
   await expect(conflict).toContainText("Conflict");
   await expect(conflict.getByRole("button", { name: "Serverversie laden" })).toBeVisible();
-  await expect(conflict.getByRole("button", { name: "Mijn versie als kopie bewaren" })).toBeVisible();
+  // Het venster heeft zelf niets gewijzigd: het scherm spreekt dan van de nieuwste versie, niet van "mijn versie".
+  await expect(conflict.getByRole("button", { name: "Nieuwste versie als kopie bewaren" })).toBeVisible();
   await expect(page.getByTestId("export-start")).toHaveCount(0);
   const lijst = (await (await request.get(`/api/projecten/${id}/exports`)).json()) as unknown[];
   expect(lijst).toEqual([]);

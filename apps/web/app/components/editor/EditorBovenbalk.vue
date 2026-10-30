@@ -53,6 +53,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
   conflict: { icoon: "i-lucide-git-compare", klasse: "text-error" },
   fout: { icoon: "i-lucide-cloud-alert", klasse: "text-error" },
   "alleen-lezen": { icoon: "i-lucide-lock", klasse: "text-warning" },
+  verwijderd: { icoon: "i-lucide-trash-2", klasse: "text-error" },
 };
 
 /**
@@ -81,7 +82,6 @@ const weergave = computed(() =>
       variant="ghost"
       class="min-w-24 max-w-64 truncate font-semibold"
       :title="$t('editor.bovenbalk.projectgegevens')"
-      :disabled="store.alleenLezen"
       data-testid="projectnaam"
       @click="projectgegevensOpen = true"
     >

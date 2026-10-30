@@ -45,6 +45,38 @@ describe("useBedrijfApi", () => {
     expect([...body.keys()]).toEqual(["bestand"]);
   });
 
+  test("haal stuurt het bedrijf waarvoor geladen wordt mee; zonder bedrijf geen header", async () => {
+    const { api, oproepen } = maakApi({ naam: "X" });
+    await api.haal("org-a");
+    await api.haal(null);
+    await api.haal();
+    expect(oproepen).toEqual([
+      ["/api/bedrijfsgegevens", { headers: { "x-elentrik-organisatie": "org-a" } }],
+      ["/api/bedrijfsgegevens"],
+      ["/api/bedrijfsgegevens"],
+    ]);
+  });
+
+  test("bewaar en uploadLogo sturen het meegegeven bedrijf mee, niet het actieve van dit moment", async () => {
+    const oproepen: Oproep[] = [];
+    const api = maakBedrijfApi(
+      async (...argumenten) => {
+        oproepen.push(argumenten);
+        return {};
+      },
+      { actieveOrganisatieId: () => "org-b" },
+    );
+    await api.bewaar({ naam: "A" }, "org-a");
+    await api.uploadLogo(new Blob([new Uint8Array([1])]), "logo.png", "org-a");
+    // Zonder expliciet bedrijf geldt het actieve, zoals voorheen.
+    await api.bewaar({ naam: "B" });
+    expect(oproepen.map(([, opties]) => opties?.headers)).toEqual([
+      { "x-elentrik-organisatie": "org-a" },
+      { "x-elentrik-organisatie": "org-a" },
+      { "x-elentrik-organisatie": "org-b" },
+    ]);
+  });
+
   test("een fout van de server blijft ongemoeid", async () => {
     const eigen = Object.assign(new Error("413"), { status: 413 });
     const api = maakBedrijfApi(async () => {

@@ -64,6 +64,13 @@
       "when": 1792772335180,
       "tag": "0008_taal",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793345972119,
+      "tag": "0009_bestanden-project-index",
+      "breakpoints": true
     }
   ]
 }

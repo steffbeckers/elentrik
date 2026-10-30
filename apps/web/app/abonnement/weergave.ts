@@ -143,6 +143,8 @@ export function paginaWeergave(o: AbonnementOverzicht, rol: Rol | null, taal: Ta
     const betalingRegelen = o.status === "past_due" || o.status === "unpaid";
     return { ...weergave, beheer: betalingRegelen ? "abonnement.betalingRegelen" : "abonnement.beheren" };
   }
+  // Een vrijgesteld bedrijf hoeft niets te kiezen: alleen de status, geen kaarten en geen prijzenmelding.
+  if (o.reden === "vrijgesteld") return weergave;
   if (!o.prijzen) return { ...weergave, melding: "prijzen" };
   const { maand, jaar } = o.prijzen;
   return {

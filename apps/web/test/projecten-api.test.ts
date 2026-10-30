@@ -70,6 +70,43 @@ describe("useProjectenApi", () => {
     ]);
   });
 
+  test("dupliceer met planbestanden stuurt hun id's als body mee; zonder bestanden geen body", async () => {
+    const oproepen: Parameters<ProjectenFetch>[] = [];
+    const api = maakProjectenApi(async (...argumenten) => {
+      oproepen.push(argumenten);
+      return { id: "kopie" };
+    });
+    await api.dupliceer("abc", ["b1", "b2"]);
+    await api.dupliceer("abc", []);
+    expect(oproepen).toEqual([
+      ["/api/projecten/abc/dupliceer", { method: "POST", body: { bestandIds: ["b1", "b2"] } }],
+      ["/api/projecten/abc/dupliceer", { method: "POST" }],
+    ]);
+  });
+
+  test("maakUitDocument post naam en document, met de gebruiker en de actieve organisatie", async () => {
+    const oproepen: Oproep[] = [];
+    const api = maakProjectenApi(
+      async (...argumenten) => {
+        oproepen.push(argumenten);
+        return { id: "nieuw", versie: 1, documentId: "d", bestandIds: {} };
+      },
+      { gebruikerId: "g1", actieveOrganisatieId: () => "org-1" },
+    );
+    const document = {} as never;
+    await api.maakUitDocument({ naam: "Woning", document });
+    expect(oproepen).toEqual([
+      [
+        "/api/projecten/uit-document",
+        {
+          method: "POST",
+          body: { naam: "Woning", document },
+          headers: { "x-elentrik-gebruiker": "g1", "x-elentrik-organisatie": "org-1" },
+        },
+      ],
+    ]);
+  });
+
   test("dupliceer en verwijder gebruiken de juiste routes", async () => {
     const { api, oproepen } = maakApi({ id: "kopie" });
     expect(await api.dupliceer("abc")).toEqual({ id: "kopie" });

@@ -132,6 +132,8 @@ export async function haalBestand(
    * `organisatie_id`. `null` als het bij geen organisatie hoort; dan is het voor niemand.
    */
   organisatieId: string | null;
+  /** Of het project van het bestand verwijderd is; altijd `false` voor een bestand zonder project. */
+  projectVerwijderd: boolean;
 } | null> {
   const [rij] = await db
     .select({
@@ -141,6 +143,7 @@ export async function haalBestand(
       sleutel: bestanden.sleutel,
       projectId: bestanden.projectId,
       organisatieId: sql<string | null>`coalesce(${projecten.organisatieId}, ${bestanden.organisatieId})`,
+      projectVerwijderd: sql<boolean>`${projecten.verwijderd} is not null`,
     })
     .from(bestanden)
     .leftJoin(projecten, eq(projecten.id, bestanden.projectId))

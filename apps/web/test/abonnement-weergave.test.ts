@@ -1,7 +1,15 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import type { AbonnementOverzicht, Toegang } from "../shared/abonnement";
-import { bannerVoor, datumTekst, jaarKorting, prijsTekst, statusAantal, statusTekstSleutel } from "../app/abonnement/weergave";
+import {
+  bannerVoor,
+  datumTekst,
+  jaarKorting,
+  paginaWeergave,
+  prijsTekst,
+  statusAantal,
+  statusTekstSleutel,
+} from "../app/abonnement/weergave";
 
 const NU = new Date("2026-11-01T12:00:00.000Z");
 const DAG = 24 * 3600 * 1000;
@@ -207,5 +215,35 @@ describe("de teksten met de betaaldatum", () => {
     expect(vul(nl.abonnement.status.betalingMisluktTot, datum)).toBe(
       "Je laatste betaling is mislukt. Regel je betaling vóór 14 november 2026.",
     );
+  });
+});
+
+describe("paginaWeergave", () => {
+  const prijzen = {
+    maand: { bedrag: 1500, munt: "eur", interval: "month" as const },
+    jaar: { bedrag: 15000, munt: "eur", interval: "year" as const },
+  };
+
+  test("een eigenaar in de proef krijgt de kaarten Maandelijks en Jaarlijks", () => {
+    const w = paginaWeergave(overzicht({ prijzen }), "eigenaar", "nl");
+    expect(w.kaarten.map((k) => k.formule)).toEqual(["maand", "jaar"]);
+  });
+
+  test("een vrijgesteld bedrijf: geen kaarten, geen melding en de status 'hoeft niet te betalen'", () => {
+    const w = paginaWeergave(overzicht({ reden: "vrijgesteld", proefEinde: null, prijzen }), "eigenaar", "nl");
+    expect(w.kaarten).toEqual([]);
+    expect(w.melding).toBeNull();
+    expect(w.beheer).toBeNull();
+    expect(w.statusSleutel).toBe("abonnement.status.vrijgesteld");
+    const nl = JSON.parse(readFileSync(new URL("../i18n/locales/nl.json", import.meta.url), "utf8")) as {
+      abonnement: { status: { vrijgesteld: string } };
+    };
+    expect(nl.abonnement.status.vrijgesteld).toContain("Je bedrijf hoeft niet te betalen");
+  });
+
+  test("een vrijgesteld bedrijf zonder prijzen toont ook niet 'prijzen ontbreken'", () => {
+    const w = paginaWeergave(overzicht({ reden: "vrijgesteld", prijzen: null }), "eigenaar", "nl");
+    expect(w.melding).toBeNull();
+    expect(w.kaarten).toEqual([]);
   });
 });

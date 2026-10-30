@@ -11,7 +11,14 @@ import {
 } from "./concepten";
 import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
 import { foutCode } from "../sessie/fouten";
-import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./useProjectenApi";
+import { metNieuweBestandIds, planBestandIds } from "../editor/kopie";
+import {
+  ConflictFout,
+  httpStatus,
+  type BewaarInvoer,
+  type NieuwProjectUitDocument,
+  type Project,
+} from "./useProjectenApi";
 
 /**
  * - `opgeslagen`: de server heeft de laatste wijziging.
@@ -27,8 +34,21 @@ import { ConflictFout, httpStatus, type BewaarInvoer, type Project } from "./use
  * - `alleen-lezen`: de server antwoordde 402 `ABONNEMENT_VEREIST`: de organisatie mag niet meer schrijven.
  *   Het werk staat in het concept; zoals bij `afgemeld` volgt geen nieuwe poging tot `nuOpslaan()`.
  *   Lukt het concept niet (of niet meer), dan is de status `onbewaard`; `alleenLezen` blijft dan true.
+ * - `verwijderd`: de server antwoordde 404: het project is intussen elders verwijderd. Het werk staat in het
+ *   concept; er volgt geen nieuwe poging. De editor biedt `bewaarAlsNieuwProject()` of terug naar de projecten
+ *   aan. Verlaten vraagt nog altijd om bevestiging (het concept van een verwijderd project is nooit meer te
+ *   openen), behalve via de uitdrukkelijke keuze "Terug naar de projecten". Lukt het concept niet (of niet
+ *   meer), dan is de status `onbewaard`; `verwijderd` blijft dan true.
  */
-export type AutosaveStatus = "opgeslagen" | "bezig" | "lokaal" | "onbewaard" | "conflict" | "fout" | "alleen-lezen";
+export type AutosaveStatus =
+  | "opgeslagen"
+  | "bezig"
+  | "lokaal"
+  | "onbewaard"
+  | "conflict"
+  | "fout"
+  | "alleen-lezen"
+  | "verwijderd";
 
 /** De leden van de editor-store die de autosave gebruikt. */
 export type AutosaveStore = {
@@ -46,8 +66,18 @@ export type AutosaveOpties = {
   store: AutosaveStore;
   bewaar: (id: string, versie: number, invoer: BewaarInvoer) => Promise<{ versie: number }>;
   haal: (id: string) => Promise<Project>;
-  dupliceer: (id: string) => Promise<{ id: string }>;
-  /** Navigeert naar een ander project (de kopie). */
+  /**
+   * Dupliceert op de server. `bestandIds`: de planbestanden van het lokale document; het antwoord
+   * geeft voor de gekopieerde bestanden oud -> nieuw (`bestandIds`).
+   */
+  dupliceer: (id: string, bestandIds?: string[]) => Promise<{ id: string; bestandIds?: Record<string, string> }>;
+  /**
+   * Maakt op de server een nieuw project uit het lokale document (het project is verwijderd). De server
+   * kopieert de planbestanden van de organisatie mee en geeft oud -> nieuw terug (`bestandIds`), samen met
+   * het document-id en de versie van het nieuwe project.
+   */
+  maakNieuw: (invoer: { naam: string; document: InstallatieDocument }) => Promise<NieuwProjectUitDocument>;
+  /** Navigeert naar een ander project (de kopie of het nieuwe project). */
   naarProject: (id: string) => void | Promise<void>;
   /** Wachttijd na de laatste wijziging. */
   vertragingMs?: number;
@@ -64,9 +94,16 @@ export type AutosaveOpties = {
   instantieId?: string;
 };
 
+/**
+ * De server heeft een andere versie dan de editor toont. `lokaleWijzigingen`: staan er in de editor
+ * wijzigingen die nog niet op de server staan? Bij een 409 op het bewaren altijd; bij de export
+ * (die enkel van een opgeslagen project kan) meestal niet: dan toont de editor gewoon een oudere versie.
+ */
+export type Conflict = { huidigeVersie: number; lokaleWijzigingen: boolean };
+
 export type Autosave = {
   status: Ref<AutosaveStatus>;
-  conflict: Ref<{ huidigeVersie: number } | null>;
+  conflict: Ref<Conflict | null>;
   /** Gezet bij status `fout`: de HTTP-status waarmee de server het bewaren weigerde. */
   fout: Ref<{ status: number } | null>;
   /**
@@ -79,9 +116,20 @@ export type Autosave = {
    * meer naar de server tot `nuOpslaan()` (na een abonnement). Een geslaagd bewaar zet dit terug op false.
    */
   alleenLezen: Ref<boolean>;
+  /**
+   * De server antwoordde 404: het project is verwijderd (elders). Het werk staat in het concept; er gaat
+   * niets meer naar de server. `bewaarAlsNieuwProject` maakt er een nieuw project van.
+   */
+  verwijderd: Ref<boolean>;
   nuOpslaan(): Promise<void>;
   laadServerversie(): Promise<void>;
   bewaarAlsKopie(): Promise<void>;
+  /**
+   * Na `verwijderd`: maakt van het lokale document een nieuw project (de planbestanden van de organisatie
+   * gaan mee), wist het concept van het verwijderde project en navigeert naar het nieuwe. Mislukt het, dan
+   * blijft alles zoals het was (status `verwijderd`, het concept blijft) en gooit dit de fout.
+   */
+  bewaarAlsNieuwProject(): Promise<void>;
   /**
    * Een 409 van buiten het bewaren (de export): de server heeft een andere versie dan de editor.
    * Hetzelfde conflictpad als een 409 bij het bewaren; `laadServerversie` of `bewaarAlsKopie` lost het op.
@@ -105,6 +153,9 @@ const TIJDELIJK = new Set([408, 429]);
 /** Geen (geldige) sessie meer. */
 const AFGEMELD = 401;
 
+/** Het project bestaat niet (meer): verwijderd, of niet van jou. */
+const NIET_GEVONDEN = 404;
+
 /** De organisatie mag niet (meer) schrijven; samen met de code `ABONNEMENT_VEREIST`. */
 const BETALING_VEREIST = 402;
 
@@ -113,6 +164,8 @@ const BETALING_VEREIST = 402;
  * of de gebruiker de pagina echt wil verlaten.
  */
 export function waarschuwBijVerlaten(status: AutosaveStatus): boolean {
+  // Ook bij `verwijderd`: het concept van een verwijderd project kan nooit meer geopend worden. Alleen
+  // de uitdrukkelijke keuze "Terug naar de projecten" slaat de vraag over (dat beslist de pagina).
   return status !== "opgeslagen";
 }
 
@@ -125,7 +178,7 @@ export function waarschuwBijVerlaten(status: AutosaveStatus): boolean {
  * kiest dan in het conflictscherm; er gaat niets verloren.
  */
 export function useAutosave(opties: AutosaveOpties): Autosave {
-  const { store, bewaar, haal, dupliceer, naarProject } = opties;
+  const { store, bewaar, haal, dupliceer, maakNieuw, naarProject } = opties;
   const vertragingMs = opties.vertragingMs ?? 2000;
   const herprobeerMs = opties.herprobeerMs ?? 10_000;
   const concepten = opties.concepten ?? { bewaarConcept: bewaarConceptEcht, wisConcept: wisConceptEcht };
@@ -137,10 +190,11 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const plekVan = (projectId: string): ConceptPlek => ({ gebruikerId, projectId, instantieId });
 
   const status = ref<AutosaveStatus>("opgeslagen");
-  const conflict = ref<{ huidigeVersie: number } | null>(null);
+  const conflict = ref<Conflict | null>(null);
   const fout = ref<{ status: number } | null>(null);
   const afgemeld = ref(false);
   const alleenLezen = ref(false);
+  const verwijderd = ref(false);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   /** Het bewaar (of de kopie) dat nu loopt; er is er nooit meer dan één tegelijk. */
@@ -171,7 +225,16 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return conceptGelukt ? "alleen-lezen" : "onbewaard";
   }
 
+  /** Zoals `alleenLezenStatus`, voor een verwijderd project. */
+  function verwijderdStatus(): AutosaveStatus {
+    return conceptGelukt ? "verwijderd" : "onbewaard";
+  }
+
   function werkOfflineStatusBij(): void {
+    if (verwijderd.value) {
+      if (status.value === "verwijderd" || status.value === "onbewaard") status.value = verwijderdStatus();
+      return;
+    }
     if (alleenLezen.value) {
       if (status.value === "alleen-lezen" || status.value === "onbewaard") status.value = alleenLezenStatus();
       return;
@@ -230,9 +293,12 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return store.gewijzigdSindsOpslaan !== bewaardeTeller;
   }
 
-  /** Bewaart de autosave vanzelf? Niet bij een conflict, een fout, na een 401 (afgemeld) of een 402 (alleen-lezen). */
+  /**
+   * Bewaart de autosave vanzelf? Niet bij een conflict, een fout, na een 401 (afgemeld), een 402
+   * (alleen-lezen) of een 404 (verwijderd).
+   */
   function automatisch(): boolean {
-    return !conflict.value && !fout.value && !afgemeld.value && !alleenLezen.value;
+    return !conflict.value && !fout.value && !afgemeld.value && !alleenLezen.value && !verwijderd.value;
   }
 
   /** Wijzigingen die tijdens een bewaar binnenkwamen krijgen hier hun eigen, gedebouncete bewaar. */
@@ -256,7 +322,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
 
   /** Bewaart de huidige staat, tenzij er een conflict of fout is of al een bewaar loopt. */
   async function probeer(): Promise<void> {
-    if (conflict.value || fout.value || lopend) return;
+    if (conflict.value || fout.value || verwijderd.value || lopend) return;
     const id = store.projectId;
     const document = store.document;
     if (id === null || document === null) return;
@@ -293,7 +359,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         if (store.laadGeneratie !== generatie) return;
         const httpCode = httpStatus(e);
         if (e instanceof ConflictFout) {
-          conflict.value = { huidigeVersie: e.huidigeVersie };
+          conflict.value = { huidigeVersie: e.huidigeVersie, lokaleWijzigingen: true };
           status.value = "conflict";
           wisTimer();
         } else if (httpCode === AFGEMELD) {
@@ -309,6 +375,19 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           alleenLezen.value = true;
           afgemeld.value = false;
           status.value = alleenLezenStatus();
+          wisTimer();
+        } else if (httpCode === NIET_GEVONDEN) {
+          // Het project is intussen verwijderd: opnieuw proberen verandert daar niets aan. Het werk
+          // staat in het concept (nog eens schrijven, voor het geval een eerdere schrijfactie mislukte);
+          // de gebruiker kiest: een nieuw project maken of terug naar de projecten.
+          verwijderd.value = true;
+          afgemeld.value = false;
+          alleenLezen.value = false;
+          status.value = verwijderdStatus();
+          const huidig = store.document;
+          if (huidig !== null) {
+            schrijfConcept(id, { document: huidig, versie: store.versie, naam: store.naam, tijd: Date.now() });
+          }
           wisTimer();
         } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
           // De server weigert dit document; opnieuw proberen verandert daar niets aan. De server
@@ -338,6 +417,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       fout.value = null;
       afgemeld.value = false;
       alleenLezen.value = false;
+      verwijderd.value = false;
       status.value = "opgeslagen";
       return;
     }
@@ -346,6 +426,8 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     if (id !== null && document !== null) {
       schrijfConcept(id, { document, versie: store.versie, naam: store.naam, tijd: Date.now() });
     }
+    // Een wijziging tijdens een conflict zonder lokale wijzigingen (de export): nu zijn er wel lokale wijzigingen.
+    if (conflict.value && !conflict.value.lokaleWijzigingen) conflict.value = { ...conflict.value, lokaleWijzigingen: true };
     // Bij een conflict, een fout of afgemeld blijft het concept staan, maar gaat er niets naar de server.
     if (!automatisch()) return;
     if (status.value !== "lokaal" && status.value !== "onbewaard") status.value = "bezig";
@@ -364,7 +446,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       await lopend;
     }
     if (gewacht && (status.value === "lokaal" || status.value === "onbewaard" || status.value === "fout")) return;
-    if (conflict.value || !onbewaard()) return;
+    if (conflict.value || verwijderd.value || !onbewaard()) return;
     fout.value = null;
     await probeer();
   }
@@ -383,33 +465,45 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     fout.value = null;
     afgemeld.value = false;
     alleenLezen.value = false;
+    verwijderd.value = false;
     status.value = "opgeslagen";
     await wisConceptVeilig(id);
   }
 
+  /**
+   * Zonder lokale wijzigingen (een conflict bij de export) is de kopie gewoon een server-side
+   * duplicaat van de actuele serverversie, met eigen planbestanden: daar wordt niets over geschreven.
+   * Met lokale wijzigingen wordt het lokale document in de kopie bewaard; de planbestanden daarvan
+   * staan dan op hun nieuwe id's uit het duplicaat.
+   */
   async function bewaarAlsKopie(): Promise<void> {
     while (lopend) await lopend;
     const id = store.projectId;
     if (id === null || store.document === null) return;
     wisTimer();
+    const zonderLokaal = conflict.value?.lokaleWijzigingen === false;
     await startLopend(async () => {
-      const kopie = await dupliceer(id);
-      // De kopie heeft een eigen document-id; die nemen we over, anders delen origineel en kopie er één.
-      const kopieDocId = (await haal(kopie.id)).document.id;
-      let versie = 1;
-      let teller: number;
-      do {
-        teller = store.gewijzigdSindsOpslaan;
-        const document = store.document;
-        if (document === null) return;
-        const resultaat = await bewaar(kopie.id, versie, {
-          naam: `${store.naam} (kopie)`,
-          document: { ...document, id: kopieDocId },
-        });
-        versie = resultaat.versie;
-        // Kwam er tijdens het bewaar nog een wijziging bij, dan gaat die ook naar de kopie.
-      } while (store.gewijzigdSindsOpslaan !== teller);
-      bewaardeTeller = store.gewijzigdSindsOpslaan;
+      const kopie = zonderLokaal ? await dupliceer(id) : await dupliceer(id, planBestandIds(store.document!));
+      // Kwam er tijdens het dupliceren toch een wijziging bij, dan gaat die mee naar de kopie.
+      if (!zonderLokaal || onbewaard()) {
+        const nieuweIds = kopie.bestandIds ?? {};
+        // De kopie heeft een eigen document-id; die nemen we over, anders delen origineel en kopie er één.
+        const kopieDocId = (await haal(kopie.id)).document.id;
+        let versie = 1;
+        let teller: number;
+        do {
+          teller = store.gewijzigdSindsOpslaan;
+          const document = store.document;
+          if (document === null) return;
+          const resultaat = await bewaar(kopie.id, versie, {
+            naam: `${store.naam} (kopie)`,
+            document: { ...metNieuweBestandIds(document, nieuweIds), id: kopieDocId },
+          });
+          versie = resultaat.versie;
+          // Kwam er tijdens het bewaar nog een wijziging bij, dan gaat die ook naar de kopie.
+        } while (store.gewijzigdSindsOpslaan !== teller);
+        bewaardeTeller = store.gewijzigdSindsOpslaan;
+      }
       afgemeld.value = false;
       alleenLezen.value = false;
       await wisConceptVeilig(id);
@@ -417,8 +511,49 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     });
   }
 
+  /**
+   * Een nieuw project uit het lokale document. De server geeft de nieuwe id's van de planbestanden terug;
+   * kwam er tijdens het maken nog een wijziging bij, dan gaat die met die id's ook naar het nieuwe project.
+   * Pas daarna gaat het concept van het verwijderde project weg en volgt de navigatie.
+   */
+  async function bewaarAlsNieuwProject(): Promise<void> {
+    while (lopend) await lopend;
+    const id = store.projectId;
+    if (id === null || store.document === null) return;
+    wisTimer();
+    await startLopend(async () => {
+      let teller = store.gewijzigdSindsOpslaan;
+      const nieuw = await maakNieuw({ naam: store.naam, document: store.document! });
+      let versie = nieuw.versie;
+      // Het nieuwe project bestaat: vanaf hier nooit een tweede maken. Lukt het bewaren van een latere
+      // wijziging niet, dan gaat die naar het concept van het nieuwe project (de editor daar biedt het
+      // aan) en navigeren we toch.
+      const naarNieuw = (document: InstallatieDocument): InstallatieDocument => ({
+        ...metNieuweBestandIds(document, nieuw.bestandIds),
+        id: nieuw.documentId,
+      });
+      try {
+        while (store.gewijzigdSindsOpslaan !== teller) {
+          teller = store.gewijzigdSindsOpslaan;
+          const document = store.document;
+          if (document === null) break;
+          const resultaat = await bewaar(nieuw.id, versie, { naam: store.naam, document: naarNieuw(document) });
+          versie = resultaat.versie;
+        }
+        bewaardeTeller = store.gewijzigdSindsOpslaan;
+      } catch {
+        const document = store.document;
+        if (document !== null) {
+          schrijfConcept(nieuw.id, { document: naarNieuw(document), versie, naam: store.naam, tijd: Date.now() });
+        }
+      }
+      await wisConceptVeilig(id);
+      await naarProject(nieuw.id);
+    });
+  }
+
   function meldConflict(huidigeVersie: number): void {
-    conflict.value = { huidigeVersie };
+    conflict.value = { huidigeVersie, lokaleWijzigingen: onbewaard() };
     status.value = "conflict";
     wisTimer();
   }
@@ -429,7 +564,9 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     stopWatch();
     wisTimer();
     // In-app navigeren binnen de vertraging mag de serverbewaring niet overslaan.
-    if (conflict.value || fout.value || alleenLezen.value || store.document === null || !onbewaard()) return;
+    if (conflict.value || fout.value || alleenLezen.value || verwijderd.value || store.document === null || !onbewaard()) {
+      return;
+    }
     // De generatie van nu: is er na het wachten opnieuw geladen (de volgende pagina, ook van
     // hetzelfde project), dan is die staat niet van ons en gaat er niets naar de server.
     const generatie = store.laadGeneratie;
@@ -459,9 +596,11 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     fout,
     afgemeld,
     alleenLezen,
+    verwijderd,
     nuOpslaan,
     laadServerversie,
     bewaarAlsKopie,
+    bewaarAlsNieuwProject,
     meldConflict,
     stop,
     wachtOpConcept,

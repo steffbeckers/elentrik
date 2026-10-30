@@ -195,6 +195,11 @@ describe("alleen-lezen zonder schrijfrecht", () => {
       },
       "PUT /api/projecten/:id": { methode: "PUT", pad: `/api/projecten/${id}`, ifMatch: 1, json: { document } },
       "POST /api/projecten/:id/dupliceer": { methode: "POST", pad: `/api/projecten/${id}/dupliceer` },
+      "POST /api/projecten/uit-document": {
+        methode: "POST",
+        pad: "/api/projecten/uit-document",
+        json: { naam: "Uit document", document },
+      },
       "POST /api/projecten/:id/bestanden": {
         methode: "POST",
         pad: `/api/projecten/${id}/bestanden`,
@@ -208,7 +213,7 @@ describe("alleen-lezen zonder schrijfrecht", () => {
     return { projecten: rijen.length, versies: rijen.map((r) => r.versie).sort() };
   }
 
-  test("een verlopen proef geeft 402 op de vier schrijfroutes en verandert niets", async () => {
+  test("een verlopen proef geeft 402 op de vijf schrijfroutes en verandert niets", async () => {
     schakelIn();
     await zetProefEinde(eigenaar.organisatieId, new Date(Date.now() - DAG_MS));
     const verzoeken = await schrijfVerzoeken();

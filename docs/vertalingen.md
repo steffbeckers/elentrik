@@ -18,6 +18,7 @@ De vertalingen zijn eigen werk (clean room). Ze nemen geen tekst of terminologie
 - **Plaatshouders en meervoudsvormen:** `{naam}` en `|` staan per sleutel identiek in elke taal.
 - **Datums in de pdf:** dag/maand/jaar in de locale van de dossiertaal, met een jaar van vier cijfers in elke taal: `19/10/2026` (nl, fr en en). Een dag onder de 10 heeft één cijfer (`5/03/2026`). Dit geldt voor de cartouche en voor de datum van een afwijking.
 - **Hoofdletters:** de benaming van een toesteltype in de pdf staat in een lopende zin of tussen haakjes in kleine letters ("Toestel (wasmachine)"); een ruimte en een type staan op zichzelf met een hoofdletter.
+- **Venster en dialoog:** "venster" (fr "fenêtre", en "window") is het browservenster of tabblad ("sluit dit venster niet"). Een pop-up in de pagina heet "dialoog" (fr "boîte de dialogue", en "dialog").
 
 ## Kernbegrippen
 

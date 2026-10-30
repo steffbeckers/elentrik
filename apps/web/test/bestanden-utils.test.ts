@@ -6,13 +6,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEvent, type H3Event } from "h3";
 import { describe, expect, test } from "vitest";
-import { MAX_UPLOAD_BYTES } from "../shared/bestandsinhoud";
+import { MAX_LOGO_BYTES, MAX_UPLOAD_BYTES } from "../shared/bestandsinhoud";
 import { maakLokaleOpslag } from "../server/bestanden/opslag";
 import { BestandFout, bewaarBestand, haalBestand, type BestandFoutCode } from "../server/bestanden/repo";
 import { maakProject } from "../server/projecten/repo";
 import {
   bestandId,
   controleerUploadGrootte,
+  leesLogoUpload,
   leesPlanUpload,
   metBestandFouten,
 } from "../server/utils/bestanden";
@@ -64,6 +65,15 @@ async function statusVan(actie: () => unknown): Promise<number | undefined> {
   return undefined;
 }
 
+async function foutVan(actie: () => unknown): Promise<{ statusCode?: number; data?: { code?: string } }> {
+  try {
+    await actie();
+  } catch (fout) {
+    return fout as { statusCode?: number; data?: { code?: string } };
+  }
+  return {};
+}
+
 describe("bestandId", () => {
   test("een uuid wordt teruggegeven, een ander id geeft 404", async () => {
     const uuid = "00000000-0000-4000-8000-000000000000";
@@ -82,14 +92,32 @@ describe("controleerUploadGrootte", () => {
     ).toBe(413);
   });
 
-  test("precies de limiet plus 1 MB, of geen header, is toegelaten", async () => {
+  test("precies de limiet plus 1 MB is toegelaten", async () => {
     const grens = String(MAX_UPLOAD_BYTES + 1024 * 1024);
     expect(
       await statusVan(() =>
         controleerUploadGrootte(maakEvent({ headers: { "content-length": grens } })),
       ),
     ).toBeUndefined();
-    expect(await statusVan(() => controleerUploadGrootte(maakEvent()))).toBeUndefined();
+  });
+
+  test.each([
+    ["ontbreekt", undefined],
+    ["is leeg", ""],
+    ["is geen getal", "abc"],
+    ["is negatief", "-5"],
+    ["is een kommagetal", "1.5"],
+  ])("een content-length die %s geeft 411 LENGTE_VEREIST", async (_naam, waarde) => {
+    const headers: Record<string, string> = waarde === undefined ? {} : { "content-length": waarde };
+    const fout = await foutVan(() => controleerUploadGrootte(maakEvent({ headers })));
+    expect(fout.statusCode).toBe(411);
+    expect(fout.data?.code).toBe("LENGTE_VEREIST");
+  });
+
+  test("een geldige lengte van 0 is toegelaten", async () => {
+    expect(
+      await statusVan(() => controleerUploadGrootte(maakEvent({ headers: { "content-length": "0" } }))),
+    ).toBeUndefined();
   });
 });
 
@@ -165,6 +193,35 @@ describe("leesPlanUpload", () => {
       },
     });
     expect(await statusVan(() => leesPlanUpload(event))).toBe(413);
+  });
+});
+
+describe("uploads zonder lengte", () => {
+  test("een plan-upload zonder content-length geeft 411 LENGTE_VEREIST", async () => {
+    const { body, headers } = multipart([
+      { naam: "soort", inhoud: "plan-raster" },
+      { naam: "bestand", inhoud: new Uint8Array([1]), bestand: true },
+    ]);
+    const zonderLengte = { "content-type": headers["content-type"] };
+    const fout = await foutVan(() => leesPlanUpload(maakEvent({ body, headers: zonderLengte })));
+    expect([fout.statusCode, fout.data?.code]).toEqual([411, "LENGTE_VEREIST"]);
+  });
+
+  test("een logo-upload zonder of met een ongeldige content-length geeft 411 LENGTE_VEREIST", async () => {
+    const { body, headers } = multipart([{ naam: "bestand", inhoud: new Uint8Array([1]), bestand: true }]);
+    for (const lengte of [undefined, "abc"]) {
+      const kop: Record<string, string> = { "content-type": headers["content-type"] };
+      if (lengte !== undefined) kop["content-length"] = lengte;
+      const fout = await foutVan(() => leesLogoUpload(maakEvent({ body, headers: kop })));
+      expect([fout.statusCode, fout.data?.code]).toEqual([411, "LENGTE_VEREIST"]);
+    }
+  });
+
+  test("een logo met een geldige lengte gaat door, en boven de logolimiet volgt 413", async () => {
+    const { body, headers } = multipart([{ naam: "bestand", inhoud: new Uint8Array([1, 2]), bestand: true }]);
+    expect(await leesLogoUpload(maakEvent({ body, headers }))).toEqual(new Uint8Array([1, 2]));
+    const teGroot = { ...headers, "content-length": String(MAX_LOGO_BYTES + 1024 * 1024 + 1) };
+    expect(await statusVan(() => leesLogoUpload(maakEvent({ headers: teGroot })))).toBe(413);
   });
 });
 

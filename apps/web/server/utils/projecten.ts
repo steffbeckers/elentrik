@@ -26,6 +26,47 @@ export const BewaarProjectSchema = z.object({
   document: z.record(z.string(), z.unknown()),
 });
 
+/** Zoveel verschillende planbestanden mag een document hebben dat als nieuw project gekopieerd wordt (zoals `DupliceerSchema`). */
+export const MAX_PLANBESTANDEN_UIT_DOCUMENT = 200;
+
+/** Het aantal verschillende planbestand-id's in een (nog niet gevalideerd) document; wat er niet uitziet als een plan telt niet. */
+function aantalPlanbestanden(document: Record<string, unknown>): number {
+  const situatie = document.situatie as { paginas?: unknown } | null | undefined;
+  const paginas = Array.isArray(situatie?.paginas) ? (situatie.paginas as unknown[]) : [];
+  const ids = new Set<string>();
+  for (const pagina of paginas) {
+    const achtergrond = (pagina as { achtergrond?: Record<string, unknown> } | null)?.achtergrond;
+    for (const sleutel of ["origineelBestandId", "rasterBestandId"] as const) {
+      const id = achtergrond?.[sleutel];
+      if (typeof id === "string") ids.add(id);
+    }
+  }
+  return ids.size;
+}
+
+/**
+ * Een nieuw project uit het document van de editor ("Bewaar als nieuw project"). Het document wordt
+ * door de repo volledig gevalideerd. De naam volgt dezelfde regel als `NieuwProjectSchema` en
+ * `BewaarProjectSchema` (geen maximum), zodat elke bestaande projectnaam als nieuw project kan worden
+ * bewaard. Het aantal planbestanden is begrensd: meer dan 200 verschillende is 400 ONGELDIGE_INVOER.
+ */
+export const ProjectUitDocumentSchema = z.object({
+  naam: z.string().trim().min(1),
+  document: z
+    .record(z.string(), z.unknown())
+    .refine((document) => aantalPlanbestanden(document) <= MAX_PLANBESTANDEN_UIT_DOCUMENT, {
+      message: "Een document mag hoogstens 200 verschillende planbestanden hebben.",
+    }),
+});
+
+/**
+ * De body van het dupliceren is optioneel: de planbestanden die de editor kent maar het opgeslagen
+ * document niet. Begrensd; wat geen bestand van het project is, negeert de repo.
+ */
+export const DupliceerSchema = z
+  .object({ bestandIds: z.array(z.string().max(100)).max(200).default([]) })
+  .default({ bestandIds: [] });
+
 /** Een id dat geen uuid is, kan nooit een bestaand project zijn: 404. */
 export function projectId(event: H3Event): string {
   const id = IdSchema.safeParse(getRouterParam(event, "id"));

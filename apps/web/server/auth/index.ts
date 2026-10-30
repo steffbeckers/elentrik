@@ -5,8 +5,10 @@
 //
 // Tokens: magic-link- en hersteltokens staan alleen gehasht in `verification`; de bevestigingslink
 // is een ondertekende JWT die niet in de database staat. Sessietokens staan wel leesbaar in
-// `session.token`: Better Auth 1.7.7 heeft daar geen optie voor. Aanvaarde beperking (ruling R4),
-// beperkt door HttpOnly-cookies en een database die alleen lokaal bereikbaar is.
+// `session.token`: Better Auth 1.7.7 heeft daar geen optie voor. Het cookie is echter
+// `token.HMAC(BETTER_AUTH_SECRET)`: een gelekte database zonder het geheim geeft dus geen sessie
+// (zie test/auth-cookie.test.ts). Aanvaarde beperking (ruling R4), verder beperkt door
+// HttpOnly-cookies en een database die alleen lokaal bereikbaar is.
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module
 // rechtstreeks (ruling E1).

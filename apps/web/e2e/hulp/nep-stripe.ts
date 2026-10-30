@@ -4,11 +4,13 @@
 // een lokale host). Er gaat nooit verkeer naar de echte Stripe.
 //
 // Wat ze doet:
-// - prijzen lezen (vaste maand- en jaarprijs), klanten maken;
+// - prijzen lezen (vaste maand- en jaarprijs), klanten maken en zoeken op `metadata.organisatieId`;
 // - Checkout-sessies maken, lezen en laten vervallen, met een nepbetaalpagina op /checkout/:id;
 // - een leeg abonnementenoverzicht en een lege lijst betaalde facturen, en een nepklantenportaal.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { E2E_STRIPE_PRIJS_JAAR, E2E_STRIPE_PRIJS_MAAND } from "../omgeving";
+
+type Klant = { id: string; email: string | null; name: string | null; metadata: Record<string, string> };
 
 type Sessie = { id: string; klant: string | null; metadata: Record<string, string>; status: "open" | "expired" };
 
@@ -49,6 +51,7 @@ function metadataVan(formulier: URLSearchParams): Record<string, string> {
 export async function startNepStripe(poort: number): Promise<{ stop(): Promise<void> }> {
   const basis = `http://127.0.0.1:${poort}`;
   const sessies = new Map<string, Sessie>();
+  const klanten = new Map<string, Klant>();
   let teller = 0;
   const nieuwId = (voorvoegsel: string) => `${voorvoegsel}_e2e_${++teller}`;
 
@@ -91,12 +94,26 @@ export async function startNepStripe(poort: number): Promise<{ stop(): Promise<v
 
     if (methode === "POST" && pad === "/v1/customers") {
       const formulier = await leesFormulier(req);
-      return json(res, 200, {
+      const klant: Klant = {
         id: nieuwId("cus"),
-        object: "customer",
         email: formulier.get("email"),
         name: formulier.get("name"),
         metadata: metadataVan(formulier),
+      };
+      klanten.set(klant.id, klant);
+      return json(res, 200, { ...klant, object: "customer" });
+    }
+
+    // De zoekopdracht van de Stripe-poort: `metadata['organisatieId']:'<uuid>'`.
+    if (methode === "GET" && pad === "/v1/customers/search") {
+      const query = new URL(req.url ?? "/", basis).searchParams.get("query") ?? "";
+      const m2 = /^metadata\['([^']+)'\]:'([^']*)'$/.exec(query);
+      const gevonden = m2 ? [...klanten.values()].filter((k) => k.metadata[m2[1]!] === m2[2]) : [];
+      return json(res, 200, {
+        object: "search_result",
+        url: "/v1/customers/search",
+        has_more: false,
+        data: gevonden.map((k) => ({ ...k, object: "customer" })),
       });
     }
 

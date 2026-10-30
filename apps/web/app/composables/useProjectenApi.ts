@@ -11,6 +11,17 @@ export type { Project, ProjectSamenvatting };
 
 export type NieuwProject = { naam: string; klantnaam: string; stroomtype: Stroomtype };
 
+/**
+ * Het antwoord van een nieuw project uit een document: het id en de versie van het project, het
+ * document-id dat het kreeg en voor elk gekopieerd planbestand het oude en het nieuwe id.
+ */
+export type NieuwProjectUitDocument = {
+  id: string;
+  versie: number;
+  documentId: string;
+  bestandIds: Record<string, string>;
+};
+
 export type BewaarInvoer = { naam?: string; document: InstallatieDocument };
 
 /** Een bewaaractie op een verouderde versie: `huidigeVersie` is de versie op de server. */
@@ -95,11 +106,27 @@ export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOptie
       }
     },
 
-    dupliceer: (id: string) =>
+    /**
+     * Dupliceert op de server (de planbestanden worden mee gekopieerd). `bestandIds`: extra planbestanden
+     * van het lokale document; het antwoord geeft voor elk gekopieerd bestand oud -> nieuw.
+     */
+    dupliceer: (id: string, bestandIds: string[] = []) =>
       haal(`/api/projecten/${id}/dupliceer`, {
         method: "POST",
         ...(opties.gebruikerId ? { headers: voorGebruiker } : {}),
-      }) as Promise<{ id: string }>,
+        ...(bestandIds.length > 0 ? { body: { bestandIds } } : {}),
+      }) as Promise<{ id: string; bestandIds?: Record<string, string> }>,
+
+    /**
+     * Maakt een nieuw project uit het document van de editor (het project werd elders verwijderd). De
+     * planbestanden van de organisatie die het document noemt, worden server-side mee gekopieerd.
+     */
+    maakUitDocument: (invoer: BewaarInvoer & { naam: string }) =>
+      haal("/api/projecten/uit-document", {
+        method: "POST",
+        body: invoer,
+        headers: { ...voorGebruiker, ...voorOrganisatie(opties.actieveOrganisatieId?.()).headers },
+      }) as Promise<NieuwProjectUitDocument>,
 
     verwijder: async (id: string): Promise<void> => {
       await haal(`/api/projecten/${id}`, { method: "DELETE" });

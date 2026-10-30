@@ -63,3 +63,18 @@ export function vertrekBevestiging(
   if (status === "onbewaard") return "editor.vertrek.bevestigingOnbewaard";
   return "editor.vertrek.bevestiging";
 }
+
+/** De velden van een klik die `slaVertrekvraagOver` leest. */
+export type Klik = Pick<MouseEvent, "button" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey">;
+
+/**
+ * "Terug naar de projecten" in de melding "project verwijderd" laat het werk uitdrukkelijk los: dan
+ * vraagt de editor niets meer bij het vertrekken. Twee uitzonderingen. Bij `onbewaard` staat het werk
+ * alleen nog in het geheugen (ook het lokale concept mislukte): dan vragen we zoals altijd. En alleen
+ * bij een gewone linkerklik: ctrl, cmd, shift of de middelste knop openen de pagina in een nieuw
+ * tabblad of venster, en dit tabblad blijft dan gewoon staan.
+ */
+export function slaVertrekvraagOver(status: AutosaveStatus, klik: Klik): boolean {
+  if (status === "onbewaard") return false;
+  return klik.button === 0 && !klik.ctrlKey && !klik.metaKey && !klik.shiftKey && !klik.altKey;
+}

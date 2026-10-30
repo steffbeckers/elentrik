@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -50,6 +50,63 @@ describe("lokale opslag", () => {
     await writeFile(nep, "x");
     const opslag = maakLokaleOpslag(nep);
     await expect(opslag.schrijf("p/b", new Uint8Array([1]))).rejects.toThrow();
+  });
+});
+
+describe("lokale opslag: oplijsten en verwijderen", () => {
+  test("lijst geeft elke sleutel met zijn wijzigingstijd, ook uit submappen, met schuine strepen", async () => {
+    const opslag = maakLokaleOpslag(map);
+    await opslag.schrijf("project-a/bestand-1", new Uint8Array([1]));
+    await opslag.schrijf("org/organisatie-1/logo-1", new Uint8Array([2]));
+    await opslag.schrijf("los", new Uint8Array([3]));
+    const oud = new Date("2026-01-02T03:04:05.000Z");
+    await utimes(join(map, "project-a", "bestand-1"), oud, oud);
+
+    const lijst = await opslag.lijst();
+
+    expect(lijst.map((b) => b.sleutel).sort()).toEqual(["los", "org/organisatie-1/logo-1", "project-a/bestand-1"]);
+    expect(lijst.find((b) => b.sleutel === "project-a/bestand-1")!.gewijzigd).toEqual(oud);
+  });
+
+  test("lijst slaat NAS-metadata over: namen met @ of . aan het begin, bestanden en mappen", async () => {
+    const opslag = maakLokaleOpslag(map);
+    await opslag.schrijf("project-a/bestand-1", new Uint8Array([1]));
+    await writeFile(join(map, ".DS_Store"), "x");
+    await writeFile(join(map, "project-a", ".verborgen"), "x");
+    await mkdir(join(map, "@eaDir", "project-a"), { recursive: true });
+    await writeFile(join(map, "@eaDir", "project-a", "bestand-1@SynoEAStream"), "x");
+    await mkdir(join(map, "project-a", "@eaDir"));
+    await writeFile(join(map, "project-a", "@eaDir", "miniatuur"), "x");
+    await mkdir(join(map, ".AppleDouble"));
+    await writeFile(join(map, ".AppleDouble", "x"), "x");
+
+    expect((await opslag.lijst()).map((b) => b.sleutel)).toEqual(["project-a/bestand-1"]);
+  });
+
+  test("lijst op een ontbrekende of lege map geeft een lege lijst, mappen zijn geen bestanden", async () => {
+    expect(await maakLokaleOpslag(join(map, "bestaat-niet")).lijst()).toEqual([]);
+    await mkdir(join(map, "lege-submap"));
+    expect(await maakLokaleOpslag(map).lijst()).toEqual([]);
+  });
+
+  test("verwijder wist het bestand; een ontbrekend bestand is geen fout", async () => {
+    const opslag = maakLokaleOpslag(map);
+    await opslag.schrijf("p/b", new Uint8Array([1]));
+    await opslag.verwijder("p/b");
+    expect(await opslag.bestaat("p/b")).toBe(false);
+    await expect(opslag.verwijder("p/b")).resolves.toBeUndefined();
+    await expect(opslag.verwijder("bestaat/nooit")).resolves.toBeUndefined();
+  });
+
+  test("verwijder weigert een sleutel die uit de map ontsnapt en wist een map niet", async () => {
+    const opslag = maakLokaleOpslag(join(map, "wortel"));
+    await writeFile(join(map, "buiten"), "x");
+    await expect(opslag.verwijder("../buiten")).rejects.toThrow();
+    expect(await readFile(join(map, "buiten"), "utf8")).toBe("x");
+
+    await opslag.schrijf("map/bestand", new Uint8Array([1]));
+    await expect(opslag.verwijder("map")).rejects.toThrow();
+    expect(await opslag.bestaat("map/bestand")).toBe(true);
   });
 });
 

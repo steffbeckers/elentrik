@@ -86,11 +86,21 @@
       "fout": "Saving failed",
       "alleen-lezen": "Not saved: read-only, your work is kept locally",
       "alleenLezen": "Read-only",
-      "opnieuwProberen": "Try again"
+      "opnieuwProberen": "Try again",
+      "verwijderd": "Project deleted"
+    },
+    "verwijderd": {
+      "melding": "This project was deleted.",
+      "uitleg": "Your changes are still kept locally. Save them as a new project, or go back to the projects.",
+      "uitlegNietLokaal": "Your changes could not be kept locally either and only exist in memory. Save them as a new project now and do not close this window.",
+      "nieuwProject": "Save as new project",
+      "terug": "Back to the projects"
     },
     "alleenLezen": {
       "bewaardLokaal": "Your company has no active subscription. Your latest changes have not been saved, but they are kept locally.",
-      "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory."
+      "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory.",
+      "dialoogTitel": "Read-only",
+      "dialoogBeschrijving": "Your company has no active subscription. Changes in this dialog can no longer be saved."
     },
     "onderdelenPaneel": {
       "titel": "Components",
@@ -172,6 +182,7 @@
       "titel": "Local draft found",
       "beschrijving": "This device has a draft of this project with changes that are not on the server yet ({tijd}).",
       "laden": "Load draft",
+      "later": "Later",
       "verwerpen": "Discard"
     },
     "verlaten": {
@@ -183,7 +194,13 @@
       "serverversie": "Load server version",
       "serverversieUitleg": "Your local changes will be lost.",
       "kopie": "Save my version as a copy",
-      "kopieUitleg": "Your version becomes a new project; the original stays unchanged."
+      "kopieUitleg": "Your version becomes a new project; the original stays unchanged.",
+      "zonderLokaal": {
+        "beschrijving": "The project has been changed in the meantime, for example in another window. The PDF was not created, because you are looking at an older version than the one on the server.",
+        "serverversieUitleg": "You will then see the latest version; nothing is lost.",
+        "kopie": "Save the latest version as a copy",
+        "kopieUitleg": "The latest version from the server becomes a new project; the original stays unchanged."
+      }
     },
     "fouten": {
       "NIET_TOEGELATEN_KIND": "That component cannot go here.",
@@ -561,6 +578,7 @@
       "verstuurd": "If this address is known, you will receive a new confirmation email."
     },
     "linkOngeldig": "This link has expired or has already been used. Request a new one.",
+    "nieuweLink": "Send a new link",
     "accountGemaakt": "Your account has been created. Sign in with your email address and password.",
     "wachtwoordGewijzigd": "Your password has been changed. Sign in with your new password.",
     "wachtwoordVergeten": "Forgot your password?",
@@ -774,6 +792,7 @@
     "BESTAND_TE_GROOT": "This file is too large.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "This file type is not accepted.",
     "RASTER_TE_GROOT": "This plan is too large (more than 8,000 pixels).",
+    "LENGTE_VEREIST": "This file could not be uploaded because its size is missing. Try again.",
     "ONBEREIKBAAR": "The PDF service cannot be reached. Try again shortly.",
     "TIMEOUT": "The PDF service did not respond in time. Try again shortly.",
     "MISLUKT": "The PDF could not be created. Please try again.",
@@ -790,6 +809,7 @@
     "ACCOUNT_BESTAAT": "An account with this address already exists. Sign in to accept the invitation.",
     "TE_VEEL_UITNODIGINGEN": "Too many invitations. Try again later.",
     "TE_VEEL_POGINGEN": "Too many attempts. Wait a moment and try again.",
+    "INLOGLINK_MISLUKT": "Signing in with the link did not work. Request a new link.",
     "INVALID_EMAIL_OR_PASSWORD": "The email address or password is incorrect.",
     "EMAIL_NOT_VERIFIED": "Your email address has not been confirmed yet.",
     "INVALID_TOKEN": "This link has expired or has already been used. Request a new one.",

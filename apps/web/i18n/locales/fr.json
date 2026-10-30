@@ -86,11 +86,21 @@
       "fout": "Échec de l'enregistrement",
       "alleen-lezen": "Non enregistré : lecture seule, votre travail reste conservé localement",
       "alleenLezen": "Lecture seule",
-      "opnieuwProberen": "Réessayer"
+      "opnieuwProberen": "Réessayer",
+      "verwijderd": "Projet supprimé"
+    },
+    "verwijderd": {
+      "melding": "Ce projet a été supprimé.",
+      "uitleg": "Vos modifications sont toujours conservées localement. Enregistrez-les comme nouveau projet ou retournez aux projets.",
+      "uitlegNietLokaal": "Vos modifications n'ont pas pu être conservées localement non plus et ne sont plus qu'en mémoire. Enregistrez-les maintenant comme nouveau projet et ne fermez pas cette fenêtre.",
+      "nieuwProject": "Enregistrer comme nouveau projet",
+      "terug": "Retour aux projets"
     },
     "alleenLezen": {
       "bewaardLokaal": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
-      "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire."
+      "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire.",
+      "dialoogTitel": "Lecture seule",
+      "dialoogBeschrijving": "Votre entreprise n'a pas d'abonnement actif. Les modifications de cette boîte de dialogue ne peuvent plus être enregistrées."
     },
     "onderdelenPaneel": {
       "titel": "Éléments",
@@ -172,6 +182,7 @@
       "titel": "Brouillon local trouvé",
       "beschrijving": "Cet appareil contient un brouillon de ce projet avec des modifications qui ne sont pas encore sur le serveur ({tijd}).",
       "laden": "Charger le brouillon",
+      "later": "Plus tard",
       "verwerpen": "Ignorer"
     },
     "verlaten": {
@@ -183,7 +194,13 @@
       "serverversie": "Charger la version du serveur",
       "serverversieUitleg": "Vos modifications locales seront perdues.",
       "kopie": "Enregistrer ma version comme copie",
-      "kopieUitleg": "Votre version devient un nouveau projet ; l'original reste inchangé."
+      "kopieUitleg": "Votre version devient un nouveau projet ; l'original reste inchangé.",
+      "zonderLokaal": {
+        "beschrijving": "Le projet a été modifié entre-temps, par exemple dans une autre fenêtre. Le PDF n'a pas été créé, car vous voyez une version plus ancienne que celle du serveur.",
+        "serverversieUitleg": "Vous verrez ensuite la version la plus récente ; rien n'est perdu.",
+        "kopie": "Enregistrer la version la plus récente comme copie",
+        "kopieUitleg": "La version la plus récente du serveur devient un nouveau projet ; l'original reste inchangé."
+      }
     },
     "fouten": {
       "NIET_TOEGELATEN_KIND": "Cet élément ne peut pas être placé ici.",
@@ -561,6 +578,7 @@
       "verstuurd": "Si cette adresse est connue, vous recevrez un nouvel e-mail de confirmation."
     },
     "linkOngeldig": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
+    "nieuweLink": "Envoyer un nouveau lien",
     "accountGemaakt": "Votre compte a été créé. Connectez-vous avec votre adresse e-mail et votre mot de passe.",
     "wachtwoordGewijzigd": "Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe.",
     "wachtwoordVergeten": "Mot de passe oublié ?",
@@ -774,6 +792,7 @@
     "BESTAND_TE_GROOT": "Ce fichier est trop volumineux.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "Ce type de fichier n'est pas accepté.",
     "RASTER_TE_GROOT": "Ce plan est trop grand (plus de 8 000 pixels).",
+    "LENGTE_VEREIST": "Ce fichier n'a pas pu être envoyé, car sa taille est absente. Réessayez.",
     "ONBEREIKBAAR": "Le service PDF est injoignable. Réessayez dans quelques instants.",
     "TIMEOUT": "Le service PDF n'a pas répondu à temps. Réessayez dans quelques instants.",
     "MISLUKT": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
@@ -790,6 +809,7 @@
     "ACCOUNT_BESTAAT": "Un compte existe déjà avec cette adresse. Connectez-vous pour accepter l'invitation.",
     "TE_VEEL_UITNODIGINGEN": "Trop d'invitations. Réessayez plus tard.",
     "TE_VEEL_POGINGEN": "Trop de tentatives. Patientez un instant et réessayez.",
+    "INLOGLINK_MISLUKT": "La connexion avec le lien n'a pas abouti. Demandez un nouveau lien.",
     "INVALID_EMAIL_OR_PASSWORD": "L'adresse e-mail ou le mot de passe est incorrect.",
     "EMAIL_NOT_VERIFIED": "Votre adresse e-mail n'est pas encore confirmée.",
     "INVALID_TOKEN": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
