@@ -128,11 +128,106 @@ describe("symbolen voor punten, leiding en onderbord", () => {
     const svgVan = (opties: DoosOpties) => tekenSymbool(doos(opties)).svg;
     const aantalVan = (svg: string, rol: string) => svg.match(new RegExp(`data-rol="${rol}"`, "g"))?.length ?? 0;
 
-    test("heeft een halve cirkel als boog en een verticale lijn naar het aansluitpunt", () => {
-      const svg = svgVan({});
-      expect(svg).toMatch(/<path d="M4 5 A3 3 0 0 1 10 5"/);
-      expect(svg).toContain('<line x1="7" y1="10" x2="7" y2="2"');
-      expect(svg).toContain('<line x1="7" y1="2" x2="7" y2="0"');
+    type Lijn = { x1: number; y1: number; x2: number; y2: number; rol: string | undefined };
+    const lijnen = (svg: string): Lijn[] =>
+      [...svg.matchAll(/<line([^>]*)>/g)].map(([, a = ""]) => {
+        const n = (s: string) => Number(a.match(new RegExp(`${s}="([^"]*)"`))?.[1]);
+        return { x1: n("x1"), y1: n("y1"), x2: n("x2"), y2: n("y2"), rol: a.match(/data-rol="([^"]*)"/)?.[1] };
+      });
+    const metRol = (svg: string, rol: string) => lijnen(svg).filter((l) => l.rol === rol);
+    const waterpas = (l: Lijn) => Math.abs(l.y1 - l.y2) < 1e-9;
+
+    /** De boog: middelpunt, straal en de y van de top (het punt het dichtst bij `in`). */
+    function boog(svg: string) {
+      const m = svg.match(/<path d="M(\S+) (\S+) A(\S+) (\S+) 0 0 (\d) (\S+) (\S+)"/);
+      if (!m) throw new Error("geen boog gevonden");
+      const [sx, sy, r, , sweep, ex, ey] = [m[1], m[2], m[3], m[4], m[5], m[6], m[7]].map(Number) as [
+        number, number, number, number, number, number, number,
+      ];
+      // Van links naar rechts: sweep 0 loopt tegen de klok in, dus onderlangs (bolle kant naar onder).
+      const naarOnder = (sx < ex) === (sweep === 0);
+      return { x1: sx, x2: ex, r, eindY: sy, eindY2: ey, topY: naarOnder ? sy + r : sy - r };
+    }
+
+    test.each(contactdozen)("de boog opent naar uit: %s", (_naam, node) => {
+      const svg = tekenSymbool(node).svg;
+      const b = boog(svg);
+      expect(b.eindY).toBeCloseTo(b.eindY2, 9);
+      // De uiteinden liggen boven (kleinere y) de top, en de top ligt het dichtst bij `in` (y = 10).
+      expect(b.eindY).toBeLessThan(b.topY);
+      expect(10 - b.topY).toBeLessThan(10 - b.eindY);
+      expect(b.topY).toBeLessThanOrEqual(10);
+      // De lijn loopt van `in` door de boog tot `uit`.
+      const lang = lijnen(svg).find((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7 && Math.abs(l.y1 - l.y2) > 5);
+      expect(lang).toBeDefined();
+      expect(Math.max(lang!.y1, lang!.y2)).toBe(10);
+      expect(Math.min(lang!.y1, lang!.y2)).toBe(0);
+    });
+
+    test.each(contactdozen)("randaarde raakt de bolle kant: %s", (_naam, node) => {
+      const svg = tekenSymbool(node).svg;
+      const { randaarde } = node as NodeVan<"contactdoos">;
+      const streep = metRol(svg, "randaarde");
+      if (!randaarde) {
+        expect(streep).toHaveLength(0);
+        return;
+      }
+      const b = boog(svg);
+      expect(streep).toHaveLength(1);
+      const [s] = streep as [Lijn];
+      expect(waterpas(s)).toBe(true);
+      expect(s.y1).toBeGreaterThan(b.topY - 0.2);
+      expect(s.y1).toBeLessThan(b.topY + 0.2);
+      expect(Math.abs(s.x2 - s.x1)).toBeGreaterThan(2 * b.r);
+    });
+
+    test.each(contactdozen)("kinderbescherming: %s", (_naam, node) => {
+      const svg = tekenSymbool(node).svg;
+      const { kinderbeveiliging } = node as NodeVan<"contactdoos">;
+      const voetjes = metRol(svg, "kinderbeveiliging");
+      if (!kinderbeveiliging) {
+        expect(voetjes).toHaveLength(0);
+        return;
+      }
+      const b = boog(svg);
+      expect(voetjes).toHaveLength(2);
+      for (const v of voetjes) {
+        expect(waterpas(v)).toBe(true);
+        expect(v.y1).toBeCloseTo(b.eindY, 9);
+        // Begint aan een uiteinde van de boog en wijst naar buiten: weg van het midden (x = 7).
+        expect([b.x1, b.x2].some((e) => Math.abs(e - v.x1) < 1e-9)).toBe(true);
+        expect(Math.abs(v.x2 - 7)).toBeGreaterThan(Math.abs(v.x1 - 7));
+      }
+      expect(voetjes.filter((v) => v.x1 < 7)).toHaveLength(1);
+    });
+
+    test.each(contactdozen)("waterdicht is de letter h: %s", (_naam, node) => {
+      const svg = tekenSymbool(node).svg;
+      const { waterdicht } = node as NodeVan<"contactdoos">;
+      expect(svg).not.toMatch(/<path [^>]*fill="currentColor"/);
+      const h = svg.match(/<text x="([^"]*)"[^>]*data-rol="waterdicht"[^>]*>([^<]*)<\/text>/);
+      if (!waterdicht) {
+        expect(h).toBeNull();
+        return;
+      }
+      expect(h?.[2]).toBe("h");
+      expect(svg).toContain('font-size="2.5" text-anchor="start"');
+      expect(Number(h?.[1])).toBeGreaterThanOrEqual(7 + boog(svg).r);
+    });
+
+    test.each(contactdozen)("aantal: %s", (_naam, node) => {
+      const svg = tekenSymbool({ ...node, aantal: 3 } as NodeVan<"contactdoos">).svg;
+      expect(metRol(svg, "aantal-streep")).toHaveLength(1);
+      expect(svg).toMatch(/data-rol="aantal"[^>]*>3<\/text>/);
+      expect(svg).not.toContain("×");
+      const een = tekenSymbool(node).svg;
+      expect(een).not.toContain("aantal-streep");
+      expect(een).not.toContain('data-rol="aantal"');
+    });
+
+    test("het aantal is een getal zonder teken ×, ook boven 9", () => {
+      expect(svgVan({ aantal: 12 })).toMatch(/data-rol="aantal"[^>]*>12<\/text>/);
+      expect(svgVan({ aantal: 1 })).not.toContain("<text");
     });
 
     test("randaarde, kinderbeveiliging en waterdicht verschijnen alleen als ze aan staan", () => {
@@ -142,16 +237,6 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(aantalVan(svgVan({ kinderbeveiliging: true }), "kinderbeveiliging")).toBe(2);
       expect(aantalVan(svgVan({}), "waterdicht")).toBe(0);
       expect(aantalVan(svgVan({ waterdicht: true }), "waterdicht")).toBe(1);
-    });
-
-    test("de waterdichtdriehoek is gevuld", () => {
-      expect(svgVan({ waterdicht: true })).toMatch(/<path d="M[^"]*Z" [^>]*fill="currentColor"[^>]*data-rol="waterdicht"/);
-    });
-
-    test("het aantal wordt alleen getoond vanaf 2, met het teken ×", () => {
-      expect(svgVan({ aantal: 1 })).not.toContain("<text");
-      expect(svgVan({ aantal: 3 })).toContain(">3×</text>");
-      expect(svgVan({ aantal: 12 })).toContain(">12×</text>");
     });
   });
 

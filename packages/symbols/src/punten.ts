@@ -55,30 +55,56 @@ function aantalTekst(aantal: number, y: number): string {
 }
 
 /**
- * Contactdoos: een halve cirkel (r = 3) met de open kant naar onder (naar `in`) en een verticale
- * lijn van het aansluitpunt onderaan door de boog tot `uit` bovenaan. 14 × 10 mm.
+ * De letter "h" van half-waterdicht, waterdicht en hermetisch (AREI tabel 2.23, F). `x` is de
+ * linkerkant en `y` de basislijn. Rechtop, zoals alle tekst.
+ */
+export function letterH(x: number, y: number): string {
+  return tekst(x, y, "h", { anker: "start", grootte: 2.5, data: { rol: "waterdicht" } });
+}
+
+/**
+ * Contactdoos volgens F in AREI tabel 2.23, 14 × 10 mm. De voeding komt van onder (`in`) en raakt
+ * de bolle kant van een halve cirkel (r = 3); de boog opent naar boven, naar `uit`, en de lijn loopt
+ * door de boog tot `uit`.
+ * - randaarde: een streep tegen de bolle kant, breder dan de boog;
+ * - kinderbeveiliging: een voetje aan elk uiteinde van de boog, naar buiten;
+ * - waterdicht: de letter h rechts van de boog;
+ * - aantal > 1: een klein schuin streepje over de boog en het getal ernaast.
  */
 export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
   const breedte = 14;
   const hoogte = 10;
   const x = breedte / 2;
   const r = 3;
-  // De rand van de boog ligt 5 mm van `in`, de onderrand.
-  const boogY = hoogte - 5;
-  const boogTop = boogY - r;
+  // De uiteinden van de boog liggen op `eindY`, de top (bolle kant, het dichtst bij `in`) r lager.
+  const eindY = 4;
+  const topY = eindY + r;
   let svg =
-    lijn(x, hoogte, x, boogTop) +
-    lijn(x, boogTop, x, 0) +
-    // Sweep 1: van links naar rechts over de bovenkant, dus de bolle kant wijst naar `uit`.
-    pad(`M${getal(x - r)} ${getal(boogY)} A${getal(r)} ${getal(r)} 0 0 1 ${getal(x + r)} ${getal(boogY)}`);
-  if (node.randaarde) svg += lijn(x - r, boogY + 1.5, x + r, boogY + 1.5, { data: { rol: "randaarde" } });
+    lijn(x, hoogte, x, 0) +
+    // Sweep 0: van links naar rechts onderlangs, dus de bolle kant wijst naar `in` en de boog opent naar `uit`.
+    pad(`M${getal(x - r)} ${getal(eindY)} A${getal(r)} ${getal(r)} 0 0 0 ${getal(x + r)} ${getal(eindY)}`);
+  if (node.randaarde) svg += lijn(x - r - 1, topY, x + r + 1, topY, { data: { rol: "randaarde" } });
   if (node.kinderbeveiliging) {
     svg +=
-      lijn(x - 1.6, boogY - 0.6, x - 0.8, boogY - 1.6, { data: { rol: "kinderbeveiliging" } }) +
-      lijn(x + 1.6, boogY - 0.6, x + 0.8, boogY - 1.6, { data: { rol: "kinderbeveiliging" } });
+      lijn(x - r, eindY, x - r - 1.2, eindY, { data: { rol: "kinderbeveiliging" } }) +
+      lijn(x + r, eindY, x + r + 1.2, eindY, { data: { rol: "kinderbeveiliging" } });
   }
-  if (node.waterdicht) svg += waterdichtDriehoek(breedte, hoogte);
-  svg += aantalTekst(node.aantal, boogY - 1.5 + AANTAL_GROOTTE_MM * 0.7);
+  if (node.waterdicht) svg += letterH(x + r + 1.6, eindY + 1.5);
+  if (node.aantal > 1) {
+    // Het streepje staat op de straal die 40° onder de horizontaal naar rechts wijst en kruist de
+    // boog daar haaks; het getal staat erboven en erachter.
+    const hoek = (40 * Math.PI) / 180;
+    const [c, s] = [Math.cos(hoek), Math.sin(hoek)];
+    svg +=
+      lijn(x + (r - 0.8) * c, eindY + (r - 0.8) * s, x + (r + 0.8) * c, eindY + (r + 0.8) * s, {
+        data: { rol: "aantal-streep" },
+      }) +
+      tekst(x + r + 0.4, eindY - 1.4, String(node.aantal), {
+        anker: "start",
+        grootte: AANTAL_GROOTTE_MM,
+        data: { rol: "aantal" },
+      });
+  }
   return { maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
 }
 
