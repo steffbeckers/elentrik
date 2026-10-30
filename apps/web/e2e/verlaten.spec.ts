@@ -6,22 +6,13 @@ import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from "./hulp/inlo
 import { E2E_URL } from "./omgeving";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
-gebruikTestgebruiker(test, { voorvoegsel: "verlaten" });
+const { spoor } = gebruikTestgebruiker(test, { voorvoegsel: "verlaten" });
 
-// Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
+// Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Verlaten ${Date.now()}`;
 const bevestiging = "Je wijzigingen staan nog niet op de server. Wil je de editor toch verlaten?";
 
-type Samenvatting = { id: string; naam: string };
 type Project = { versie: number; document: unknown };
-
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as Samenvatting[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
 
 test("navigeren in de app bij een conflict vraagt een bevestiging en het concept blijft", async ({ page, request }) => {
   const aangemaakt = await request.post("/api/projecten", {
@@ -171,6 +162,7 @@ test("de sessie verdwijnt op de server tijdens het tekenen: melding, opnieuw inl
   playwright,
 }) => {
   const gebruiker = { naam: "Sessie Tester", email: uniekAdres("sessie"), bedrijf: "Sessie Elektro" };
+  spoor.emails.add(gebruiker.email);
   const api = await playwright.request.newContext({ baseURL: E2E_URL });
   const staat = await maakTestgebruiker(api, gebruiker).finally(() => api.dispose());
   const context = await browser.newContext({ storageState: staat });

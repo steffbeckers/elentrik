@@ -5,20 +5,12 @@ import { gebruikTestgebruiker } from "./hulp/inloggen";
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "verwijderd" });
 
-// Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
+// Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Verwijderd ${Date.now()}`;
 const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const bevestiging = "Je wijzigingen staan nog niet op de server. Wil je de editor toch verlaten?";
 
-type Samenvatting = { id: string; naam: string };
 type Project = { id: string; versie: number; naam: string; document: { nodes: Record<string, unknown> } };
-
-test.afterAll(async ({ request }) => {
-  const projecten = (await (await request.get("/api/projecten")).json()) as Samenvatting[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
 
 /** Opent een nieuw project in de editor, verwijdert het via de API (een ander venster) en wijzigt iets. */
 async function openVerwijderdProject(page: Page, request: APIRequestContext, suffix: string) {

@@ -8,6 +8,7 @@ import { meldAan, meldAf } from "./hulp/aanmelden";
 import { metE2eDatabase } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { TESTWACHTWOORD, uniekAdres } from "./hulp/inloggen";
+import { nieuwSpoor, ruimOp } from "./hulp/opruimen";
 import { aantalMailsAan, laatsteMailAan, linkUit } from "./hulp/mailpit";
 import { E2E_URL } from "./omgeving";
 
@@ -24,6 +25,15 @@ const eigenaar = {
 };
 const collega = { naam: "Chris Collega", email: uniekAdres("collega"), wachtwoord: "collega-wachtwoord-123" };
 
+// Wat deze spec aanmaakt, wordt in `afterAll` gewist, ook als een test faalde: beide gebruikers
+// (met de organisatie, de overgenomen projecten en de bedrijfsrij) en de gezaaide gegevens.
+const spoor = nieuwSpoor();
+spoor.emails.add(eigenaar.email).add(collega.email);
+
+test.afterAll(async () => {
+  await ruimOp(spoor);
+});
+
 test("registreren: bevestigen en inloggen, en de bestaande projecten en bedrijfsgegevens worden overgenomen", async ({
   page,
 }) => {
@@ -33,12 +43,16 @@ test("registreren: bevestigen en inloggen, en de bestaande projecten en bedrijfs
   // playwright.config.ts) en het zaaien en het registreren in deze ene test gebeuren: tussen beide
   // kan geen andere spec iemand registreren. De volgorde van de spec-bestanden speelt geen rol;
   // gebruikers die al een organisatie hebben, nemen niets over.
+  // Ook zonder overname (een falende test) staan ze in het spoor, zodat ze niet achterblijven.
+  spoor.bedrijfsinstellingen.add(1);
   await metE2eDatabase(async (sql) => {
     for (const naam of projectNamen) {
       const document = nieuwProjectDocument({ klantNaam: "Overname", stroomtype: "2x230V" });
-      await sql`
+      const [rij] = await sql<{ id: string }[]>`
         insert into projecten (naam, klantnaam, document)
-        values (${naam}, ${"Overname"}, ${sql.json(JSON.parse(JSON.stringify(document)))})`;
+        values (${naam}, ${"Overname"}, ${sql.json(JSON.parse(JSON.stringify(document)))})
+        returning id`;
+      spoor.projecten.add(rij!.id);
     }
     await sql`
       insert into bedrijfsinstellingen (id, organisatie_id, installateur)
@@ -84,6 +98,7 @@ test("inloggen met een wachtwoord en met een inloglink; een onbekend adres krijg
   // Een inloglink voor een onbekend adres: dezelfde, neutrale melding, en er komt geen mail.
   const melding = "Als dit adres bekend is, ontvang je een link.";
   const onbekend = uniekAdres("onbekend");
+  spoor.emails.add(onbekend);
   const sindsOnbekend = new Date(Date.now() - 1000);
   await page.getByTestId("inloggen-email").fill(onbekend);
   await page.getByTestId("inloglink-knop").click();
