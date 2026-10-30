@@ -95,6 +95,16 @@ describe("foutSleutel", () => {
   });
 });
 
+describe("foutSleutel bij een volle opslag", () => {
+  const opslagVol = Object.assign(new Error("HTTP 413"), { status: 413, data: { data: { code: "OPSLAG_VOL" } } });
+
+  test("een 413 OPSLAG_VOL is opslagVol, een 413 BESTAND_TE_GROOT blijft teGroot", () => {
+    expect(foutSleutel(opslagVol)).toBe("opslagVol");
+    const teGroot = Object.assign(new Error("HTTP 413"), { status: 413, data: { data: { code: "BESTAND_TE_GROOT" } } });
+    expect(foutSleutel(teGroot)).toBe("teGroot");
+  });
+});
+
 describe("isAfgebroken", () => {
   test("herkent een AbortError, ook van een fetch-fout met cause", () => {
     expect(isAfgebroken(new DOMException("x", "AbortError"))).toBe(true);

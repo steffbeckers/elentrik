@@ -86,6 +86,7 @@ services:
       ELENTRIK_GOTENBERG_URL: http://gotenberg:3000
       ELENTRIK_VERTROUWD_PROXYNET: 172.30.70.0/24
       ELENTRIK_GEPLANDE_TAKEN: ${ELENTRIK_GEPLANDE_TAKEN:-}
+      ELENTRIK_OPSLAG_PER_BEDRIJF_MB: ${ELENTRIK_OPSLAG_PER_BEDRIJF_MB:-}
       # Zet de grendels van de opstartcontrole aan: productie weigert SMTP_HOST=mailpit.
       ELENTRIK_OMGEVING: productie
       MAIL_VERZENDER: ${MAIL_VERZENDER:-smtp}
@@ -136,6 +137,7 @@ services:
       ELENTRIK_GOTENBERG_URL: http://gotenberg:3000
       ELENTRIK_VERTROUWD_PROXYNET: 172.30.70.0/24
       ELENTRIK_GEPLANDE_TAKEN: ${ELENTRIK_GEPLANDE_TAKEN:-}
+      ELENTRIK_OPSLAG_PER_BEDRIJF_MB: ${ELENTRIK_OPSLAG_PER_BEDRIJF_MB:-}
       # Alle mail naar de Mailpit van deze stack; nooit naar Graph of een echte mailserver.
       MAIL_VERZENDER: smtp
       SMTP_HOST: mailpit

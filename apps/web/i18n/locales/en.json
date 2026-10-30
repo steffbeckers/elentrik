@@ -793,6 +793,7 @@
     "BESTANDSTYPE_NIET_TOEGELATEN": "This file type is not accepted.",
     "RASTER_TE_GROOT": "This plan is too large (more than 8,000 pixels).",
     "PLANBESTAND_ONBEKEND": "The project refers to a plan that does not belong to it and could not be saved. Upload the plan again.",
+    "OPSLAG_VOL": "This company's storage is full. Delete projects or get in touch.",
     "LENGTE_VEREIST": "This file could not be uploaded because its size is missing. Try again.",
     "ONBEREIKBAAR": "The PDF service cannot be reached. Try again shortly.",
     "TIMEOUT": "The PDF service did not respond in time. Try again shortly.",

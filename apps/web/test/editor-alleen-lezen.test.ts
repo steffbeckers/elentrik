@@ -277,6 +277,7 @@ describe("een plan uploaden zonder abonnement", () => {
     const alleenLezen = vi.fn(async () => true);
     expect(await uploadFoutMelding(fetchFout(413, "BESTAND_TE_GROOT"), alleenLezen)).toBe("teGroot");
     expect(await uploadFoutMelding(fetchFout(415, "X"), alleenLezen)).toBe("onbekendType");
+    expect(await uploadFoutMelding(fetchFout(413, "OPSLAG_VOL"), alleenLezen)).toBe("opslagVol");
     expect(await uploadFoutMelding(new Error("netwerk"), alleenLezen)).toBe("mislukt");
     expect(alleenLezen).not.toHaveBeenCalled();
   });

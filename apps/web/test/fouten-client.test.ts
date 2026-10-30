@@ -31,6 +31,14 @@ describe("vertaalFout", () => {
     expect(vertaalFout(fout, t)).toBe("[fouten.PLANBESTAND_ONBEKEND]");
   });
 
+  test("OPSLAG_VOL (413) van een upload, dupliceren of Bewaar als nieuw project: de vertaling, niet 'te groot'", () => {
+    const fout = {
+      status: 413,
+      data: { statusCode: 413, statusMessage: "Opslag vol", data: { code: "OPSLAG_VOL" } },
+    };
+    expect(vertaalFout(fout, t)).toBe("[fouten.OPSLAG_VOL]");
+  });
+
   test("de Better Auth-client: de code bovenaan", () => {
     const fout = { status: 401, code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" };
     expect(vertaalFout(fout, t)).toBe("[fouten.INVALID_EMAIL_OR_PASSWORD]");

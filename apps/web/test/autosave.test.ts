@@ -14,6 +14,7 @@ import {
 import { useAutosave, waarschuwBijVerlaten, type AutosaveOpties } from "../app/composables/useAutosave";
 import { ConflictFout, type Project } from "../app/composables/useProjectenApi";
 import { vertrekBevestiging } from "../app/editor/aanmelding";
+import { vertaalFout } from "../app/fouten";
 import { useEditorStore } from "../app/stores/editor";
 
 const KOPIE_DOC_ID = "kopie-document-id";
@@ -379,6 +380,22 @@ describe("useAutosave", () => {
     expect(store.document).toBe(voor);
     expect(await conceptVan("p1")).toBeUndefined();
     expect(naarProject).toHaveBeenCalledWith("kopie1");
+  });
+
+  test("een volle opslag (413 OPSLAG_VOL) bij het dupliceren: de fout komt ongewijzigd door en er wordt niet genavigeerd", async () => {
+    const { store, bewaar, dupliceer, naarProject, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(new ConflictFout(5));
+    wijzig(store, "Lokaal");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    const opslagVol = Object.assign(new Error("opslag vol"), { status: 413, data: { data: { code: "OPSLAG_VOL" } } });
+    dupliceer.mockRejectedValueOnce(opslagVol);
+
+    await expect(autosave.bewaarAlsKopie()).rejects.toBe(opslagVol);
+
+    expect(vertaalFout(opslagVol, (sleutel) => sleutel)).toBe("fouten.OPSLAG_VOL");
+    expect(naarProject).not.toHaveBeenCalled();
+    expect(autosave.status.value).toBe("conflict");
   });
 
   test("bewaarAlsKopie zonder lokale wijzigingen, maar met een wijziging tijdens het dupliceren: die gaat mee naar de kopie", async () => {
@@ -1430,6 +1447,19 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     expect(nieuwConcept?.document.id).toBe(NIEUW_DOC_ID);
     // Het concept van het verwijderde project is weg.
     expect(await conceptVan("p1")).toBeUndefined();
+  });
+
+  test("een volle opslag (413 OPSLAG_VOL) bij het maken: de fout komt ongewijzigd door, er wordt niet genavigeerd en het concept blijft", async () => {
+    const { maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    const opslagVol = Object.assign(new Error("opslag vol"), { status: 413, data: { data: { code: "OPSLAG_VOL" } } });
+    maakNieuw.mockRejectedValueOnce(opslagVol);
+
+    await expect(autosave.bewaarAlsNieuwProject()).rejects.toBe(opslagVol);
+
+    expect(vertaalFout(opslagVol, (sleutel) => sleutel)).toBe("fouten.OPSLAG_VOL");
+    expect(autosave.status.value).toBe("verwijderd");
+    expect(naarProject).not.toHaveBeenCalled();
+    expect((await conceptVan("p1"))?.naam).toBe("a");
   });
 
   test("mislukt het maken, dan blijft de status verwijderd en het concept staan, en kan het opnieuw", async () => {

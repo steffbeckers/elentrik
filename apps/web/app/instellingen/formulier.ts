@@ -2,6 +2,7 @@
 // expliciete imports, geen Nuxt-auto-imports (ruling E1).
 import type { Partij } from "@elentrik/model";
 import { herkenSoort, MAX_LOGO_BYTES } from "../../shared/bestandsinhoud";
+import { foutCode, foutStatus } from "../sessie/fouten";
 import {
   STANDAARD_LAND,
   VERPLICHTE_ADRESVELDEN,
@@ -72,6 +73,18 @@ export function partijUitFormulier(f: BedrijfFormulier): Partij {
   const adres = adresUitFormulier(f);
   if (adres !== undefined) partij.adres = adres;
   return partij;
+}
+
+export type LogoFoutSleutel = "onbekendType" | "teGroot" | "opslagVol" | "mislukt";
+
+/**
+ * De melding bij een mislukte logo-upload. Een 413 is `teGroot`, tenzij de server de code OPSLAG_VOL
+ * stuurde: dan is de opslag van het bedrijf vol (`opslagVol`, de vertaling is `fouten.OPSLAG_VOL`).
+ */
+export function logoUploadFout(fout: unknown): LogoFoutSleutel {
+  const status = foutStatus(fout);
+  if (status === 413) return foutCode(fout) === "OPSLAG_VOL" ? "opslagVol" : "teGroot";
+  return status === 415 ? "onbekendType" : "mislukt";
 }
 
 /** Eerste controle van een logo (PNG of JPEG, hoogstens 2 MB); de server herhaalt ze. */

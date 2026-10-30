@@ -4,6 +4,7 @@
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
 import { leesAbonnementConfig } from "../abonnementen/config";
+import { opslagLimietBytes } from "../bestanden/opslagruimte";
 import { isCidr } from "../net";
 import { isStaging, leesOmgeving } from "../../shared/omgeving";
 
@@ -108,6 +109,13 @@ export function controleerConfiguratie(env: Env): string[] {
 
   const net = env.ELENTRIK_VERTROUWD_PROXYNET?.trim();
   if (net && !isCidr(net)) meld("ELENTRIK_VERTROUWD_PROXYNET");
+
+  // De opslaglimiet per bedrijf: leeg of weggelaten is de standaard (5 GB); anders een positief geheel aantal MB.
+  try {
+    opslagLimietBytes(env);
+  } catch {
+    meld("ELENTRIK_OPSLAG_PER_BEDRIJF_MB");
+  }
 
   return problemen;
 }

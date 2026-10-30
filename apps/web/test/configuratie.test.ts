@@ -157,6 +157,17 @@ describe("controleerConfiguratie", () => {
     expect(controleerConfiguratie({ ...STRIPE, STRIPE_API_BASIS: "https://example.com" })).toEqual(["STRIPE_API_BASIS"]);
   });
 
+  test("ELENTRIK_OPSLAG_PER_BEDRIJF_MB: leeg of een positief geheel getal is goed, anders die naam", () => {
+    for (const goed of ["100", "5120", "", "  "]) {
+      expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_OPSLAG_PER_BEDRIJF_MB: goed }), goed).toEqual([]);
+    }
+    for (const fout of ["0", "-1", "abc", "1.5"]) {
+      expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_OPSLAG_PER_BEDRIJF_MB: fout }), fout).toEqual([
+        "ELENTRIK_OPSLAG_PER_BEDRIJF_MB",
+      ]);
+    }
+  });
+
   test("ELENTRIK_VERTROUWD_PROXYNET: leeg of een geldige CIDR is goed, anders die naam", () => {
     expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_VERTROUWD_PROXYNET: "172.30.70.0/24" })).toEqual([]);
     expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_VERTROUWD_PROXYNET: "" })).toEqual([]);

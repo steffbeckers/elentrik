@@ -80,7 +80,8 @@ watch(open, () => reset());
 onBeforeUnmount(reset);
 
 function meld(sleutel: UploadFoutSleutel | "onleesbaar") {
-  toast.add({ title: t(`editor.situatie.toevoegen.fout.${sleutel}`), color: "error" });
+  const titel = sleutel === "opslagVol" ? t("fouten.OPSLAG_VOL") : t(`editor.situatie.toevoegen.fout.${sleutel}`);
+  toast.add({ title: titel, color: "error" });
 }
 
 async function laadVoorbeelden(document: PdfDocument, dezeSessie: number) {

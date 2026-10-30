@@ -15,6 +15,7 @@ import { and, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-or
 import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 import type { Db } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
+import { controleerOpslagruimte } from "../bestanden/opslagruimte";
 import { bestanden, projecten } from "../db/schema";
 import { controleerPlanverwijzingen, nieuwePlanIds, planBestandIdsVan, UUID } from "./planverwijzingen";
 
@@ -192,6 +193,17 @@ async function planBestandenVanOrganisatie(db: Db, organisatieId: string, ids: s
     );
 }
 
+/**
+ * Past de te kopiëren bestanden nog in de opslag van het bedrijf? Zo niet: 413 OPSLAG_VOL, vóór er een
+ * byte gelezen of geschreven wordt. De som is die van `grootte` van de rijen (een bestand dat op schijf
+ * ontbreekt wordt niet gekopieerd en telt hier toch mee: een kleine overschatting). Zonder bestanden
+ * kost de kopie niets en is er niets te controleren.
+ */
+async function controleerRuimteVoorKopie(db: Db, organisatieId: string, bronnen: readonly BestandRij[]): Promise<void> {
+  const bytes = bronnen.reduce((som, rij) => som + rij.grootte, 0);
+  if (bytes > 0) await controleerOpslagruimte(db, organisatieId, bytes);
+}
+
 /** Het document met nieuwe planbestand-id's (oud -> nieuw); een id zonder toewijzing blijft staan. */
 function metNieuwePlanIds(document: InstallatieDocument, nieuweIds: ReadonlyMap<string, string>): InstallatieDocument {
   return {
@@ -308,6 +320,7 @@ export async function dupliceerProject(
   // Elk planbestand van de organisatie, niet alleen die van het bronproject: een kopie van vóór deze fix
   // verwijst nog naar de bestanden van haar eigen bron en krijgt zo alsnog eigen bestanden.
   const bronnen = await planBestandenVanOrganisatie(db, organisatieId, bestandIds);
+  await controleerRuimteVoorKopie(db, organisatieId, bronnen);
 
   const kopieen = await kopieerPlanbestanden(opslag, bronnen, kopieId);
   try {
@@ -355,6 +368,7 @@ export async function maakProjectUitDocument(
 
   const bestandIds = [...new Set(planBestandIdsVan(bronDocument).filter((bestandId) => UUID.test(bestandId)))];
   const bronnen = await planBestandenVanOrganisatie(db, organisatieId, bestandIds);
+  await controleerRuimteVoorKopie(db, organisatieId, bronnen);
 
   const kopieen = await kopieerPlanbestanden(opslag, bronnen, kopieId);
   try {

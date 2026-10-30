@@ -39,6 +39,9 @@ export const SERVER_FOUTCODES = [
   "RASTER_TE_GROOT",
   // Een nieuwe verwijzing in het document naar een plan dat niet van dit project is (422)
   "PLANBESTAND_ONBEKEND",
+  // De opslag van het bedrijf is vol: een upload, een kopie of "Bewaar als nieuw project" zou
+  // de limiet overschrijden (413). Exports worden nooit geweigerd.
+  "OPSLAG_VOL",
   // Een upload zonder geldige Content-Length (411)
   "LENGTE_VEREIST",
   // Export (502, de code van `PdfFout`)

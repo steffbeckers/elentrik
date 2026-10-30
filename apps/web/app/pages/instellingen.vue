@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { httpStatus } from "~/composables/useProjectenApi";
 import {
   controleerLogo,
   formulierUitPartij,
   leegFormulier,
+  logoUploadFout,
   partijUitFormulier,
   valideerFormulier,
   type BedrijfFormulier,
+  type LogoFoutSleutel,
 } from "~/instellingen/formulier";
 import { laadBedrijf } from "~/instellingen/laden";
 import { maakBedrijfBewaarder, type BewaarderToestand } from "~/instellingen/bewaarder";
@@ -101,8 +102,9 @@ async function bewaar() {
 const invoer = ref<HTMLInputElement | null>(null);
 const logoUrl = computed(() => (logoBestandId.value ? bestanden.url(logoBestandId.value) : null));
 
-function meldLogoFout(sleutel: "onbekendType" | "teGroot" | "mislukt") {
-  toast.add({ title: t(`bedrijf.logo.fout.${sleutel}`), color: "error" });
+function meldLogoFout(sleutel: LogoFoutSleutel) {
+  const titel = sleutel === "opslagVol" ? t("fouten.OPSLAG_VOL") : t(`bedrijf.logo.fout.${sleutel}`);
+  toast.add({ title: titel, color: "error" });
 }
 
 async function opLogoGekozen(gebeurtenis: Event) {
@@ -126,8 +128,7 @@ async function opLogoGekozen(gebeurtenis: Event) {
     logoBestandId.value = uitkomst.waarde.id;
     toast.add({ title: t("bedrijf.logo.bewaard"), color: "success" });
   } catch (fout) {
-    const code = httpStatus(fout);
-    meldLogoFout(code === 413 ? "teGroot" : code === 415 ? "onbekendType" : "mislukt");
+    meldLogoFout(logoUploadFout(fout));
   }
 }
 </script>

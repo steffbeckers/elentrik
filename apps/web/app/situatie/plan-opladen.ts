@@ -6,6 +6,8 @@ import { httpStatus } from "../composables/useProjectenApi";
 import { foutCode } from "../sessie/fouten";
 import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
 
+const OPSLAG_VOL = "OPSLAG_VOL";
+
 export type PlanUploader = Pick<BestandenApi, "upload">;
 
 export type PlanInvoer = {
@@ -58,15 +60,19 @@ export async function laadPlanOp(
   };
 }
 
-export type UploadFoutSleutel = "onbekendType" | "teGroot" | "tePixels" | "mislukt";
+/**
+ * `opslagVol` (413 OPSLAG_VOL) heeft geen eigen tekst onder `editor.situatie.toevoegen.fout`: de
+ * dialoog toont dan `fouten.OPSLAG_VOL`, de vertaling van de foutcode.
+ */
+export type UploadFoutSleutel = "onbekendType" | "teGroot" | "tePixels" | "opslagVol" | "mislukt";
 
-/** De sleutel onder `editor.situatie.toevoegen.fout` voor een mislukte upload. */
+/** De sleutel onder `editor.situatie.toevoegen.fout` voor een mislukte upload (of `opslagVol`, zie `UploadFoutSleutel`). */
 export function foutSleutel(fout: unknown): UploadFoutSleutel {
   switch (httpStatus(fout)) {
     case 415:
       return "onbekendType";
     case 413:
-      return "teGroot";
+      return foutCode(fout) === OPSLAG_VOL ? "opslagVol" : "teGroot";
     case 422:
       return "tePixels";
     default:
