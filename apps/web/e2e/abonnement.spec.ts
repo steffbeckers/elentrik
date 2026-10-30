@@ -1,7 +1,7 @@
 // Abonnementen end-to-end, tegen een nep-Stripe op poort 3199 (zie hulp/nep-stripe.ts en
 // global-setup.ts). De server draait met Stripe aan, dus elke nieuwe organisatie krijgt een proef.
 // Een verlopen proef zetten we rechtstreeks in de e2e-database.
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { metE2eDatabase, zetProefEinde, zetVrijgesteld } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from "./hulp/inloggen";
@@ -189,11 +189,20 @@ test("een dialoog die openstaat bij de overgang naar alleen-lezen blijft open me
 });
 
 test("een vrijgesteld bedrijf ziet op /abonnement geen Kies-kaarten, alleen de status", async ({ page, request }) => {
-  await zetVrijgesteld(await organisatieId(request));
+  const thuis = await organisatieId(request);
+  await zetVrijgesteld(thuis);
+  try {
+    await controleerVrijgesteld(page);
+  } finally {
+    await metE2eDatabase((sql) => sql`update organization set vrijgesteld = false where id = ${thuis}`);
+  }
+});
+
+async function controleerVrijgesteld(page: Page): Promise<void> {
   await ga(page, "/abonnement");
   await expect(page.getByTestId("abonnement-status")).toContainText("Je bedrijf hoeft niet te betalen");
   await expect(page.getByTestId("abonnement-kaart-maand")).toHaveCount(0);
   await expect(page.getByTestId("abonnement-kaart-jaar")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Kies", exact: true })).toHaveCount(0);
   await expect(page.getByTestId("abonnement-prijzen-ontbreken")).toHaveCount(0);
-});
+}

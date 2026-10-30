@@ -359,8 +359,19 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
     expect(await poort().zoekKlant(ORG)).toBeNull();
   });
 
-  test("zoekKlant weigert een organisatie-id dat geen uuid is, zonder verzoek", async () => {
-    for (const id of ["org_1", "' OR metadata['x']:'y", `${ORG}'`, ""]) {
+  test("zoekKlant werkt ook met de alfanumerieke id van een bedrijf uit Better Auth", async () => {
+    const baId = "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY";
+    antwoorden["/v1/customers/search"] = {
+      object: "search_result",
+      has_more: false,
+      data: [{ id: "cus_ba", object: "customer", metadata: { organisatieId: baId } }],
+    };
+    expect(await poort().zoekKlant(baId)).toEqual({ id: "cus_ba" });
+    expect(verzoeken[0]!.zoek.get("query")).toBe(`metadata['organisatieId']:'${baId}'`);
+  });
+
+  test("zoekKlant weigert een organisatie-id met onveilige tekens, zonder verzoek", async () => {
+    for (const id of ["' OR metadata['x']:'y", `${ORG}'`, "a\b", "a b", "a".repeat(65), ""]) {
       await expect(poort().zoekKlant(id)).rejects.toThrow("geen geldig organisatie-id");
     }
     expect(verzoeken).toEqual([]);

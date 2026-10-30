@@ -46,7 +46,7 @@ export interface StripePoort {
   /**
    * Zoekt de bestaande Stripe-klant met `metadata.organisatieId` van deze organisatie (bv. van een
    * mislukte Checkout), of null. De zoekindex van Stripe loopt even achter: de idempotency key van
-   * `maakKlant` vangt dat op. Gooit bij een `organisatieId` dat geen uuid is.
+   * `maakKlant` vangt dat op. Gooit bij een `organisatieId` met andere tekens dan letters, cijfers, `_` en `-`.
    */
   zoekKlant(organisatieId: string): Promise<{ id: string } | null>;
   maakCheckout(i: {
@@ -91,7 +91,12 @@ function idVan(waarde: Id): string | null {
   return typeof waarde === "string" ? waarde : waarde.id;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/**
+ * Een organisatie-id is een uuid (registratie) of een alfanumerieke id van Better Auth
+ * (`organization.create`, "Nieuw bedrijf"). Alleen deze tekens gaan in de zoekquery: geen aanhalingsteken
+ * of backslash, dus de query blijft veilig.
+ */
+export const ORGANISATIE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 function bestaatNiet(fout: unknown): boolean {
   return fout instanceof Stripe.errors.StripeError && (fout.code === "resource_missing" || fout.statusCode === 404);
@@ -151,8 +156,8 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
     },
 
     async zoekKlant(organisatieId) {
-      // De id gaat in een Stripe-zoekquery: alleen een uuid, nooit vrije tekst.
-      if (!UUID.test(organisatieId)) throw new Error("Dit is geen geldig organisatie-id");
+      // De id gaat in een Stripe-zoekquery: alleen veilige tekens, nooit vrije tekst.
+      if (!ORGANISATIE_ID.test(organisatieId)) throw new Error("Dit is geen geldig organisatie-id");
       const resultaat = await stripe.customers.search({
         query: `metadata['organisatieId']:'${organisatieId}'`,
         limit: 10,
