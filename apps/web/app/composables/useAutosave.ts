@@ -501,8 +501,9 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     wisTimer();
     const zonderLokaal = conflict.value?.lokaleWijzigingen === false;
     await startLopend(async () => {
-      // Altijd de planbestanden van het lokale document, uit de staat van vlak vóór het dupliceren: zo wijst
-      // een wijziging tijdens het dupliceren nooit naar plannen van het origineel (de server weigert dat).
+      // Altijd de planbestanden van het lokale document, uit de staat van vlak vóór het dupliceren. Restrisico:
+      // een planupload die tijdens het dupliceren klaar komt, zit niet in de mapping; het bewaren in de kopie
+      // krijgt dan 422 PLANBESTAND_ONBEKEND.
       const kopie = await dupliceer(id, planBestandIds(store.document!));
       // Kwam er tijdens het dupliceren toch een wijziging bij, dan gaat die mee naar de kopie.
       if (!zonderLokaal || onbewaard()) {

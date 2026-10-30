@@ -106,6 +106,7 @@ async function wisUitDatabase(sql: OpruimSql, spoor: E2eSpoor): Promise<string[]
   const gebruikers = emails.length ? waarden(await sql<{ id: string }[]>`select id from "user" where email in ${sql(emails)}`, "id") : [];
 
   // Organisaties: de uitdrukkelijke, plus die waarvan een gebruiker van het spoor lid is.
+  // Ze komen via het lidmaatschap binnen: elk lid van zo'n organisatie moet dus een gebruiker van het spoor van dezelfde spec zijn.
   const organisaties = new Set(spoor.organisaties);
   if (gebruikers.length) {
     const leden = await sql<{ organization_id: string }[]>`

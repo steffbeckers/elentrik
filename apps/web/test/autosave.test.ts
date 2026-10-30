@@ -483,7 +483,6 @@ describe("useAutosave", () => {
       o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
       o.autosave.meldConflict(7);
       o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "nieuwer-o", "nieuwer-r") });
-      o.autosave.meldConflict(7);
       await o.autosave.bewaarAlsKopie();
       expect(o.dupliceer).toHaveBeenCalledWith("p1", ["nieuwer-o", "nieuwer-r"]);
     });

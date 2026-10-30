@@ -37,8 +37,8 @@ export function opslagLimietBytes(env: Record<string, string | undefined> = proc
  * (plannen en exports) plus de logo's (bestanden zonder project met `organisatie_id`).
  */
 export async function gebruikteOpslag(db: Db, organisatieId: string): Promise<number> {
-  // Twee sommen die elk een index volgen: de plannen en exports via de levende projecten van het
-  // bedrijf (bestanden.project_id), en de logo's via bestanden.organisatie_id (een kleine verzameling).
+  // Twee sommen: de plannen en exports via de levende projecten van het bedrijf (bestanden.project_id,
+  // met index), en de logo's via bestanden.organisatie_id (zonder index: een kleine, sequentiële scan).
   const [projectBestanden] = await db
     .select({ totaal: sql<string | number | bigint>`coalesce(sum(${bestanden.grootte}), 0)` })
     .from(projecten)

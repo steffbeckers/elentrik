@@ -36,7 +36,7 @@ function genormaliseerd(pad: string): string | null {
 
 /**
  * De bestemming als ze een veilig relatief pad is, anders `null`. Veilig: begint met precies één `/`
- * (dus niet `//` or `/\`, wat een browser als een ander domein leest, en geen schema), zonder `\` of
+ * (dus niet `//` of `/\`, wat een browser als een ander domein leest, en geen schema), zonder `\` of
  * stuurtekens, en ook na normalisatie van puntsegmenten nog zo. De waarde reist URL-gecodeerd en een
  * tussenstap kan haar al eens gedecodeerd hebben: daarom moet zowel de waarde zelf als haar
  * gedecodeerde vorm veilig zijn (`%2F%2Fevil.example` valt weg).

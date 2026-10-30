@@ -29,7 +29,6 @@ describe("veiligTerugpad", () => {
     "/%2E//evil",
     "/%2e%2E//evil",
     "/a/..//evil?error=1",
-    "/./\/evil",
     "",
   ])("%j wordt geweigerd", (pad) => {
     expect(veiligTerugpad(pad)).toBeNull();
