@@ -1,5 +1,5 @@
-// De dagelijkse opruimtaak: een verwijderd project na 30 dagen definitief wissen, en verweesde
-// planbestanden, oude logo's en bestanden op schijf zonder rij na 7 dagen. De database is PGlite,
+// De dagelijkse opruimtaak: een verwijderd project en een verweesd planbestand na 30 dagen definitief
+// wissen, en oude logo's en bestanden op schijf zonder rij na 7 dagen. De database is PGlite,
 // de opslag een lokale opslag in een tijdelijke map (met af en toe een defecte verwijderstap).
 // Nooit de echte database en nooit de echte bestandenmap.
 import { randomUUID } from "node:crypto";
@@ -551,6 +551,33 @@ describe("een project in de prullenbak waarvan een ander project bestanden gebru
     expect((await opruimen()).geblokkeerd).toBe(1);
     expect(await projectBestaat(bron)).toBe(true);
     expect(await rijBestaat(plan.id)).toBe(true);
+  });
+
+  test("een verwijzing naar een bestand dat niet meer op schijf staat, blokkeert niet", async () => {
+    const bron = await maakProject({ verwijderdDagen: 31 });
+    const plan = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
+    await opslag.verwijder(plan.sleutel);
+    await maakProject({ document: document(plan.id), naam: "Kopie" });
+
+    const resultaat = await opruimen();
+
+    expect(resultaat.projecten).toBe(1);
+    expect(resultaat.geblokkeerd).toBe(0);
+    expect(await projectBestaat(bron)).toBe(false);
+    expect(await rijBestaat(plan.id)).toBe(false);
+  });
+
+  test("een bestand dat wel op schijf staat blokkeert nog, ook als een ander bestand van het project ontbreekt", async () => {
+    const bron = await maakProject({ verwijderdDagen: 31 });
+    const weg = await maakBestand({ projectId: bron, soort: "plan-origineel", leeftijdDagen: 60 });
+    const staat = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
+    await opslag.verwijder(weg.sleutel);
+    await maakProject({ document: document(weg.id, staat.id), naam: "Kopie" });
+
+    const resultaat = await opruimen();
+
+    expect(resultaat).toMatchObject({ projecten: 0, geblokkeerd: 1 });
+    expect(await projectBestaat(bron)).toBe(true);
   });
 
   test("een eigen verwijzing (eigen document of snapshot) blokkeert niet", async () => {

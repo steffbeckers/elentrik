@@ -100,7 +100,7 @@
       "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
       "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen.",
       "dialoogTitel": "Alleen lezen",
-      "dialoogBeschrijving": "Je bedrijf heeft geen actief abonnement. Wijzigingen in dit venster kunnen niet meer bewaard worden."
+      "dialoogBeschrijving": "Je bedrijf heeft geen actief abonnement. Wijzigingen in deze dialoog kunnen niet meer bewaard worden."
     },
     "onderdelenPaneel": {
       "titel": "Onderdelen",
@@ -182,6 +182,7 @@
       "titel": "Lokaal concept gevonden",
       "beschrijving": "Op dit toestel staat een concept van dit project met wijzigingen die nog niet op de server staan ({tijd}).",
       "laden": "Concept laden",
+      "later": "Later",
       "verwerpen": "Verwerpen"
     },
     "verlaten": {

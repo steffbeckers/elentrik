@@ -188,6 +188,82 @@ test("een dialoog die openstaat bij de overgang naar alleen-lezen blijft open me
   }
 });
 
+test("conceptdialoog die alleen-lezen wordt: 'Later' sluit zonder het concept te wissen", async ({ page, request }) => {
+  const thuis = await organisatieId(request);
+  await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
+  const gebruikerId = ((await (await request.get("/api/mij")).json()) as { gebruiker: { id: string } }).gebruiker.id;
+  const aangemaakt = await request.post("/api/projecten", {
+    data: { naam: `Abonnement ${run} later`, klantnaam: "Peeters", stroomtype: "2x230V" },
+  });
+  expect(aangemaakt.status()).toBe(201);
+  const { id } = (await aangemaakt.json()) as { id: string };
+  const project = (await (await request.get(`/api/projecten/${id}`)).json()) as {
+    naam: string;
+    versie: number;
+    document: unknown;
+  };
+  const sleutel = `concept:u:${gebruikerId}:${id}:e2e`;
+
+  /** Of het concept nog in het IndexedDB-archief van de editor staat. */
+  const staatInArchief = () =>
+    page.evaluate(
+      (s) =>
+        new Promise<boolean>((klaar, fout) => {
+          const open = indexedDB.open("keyval-store");
+          open.onerror = () => fout(open.error);
+          open.onsuccess = () => {
+            const vraag = open.result.transaction("keyval").objectStore("keyval").getAllKeys();
+            vraag.onsuccess = () => klaar(vraag.result.map(String).includes(s));
+            vraag.onerror = () => fout(vraag.error);
+          };
+        }),
+      sleutel,
+    );
+
+  try {
+    // Een openstaand concept van dit project, zoals een eerder venster het achterliet.
+    await ga(page, `/projecten/${id}`);
+    await expect(page.getByTestId("schema-canvas")).toBeVisible();
+    await page.evaluate(
+      ({ s, concept }) =>
+        new Promise<void>((klaar, fout) => {
+          const open = indexedDB.open("keyval-store");
+          open.onerror = () => fout(open.error);
+          open.onsuccess = () => {
+            const transactie = open.result.transaction("keyval", "readwrite");
+            transactie.objectStore("keyval").put(concept, s);
+            transactie.oncomplete = () => klaar();
+            transactie.onerror = () => fout(transactie.error);
+          };
+        }),
+      { s: sleutel, concept: { document: project.document, versie: project.versie, naam: project.naam, tijd: Date.now() } },
+    );
+    await ga(page, `/projecten/${id}`);
+    const dialoog = page.getByRole("dialog");
+    await expect(dialoog).toContainText("Lokaal concept gevonden");
+    await expect(dialoog.getByRole("button", { name: "Concept laden" })).toBeEnabled();
+    await expect(dialoog.getByTestId("concept-later")).toHaveCount(0);
+
+    // Het abonnement vervalt terwijl de dialoog openstaat: laden kan niet meer, "Later" wel.
+    await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
+    await page.evaluate(async () => {
+      const app = (
+        window as unknown as { useNuxtApp: () => { $pinia: { _s: Map<string, { laad(): Promise<void> }> } } }
+      ).useNuxtApp();
+      await app.$pinia._s.get("sessie")!.laad();
+    });
+    await expect(dialoog.getByRole("button", { name: "Concept laden" })).toHaveCount(0);
+    await expect(dialoog.getByRole("button", { name: "Verwerpen" })).toBeVisible();
+    await dialoog.getByTestId("concept-later").click();
+
+    await expect(dialoog).toHaveCount(0);
+    expect(await staatInArchief()).toBe(true);
+  } finally {
+    await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
+    await request.delete(`/api/projecten/${id}`);
+  }
+});
+
 test("een vrijgesteld bedrijf ziet op /abonnement geen Kies-kaarten, alleen de status", async ({ page, request }) => {
   const thuis = await organisatieId(request);
   await zetVrijgesteld(thuis);

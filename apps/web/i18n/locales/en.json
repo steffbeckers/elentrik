@@ -100,7 +100,7 @@
       "bewaardLokaal": "Your company has no active subscription. Your latest changes have not been saved, but they are kept locally.",
       "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory.",
       "dialoogTitel": "Read-only",
-      "dialoogBeschrijving": "Your company has no active subscription. Changes in this window can no longer be saved."
+      "dialoogBeschrijving": "Your company has no active subscription. Changes in this dialog can no longer be saved."
     },
     "onderdelenPaneel": {
       "titel": "Components",
@@ -182,6 +182,7 @@
       "titel": "Local draft found",
       "beschrijving": "This device has a draft of this project with changes that are not on the server yet ({tijd}).",
       "laden": "Load draft",
+      "later": "Later",
       "verwerpen": "Discard"
     },
     "verlaten": {

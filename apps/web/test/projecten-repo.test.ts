@@ -382,9 +382,10 @@ describe("dupliceren met planbestanden", () => {
     expect([...new Uint8Array(await new Response((await opslag.lees(nieuw!.sleutel))!).arrayBuffer())]).toEqual([9, 9]);
   });
 
-  test("een bestand van een ander project, of een onbekend of ongeldig id, wordt stil genegeerd", async () => {
+  test("een bestand van een andere organisatie, of een onbekend of ongeldig id, wordt stil genegeerd", async () => {
     const { db, org, id, opslag } = await opzet();
-    const { id: ander } = await maakProject(db, org, invoer);
+    const vreemdeOrg = await maakTestOrganisatie(db, "Vreemd");
+    const { id: ander } = await maakProject(db, vreemdeOrg, invoer);
     const [vreemd] = await db
       .insert(bestanden)
       .values({ projectId: ander, soort: "plan-origineel", mime: "application/pdf", grootte: 1, sleutel: `${ander}/${crypto.randomUUID()}` })
@@ -398,6 +399,30 @@ describe("dupliceren met planbestanden", () => {
     expect(Object.keys(bestandIds)).toHaveLength(3);
     // Alleen de drie planbestanden van het bron zijn erbij gekomen.
     expect((await db.select().from(bestanden)).length).toBe(voor + 3);
+  });
+
+  test("een kopie van vóór de fix (verwijst naar de bestanden van haar bron) krijgt bij het dupliceren eigen bestanden", async () => {
+    const { db, org, id: a, opslag, bestanden: b } = await opzet();
+    // Een oude kopie B: het document verwijst nog naar de planbestanden van A, B zelf heeft geen rijen.
+    const { id: oudeKopie } = await maakProject(db, org, { ...invoer, naam: "B" });
+    const documentA = (await haalProject(db, org, a))!.document;
+    await bewaarProject(db, org, oudeKopie, 1, { document: documentA });
+
+    const { id: nieuweKopie, bestandIds } = await dupliceerProject(db, opslag, org, oudeKopie);
+
+    // Elk planbestand van A heeft een eigen kopie onder de nieuwe kopie, met dezelfde inhoud.
+    expect(Object.keys(bestandIds).sort()).toEqual([b.pdf.id, b.raster.id, b.afbeelding.id].sort());
+    const kopie = (await haalProject(db, org, nieuweKopie))!;
+    const [p1, p2] = kopie.document.situatie.paginas;
+    const nieuweIds = [p1!.achtergrond!.origineelBestandId, p1!.achtergrond!.rasterBestandId, p2!.achtergrond!.origineelBestandId];
+    for (const oud of [b.pdf.id, b.raster.id, b.afbeelding.id]) expect(nieuweIds).not.toContain(oud);
+    for (const nieuwId of nieuweIds) {
+      const info = await haalBestand(db, nieuwId);
+      expect(info?.projectId).toBe(nieuweKopie);
+      expect(info?.sleutel.startsWith(`${nieuweKopie}/`)).toBe(true);
+    }
+    // A en haar bestanden blijven ongemoeid.
+    expect((await haalBestand(db, b.pdf.id))?.projectId).toBe(a);
   });
 
   test("mislukt het schrijven van een kopie, dan blijft er geen project, geen rij en geen bestand achter", async () => {

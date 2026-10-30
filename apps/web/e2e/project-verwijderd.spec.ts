@@ -102,6 +102,28 @@ test("'Terug naar de projecten' vraagt niets over onbewaarde wijzigingen, en het
   expect(sleutels.some((sleutel) => sleutel.includes(id))).toBe(true);
 });
 
+test("'Terug naar de projecten' met ctrl-klik (nieuw tabblad) slaat de vertrekvraag niet over", async ({
+  page,
+  request,
+}) => {
+  await openVerwijderdProject(page, request, "ctrl");
+  const melding = page.getByTestId("verwijderd-melding");
+  await expect(melding).toContainText("Dit project werd verwijderd.", { timeout: 15_000 });
+
+  const dialogen: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogen.push(dialog.message());
+    await dialog.dismiss();
+  });
+
+  // Ctrl-klik opent een nieuw tabblad en laat dit tabblad staan. De vlag mag daarna niet blijven hangen:
+  // een gewone navigatie hier vraagt nog altijd om bevestiging.
+  await melding.getByRole("link", { name: "Terug naar de projecten" }).click({ modifiers: ["Control"] });
+  await page.getByRole("link", { name: "Naar de projecten", exact: true }).click();
+  await expect.poll(() => dialogen).toEqual([bevestiging]);
+  await expect(page).toHaveURL(/\/projecten\//);
+});
+
 test("de pijl in de balk vraagt nog wel om bevestiging: het concept van een verwijderd project is nooit meer te openen", async ({
   page,
   request,
