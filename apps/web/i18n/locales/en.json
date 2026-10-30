@@ -86,7 +86,14 @@
       "fout": "Saving failed",
       "alleen-lezen": "Not saved: read-only, your work is kept locally",
       "alleenLezen": "Read-only",
-      "opnieuwProberen": "Try again"
+      "opnieuwProberen": "Try again",
+      "verwijderd": "Project deleted"
+    },
+    "verwijderd": {
+      "melding": "This project was deleted.",
+      "uitleg": "Your changes are still kept locally. Save them as a new project, or go back to the projects.",
+      "nieuwProject": "Save as new project",
+      "terug": "Back to the projects"
     },
     "alleenLezen": {
       "bewaardLokaal": "Your company has no active subscription. Your latest changes have not been saved, but they are kept locally.",
@@ -567,6 +574,7 @@
       "verstuurd": "If this address is known, you will receive a new confirmation email."
     },
     "linkOngeldig": "This link has expired or has already been used. Request a new one.",
+    "nieuweLink": "Send a new link",
     "accountGemaakt": "Your account has been created. Sign in with your email address and password.",
     "wachtwoordGewijzigd": "Your password has been changed. Sign in with your new password.",
     "wachtwoordVergeten": "Forgot your password?",
@@ -797,6 +805,7 @@
     "ACCOUNT_BESTAAT": "An account with this address already exists. Sign in to accept the invitation.",
     "TE_VEEL_UITNODIGINGEN": "Too many invitations. Try again later.",
     "TE_VEEL_POGINGEN": "Too many attempts. Wait a moment and try again.",
+    "INLOGLINK_MISLUKT": "Signing in with the link did not work. Request a new link.",
     "INVALID_EMAIL_OR_PASSWORD": "The email address or password is incorrect.",
     "EMAIL_NOT_VERIFIED": "Your email address has not been confirmed yet.",
     "INVALID_TOKEN": "This link has expired or has already been used. Request a new one.",

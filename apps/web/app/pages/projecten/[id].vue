@@ -65,6 +65,7 @@ const autosave = useAutosave({
   bewaar: api.bewaar,
   haal: api.haal,
   dupliceer: api.dupliceer,
+  maakNieuw: api.maakUitDocument,
   naarProject: async (kopieId) => {
     await navigateTo(`/projecten/${kopieId}`);
   },
@@ -211,6 +212,27 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
     if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
   } finally {
     conflictBezig.value = false;
+  }
+}
+
+// --- Project elders verwijderd -----------------------------------------------------
+
+const nieuwProjectBezig = ref(false);
+
+/**
+ * Het project werd elders verwijderd: het lokale document wordt een nieuw project (met de plannen van
+ * het bedrijf). Een 402 geeft de alleen-lezenmelding, een andere fout een toast; de editor blijft dan
+ * staan zoals hij was, met het concept lokaal.
+ */
+async function bewaarAlsNieuwProject(): Promise<void> {
+  if (nieuwProjectBezig.value) return;
+  nieuwProjectBezig.value = true;
+  try {
+    await autosave.bewaarAlsNieuwProject();
+  } catch (fout) {
+    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
+  } finally {
+    nieuwProjectBezig.value = false;
   }
 }
 
@@ -433,6 +455,38 @@ onBeforeUnmount(() => {
         @toon-bevindingen="toonBevindingen"
         @exporteren="exportOpen = true"
       />
+      <UAlert
+        v-if="autosave.verwijderd.value"
+        color="error"
+        variant="subtle"
+        icon="i-lucide-trash-2"
+        orientation="horizontal"
+        class="rounded-none border-b border-default py-2"
+        :title="$t('editor.verwijderd.melding')"
+        :description="$t('editor.verwijderd.uitleg')"
+        data-testid="verwijderd-melding"
+      >
+        <template #actions>
+          <UButton
+            size="xs"
+            color="error"
+            icon="i-lucide-copy-plus"
+            :label="$t('editor.verwijderd.nieuwProject')"
+            :loading="nieuwProjectBezig"
+            data-testid="verwijderd-nieuw-project"
+            @click="bewaarAlsNieuwProject"
+          />
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-arrow-left"
+            to="/"
+            :label="$t('editor.verwijderd.terug')"
+            data-testid="verwijderd-terug"
+          />
+        </template>
+      </UAlert>
       <AbonnementBanner />
       <div class="grid min-h-0 flex-1 grid-cols-[14rem_minmax(0,1fr)_20rem]">
         <template v-if="store.tabblad === 'eendraadschema'">

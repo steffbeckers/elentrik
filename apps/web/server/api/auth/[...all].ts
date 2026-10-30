@@ -3,8 +3,10 @@
 // een doorgestuurde header van de client), zodat rate limiting niet te omzeilen is.
 // Organisatie-endpoints van Better Auth zijn van buitenaf dicht (404), behalve de expliciet
 // toegelaten (server/auth/toegelaten.ts, ruling R7); de eigen routes vervangen ze.
+// Een serverfout bij het verifiëren van een inloglink wordt een redirect (server/auth/inloglink.ts).
 import { defineEventHandler, toWebRequest } from "h3";
 import { gebruikAuth } from "../../auth";
+import { metInloglinkVangnet } from "../../auth/inloglink";
 import { metSocketIp, verzoekIp } from "../../auth/ip";
 import { isGeweigerdAuthPad } from "../../auth/toegelaten";
 import { nietGevondenFout } from "../../fouten";
@@ -14,5 +16,6 @@ export default defineEventHandler((event) => {
   if (isGeweigerdAuthPad(new URL(verzoek.url).pathname)) {
     throw nietGevondenFout();
   }
-  return gebruikAuth().handler(metSocketIp(verzoek, verzoekIp(event)));
+  // Een fout na een geldige inloglink wordt een redirect naar /inloggen, geen kale 500 (alleen dat pad).
+  return metInloglinkVangnet(metSocketIp(verzoek, verzoekIp(event)), (v) => gebruikAuth().handler(v));
 });

@@ -1,4 +1,4 @@
-import { nieuwProjectDocument, valideerStructuur } from "@elentrik/model";
+import { nieuwProjectDocument, valideerStructuur, type InstallatieDocument } from "@elentrik/model";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,6 +12,7 @@ import {
   haalProject,
   lijstProjecten,
   maakProject,
+  maakProjectUitDocument,
   ProjectFout,
   projectOrganisatie,
   verwijderProject,
@@ -432,5 +433,154 @@ describe("dupliceren met planbestanden", () => {
     const a = kopie.document.situatie.paginas[0]!.achtergrond!;
     expect(a.rasterBestandId).toBe(b.raster.id);
     expect(a.origineelBestandId).not.toBe(b.pdf.id);
+  });
+});
+
+describe("een nieuw project uit een document (project elders verwijderd)", () => {
+  let map: string | undefined;
+  afterEach(async () => {
+    if (map) await rm(map, { recursive: true, force: true });
+    map = undefined;
+  });
+
+  async function opzet() {
+    map = await mkdtemp(join(tmpdir(), "elentrik-uit-document-"));
+    const opslag = maakLokaleOpslag(map);
+    const db = await maakTestDb();
+    const org = await maakTestOrganisatie(db);
+    const { id } = await maakProject(db, org, invoer);
+    const nieuw = async (projectId: string, soort: "plan-origineel" | "plan-raster", bytes: number[]) => {
+      const [rij] = await db
+        .insert(bestanden)
+        .values({ projectId, soort, mime: "application/octet-stream", grootte: bytes.length, sleutel: `${projectId}/${crypto.randomUUID()}` })
+        .returning();
+      await opslag.schrijf(rij!.sleutel, new Uint8Array(bytes));
+      return rij!;
+    };
+    const metPlan = (document: InstallatieDocument, origineel: string, raster: string): InstallatieDocument => ({
+      ...document,
+      situatie: {
+        ...document.situatie,
+        paginas: [
+          {
+            id: "p1",
+            titel: "Gelijkvloers",
+            plaatsingen: [],
+            achtergrond: { origineelBestandId: origineel, rasterBestandId: raster, breedte_px: 10, hoogte_px: 10 },
+          },
+        ],
+      },
+    });
+    const document = (await haalProject(db, org, id))!.document;
+    return { db, org, id, opslag, nieuw, metPlan, document };
+  }
+
+  test("de plannen van het verwijderde bronproject in dezelfde organisatie worden gekopieerd, met nieuwe id's", async () => {
+    const { db, org, id, opslag, nieuw, metPlan, document } = await opzet();
+    const pdf = await nieuw(id, "plan-origineel", [1, 1, 1]);
+    const raster = await nieuw(id, "plan-raster", [2, 2]);
+    await verwijderProject(db, org, id);
+
+    const antwoord = await maakProjectUitDocument(db, opslag, org, {
+      naam: "Terug van weggeweest",
+      document: metPlan(document, pdf.id, raster.id),
+    });
+
+    expect(antwoord.versie).toBe(1);
+    expect(Object.keys(antwoord.bestandIds).sort()).toEqual([pdf.id, raster.id].sort());
+    const project = (await haalProject(db, org, antwoord.id))!;
+    expect(project.naam).toBe("Terug van weggeweest");
+    // Een vers document-id, ook in het antwoord.
+    expect(project.document.id).not.toBe(document.id);
+    expect(antwoord.documentId).toBe(project.document.id);
+    const a = project.document.situatie.paginas[0]!.achtergrond!;
+    expect(a.origineelBestandId).toBe(antwoord.bestandIds[pdf.id]);
+    expect(a.rasterBestandId).toBe(antwoord.bestandIds[raster.id]);
+    // De nieuwe bestanden horen bij het nieuwe project en hebben dezelfde inhoud.
+    const verwacht = new Map([
+      [a.origineelBestandId, [1, 1, 1]],
+      [a.rasterBestandId, [2, 2]],
+    ]);
+    for (const [nieuwId, bytes] of verwacht) {
+      const info = await haalBestand(db, nieuwId);
+      expect(info?.projectId).toBe(antwoord.id);
+      expect(info?.sleutel.startsWith(`${antwoord.id}/`)).toBe(true);
+      expect([...new Uint8Array(await new Response((await opslag.lees(info!.sleutel))!).arrayBuffer())]).toEqual(bytes);
+    }
+  });
+
+  test("de plannen van een levend project van dezelfde organisatie worden ook gekopieerd", async () => {
+    const { db, org, opslag, nieuw, metPlan, document } = await opzet();
+    const { id: ander } = await maakProject(db, org, invoer);
+    const pdf = await nieuw(ander, "plan-origineel", [4]);
+    const raster = await nieuw(ander, "plan-raster", [5]);
+
+    const antwoord = await maakProjectUitDocument(db, opslag, org, { naam: "X", document: metPlan(document, pdf.id, raster.id) });
+
+    expect(Object.keys(antwoord.bestandIds)).toHaveLength(2);
+    expect((await haalBestand(db, antwoord.bestandIds[pdf.id]!))?.projectId).toBe(antwoord.id);
+  });
+
+  test("bestanden van een andere organisatie, onbekende id's en geen planbestanden worden genegeerd", async () => {
+    const { db, org, opslag, nieuw, metPlan, document } = await opzet();
+    const vreemdeOrg = await maakTestOrganisatie(db, "Vreemd");
+    const { id: vreemdProject } = await maakProject(db, vreemdeOrg, invoer);
+    const vreemd = await nieuw(vreemdProject, "plan-origineel", [7]);
+    // Een export van het eigen project is geen plan.
+    const { id: eigen } = await maakProject(db, org, invoer);
+    const [uitvoer] = await db
+      .insert(bestanden)
+      .values({ projectId: eigen, soort: "export", mime: "application/pdf", grootte: 1, sleutel: `${eigen}/${crypto.randomUUID()}` })
+      .returning();
+    await opslag.schrijf(uitvoer!.sleutel, new Uint8Array([8]));
+    const onbekend = crypto.randomUUID();
+    const voor = (await db.select().from(bestanden)).length;
+
+    const invoerDoc = metPlan(document, vreemd.id, onbekend);
+    const antwoord = await maakProjectUitDocument(db, opslag, org, { naam: "X", document: invoerDoc });
+    const tweede = await maakProjectUitDocument(db, opslag, org, { naam: "Y", document: metPlan(document, uitvoer!.id, "geen-uuid") });
+
+    expect(antwoord.bestandIds).toEqual({});
+    expect(tweede.bestandIds).toEqual({});
+    expect((await db.select().from(bestanden)).length).toBe(voor);
+    // De verwijzingen blijven zoals ze waren.
+    const a = (await haalProject(db, org, antwoord.id))!.document.situatie.paginas[0]!.achtergrond!;
+    expect(a.origineelBestandId).toBe(vreemd.id);
+    expect(a.rasterBestandId).toBe(onbekend);
+  });
+
+  test("een ongeldig document is ONGELDIG en maakt niets aan", async () => {
+    const { db, org, opslag } = await opzet();
+    const voor = (await db.select().from(projecten)).length;
+    const fout = await vangFout(maakProjectUitDocument(db, opslag, org, { naam: "X", document: { onzin: true } }));
+    expect(fout.code).toBe("ONGELDIG");
+    expect((await db.select().from(projecten)).length).toBe(voor);
+  });
+
+  test("mislukt het schrijven van een bestand, dan blijft er geen project, geen rij en geen bestand achter", async () => {
+    const { db, org, id, opslag, nieuw, metPlan, document } = await opzet();
+    const pdf = await nieuw(id, "plan-origineel", [1]);
+    const raster = await nieuw(id, "plan-raster", [2]);
+    let beurten = 0;
+    const stuk: BestandOpslag = {
+      ...opslag,
+      async schrijf(sleutel, data) {
+        if (++beurten === 2) throw new Error("schijf vol");
+        await opslag.schrijf(sleutel, data);
+      },
+    };
+    const voor = {
+      projecten: (await db.select().from(projecten)).length,
+      bestanden: (await db.select().from(bestanden)).length,
+      schijf: (await opslag.lijst()).length,
+    };
+
+    await expect(
+      maakProjectUitDocument(db, stuk, org, { naam: "X", document: metPlan(document, pdf.id, raster.id) }),
+    ).rejects.toThrow("schijf vol");
+
+    expect((await db.select().from(projecten)).length).toBe(voor.projecten);
+    expect((await db.select().from(bestanden)).length).toBe(voor.bestanden);
+    expect((await opslag.lijst()).length).toBe(voor.schijf);
   });
 });

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { vertaalFout } from "~/fouten";
+import { INLOGLINK_MISLUKT } from "../../shared/inloglink";
 import { terugZonderFout, veiligTerug } from "~/sessie/bestemming";
 import { foutCode, foutStatus } from "~/sessie/fouten";
 import { isEmail } from "~/sessie/invoer";
@@ -18,10 +19,15 @@ useHead({ title: () => `${t("inloggen.titel")} · ${t("app.naam")}` });
 const terugInfo = computed(() => terugZonderFout(veiligTerug(route.query.terug) ?? "/"));
 const terug = computed(() => terugInfo.value.pad);
 
-type Melding = { kleur: "success" | "error" | "info"; tekst: string };
+/** `nieuweLink`: de melding biedt de knop "Stuur een nieuwe link" aan (een mislukte inloglink). */
+type Melding = { kleur: "success" | "error" | "info"; tekst: string; nieuweLink?: true };
 
 /** Een melding uit de URL: alleen vaste sleutels, nooit tekst uit de query zelf. */
 function meldingUitQuery(): Melding | null {
+  // De server stuurt hierheen na een serverfout bij het verifiëren van een inloglink.
+  if (route.query.fout === INLOGLINK_MISLUKT) {
+    return { kleur: "error", tekst: t(`fouten.${INLOGLINK_MISLUKT}`), nieuweLink: true };
+  }
   if (route.query.error !== undefined || terugInfo.value.fout) {
     return { kleur: "error", tekst: t("inloggen.linkOngeldig") };
   }
@@ -125,7 +131,21 @@ async function stuurBevestiging() {
         :icon="melding.kleur === 'error' ? 'i-lucide-circle-alert' : 'i-lucide-info'"
         :title="melding.tekst"
         data-testid="inloggen-melding"
-      />
+      >
+        <template v-if="melding.nieuweLink" #actions>
+          <UButton
+            color="error"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-mail"
+            :label="$t('inloggen.nieuweLink')"
+            :loading="bezig === 'link'"
+            :disabled="bezig !== null"
+            data-testid="inloggen-nieuwe-link"
+            @click="stuurInloglink"
+          />
+        </template>
+      </UAlert>
       <UAlert
         v-if="onbevestigd"
         color="warning"

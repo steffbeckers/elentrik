@@ -29,6 +29,7 @@ async function afgemeldVenster() {
     bewaar,
     haal: async () => ({}) as Project,
     dupliceer: async () => ({ id: "kopie" }),
+    maakNieuw: async () => ({ id: "nieuw", versie: 1, documentId: "d", bestandIds: {} }),
     naarProject: () => {},
     gebruikerId: "an",
   });
@@ -130,6 +131,7 @@ describe("de melding 'afgemeld' in de editor", () => {
       bewaar,
       haal: async () => ({}) as Project,
       dupliceer: async () => ({ id: "kopie" }),
+      maakNieuw: async () => ({ id: "nieuw", versie: 1, documentId: "d", bestandIds: {} }),
       naarProject: () => {},
       gebruikerId: "an",
     });

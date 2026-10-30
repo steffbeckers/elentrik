@@ -17,6 +17,7 @@ import { vertrekBevestiging } from "../app/editor/aanmelding";
 import { useEditorStore } from "../app/stores/editor";
 
 const KOPIE_DOC_ID = "kopie-document-id";
+const NIEUW_DOC_ID = "nieuw-document-id";
 /** De ingelogde gebruiker van elk venster in deze tests. */
 const GEBRUIKER = "g1";
 
@@ -61,16 +62,23 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
   }));
   const dupliceer = vi.fn<AutosaveOpties["dupliceer"]>(async (_id, _bestandIds) => ({ id: "kopie1" }));
   const naarProject = vi.fn(async (_id: string) => {});
+  const maakNieuw = vi.fn<AutosaveOpties["maakNieuw"]>(async () => ({
+    id: "nieuw1",
+    versie: 1,
+    documentId: NIEUW_DOC_ID,
+    bestandIds: {},
+  }));
   const autosave = useAutosave({
     store,
     bewaar,
     haal,
     dupliceer,
+    maakNieuw,
     naarProject,
     gebruikerId: GEBRUIKER,
     ...overschrijf,
   });
-  return { store, bewaar, haal, dupliceer, naarProject, autosave };
+  return { store, bewaar, haal, dupliceer, maakNieuw, naarProject, autosave };
 }
 
 beforeEach(async () => {
@@ -597,7 +605,15 @@ describe("useAutosave", () => {
     autosave.stop();
     // De volgende pagina opent hetzelfde project opnieuw, vers van de server.
     store.laad({ id: "p1", naam: "Van de server", versie: 5, document: startDocument() });
-    const nieuw = useAutosave({ store, bewaar, haal, dupliceer, naarProject, gebruikerId: GEBRUIKER });
+    const nieuw = useAutosave({
+      store,
+      bewaar,
+      haal,
+      dupliceer,
+      maakNieuw: async () => ({ id: "nieuw1", versie: 1, documentId: NIEUW_DOC_ID, bestandIds: {} }),
+      naarProject,
+      gebruikerId: GEBRUIKER,
+    });
     rond?.();
     await leeg();
     await vi.advanceTimersByTimeAsync(20_000);
@@ -837,7 +853,8 @@ describe("useAutosave: foutsoorten", () => {
     expect(autosave.status.value).toBe("onbewaard");
   });
 
-  test.each([422, 404])("een %i zet de status op fout, zonder nieuwe poging of autosave", async (code) => {
+  test("een 422 zet de status op fout, zonder nieuwe poging of autosave", async () => {
+    const code = 422;
     const { store, bewaar, autosave } = opzet();
     bewaar.mockRejectedValue(Object.assign(new Error("geweigerd"), { statusCode: code }));
     wijzig(store, "a");
@@ -965,7 +982,7 @@ describe("useAutosave: foutsoorten", () => {
     expect(bewaar).toHaveBeenCalledTimes(2);
   });
 
-  test("afgemeld en dan een 404 bij opnieuw proberen: fout, en afgemeld vervalt", async () => {
+  test("afgemeld en dan een 404 bij opnieuw proberen: verwijderd, en afgemeld vervalt", async () => {
     const { store, bewaar, autosave } = opzet();
     bewaar.mockRejectedValueOnce(Object.assign(new Error("Niet ingelogd"), { status: 401 }));
     wijzig(store, "a");
@@ -973,7 +990,7 @@ describe("useAutosave: foutsoorten", () => {
     await leeg();
     bewaar.mockRejectedValueOnce(Object.assign(new Error("weg"), { status: 404 }));
     await autosave.nuOpslaan();
-    expect(autosave.status.value).toBe("fout");
+    expect(autosave.status.value).toBe("verwijderd");
     expect(autosave.afgemeld.value).toBe(false);
   });
 
@@ -1091,7 +1108,7 @@ describe("useAutosave: foutsoorten", () => {
       expect(autosave.alleenLezen.value).toBe(false);
     });
 
-    test("alleen-lezen en dan een 404 bij opnieuw proberen: fout, en alleen-lezen vervalt", async () => {
+    test("alleen-lezen en dan een 404 bij opnieuw proberen: verwijderd, en alleen-lezen vervalt", async () => {
       const { store, bewaar, autosave } = opzet();
       bewaar.mockRejectedValueOnce(abonnementVereist());
       wijzig(store, "a");
@@ -1099,7 +1116,7 @@ describe("useAutosave: foutsoorten", () => {
       await leeg();
       bewaar.mockRejectedValueOnce(Object.assign(new Error("weg"), { status: 404 }));
       await autosave.nuOpslaan();
-      expect(autosave.status.value).toBe("fout");
+      expect(autosave.status.value).toBe("verwijderd");
       expect(autosave.alleenLezen.value).toBe(false);
     });
 
@@ -1227,5 +1244,158 @@ describe("waarschuwBijVerlaten", () => {
 
   test("status opgeslagen: geen waarschuwing", () => {
     expect(waarschuwBijVerlaten("opgeslagen")).toBe(false);
+  });
+
+  test("status verwijderd: geen waarschuwing (op de server is er niets meer om te bewaren)", () => {
+    expect(waarschuwBijVerlaten("verwijderd")).toBe(false);
+  });
+});
+
+describe("useAutosave: project elders verwijderd (404)", () => {
+  const weg = () =>
+    Object.assign(new Error("Niet gevonden"), { status: 404, data: { data: { code: "NIET_GEVONDEN" } } });
+
+  async function verwijderdeOpzet(overschrijf: Partial<AutosaveOpties> = {}) {
+    const o = opzet(overschrijf);
+    o.bewaar.mockRejectedValueOnce(weg());
+    wijzig(o.store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    return o;
+  }
+
+  test("een 404 geeft de status verwijderd, bewaart het concept lokaal en probeert niet opnieuw", async () => {
+    const { store, bewaar, autosave } = await verwijderdeOpzet();
+    expect(autosave.status.value).toBe("verwijderd");
+    expect(autosave.verwijderd.value).toBe(true);
+    expect(autosave.fout.value).toBeNull();
+    expect((await conceptVan("p1"))?.naam).toBe("a");
+    expect(vi.getTimerCount()).toBe(0);
+
+    // Geen nieuwe poging, ook niet na een volgende wijziging, en ook niet met nuOpslaan.
+    wijzig(store, "b");
+    await vi.advanceTimersByTimeAsync(60_000);
+    await leeg();
+    await autosave.nuOpslaan();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(autosave.status.value).toBe("verwijderd");
+    // Het concept volgt de nieuwste wijziging.
+    expect((await conceptVan("p1"))?.naam).toBe("b");
+  });
+
+  test("een 404 zonder foutcode in het antwoord telt ook als verwijderd", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(Object.assign(new Error("weg"), { statusCode: 404 }));
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("verwijderd");
+  });
+
+  test("een kapot conceptarchief verandert de status niet", async () => {
+    const concepten = {
+      bewaarConcept: vi.fn(async () => {
+        throw new Error("IndexedDB kapot");
+      }),
+      wisConcept: vi.fn(async () => {}),
+    };
+    const { autosave } = await verwijderdeOpzet({ concepten });
+    expect(autosave.status.value).toBe("verwijderd");
+  });
+
+  test("stop bewaart niets meer en laat het concept staan", async () => {
+    const { bewaar, autosave } = await verwijderdeOpzet();
+    autosave.stop();
+    await vi.advanceTimersByTimeAsync(20_000);
+    await leeg();
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect((await conceptVan("p1"))?.naam).toBe("a");
+  });
+
+  test("verlaten vraagt niets: geen waarschuwing en geen bevestiging bij wisselen of uitloggen", async () => {
+    const { autosave } = await verwijderdeOpzet();
+    expect(waarschuwBijVerlaten(autosave.status.value)).toBe(false);
+    expect(vertrekBevestiging(autosave.status.value)).toBeNull();
+  });
+
+  test("een vers geladen project (teller 0) wist de status verwijderd", async () => {
+    const { store, autosave } = await verwijderdeOpzet();
+    store.laad({ id: "p2", naam: "Ander", versie: 1, document: startDocument() });
+    await nextTick();
+    expect(autosave.status.value).toBe("opgeslagen");
+    expect(autosave.verwijderd.value).toBe(false);
+  });
+
+  test("bewaarAlsNieuwProject maakt een nieuw project met het huidige document en navigeert", async () => {
+    const { store, bewaar, maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    wijzig(store, "Daarna");
+    await nextTick();
+    const document = store.document;
+
+    await autosave.bewaarAlsNieuwProject();
+
+    expect(maakNieuw).toHaveBeenCalledTimes(1);
+    expect(maakNieuw).toHaveBeenCalledWith({ naam: "Daarna", document });
+    // Het document is al helemaal bij de server; verder gaat er niets naar het nieuwe project.
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    expect(naarProject).toHaveBeenCalledWith("nieuw1");
+    // Het concept hoort nu bij het nieuwe project en niet meer bij het verwijderde.
+    expect(await conceptVan("p1")).toBeUndefined();
+  });
+
+  test("een wijziging tijdens het maken gaat met de nieuwe planbestand-id's mee naar het nieuwe project", async () => {
+    const { store, bewaar, maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    const metPlan = (document: InstallatieDocument): InstallatieDocument => ({
+      ...document,
+      situatie: {
+        ...document.situatie,
+        paginas: [
+          {
+            id: "pg1",
+            titel: "Plan",
+            plaatsingen: [],
+            achtergrond: { origineelBestandId: "oud-o", rasterBestandId: "oud-r", breedte_px: 10, hoogte_px: 10 },
+          },
+        ],
+      },
+    });
+    store.laad({ id: "p1", naam: "Woning", versie: 1, document: metPlan(startDocument()) });
+    // Een wijziging terwijl de server bezig is.
+    maakNieuw.mockImplementationOnce(async () => {
+      wijzig(store, "Tijdens");
+      return {
+        id: "nieuw1",
+        versie: 1,
+        documentId: NIEUW_DOC_ID,
+        bestandIds: { "oud-o": "nieuw-o", "oud-r": "nieuw-r" },
+      };
+    });
+
+    await autosave.bewaarAlsNieuwProject();
+
+    expect(bewaar).toHaveBeenLastCalledWith("nieuw1", 1, {
+      naam: "Tijdens",
+      document: expect.objectContaining({ id: NIEUW_DOC_ID }),
+    });
+    const bewaard = bewaar.mock.lastCall![2].document;
+    expect(bewaard.situatie.paginas[0]!.achtergrond).toMatchObject({
+      origineelBestandId: "nieuw-o",
+      rasterBestandId: "nieuw-r",
+    });
+    expect(naarProject).toHaveBeenCalledWith("nieuw1");
+    expect(await conceptVan("p1")).toBeUndefined();
+  });
+
+  test("mislukt het maken, dan blijft de status verwijderd en het concept staan, en kan het opnieuw", async () => {
+    const { maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    maakNieuw.mockRejectedValueOnce(Object.assign(new Error("geen abonnement"), { status: 402 }));
+
+    await expect(autosave.bewaarAlsNieuwProject()).rejects.toMatchObject({ status: 402 });
+
+    expect(autosave.status.value).toBe("verwijderd");
+    expect(naarProject).not.toHaveBeenCalled();
+    expect((await conceptVan("p1"))?.naam).toBe("a");
+    await autosave.bewaarAlsNieuwProject();
+    expect(naarProject).toHaveBeenCalledWith("nieuw1");
   });
 });
