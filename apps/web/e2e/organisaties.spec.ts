@@ -2,17 +2,21 @@
 // (met "Bedrijf Alfa") komt uit `storageState`, gebruiker B (met "Bedrijf Beta") wordt in
 // `beforeAll` aangemaakt; niemand logt per test in, zodat de rate limiter nooit in de weg zit.
 import { expect, test, type APIRequestContext, type Browser } from "@playwright/test";
+import type { Mij } from "../shared/mij";
 import { zetVrijgesteld } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres, type StorageState } from "./hulp/inloggen";
 import { E2E_URL } from "./omgeving";
 
-const { gebruiker } = gebruikTestgebruiker(test, { voorvoegsel: "alfa", bedrijf: "Bedrijf Alfa", naam: "Alfa Eigenaar" });
+const { gebruiker, spoor } = gebruikTestgebruiker(test, { voorvoegsel: "alfa", bedrijf: "Bedrijf Alfa", naam: "Alfa Eigenaar" });
 
 const run = Date.now();
 const naamAlfa = `Project Alfa ${run}`;
 const naamTweede = `Project Alfa Twee ${run}`;
 const bedrijfTweede = `Bedrijf Alfa Twee ${run}`;
+const adresBeta = uniekAdres("beta");
+// Gebruiker B staat vóór het aanmaken in het spoor: ook een halve registratie wordt opgeruimd.
+spoor.emails.add(adresBeta);
 let staatB: StorageState;
 
 test.beforeAll(async ({ playwright }) => {
@@ -20,15 +24,13 @@ test.beforeAll(async ({ playwright }) => {
   try {
     staatB = await maakTestgebruiker(request, {
       naam: "Beta Eigenaar",
-      email: uniekAdres("beta"),
+      email: adresBeta,
       bedrijf: "Bedrijf Beta",
     });
   } finally {
     await request.dispose();
   }
 });
-
-type Mij = { organisaties: { id: string; naam: string }[]; actieveOrganisatieId: string };
 
 async function leesMij(request: APIRequestContext): Promise<Mij> {
   return (await (await request.get("/api/mij")).json()) as Mij;
@@ -96,6 +98,7 @@ test("een gebruiker met twee organisaties wisselt via de organisatiekeuze, en de
     // Een tweede eigen bedrijf heeft geen gratis proef (alleen het eerste heeft er een). Dit
     // bestand test het wisselen, niet de abonnementen: dat bedrijf mag daarom schrijven.
     const tweedeBedrijfId = (await leesMij(page.request)).organisaties.find((o) => o.naam === bedrijfTweede)!.id;
+    spoor.organisaties.add(tweedeBedrijfId);
     await zetVrijgesteld(tweedeBedrijfId);
     await ga(page, "/");
     await expect(page.getByText("Nog geen projecten. Maak je eerste project aan.")).toBeVisible();

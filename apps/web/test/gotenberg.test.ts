@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test, vi } from "vitest";
-import { maakPdf, PdfFout } from "../server/pdf/gotenberg";
+import { maakPdf, PdfFout, STANDAARD_TIMEOUT_MS } from "../server/pdf/gotenberg";
 
 const pdfBytes = new TextEncoder().encode("%PDF-1.7\n%test");
 const invoer = {
@@ -138,5 +140,18 @@ describe("maakPdf", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+// De time-out van Gotenberg zelf staat in de compose-bestanden. Ze moet korter zijn dan die van de client:
+// zo krijgt de app eerst de foutmelding van Gotenberg, en loopt haar eigen time-out niet eerst af.
+describe("--api-timeout van Gotenberg", () => {
+  const ROOT = join(import.meta.dirname, "..", "..", "..");
+  const COMPOSE = [join(ROOT, "deploy", "nas", "compose.yaml"), join(ROOT, "infra", "docker-compose.yml")];
+
+  test.each(COMPOSE)("%s zet --api-timeout op 55 s, korter dan de client", (bestand) => {
+    const seconden = [...readFileSync(bestand, "utf8").matchAll(/--api-timeout=(\d+)s/g)].map((m) => Number(m[1]));
+    expect(seconden).toEqual([55]);
+    expect(seconden[0]! * 1000).toBeLessThan(STANDAARD_TIMEOUT_MS);
   });
 });

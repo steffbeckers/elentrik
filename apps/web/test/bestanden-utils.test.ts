@@ -5,7 +5,7 @@ import { Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEvent, type H3Event } from "h3";
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { MAX_LOGO_BYTES, MAX_UPLOAD_BYTES } from "../shared/bestandsinhoud";
 import { maakLokaleOpslag } from "../server/bestanden/opslag";
 import { BestandFout, bewaarBestand, haalBestand, type BestandFoutCode } from "../server/bestanden/repo";
@@ -16,10 +16,19 @@ import {
   leesLogoUpload,
   leesPlanUpload,
   metBestandFouten,
+  type UploadRuimte,
 } from "../server/utils/bestanden";
 import { maakTestDb, maakTestOrganisatie } from "./db";
 
 const GRENS = "----elentrik";
+
+/** Een bedrijf met een lege opslag: de uploadhulpen controleren de ruimte voor ze iets lezen. */
+let ruimte: UploadRuimte;
+
+beforeAll(async () => {
+  const db = await maakTestDb();
+  ruimte = { db, organisatieId: await maakTestOrganisatie(db) };
+});
 
 function maakEvent(opties: { headers?: Record<string, string>; id?: string; body?: Buffer } = {}) {
   const req = new IncomingMessage(new Socket());
@@ -128,7 +137,7 @@ describe("leesPlanUpload", () => {
       { naam: "soort", inhoud: "plan-raster" },
       { naam: "bestand", inhoud: bytes, bestand: true },
     ]);
-    const upload = await leesPlanUpload(maakEvent({ body, headers }));
+    const upload = await leesPlanUpload(maakEvent({ body, headers }), ruimte);
     expect(upload.soort).toBe("plan-raster");
     expect(upload.data).toEqual(bytes);
   });
@@ -138,20 +147,20 @@ describe("leesPlanUpload", () => {
       { naam: "soort", inhoud: "iets-anders" },
       { naam: "bestand", inhoud: new Uint8Array([1]), bestand: true },
     ]);
-    expect(await statusVan(() => leesPlanUpload(maakEvent({ body, headers })))).toBe(400);
+    expect(await statusVan(() => leesPlanUpload(maakEvent({ body, headers }), ruimte))).toBe(400);
   });
 
   test("een ontbrekend bestandsveld of een ontbrekende soort geeft 400", async () => {
     const zonderBestand = multipart([{ naam: "soort", inhoud: "plan-raster" }]);
     expect(
       await statusVan(() =>
-        leesPlanUpload(maakEvent({ body: zonderBestand.body, headers: zonderBestand.headers })),
+        leesPlanUpload(maakEvent({ body: zonderBestand.body, headers: zonderBestand.headers }), ruimte),
       ),
     ).toBe(400);
     const zonderSoort = multipart([{ naam: "bestand", inhoud: new Uint8Array([1]), bestand: true }]);
     expect(
       await statusVan(() =>
-        leesPlanUpload(maakEvent({ body: zonderSoort.body, headers: zonderSoort.headers })),
+        leesPlanUpload(maakEvent({ body: zonderSoort.body, headers: zonderSoort.headers }), ruimte),
       ),
     ).toBe(400);
   });
@@ -170,7 +179,7 @@ describe("leesPlanUpload", () => {
         { naam: "bestand", inhoud: png, bestand: true, bestandsnaam: "../../evil.png" },
       ]);
 
-      const upload = await leesPlanUpload(maakEvent({ body, headers }));
+      const upload = await leesPlanUpload(maakEvent({ body, headers }), ruimte);
       const info = await bewaarBestand(db, maakLokaleOpslag(map), { organisatieId, projectId, ...upload });
 
       expect(info.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
@@ -192,7 +201,7 @@ describe("leesPlanUpload", () => {
         "content-length": String(MAX_UPLOAD_BYTES * 2),
       },
     });
-    expect(await statusVan(() => leesPlanUpload(event))).toBe(413);
+    expect(await statusVan(() => leesPlanUpload(event, ruimte))).toBe(413);
   });
 });
 
@@ -203,7 +212,7 @@ describe("uploads zonder lengte", () => {
       { naam: "bestand", inhoud: new Uint8Array([1]), bestand: true },
     ]);
     const zonderLengte = { "content-type": headers["content-type"] };
-    const fout = await foutVan(() => leesPlanUpload(maakEvent({ body, headers: zonderLengte })));
+    const fout = await foutVan(() => leesPlanUpload(maakEvent({ body, headers: zonderLengte }), ruimte));
     expect([fout.statusCode, fout.data?.code]).toEqual([411, "LENGTE_VEREIST"]);
   });
 
@@ -212,16 +221,16 @@ describe("uploads zonder lengte", () => {
     for (const lengte of [undefined, "abc"]) {
       const kop: Record<string, string> = { "content-type": headers["content-type"] };
       if (lengte !== undefined) kop["content-length"] = lengte;
-      const fout = await foutVan(() => leesLogoUpload(maakEvent({ body, headers: kop })));
+      const fout = await foutVan(() => leesLogoUpload(maakEvent({ body, headers: kop }), ruimte));
       expect([fout.statusCode, fout.data?.code]).toEqual([411, "LENGTE_VEREIST"]);
     }
   });
 
   test("een logo met een geldige lengte gaat door, en boven de logolimiet volgt 413", async () => {
     const { body, headers } = multipart([{ naam: "bestand", inhoud: new Uint8Array([1, 2]), bestand: true }]);
-    expect(await leesLogoUpload(maakEvent({ body, headers }))).toEqual(new Uint8Array([1, 2]));
+    expect(await leesLogoUpload(maakEvent({ body, headers }), ruimte)).toEqual(new Uint8Array([1, 2]));
     const teGroot = { ...headers, "content-length": String(MAX_LOGO_BYTES + 1024 * 1024 + 1) };
-    expect(await statusVan(() => leesLogoUpload(maakEvent({ headers: teGroot })))).toBe(413);
+    expect(await statusVan(() => leesLogoUpload(maakEvent({ headers: teGroot }), ruimte))).toBe(413);
   });
 });
 

@@ -30,6 +30,7 @@ import {
   type H3Event,
 } from "h3";
 import { ANDERE_GEBRUIKER, VERWACHTE_GEBRUIKER_HEADER } from "../../shared/gebruiker";
+import type { Rol } from "../../shared/mij";
 import { ACTIEVE_ORGANISATIE_HEADER, ANDERE_ORGANISATIE } from "../../shared/organisatie";
 import { gebruikAuth } from "../auth";
 import { vertrouwdeOorsprongen } from "../auth/oorsprong";
@@ -40,7 +41,7 @@ import { isEigenaarRol } from "../organisaties/regels";
 import { projectOrganisatie } from "../projecten/repo";
 
 /** De rollen zoals de API en de UI ze noemen; intern heten ze `owner` en `member`. */
-export type Rol = "eigenaar" | "lid";
+export type { Rol };
 
 export type Gebruiker = { id: string; naam: string; email: string };
 

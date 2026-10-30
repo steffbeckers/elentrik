@@ -5,7 +5,7 @@
 # niets ervan zit in het image; zie deploy/nas/.env.voorbeeld.
 
 # Een exacte basis, minstens twee weken oud. pnpm via corepack op de versie waarmee pnpm-lock.yaml
-# gemaakt is (de root-package.json heeft geen `packageManager`).
+# gemaakt is (pnpm komt overeen met `packageManager` in de root-package.json).
 FROM node:24.21.0-slim AS bouw
 ENV CI=true \
     NODE_OPTIONS=--max-old-space-size=4096

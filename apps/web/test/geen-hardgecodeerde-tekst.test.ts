@@ -4,9 +4,11 @@
 //   binding (`:label="..."`);
 // - in `.ts` en in `<script>` van een `.vue` geen toast- of meldingtitel als letterlijke tekst
 //   (`title: "..."`, `description: "..."`);
-// - geen vaste locale `"nl-BE"` voor `Intl`: getallen, bedragen en datums volgen de taal (R4).
+// - geen hardgecodeerde locale voor `Intl`: getallen, bedragen en datums volgen de taal (R4). Een locale-
+//   tekst (`"nl-BE"`, `"fr-BE"`, `"en-GB"`, ...) of een letterlijke eerste parameter van `Intl.*(...)` en
+//   `toLocale*String(...)` is een fout, in app/, server/, shared/ en de pakketten;
 // Wat letterlijk mag, staat in `UITZONDERINGEN`: merknamen, eenheden en symbolen.
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, test } from "vitest";
 
@@ -16,9 +18,9 @@ const APP = join(WEB, "app");
 /**
  * Woorden die in elke taal dezelfde zijn en dus letterlijk in een template mogen staan.
  * - merknamen: Elentrik, Stripe;
- * - eenheden: mm, mm², px, A, mA, kA, W, V, MB.
+ * - eenheden: mm, mm², px, A, mA, kA, W, V. (Niet MB: een grootte met eenheid is een opgemaakt, vertaalbaar getal.)
  */
-const UITZONDERINGEN: ReadonlySet<string> = new Set(["Elentrik", "Stripe", "mm", "mm²", "px", "A", "mA", "kA", "W", "V", "MB"]);
+const UITZONDERINGEN: ReadonlySet<string> = new Set(["Elentrik", "Stripe", "mm", "mm²", "px", "A", "mA", "kA", "W", "V"]);
 
 /** Attributen die tekst voor de gebruiker dragen. */
 const TEKSTATTRIBUTEN = ["label", "title", "placeholder", "aria-label", "description", "alt"];
@@ -110,8 +112,48 @@ function scanMeldingen(script: string): Vondst[] {
     .map((m) => ({ regel: regelVan(script, m.index), tekst: m[0] }));
 }
 
+const LOCALE_PATRONEN: readonly RegExp[] = [
+  // Een letterlijke eerste parameter (of eerste element van een lijst) van `Intl.X(...)` en `toLocale*String(...)`.
+  /\bIntl\s*\.\s*\w+\s*\(\s*\[?\s*["'`]/g,
+  /\btoLocale\w*String\s*\(\s*\[?\s*["'`]/g,
+  // Een locale-tekst, ook in een constante: "nl-BE", 'fr-BE', `en-GB`.
+  /["'`][a-z]{2,3}-[A-Z]{2}["'`]/g,
+];
+
+/**
+ * Hardgecodeerde locales in een bron. De regexen lopen over de hele tekst, dus ook een aanroep die over
+ * meerdere regels staat. `LOCALES` zelf (in @elentrik/arei) is de enige plek waar locale-teksten mogen
+ * staan: `isDefinitie` laat alleen daar de losse locale-tekst toe.
+ */
+function scanLocales(bron: string, isDefinitie = false): Vondst[] {
+  const patronen = isDefinitie ? LOCALE_PATRONEN.slice(0, 2) : LOCALE_PATRONEN;
+  const regels = bron.split("\n");
+  const vondsten = new Map<number, Vondst>();
+  for (const patroon of patronen) {
+    for (const m of bron.matchAll(patroon)) {
+      const regel = regelVan(bron, m.index);
+      if (!vondsten.has(regel)) vondsten.set(regel, { regel, tekst: regels[regel - 1]!.trim() });
+    }
+  }
+  return [...vondsten.values()].sort((a, b) => a.regel - b.regel);
+}
+
+const SERVER = join(WEB, "server");
+const SHARED = join(WEB, "shared");
+const PAKKETTEN = join(WEB, "..", "..", "packages");
+const LOCALES_BRON = join(PAKKETTEN, "arei", "src", "berichten", "index.ts");
 const VUE = bestanden(APP, ".vue");
 const TS = bestanden(APP, ".ts");
+const LOCALEBESTANDEN = [
+  ...VUE,
+  ...TS,
+  ...bestanden(SERVER, ".ts"),
+  ...bestanden(SHARED, ".ts"),
+  ...readdirSync(PAKKETTEN).flatMap((pakket) => {
+    const src = join(PAKKETTEN, pakket, "src");
+    return existsSync(src) ? [...bestanden(src, ".ts"), ...bestanden(src, ".vue")] : [];
+  }),
+];
 
 describe("geen hardgecodeerde tekst in app/", () => {
   test("de scan vindt de bestanden", () => {
@@ -170,11 +212,36 @@ describe("geen hardgecodeerde tekst in app/", () => {
     expect(fouten).toEqual([]);
   });
 
-  test("geen vaste locale nl-BE: Intl volgt de taal (via LOCALES uit shared/taal)", () => {
-    const fouten = [...TS, ...VUE].flatMap((bestand) =>
-      readFileSync(bestand, "utf8")
-        .split("\n")
-        .flatMap((regel, i) => (/["'`]nl-BE["'`]/.test(regel) ? [`${pad(bestand)}:${i + 1}: ${regel.trim()}`] : [])),
+  test("de scan op locales vindt elke hardgecodeerde locale, ook over meerdere regels", () => {
+    const vondst = (bron: string) => scanLocales(bron).map((v) => v.regel);
+    expect(vondst('new Intl.NumberFormat("nl-BE")')).toEqual([1]);
+    expect(vondst("new Intl.DateTimeFormat('fr-BE', {})")).toEqual([1]);
+    expect(vondst('x.toLocaleString("en-GB", { style: "currency" })')).toEqual([1]);
+    expect(vondst("d.toLocaleDateString(`de`)")).toEqual([1]);
+    expect(vondst('new Intl.NumberFormat(\n  "nl",\n)')).toEqual([1]);
+    expect(vondst('new Intl.PluralRules(["nl"])')).toEqual([1]);
+    expect(vondst('const L = "fr-BE";')).toEqual([1]);
+    // Een locale uit de taal van de gebruiker, een type of een opties-object is geen vondst.
+    expect(vondst("new Intl.NumberFormat(LOCALES[taal], { style: 'currency' })")).toEqual([]);
+    expect(vondst("d.toLocaleString(localeProperties.value.language, {})")).toEqual([]);
+    expect(vondst("const m = new Map<Taal, Intl.NumberFormat>();")).toEqual([]);
+    expect(vondst("x.toLocaleString(undefined, { dateStyle: 'short' })")).toEqual([]);
+    // De definitie van LOCALES mag haar locale-teksten houden, maar niet een letterlijke Intl-locale.
+    expect(scanLocales('const LOCALES = { nl: "nl-BE" };', true)).toEqual([]);
+    expect(scanLocales('new Intl.NumberFormat("nl-BE")', true).map((v) => v.regel)).toEqual([1]);
+  });
+
+  test("een grootte met eenheid (MB) staat niet op de uitzonderingenlijst: ze is een opgemaakt, vertaalbaar getal", () => {
+    expect(UITZONDERINGEN.has("MB")).toBe(false);
+    expect(scanTemplate("<template><p>5 MB</p></template>").map((v) => v.tekst)).toEqual(["5 MB"]);
+  });
+
+  test("geen hardgecodeerde locale voor Intl in app/, server/, shared/ en de pakketten (via LOCALES uit @elentrik/arei)", () => {
+    expect(LOCALEBESTANDEN.length).toBeGreaterThan(60);
+    const fouten = LOCALEBESTANDEN.flatMap((bestand) =>
+      scanLocales(readFileSync(bestand, "utf8"), bestand === LOCALES_BRON).map(
+        (v) => `${pad(bestand)}:${v.regel}: ${v.tekst}`,
+      ),
     );
     expect(fouten).toEqual([]);
   });

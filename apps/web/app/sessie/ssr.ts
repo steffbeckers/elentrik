@@ -7,7 +7,7 @@
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import type { Mij } from "../stores/sessie";
+import type { Mij } from "../../shared/mij";
 
 /** Elke Set-Cookie-header apart (een vervaldatum bevat zelf een komma). */
 export function setCookies(headers: Headers): string[] {

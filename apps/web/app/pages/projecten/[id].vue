@@ -211,6 +211,11 @@ watch(autosave.status, (status) => {
   conflictOpen.value = status === "conflict";
 });
 
+// De server weigerde het document met een bekende foutcode (bv. PLANBESTAND_ONBEKEND): de vertaalde reden.
+watch(autosave.fout, (fout) => {
+  if (fout?.code) toast.add({ title: t(`fouten.${fout.code}`), color: "error" });
+});
+
 async function losConflictOp(actie: () => Promise<void>): Promise<void> {
   conflictBezig.value = true;
   try {
@@ -600,7 +605,12 @@ onBeforeUnmount(() => {
       {{ $t("editor.pagina.laden") }}
     </div>
 
-    <PlanToevoegenDialoog v-model:open="planDialoogOpen" :vervang-pagina-id="vervangPaginaId" @klaar="planKlaar" />
+    <PlanToevoegenDialoog
+      v-model:open="planDialoogOpen"
+      :vervang-pagina-id="vervangPaginaId"
+      @klaar="planKlaar"
+      @verwijderd="autosave.meldVerwijderd"
+    />
     <SchaalDialoog v-model:open="schaalOpen" :pagina-id="meetPaginaId" :afstand-px="schaalAfstandPx" />
 
     <ConceptDialoog

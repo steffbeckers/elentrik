@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { httpStatus } from "~/composables/useProjectenApi";
+import AdresVelden from "~/components/editor/AdresVelden.vue";
 import {
   controleerLogo,
   formulierUitPartij,
   leegFormulier,
+  logoUploadFout,
   partijUitFormulier,
   valideerFormulier,
   type BedrijfFormulier,
+  type LogoFoutSleutel,
 } from "~/instellingen/formulier";
 import { laadBedrijf } from "~/instellingen/laden";
 import { maakBedrijfBewaarder, type BewaarderToestand } from "~/instellingen/bewaarder";
@@ -101,8 +103,9 @@ async function bewaar() {
 const invoer = ref<HTMLInputElement | null>(null);
 const logoUrl = computed(() => (logoBestandId.value ? bestanden.url(logoBestandId.value) : null));
 
-function meldLogoFout(sleutel: "onbekendType" | "teGroot" | "mislukt") {
-  toast.add({ title: t(`bedrijf.logo.fout.${sleutel}`), color: "error" });
+function meldLogoFout(sleutel: LogoFoutSleutel) {
+  const titel = sleutel === "opslagVol" ? t("fouten.OPSLAG_VOL") : t(`bedrijf.logo.fout.${sleutel}`);
+  toast.add({ title: titel, color: "error" });
 }
 
 async function opLogoGekozen(gebeurtenis: Event) {
@@ -126,8 +129,7 @@ async function opLogoGekozen(gebeurtenis: Event) {
     logoBestandId.value = uitkomst.waarde.id;
     toast.add({ title: t("bedrijf.logo.bewaard"), color: "success" });
   } catch (fout) {
-    const code = httpStatus(fout);
-    meldLogoFout(code === 413 ? "teGroot" : code === 415 ? "onbekendType" : "mislukt");
+    meldLogoFout(logoUploadFout(fout));
   }
 }
 </script>
@@ -242,26 +244,8 @@ async function opLogoGekozen(gebeurtenis: Event) {
             <template #header>
               <h2 class="font-semibold">{{ $t("bedrijf.adres.titel") }}</h2>
             </template>
-            <div class="grid grid-cols-6 gap-4">
-              <UFormField name="straat" :label="$t('bedrijf.adres.straat')" class="col-span-6 sm:col-span-4">
-                <UInput v-model="formulier.straat" class="w-full" />
-              </UFormField>
-              <UFormField name="nummer" :label="$t('bedrijf.adres.nummer')" class="col-span-3 sm:col-span-1">
-                <UInput v-model="formulier.nummer" class="w-full" />
-              </UFormField>
-              <UFormField name="bus" :label="$t('bedrijf.adres.bus')" class="col-span-3 sm:col-span-1">
-                <UInput v-model="formulier.bus" class="w-full" />
-              </UFormField>
-              <UFormField name="postcode" :label="$t('bedrijf.adres.postcode')" class="col-span-2 sm:col-span-2">
-                <UInput v-model="formulier.postcode" class="w-full" />
-              </UFormField>
-              <UFormField name="gemeente" :label="$t('bedrijf.adres.gemeente')" class="col-span-4 sm:col-span-2">
-                <UInput v-model="formulier.gemeente" class="w-full" />
-              </UFormField>
-              <UFormField name="land" :label="$t('bedrijf.adres.land')" class="col-span-6 sm:col-span-2">
-                <UInput v-model="formulier.land" class="w-full" />
-              </UFormField>
-            </div>
+            <!-- De adresvelden staan op het hoogste niveau van het formulier (geen voorvoegsel); het component wijzigt ze ter plaatse. -->
+            <AdresVelden :model-value="formulier" />
           </UCard>
 
           <div v-if="!alleenLezen" class="flex justify-end">

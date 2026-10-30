@@ -8,18 +8,8 @@ import { leesPdf } from "./hulp/pdf";
 // bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "export" });
 
-// Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
+// Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Exportdialoog ${Date.now()}`;
-
-type Samenvatting = { id: string; naam: string };
-
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as Samenvatting[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
 
 async function nieuwProject(request: APIRequestContext, achtervoegsel: string): Promise<string> {
   const antwoord = await request.post("/api/projecten", {

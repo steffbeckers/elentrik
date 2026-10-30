@@ -10,6 +10,8 @@ import {
   type ConceptPlek,
 } from "./concepten";
 import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
+import type { Foutcode } from "../../shared/foutcodes";
+import { bekendeFoutcode } from "../fouten";
 import { foutCode } from "../sessie/fouten";
 import { metNieuweBestandIds, planBestandIds } from "../editor/kopie";
 import {
@@ -104,8 +106,8 @@ export type Conflict = { huidigeVersie: number; lokaleWijzigingen: boolean };
 export type Autosave = {
   status: Ref<AutosaveStatus>;
   conflict: Ref<Conflict | null>;
-  /** Gezet bij status `fout`: de HTTP-status waarmee de server het bewaren weigerde. */
-  fout: Ref<{ status: number } | null>;
+  /** Gezet bij status `fout`: de HTTP-status waarmee de server het bewaren weigerde, en zijn foutcode als die bekend is. */
+  fout: Ref<{ status: number; code?: Foutcode } | null>;
   /**
    * De server antwoordde 401: de sessie is verlopen. Het werk staat in het concept; er gaat
    * niets meer naar de server tot `nuOpslaan()`. Een geslaagd bewaar zet dit terug op false.
@@ -135,6 +137,11 @@ export type Autosave = {
    * Hetzelfde conflictpad als een 409 bij het bewaren; `laadServerversie` of `bewaarAlsKopie` lost het op.
    */
   meldConflict(huidigeVersie: number): void;
+  /**
+   * Een 404 van buiten het bewaren (het uploaden van een plan): het project is elders verwijderd. Dezelfde
+   * toestand als een 404 bij het bewaren: status `verwijderd`, het werk in het concept, geen nieuwe poging.
+   */
+  meldVerwijderd(): void;
   /**
    * Stopt de watcher en de timers. Gebeurt ook automatisch als de scope verdwijnt. Staan er dan
    * onbewaarde wijzigingen (en geen conflict of fout), dan volgt nog één poging om ze te bewaren.
@@ -191,7 +198,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
 
   const status = ref<AutosaveStatus>("opgeslagen");
   const conflict = ref<Conflict | null>(null);
-  const fout = ref<{ status: number } | null>(null);
+  const fout = ref<{ status: number; code?: Foutcode } | null>(null);
   const afgemeld = ref(false);
   const alleenLezen = ref(false);
   const verwijderd = ref(false);
@@ -320,6 +327,23 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return taak;
   }
 
+  /**
+   * De toestand `verwijderd`, voor een 404 bij het bewaren en voor `meldVerwijderd`: het werk staat in het
+   * concept (nog eens schrijven, voor het geval een eerdere schrijfactie mislukte) en er volgt geen nieuwe
+   * poging; de gebruiker kiest een nieuw project of terug naar de projecten.
+   */
+  function zetVerwijderd(id: string): void {
+    verwijderd.value = true;
+    afgemeld.value = false;
+    alleenLezen.value = false;
+    status.value = verwijderdStatus();
+    const huidig = store.document;
+    if (huidig !== null) {
+      schrijfConcept(id, { document: huidig, versie: store.versie, naam: store.naam, tijd: Date.now() });
+    }
+    wisTimer();
+  }
+
   /** Bewaart de huidige staat, tenzij er een conflict of fout is of al een bewaar loopt. */
   async function probeer(): Promise<void> {
     if (conflict.value || fout.value || verwijderd.value || lopend) return;
@@ -380,19 +404,12 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           // Het project is intussen verwijderd: opnieuw proberen verandert daar niets aan. Het werk
           // staat in het concept (nog eens schrijven, voor het geval een eerdere schrijfactie mislukte);
           // de gebruiker kiest: een nieuw project maken of terug naar de projecten.
-          verwijderd.value = true;
-          afgemeld.value = false;
-          alleenLezen.value = false;
-          status.value = verwijderdStatus();
-          const huidig = store.document;
-          if (huidig !== null) {
-            schrijfConcept(id, { document: huidig, versie: store.versie, naam: store.naam, tijd: Date.now() });
-          }
-          wisTimer();
+          zetVerwijderd(id);
         } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
           // De server weigert dit document; opnieuw proberen verandert daar niets aan. De server
           // antwoordde met een sessie: afgemeld vervalt, zodat er maar een melding tegelijk staat.
-          fout.value = { status: httpCode };
+          const code = bekendeFoutcode(e);
+          fout.value = code === undefined ? { status: httpCode } : { status: httpCode, code };
           afgemeld.value = false;
           alleenLezen.value = false;
           status.value = "fout";
@@ -472,7 +489,8 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
 
   /**
    * Zonder lokale wijzigingen (een conflict bij de export) is de kopie gewoon een server-side
-   * duplicaat van de actuele serverversie, met eigen planbestanden: daar wordt niets over geschreven.
+   * duplicaat van de actuele serverversie, met eigen planbestanden: daar wordt niets over geschreven
+   * (de plan-id's van het lokale document gaan toch mee, voor een wijziging tijdens het dupliceren).
    * Met lokale wijzigingen wordt het lokale document in de kopie bewaard; de planbestanden daarvan
    * staan dan op hun nieuwe id's uit het duplicaat.
    */
@@ -483,7 +501,10 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     wisTimer();
     const zonderLokaal = conflict.value?.lokaleWijzigingen === false;
     await startLopend(async () => {
-      const kopie = zonderLokaal ? await dupliceer(id) : await dupliceer(id, planBestandIds(store.document!));
+      // Altijd de planbestanden van het lokale document, uit de staat van vlak vóór het dupliceren. Restrisico:
+      // een planupload die tijdens het dupliceren klaar komt, zit niet in de mapping; het bewaren in de kopie
+      // krijgt dan 422 PLANBESTAND_ONBEKEND.
+      const kopie = await dupliceer(id, planBestandIds(store.document!));
       // Kwam er tijdens het dupliceren toch een wijziging bij, dan gaat die mee naar de kopie.
       if (!zonderLokaal || onbewaard()) {
         const nieuweIds = kopie.bestandIds ?? {};
@@ -552,6 +573,15 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     });
   }
 
+  function meldVerwijderd(): void {
+    const id = store.projectId;
+    if (id === null) return;
+    // Een conflict of fout hoort bij een project dat er nog was: er staat maar één melding tegelijk.
+    conflict.value = null;
+    fout.value = null;
+    zetVerwijderd(id);
+  }
+
   function meldConflict(huidigeVersie: number): void {
     conflict.value = { huidigeVersie, lokaleWijzigingen: onbewaard() };
     status.value = "conflict";
@@ -602,6 +632,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     bewaarAlsKopie,
     bewaarAlsNieuwProject,
     meldConflict,
+    meldVerwijderd,
     stop,
     wachtOpConcept,
   };

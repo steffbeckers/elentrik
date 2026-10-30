@@ -369,13 +369,7 @@
       "email": "E-mail"
     },
     "adres": {
-      "titel": "Adres",
-      "straat": "Straat",
-      "nummer": "Nummer",
-      "bus": "Bus",
-      "postcode": "Postcode",
-      "gemeente": "Gemeente",
-      "land": "Land"
+      "titel": "Adres"
     },
     "fouten": {
       "naamVerplicht": "Geef je bedrijf een naam.",
@@ -792,7 +786,10 @@
     "BESTAND_TE_GROOT": "Dit bestand is te groot.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "Dit bestandstype wordt niet aanvaard.",
     "RASTER_TE_GROOT": "Dit plan is te groot (meer dan 8.000 pixels).",
-    "LENGTE_VEREIST": "Dit bestand kon niet verstuurd worden, omdat de grootte ervan ontbreekt. Probeer het opnieuw.",
+    "PLANBESTAND_ONBEKEND": "Het project verwijst naar een plan dat er niet bij hoort en kon niet opgeslagen worden. Laad het plan opnieuw op.",
+    "OPSLAG_VOL": "De opslagruimte van dit bedrijf is vol. Verwijder oude projecten om ruimte vrij te maken.",
+    "LENGTE_VEREIST": "Dit kon niet verstuurd worden, omdat de grootte ontbreekt. Probeer het opnieuw.",
+    "VERZOEK_TE_GROOT": "Het project is te groot om te bewaren.",
     "ONBEREIKBAAR": "De PDF-dienst is niet bereikbaar. Probeer het straks opnieuw.",
     "TIMEOUT": "De PDF-dienst antwoordde niet op tijd. Probeer het straks opnieuw.",
     "MISLUKT": "De PDF kon niet gemaakt worden. Probeer het opnieuw.",
@@ -807,6 +804,8 @@
     "UITNODIGING_ANDER_ADRES": "Deze uitnodiging is voor een ander adres.",
     "EMAIL_NIET_BEVESTIGD": "Bevestig eerst je e-mailadres en probeer het dan opnieuw.",
     "ACCOUNT_BESTAAT": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
+    "UITNODIGINGEN_VOL": "Er staan al te veel uitnodigingen open. Trek er een in of wacht tot ze aanvaard zijn.",
+    "LEDEN_VOL": "Dit bedrijf heeft het maximum aantal leden bereikt.",
     "TE_VEEL_UITNODIGINGEN": "Te veel uitnodigingen. Probeer het straks opnieuw.",
     "TE_VEEL_POGINGEN": "Te veel pogingen. Wacht even en probeer het opnieuw.",
     "INLOGLINK_MISLUKT": "Inloggen met de link is niet gelukt. Vraag een nieuwe link aan.",
@@ -817,6 +816,8 @@
     "PASSWORD_TOO_SHORT": "Een wachtwoord telt minstens 10 tekens.",
     "PASSWORD_TOO_LONG": "Een wachtwoord telt hoogstens 128 tekens.",
     "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Er bestaat al een account met dit adres.",
-    "INVALID_EMAIL": "Vul een geldig e-mailadres in."
+    "INVALID_EMAIL": "Vul een geldig e-mailadres in.",
+    "ORGANIZATION_ALREADY_EXISTS": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw.",
+    "ORGANIZATION_SLUG_ALREADY_TAKEN": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw."
   }
 }

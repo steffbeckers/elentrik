@@ -74,11 +74,37 @@ export function projectId(event: H3Event): string {
   return id.data;
 }
 
-/** Leest en valideert de JSON-body; een ongeldige body geeft 400 met de Zod-issues. */
+/** De grootste JSON-body die de server leest (een groot project met veel pagina's is een paar MB). */
+export const MAX_JSON_BODY = 50 * 1024 * 1024;
+
+/**
+ * Controleert de lengte van de body vóór ze gelezen wordt, zodat de grens niet te omzeilen is met
+ * een gestreamde body. Een verzoek met `Transfer-Encoding` maar zonder geldige `Content-Length`
+ * heeft een body van onbekende lengte: 411 LENGTE_VEREIST. Een verzoek met geen van beide heeft
+ * geen body (een optionele body, zoals bij dupliceren, blijft dus werken). Boven `MAX_JSON_BODY`:
+ * 413 VERZOEK_TE_GROOT. De browser stuurt bij `fetch` met een tekst-body altijd een lengte mee.
+ */
+function controleerBodyGrootte(event: H3Event): void {
+  const lengte = getHeader(event, "content-length")?.trim();
+  const geldig = lengte !== undefined && /^\d+$/.test(lengte);
+  const gestreamd = getHeader(event, "transfer-encoding") !== undefined;
+  if ((lengte !== undefined || gestreamd) && !geldig) {
+    throw createError({ statusCode: 411, statusMessage: "Lengte vereist", data: { code: "LENGTE_VEREIST" } });
+  }
+  if (geldig && Number(lengte) > MAX_JSON_BODY) {
+    throw createError({ statusCode: 413, statusMessage: "Verzoek te groot", data: { code: "VERZOEK_TE_GROOT" } });
+  }
+}
+
+/**
+ * Leest en valideert de JSON-body; een ongeldige body geeft 400 met de Zod-issues, een body zonder
+ * bekende lengte 411 en een te grote body 413 (zie `controleerBodyGrootte`).
+ */
 export async function leesBody<T extends z.ZodType>(
   event: H3Event,
   schema: T,
 ): Promise<z.output<T>> {
+  controleerBodyGrootte(event);
   const resultaat = schema.safeParse(await readBody(event));
   if (!resultaat.success) {
     throw createError({

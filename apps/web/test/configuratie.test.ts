@@ -2,6 +2,8 @@
 // een waarde. In productie gooit de plugin bij problemen; anders waarschuwt ze alleen.
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { controleerBijStart, controleerConfiguratie } from "../server/config/controle";
+import { isPlaatshouder, PLAATSHOUDERS } from "../server/config/plaatshouders";
+import { plaatshoudersUitVoorbeelden } from "./plaatshouders";
 
 // Nitro draait niet in Vitest: defineNitroPlugin geeft de functie van de plugin terug.
 vi.mock("nitropack/runtime", () => ({ defineNitroPlugin: (f: () => void) => f }));
@@ -118,7 +120,7 @@ describe("controleerConfiguratie", () => {
     expect(controleerConfiguratie({ ...VOLLEDIG, MAIL_VERZENDER: "smtp" })).toEqual([]);
   });
 
-  test("plaatshouders die met < beginnen tellen als niet ingevuld (graph)", () => {
+  test("de plaatshouders uit de voorbeeldbestanden tellen als niet ingevuld (graph)", () => {
     const graph = {
       ...VOLLEDIG,
       MAIL_VERZENDER: "graph",
@@ -155,6 +157,17 @@ describe("controleerConfiguratie", () => {
 
   test("een ongeldige STRIPE_API_BASIS: die naam", () => {
     expect(controleerConfiguratie({ ...STRIPE, STRIPE_API_BASIS: "https://example.com" })).toEqual(["STRIPE_API_BASIS"]);
+  });
+
+  test("ELENTRIK_OPSLAG_PER_BEDRIJF_MB: leeg of een positief geheel getal is goed, anders die naam", () => {
+    for (const goed of ["100", "5120", "", "  "]) {
+      expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_OPSLAG_PER_BEDRIJF_MB: goed }), goed).toEqual([]);
+    }
+    for (const fout of ["0", "-1", "abc", "1.5"]) {
+      expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_OPSLAG_PER_BEDRIJF_MB: fout }), fout).toEqual([
+        "ELENTRIK_OPSLAG_PER_BEDRIJF_MB",
+      ]);
+    }
   });
 
   test("ELENTRIK_VERTROUWD_PROXYNET: leeg of een geldige CIDR is goed, anders die naam", () => {
@@ -352,5 +365,68 @@ describe("grendels per omgeving (plan 10)", () => {
     const env = { ...STAGING, NODE_ENV: "development", MAIL_VERZENDER: "graph", ...GRAPH_VARS };
     expect(() => controleerBijStart(env)).toThrow(/MAIL_VERZENDER/);
     expect(() => controleerBijStart(env)).not.toThrow(/mailpit|geheim/);
+  });
+});
+
+// Alleen de exacte plaatshouders uit deploy/nas/.env.voorbeeld en apps/web/.env.example gelden als niet
+// ingevuld, niet elke waarde die met "<" begint: een wachtwoord als "<geheim>wachtwoord123" is geldig.
+// De lijst in de code wordt hier uit die twee bestanden afgeleid, zodat ze niet kan afwijken.
+describe("plaatshouders uit de voorbeeldbestanden", () => {
+  const AFGELEID = plaatshoudersUitVoorbeelden();
+
+  test("de afleiding vindt de plaatshouders, en geen samengestelde waarde", () => {
+    expect(AFGELEID).toEqual(
+      expect.arrayContaining([
+        "<vervang-door-een-lange-willekeurige-waarde>",
+        "<vervang-door-een-andere-lange-willekeurige-waarde>",
+        "<tenant-id>",
+        "<client-geheim>",
+      ]),
+    );
+    expect(AFGELEID.length).toBeGreaterThanOrEqual(8);
+    expect(AFGELEID.some((p) => p.includes("noreply"))).toBe(false);
+  });
+
+  test("PLAATSHOUDERS in de code is precies die lijst", () => {
+    expect([...PLAATSHOUDERS].sort()).toEqual([...AFGELEID].sort());
+  });
+
+  test("elke plaatshouder wordt geweigerd als PGPASSWORD en als Graph-variabele", () => {
+    const graph = {
+      ...VOLLEDIG,
+      MAIL_VERZENDER: "graph",
+      GRAPH_TENANT_ID: "t",
+      GRAPH_CLIENT_ID: "c",
+      GRAPH_CLIENT_GEHEIM: GEHEIM,
+      MAIL_AFZENDER: "noreply@elentrik.example.be",
+    };
+    for (const plaatshouder of AFGELEID) {
+      expect(isPlaatshouder(plaatshouder), plaatshouder).toBe(true);
+      expect(isPlaatshouder(`  ${plaatshouder} `), plaatshouder).toBe(true);
+      expect(controleerConfiguratie({ ...VOLLEDIG, NODE_ENV: "production", MAIL_VERZENDER: "smtp", SMTP_HOST: "smtp.example.be", SMTP_VAN: "a@b.be", PGPASSWORD: plaatshouder }), plaatshouder).toEqual(["PGPASSWORD"]);
+      expect(controleerConfiguratie({ ...graph, GRAPH_CLIENT_ID: plaatshouder }), plaatshouder).toEqual(["GRAPH_CLIENT_ID"]);
+    }
+  });
+
+  test("een echte waarde die met < begint of een < bevat, wordt aanvaard", () => {
+    const productie = { ...VOLLEDIG, NODE_ENV: "production", MAIL_VERZENDER: "smtp", SMTP_HOST: "smtp.example.be", SMTP_VAN: "a@b.be" };
+    for (const waarde of ["<geheim>wachtwoord123", "<geheim", "wacht<woord>123", "<vervang-door-iets-anders>", "<tenant-id>x", "Elentrik <noreply@elentrik.app>"]) {
+      expect(isPlaatshouder(waarde), waarde).toBe(false);
+      expect(controleerConfiguratie({ ...productie, PGPASSWORD: waarde }), waarde).toEqual([]);
+    }
+    expect(isPlaatshouder(undefined)).toBe(false);
+    expect(isPlaatshouder("")).toBe(false);
+  });
+
+  test("Graph-variabelen met een echte waarde die met < begint, worden aanvaard", () => {
+    const graph = {
+      ...VOLLEDIG,
+      MAIL_VERZENDER: "graph",
+      GRAPH_TENANT_ID: "t",
+      GRAPH_CLIENT_ID: "c",
+      GRAPH_CLIENT_GEHEIM: "<geheim>wachtwoord123",
+      MAIL_AFZENDER: "noreply@elentrik.example.be",
+    };
+    expect(controleerConfiguratie(graph)).toEqual([]);
   });
 });

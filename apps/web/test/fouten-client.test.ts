@@ -23,9 +23,31 @@ describe("vertaalFout", () => {
     expect(vertaalFout(fout, t)).toBe("[fouten.LAATSTE_EIGENAAR]");
   });
 
+  test("PLANBESTAND_ONBEKEND van het bewaren (422): de vertaling", () => {
+    const fout = {
+      status: 422,
+      data: { statusCode: 422, statusMessage: "Het document verwijst naar een planbestand", data: { code: "PLANBESTAND_ONBEKEND" } },
+    };
+    expect(vertaalFout(fout, t)).toBe("[fouten.PLANBESTAND_ONBEKEND]");
+  });
+
+  test("OPSLAG_VOL (413) van een upload, dupliceren of Bewaar als nieuw project: de vertaling, niet 'te groot'", () => {
+    const fout = {
+      status: 413,
+      data: { statusCode: 413, statusMessage: "Opslag vol", data: { code: "OPSLAG_VOL" } },
+    };
+    expect(vertaalFout(fout, t)).toBe("[fouten.OPSLAG_VOL]");
+  });
+
   test("de Better Auth-client: de code bovenaan", () => {
     const fout = { status: 401, code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" };
     expect(vertaalFout(fout, t)).toBe("[fouten.INVALID_EMAIL_OR_PASSWORD]");
+  });
+
+  test("een nieuw bedrijf met een bestaande slug (Better Auth, rechtstreeks vanuit de client): de vertaling", () => {
+    for (const code of ["ORGANIZATION_ALREADY_EXISTS", "ORGANIZATION_SLUG_ALREADY_TAKEN"]) {
+      expect(vertaalFout({ status: 400, code, message: "Organization already exists" }, t)).toBe(`[fouten.${code}]`);
+    }
   });
 
   test("een onbekende code: fouten.onbekend", () => {

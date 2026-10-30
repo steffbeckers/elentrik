@@ -1,9 +1,10 @@
 // Een fout na een geldige inloglink (hier: de sessiehook faalt) geeft een redirect naar /inloggen met
-// een vertaalbare code, geen kale 500. Alleen de verificatie van de inloglink wordt zo opgevangen.
+// een vertaalbare code, geen kale 500. Alleen de verificatie van de inloglink en van de bevestigingslink
+// wordt zo opgevangen.
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth } from "../server/auth";
-import { INLOGLINK_PAD, metInloglinkVangnet } from "../server/auth/inloglink";
+import { BEVESTIGING_PAD, INLOGLINK_PAD, metInloglinkVangnet } from "../server/auth/inloglink";
 import type { Db } from "../server/db";
 import { session, user } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
@@ -66,6 +67,20 @@ async function inloglink(): Promise<{ url: string; email: string }> {
 
 const handler = (verzoek: Request) => auth.handler(verzoek);
 
+/** Een nieuwe, nog onbevestigde gebruiker met de bevestigingslink uit de mail (zonder callbackURL). */
+async function bevestigingslink(): Promise<URL> {
+  teller += 1;
+  const email = `nieuw${teller}@voorbeeld.be`;
+  mails.length = 0;
+  await auth.api.signUpEmail({
+    body: { name: "Jan", email, password: "lang-genoeg-1", wachtendeBedrijfsnaam: "Peeters Elektro" },
+    headers: new Headers({ "user-agent": "vitest", "x-forwarded-for": "127.0.0.1" }),
+  });
+  await new Promise((klaar) => setTimeout(klaar, 0));
+  const mail = mails.find((m) => m.aan === email)!;
+  return new URL(mail.tekst.match(/https?:\/\/\S+/)![0]);
+}
+
 describe("een fout na een geldige inloglink", () => {
   test("zonder vangnet is het een kale 500 (de aanleiding)", async () => {
     const { url } = await inloglink();
@@ -77,13 +92,16 @@ describe("een fout na een geldige inloglink", () => {
 
   test("met het vangnet: 302 naar /inloggen?fout=INLOGLINK_MISLUKT, en geen sessiecookie", async () => {
     const { url } = await inloglink();
+    // De bestemming van de link: een echte link, dus Better Auth zelf leest ze ook (rate limit: één keer).
+    const link = new URL(url);
+    link.searchParams.set("callbackURL", "/uitnodiging/abc");
     hook.faal = true;
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const antwoord = await metInloglinkVangnet(new Request(url), handler);
+    const antwoord = await metInloglinkVangnet(new Request(link), handler);
 
     expect(antwoord.status).toBe(302);
-    expect(antwoord.headers.get("location")).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);
+    expect(antwoord.headers.get("location")).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}&terug=%2Fuitnodiging%2Fabc`);
     expect(antwoord.headers.getSetCookie()).toEqual([]);
   });
 
@@ -99,7 +117,7 @@ describe("een fout na een geldige inloglink", () => {
       .map((c) => String(c[0]))
       .filter((r) => r.startsWith("Inloglink"))
       .join("\n");
-    expect(regels).toBe("Inloglink verifiëren mislukt: status 500");
+    expect(regels).toBe(`Inloglink verifiëren mislukt op ${INLOGLINK_PAD}: status 500`);
     for (const verboden of [email, "ontvanger@voorbeeld.be", "abc123", new URL(url).searchParams.get("token")!]) {
       expect(regels).not.toContain(verboden);
     }
@@ -152,5 +170,107 @@ describe("een fout na een geldige inloglink", () => {
   test("een 4xx op het verify-pad blijft zoals ze is (alleen een serverfout wordt opgevangen)", async () => {
     const vier = new Response("nee", { status: 403 });
     expect(await metInloglinkVangnet(new Request(`${BASIS}${INLOGLINK_PAD}?token=x`), async () => vier)).toBe(vier);
+  });
+});
+
+describe("de bevestigingslink (verify-email)", () => {
+  test("zonder vangnet is een fout in de sessiehook een kale 500 (de aanleiding)", async () => {
+    const link = await bevestigingslink();
+    hook.faal = true;
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await handler(new Request(link))).status).toBe(500);
+  });
+
+  test("met het vangnet: 302 naar /inloggen?fout=INLOGLINK_MISLUKT, geen 500 en geen sessiecookie", async () => {
+    const link = await bevestigingslink();
+    hook.faal = true;
+    const fouten = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const antwoord = await metInloglinkVangnet(new Request(link), handler);
+
+    expect(antwoord.status).toBe(302);
+    expect(antwoord.headers.get("location")).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);
+    expect(antwoord.headers.getSetCookie()).toEqual([]);
+    const regels = fouten.mock.calls
+      .map((c) => String(c[0]))
+      .filter((r) => r.startsWith("Inloglink"))
+      .join("\n");
+    expect(regels).toBe(`Inloglink verifiëren mislukt op ${BEVESTIGING_PAD}: status 500`);
+  });
+
+  test("de bestemming blijft bewaard in de foutredirect", async () => {
+    const link = await bevestigingslink();
+    link.searchParams.set("callbackURL", "/uitnodiging/abc");
+    hook.faal = true;
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const antwoord = await metInloglinkVangnet(new Request(link), handler);
+
+    expect(antwoord.headers.get("location")).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}&terug=%2Fuitnodiging%2Fabc`);
+  });
+
+  test("zonder fout werkt de bevestiging gewoon", async () => {
+    const link = await bevestigingslink();
+    const antwoord = await metInloglinkVangnet(new Request(link), handler);
+    expect(antwoord.status).toBe(302);
+    expect(antwoord.headers.getSetCookie().length).toBeGreaterThan(0);
+  });
+
+  test("een 4xx van Better Auth zelf (ongeldige token) gaat ongewijzigd door", async () => {
+    const antwoord = await metInloglinkVangnet(
+      new Request(`${BASIS}${BEVESTIGING_PAD}?token=bestaat-niet&callbackURL=/projecten`),
+      handler,
+    );
+    expect(antwoord.status).toBeLessThan(500);
+    expect(antwoord.headers.get("location") ?? "").not.toContain("INLOGLINK_MISLUKT");
+  });
+
+  test("een gooiende handler wordt ook opgevangen", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const antwoord = await metInloglinkVangnet(new Request(`${BASIS}${BEVESTIGING_PAD}?token=x`), async () => {
+      throw new Error("kapot");
+    });
+    expect(antwoord.status).toBe(302);
+    expect(antwoord.headers.get("location")).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);
+  });
+
+  test("alleen GET op dat pad wordt opgevangen", async () => {
+    const kapot = new Response("boem", { status: 500 });
+    expect(
+      await metInloglinkVangnet(new Request(`${BASIS}${BEVESTIGING_PAD}`, { method: "POST" }), async () => kapot),
+    ).toBe(kapot);
+  });
+});
+
+describe("de bestemming (callbackURL) in de foutredirect", () => {
+  /** Een serverfout op het verify-pad met deze `callbackURL`; zonder echte link, dus zonder rate limit. */
+  async function foutlocatie(callbackURL: string | null): Promise<string | null> {
+    const verzoek = new URL(`${BASIS}${INLOGLINK_PAD}?token=x`);
+    if (callbackURL !== null) verzoek.searchParams.set("callbackURL", callbackURL);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const antwoord = await metInloglinkVangnet(new Request(verzoek), async () => new Response(null, { status: 500 }));
+    expect(antwoord.status).toBe(302);
+    return antwoord.headers.get("location");
+  }
+
+  test("ook met een query in de bestemming", async () => {
+    expect(await foutlocatie("/uitnodiging/abc?x=1&y=2")).toBe(
+      `/inloggen?fout=${INLOGLINK_MISLUKT}&terug=%2Fuitnodiging%2Fabc%3Fx%3D1%26y%3D2`,
+    );
+  });
+
+  test("de standaardbestemming `/` hoeft niet mee", async () => {
+    expect(await foutlocatie("/")).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);
+  });
+
+  test.each(["//evil.example", "https://evil.example", "/\\evil.example", "/.//evil.example", "%2F%2Fevil.example", "javascript:alert(1)", ""])(
+    "%j valt weg",
+    async (callbackURL) => {
+      expect(await foutlocatie(callbackURL)).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);
+    },
+  );
+
+  test("zonder callbackURL: geen terug", async () => {
+    expect(await foutlocatie(null)).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);
   });
 });

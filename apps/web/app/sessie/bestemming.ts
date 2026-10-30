@@ -13,24 +13,9 @@ const UITNODIGING = /^\/uitnodiging\/[^/]+$/;
 /** De pagina voor een ingelogde gebruiker zonder organisatie. */
 export const GEEN_ORGANISATIE = "/geen-organisatie";
 
-/** Hoogstens zo lang mag een terugkeer-URL zijn. */
-const MAX_TERUG = 2000;
-
 /** Een pad dat zonder sessie bereikbaar is. Alles wat hier niet staat, vraagt een sessie. */
 export function isPubliek(pad: string): boolean {
   return PUBLIEKE_PADEN.has(pad) || UITNODIGING.test(pad);
-}
-
-/**
- * De terugkeer-URL na inloggen als ze een lokaal pad is, anders null. Lokaal: begint met precies
- * één `/` (niet `//` of `/\`, wat een browser als een ander domein leest), zonder stuurtekens
- * (een browser schrapt tab en nieuwe regel, waardoor `/\t/x` toch `//x` wordt) en zonder `\`.
- */
-export function veiligTerug(terug: unknown): string | null {
-  if (typeof terug !== "string" || terug.length === 0 || terug.length > MAX_TERUG) return null;
-  if (!terug.startsWith("/") || terug.startsWith("//")) return null;
-  if (/[\u0000-\u001f\u007f\\]/.test(terug)) return null;
-  return terug;
 }
 
 /** De parameters waarmee Better Auth een mislukte link (verlopen, al gebruikt) terugmeldt. */

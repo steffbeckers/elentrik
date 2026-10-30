@@ -3,7 +3,8 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { maakTaalWissel, TAALNAMEN, taalKeuzes } from "../app/sessie/taal";
-import { useSessieStore, type Mij, type SessieApi } from "../app/stores/sessie";
+import type { Mij } from "../shared/mij";
+import { useSessieStore, type SessieApi } from "../app/stores/sessie";
 import { LOCALES, TALEN, type Taal } from "../shared/taal";
 
 beforeEach(() => {
