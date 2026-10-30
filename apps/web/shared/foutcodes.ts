@@ -37,6 +37,8 @@ export const SERVER_FOUTCODES = [
   "BESTAND_TE_GROOT",
   "BESTANDSTYPE_NIET_TOEGELATEN",
   "RASTER_TE_GROOT",
+  // Een upload zonder geldige Content-Length (411)
+  "LENGTE_VEREIST",
   // Export (502, de code van `PdfFout`)
   "ONBEREIKBAAR",
   "TIMEOUT",
