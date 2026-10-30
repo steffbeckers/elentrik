@@ -795,7 +795,7 @@
     "PLANBESTAND_ONBEKEND": "The project refers to a plan that does not belong to it and could not be saved. Upload the plan again.",
     "OPSLAG_VOL": "This company's storage is full. Delete old projects to free up space.",
     "LENGTE_VEREIST": "This could not be sent because its size is missing. Try again.",
-    "VERZOEK_TE_GROOT": "This is too large to send.",
+    "VERZOEK_TE_GROOT": "The project is too large to save.",
     "ONBEREIKBAAR": "The PDF service cannot be reached. Try again shortly.",
     "TIMEOUT": "The PDF service did not respond in time. Try again shortly.",
     "MISLUKT": "The PDF could not be created. Please try again.",

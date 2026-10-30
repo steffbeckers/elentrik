@@ -13,8 +13,8 @@
 // 4. Een bestand op schijf zonder rij in `bestanden` gaat na 7 dagen weg, tenzij dat verdacht veel
 //    is (een lege of verse database naast een volle opslagmap, bv. midden in een herstel).
 //
-// Vóór alles een controle op de opslagmap: is ze er niet (een niet-aangekoppeld volume), of is ze leeg
-// terwijl er rijen in `bestanden` staan, dan doet de hele run niets en volgt één waarschuwing met
+// Vóór alles een controle op de opslagmap: staan er rijen in `bestanden` en is ze er niet (een
+// niet-aangekoppeld volume), laat ze zich niet lezen of is ze leeg, dan doet de hele run niets en volgt één waarschuwing met
 // aantallen. Zonder die controle zouden alle bestanden "ontbrekend" lijken en zou stap 1 projecten
 // ontgrendelen en wissen die een kopie nog gebruikt. De uitslag heeft dan `overgeslagen`.
 //
@@ -179,12 +179,15 @@ async function wisOpSchijf(opslag: BestandOpslag, sleutel: string, fouten: { aan
 }
 
 /**
- * Is de opslagmap bruikbaar? Niet als ze er niet is, als ze zich niet laat lezen, of als ze leeg is
- * terwijl er rijen in `bestanden` staan. Dan lijkt elk bestand te ontbreken en mag niets gewist
- * worden. Geeft de aantallen voor de waarschuwing, of `undefined` als alles in orde is.
+ * Is de opslagmap bruikbaar? Niet als er rijen in `bestanden` staan en de opslagmap er niet is, zich
+ * niet laat lezen, of leeg is. Dan lijkt elk bestand te ontbreken en mag niets gewist worden.
+ * Staan er geen rijen in `bestanden`, dan valt er niets verkeerd te beoordelen (een verse
+ * installatie heeft nog geen opslagmap) en loopt de run gewoon. Geeft de aantallen voor de
+ * waarschuwing, of `undefined` als alles in orde is.
  */
 async function onbereikbaarheid(db: Db, opslag: BestandOpslag): Promise<{ rijen: number; opSchijf: number } | undefined> {
   const [{ aantal: rijen } = { aantal: 0 }] = await db.select({ aantal: count() }).from(bestanden);
+  if (rijen === 0) return undefined;
   let opSchijf = 0;
   try {
     if (!(await opslag.bestaatWortel())) return { rijen, opSchijf };
@@ -193,7 +196,7 @@ async function onbereikbaarheid(db: Db, opslag: BestandOpslag): Promise<{ rijen:
     // Kunnen we de opslagmap niet lezen, dan is ze voor ons onbereikbaar.
     return { rijen, opSchijf };
   }
-  return opSchijf === 0 && rijen > 0 ? { rijen, opSchijf } : undefined;
+  return opSchijf === 0 ? { rijen, opSchijf } : undefined;
 }
 
 /** Een project dat tussen het zoeken en het wissen teruggezet is: de transactie draait terug. */

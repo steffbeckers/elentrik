@@ -545,6 +545,41 @@ describe("een onbereikbare opslagmap", () => {
     expect(await projectBestaat(leeg)).toBe(false);
   });
 
+  test("een opslagmap die er niet is, zonder bestandsrijen: de run loopt gewoon, zonder waarschuwing of vlag", async () => {
+    const leeg = await maakProject({ verwijderdDagen: 31 });
+    const weg = maakLokaleOpslag(join(map, "nog-nooit-gebruikt"));
+    const waarschuwingen: unknown[][] = [];
+    vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => void waarschuwingen.push(args));
+
+    const resultaat = await opruimen({ opslag: weg });
+
+    expect(resultaat).not.toHaveProperty("overgeslagen");
+    expect(resultaat.projecten).toBe(1);
+    expect(await projectBestaat(leeg)).toBe(false);
+    expect(waarschuwingen).toEqual([]);
+  });
+
+  test("een opslagmap die zich niet laat lezen, zonder bestandsrijen: de run loopt gewoon", async () => {
+    const leeg = await maakProject({ verwijderdDagen: 31 });
+    const stuk: BestandOpslag = {
+      ...opslag,
+      async bestaatWortel() {
+        throw new Error("EIO");
+      },
+      async lijst() {
+        throw new Error("EIO");
+      },
+    };
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const resultaat = await opruimen({ opslag: stuk });
+
+    expect(resultaat).not.toHaveProperty("overgeslagen");
+    expect(resultaat.projecten).toBe(1);
+    expect(await projectBestaat(leeg)).toBe(false);
+  });
+
   test("een bereikbare opslagmap met bestanden: geen vlag", async () => {
     await omstander();
     const resultaat = await opruimen();

@@ -73,6 +73,7 @@ export function maakLokaleOpslag(map: string): BestandOpslag {
           // Windows meldt een map die net gewist wordt als `EPERM`.
           const code = (fout as NodeJS.ErrnoException).code;
           if ((code !== "ENOENT" && code !== "EPERM") || poging >= SCHRIJF_POGINGEN) throw fout;
+          await new Promise((klaar) => setTimeout(klaar, poging * 2));
         }
       }
     },
