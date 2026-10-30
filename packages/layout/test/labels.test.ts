@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { installatie } from "@elentrik/arei/testing";
-import { voegToe, type NodeVan } from "@elentrik/model";
+import { voegToe, type NodeId, type NodeVan } from "@elentrik/model";
 import {
   TEKEN_BREEDTE_FACTOR,
   beveiligingLabel,
@@ -75,23 +75,62 @@ describe("tekstBreedte", () => {
   test("aantal tekens × grootte × TEKEN_BREEDTE_FACTOR", () => {
     expect(TEKEN_BREEDTE_FACTOR).toBe(0.6);
     expect(tekstBreedte("Garage.A3", 2.5)).toBeCloseTo(9 * 2.5 * 0.6, 10);
-    expect(tekstBreedte("300 mA A", 2)).toBeCloseTo(9.6, 10);
+    expect(tekstBreedte("B16 2P", 2)).toBeCloseTo(7.2, 10);
     expect(tekstBreedte("", 3)).toBe(0);
   });
 });
 
 describe("beveiligingLabel", () => {
-  test("automaat, zekering en differentieel", () => {
-    const { doc } = installatie()
-      .differentieel(300, (d) =>
-        d.verdeelbord((b) => b.kring((k) => k.automaat(16)).kring((k) => k.zekering(20))),
-      )
-      .bouw();
-    const node = <T extends "automaat" | "zekering" | "differentieel">(type: T) =>
-      Object.values(doc.nodes).find((n): n is NodeVan<T> => n.type === type)!;
-    expect(beveiligingLabel(node("automaat"))).toBe("16 A B");
-    expect(beveiligingLabel(node("zekering"))).toBe("20 A");
-    expect(beveiligingLabel(node("differentieel"))).toBe("300 mA A");
+  const basis = { id: "b" as NodeId, parentId: null, kinderen: [] };
+  const automaat = (delen: Partial<NodeVan<"automaat">>): NodeVan<"automaat"> => ({
+    ...basis,
+    type: "automaat",
+    nominaal_A: 16,
+    curve: "B",
+    polen: 1,
+    ...delen,
+  });
+  const differentieel = (delen: Partial<NodeVan<"differentieel">>): NodeVan<"differentieel"> => ({
+    ...basis,
+    type: "differentieel",
+    nominaal_A: 40,
+    gevoeligheid_mA: 30,
+    klasse: "A",
+    polen: 2,
+    ...delen,
+  });
+  const zekering = (delen: Partial<NodeVan<"zekering">>): NodeVan<"zekering"> => ({
+    ...basis,
+    type: "zekering",
+    nominaal_A: 20,
+    ...delen,
+  });
+
+  test("automaat: curve en nominale stroom, met de polen vanaf twee", () => {
+    expect(beveiligingLabel(automaat({ nominaal_A: 20, curve: "C", polen: 1 }))).toBe("C20");
+    expect(beveiligingLabel(automaat({ nominaal_A: 16, curve: "B", polen: 2 }))).toBe("B16 2P");
+    expect(beveiligingLabel(automaat({ nominaal_A: 32, curve: "D", polen: 4 }))).toBe("D32 4P");
+  });
+  test("differentieel: nominale stroom, gevoeligheid in A, klasse en polen", () => {
+    expect(beveiligingLabel(differentieel({ nominaal_A: 40, gevoeligheid_mA: 30, klasse: "A", polen: 2 }))).toBe(
+      "40/0,03A type A 2P",
+    );
+    expect(beveiligingLabel(differentieel({ nominaal_A: 40, gevoeligheid_mA: 300, klasse: "A", polen: 4 }))).toBe(
+      "40/0,3A type A 4P",
+    );
+    expect(beveiligingLabel(differentieel({ nominaal_A: 63, gevoeligheid_mA: 300, klasse: "AC", polen: 1 }))).toBe(
+      "63/0,3A type AC",
+    );
+  });
+  test("de gevoeligheid heeft hoogstens drie decimalen en geen overbodige nullen", () => {
+    expect(beveiligingLabel(differentieel({ gevoeligheid_mA: 10 }))).toBe("40/0,01A type A 2P");
+    expect(beveiligingLabel(differentieel({ gevoeligheid_mA: 500 }))).toBe("40/0,5A type A 2P");
+    expect(beveiligingLabel(differentieel({ gevoeligheid_mA: 1000 }))).toBe("40/1A type A 2P");
+    expect(beveiligingLabel(differentieel({ gevoeligheid_mA: 1500 }))).toBe("40/1,5A type A 2P");
+    expect(beveiligingLabel(differentieel({ gevoeligheid_mA: 25 }))).toBe("40/0,025A type A 2P");
+  });
+  test("zekering: nominale stroom en A", () => {
+    expect(beveiligingLabel(zekering({ nominaal_A: 20 }))).toBe("20 A");
   });
 });
 
@@ -145,7 +184,7 @@ describe("maakStrook: rail en labels", () => {
     const a = symVan("a");
     const beveiliging = teksten(strook.elementen, "beveiliging");
     // differentieel, daarna drie automaten
-    expect(beveiliging.map((t) => t.tekst)).toEqual(["300 mA A", "16 A B", "10 A B", "16 A C"]);
+    expect(beveiliging.map((t) => t.tekst)).toEqual(["40/0,3A type A 2P", "B16 2P", "B10 2P", "C16 2P"]);
     expect(beveiliging[1]).toMatchObject({
       x: cx(a) + a.symbool.maat.breedte / 2 + 1,
       grootte: 2,
