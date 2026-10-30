@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, type MockInstance, test, vi } from "vitest";
 import { type Auth, leesGeheim, maakAuth } from "../server/auth";
+import { plaatshoudersUitVoorbeelden } from "./plaatshouders";
 import { vertrouwdeOorsprongen } from "../server/auth/oorsprong";
 import type { Db } from "../server/db";
 import { invitation, member, organization, session, user, verification } from "../server/db/schema";
@@ -138,6 +139,21 @@ describe("geheim", () => {
     expect(() =>
       leesGeheim({ BETTER_AUTH_SECRET: "<vervang-door-een-lange-willekeurige-waarde>" }),
     ).toThrow(/BETTER_AUTH_SECRET/);
+  });
+
+  test("elke plaatshouder uit de voorbeeldbestanden telt niet als geheim, ook niet met witruimte", () => {
+    for (const plaatshouder of plaatshoudersUitVoorbeelden()) {
+      expect(() => leesGeheim({ BETTER_AUTH_SECRET: plaatshouder }), plaatshouder).toThrow(/BETTER_AUTH_SECRET/);
+      expect(() => leesGeheim({ BETTER_AUTH_SECRET: `  ${plaatshouder}` }), plaatshouder).toThrow(/BETTER_AUTH_SECRET/);
+    }
+  });
+
+  test("een echt geheim dat met < begint, is geldig", () => {
+    const geheim = "<geheim>" + "x".repeat(32);
+    expect(leesGeheim({ BETTER_AUTH_SECRET: geheim })).toBe(geheim);
+    expect(leesGeheim({ BETTER_AUTH_SECRET: "<vervang-door-iets-anders-van-voldoende-lengte>" })).toBe(
+      "<vervang-door-iets-anders-van-voldoende-lengte>",
+    );
   });
 
   test("een geheim van 31 tekens is te kort, 32 tekens mag", () => {

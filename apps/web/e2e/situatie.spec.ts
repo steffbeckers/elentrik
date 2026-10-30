@@ -5,7 +5,7 @@ import { gebruikTestgebruiker } from "./hulp/inloggen";
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "situatie" });
 
-// Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
+// Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Situatie ${Date.now()}`;
 const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const PLAN_PDF = fileURLToPath(new URL("./fixtures/plan-2p.pdf", import.meta.url));
@@ -13,7 +13,6 @@ const ONBEKEND_ID = "00000000-0000-0000-0000-000000000000";
 const NIET_GEPLAATST_A1 = "Punt A1 is nog niet op een situatieplan geplaatst.";
 const NIET_GEPLAATST_A2 = "Punt A2 is nog niet op een situatieplan geplaatst.";
 
-type Samenvatting = { id: string; naam: string };
 type Plaatsing = { nodeId: string; x: number; y: number };
 type Pagina = {
   id: string;
@@ -22,14 +21,6 @@ type Pagina = {
   achtergrond?: { rasterBestandId: string; origineelBestandId: string };
 };
 type Project = { versie: number; document: { situatie: { paginas: Pagina[] } } };
-
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as Samenvatting[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
 
 /** De tekstlabels in de SVG van het schema (puntlabels als "A1"). */
 function schemaTekst(page: Page, tekst: string) {

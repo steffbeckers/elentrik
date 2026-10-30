@@ -7,7 +7,10 @@ import { eisE2eDatabase } from "./omgeving";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
-const { gebruiker } = gebruikTestgebruiker(test, { voorvoegsel: "paginas", bedrijf: "Paginas Elektro" });
+const { gebruiker, spoor } = gebruikTestgebruiker(test, { voorvoegsel: "paginas", bedrijf: "Paginas Elektro" });
+// Een inloglink aan dit onbekende adres laat een verificatierij achter; ze wordt na afloop gewist.
+const ONBEKEND_ADRES = "niemand@e2e.elentrik.test";
+spoor.emails.add(ONBEKEND_ADRES);
 
 /** Een pagina zonder sessie, los van de testgebruiker van dit bestand. */
 async function zonderSessie(browser: Browser) {
@@ -70,7 +73,7 @@ test("een inloglink geeft altijd dezelfde, neutrale melding", async ({ browser }
   const { context, page } = await zonderSessie(browser);
   try {
     await ga(page, "/inloggen");
-    await page.getByTestId("inloggen-email").fill("niemand@e2e.elentrik.test");
+    await page.getByTestId("inloggen-email").fill(ONBEKEND_ADRES);
     await page.getByTestId("inloglink-knop").click();
     await expect(page.getByTestId("inloggen-melding")).toHaveText("Als dit adres bekend is, ontvang je een link.");
   } finally {

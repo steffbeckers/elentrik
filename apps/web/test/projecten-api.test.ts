@@ -66,11 +66,11 @@ describe("useProjectenApi", () => {
         "/api/projecten/abc",
         { method: "PUT", headers: { "If-Match": "3", "x-elentrik-gebruiker": "g1" }, body: { document } },
       ],
-      ["/api/projecten/abc/dupliceer", { method: "POST", headers: { "x-elentrik-gebruiker": "g1" } }],
+      ["/api/projecten/abc/dupliceer", { method: "POST", headers: { "x-elentrik-gebruiker": "g1" }, body: { bestandIds: [] } }],
     ]);
   });
 
-  test("dupliceer met planbestanden stuurt hun id's als body mee; zonder bestanden geen body", async () => {
+  test("dupliceer stuurt altijd een body mee: de id's van de planbestanden, of een lege lijst", async () => {
     const oproepen: Parameters<ProjectenFetch>[] = [];
     const api = maakProjectenApi(async (...argumenten) => {
       oproepen.push(argumenten);
@@ -80,7 +80,7 @@ describe("useProjectenApi", () => {
     await api.dupliceer("abc", []);
     expect(oproepen).toEqual([
       ["/api/projecten/abc/dupliceer", { method: "POST", body: { bestandIds: ["b1", "b2"] } }],
-      ["/api/projecten/abc/dupliceer", { method: "POST" }],
+      ["/api/projecten/abc/dupliceer", { method: "POST", body: { bestandIds: [] } }],
     ]);
   });
 
@@ -112,7 +112,7 @@ describe("useProjectenApi", () => {
     expect(await api.dupliceer("abc")).toEqual({ id: "kopie" });
     await api.verwijder("abc");
     expect(oproepen).toEqual([
-      ["/api/projecten/abc/dupliceer", { method: "POST" }],
+      ["/api/projecten/abc/dupliceer", { method: "POST", body: { bestandIds: [] } }],
       ["/api/projecten/abc", { method: "DELETE" }],
     ]);
   });

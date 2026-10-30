@@ -17,24 +17,19 @@ import { leesPdf } from "./hulp/pdf";
 import { sjabloonRegex, vertaling } from "./hulp/teksten";
 import { E2E_URL } from "./omgeving";
 
-// De interface en de dossiertaal in drie talen (plan 8). De tests hangen van elkaar af: de eerste
-// zet de taal van de gebruiker op Frans, de volgende gaan daarvan uit. Eén gebruiker en één
-// organisatie voor het hele bestand (de rate limiter laat geen login per test toe).
-test.describe.configure({ mode: "serial" });
+// De interface en de dossiertaal in drie talen (plan 8). Eén gebruiker en één organisatie voor
+// het hele bestand (de rate limiter laat geen login per test toe). De tests zijn onafhankelijk:
+// elke test zet de taal van die gebruiker zelf (`zetTaal`) en kan dus apart en in elke volgorde draaien.
 const { gebruiker } = gebruikTestgebruiker(test, { voorvoegsel: "talen" });
 
-// Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
+// Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Talen ${Date.now()}`;
 
-type Samenvatting = { id: string; naam: string };
-
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as Samenvatting[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
+/** Zet de taal van de ingelogde testgebruiker, zoals het taalmenu dat doet (PUT /api/mij/taal). */
+async function zetTaal(request: APIRequestContext, taal: "nl" | "fr" | "en"): Promise<void> {
+  const antwoord = await request.put("/api/mij/taal", { data: { taal } });
+  expect(antwoord.status()).toBe(200);
+}
 
 /** Een nieuwe browsercontext met de taal van de browser. De `storageState` is expliciet leeg: anders erft hij de sessie van de testgebruiker. */
 async function browserIn(browser: Browser, locale: string): Promise<BrowserContext> {
@@ -54,7 +49,12 @@ async function nieuwProject(request: APIRequestContext, achtervoegsel: string): 
   return ((await antwoord.json()) as { id: string }).id;
 }
 
-test("de taal kiezen in het gebruikersmenu blijft na herladen en volgt het account", async ({ page, browser }) => {
+test("de taal kiezen in het gebruikersmenu blijft na herladen en volgt het account", async ({
+  page,
+  browser,
+  request,
+}) => {
+  await zetTaal(request, "nl");
   await page.goto("/");
   await wachtOpHydratatie(page);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(vertaling("nl", "projecten.titel"));
@@ -116,6 +116,7 @@ test.describe("dossiertaal en pdf", () => {
   }
 
   test("een nieuw project krijgt de taal van de gebruiker; de pdf volgt de dossiertaal", async ({ page, request }) => {
+    await zetTaal(request, "fr");
     const id = await nieuwProject(request, "dossiertaal");
     await page.goto(`/projecten/${id}`);
     await expect(page.getByTestId("opslagstatus")).toHaveText(vertaling("fr", "editor.status.opgeslagen"), {
@@ -174,6 +175,7 @@ test("de aanmeldpagina volgt de browsertaal en de taalkiezer wisselt ze", async 
 });
 
 test("een bevinding in de editor staat in de taal van de interface", async ({ page, request }) => {
+  await zetTaal(request, "fr");
   const id = await nieuwProject(request, "bevinding");
   await page.goto(`/projecten/${id}`);
   await expect(page.getByTestId("opslagstatus")).toHaveText(vertaling("fr", "editor.status.opgeslagen"), {

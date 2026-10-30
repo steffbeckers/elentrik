@@ -206,6 +206,10 @@ describe("bewaarBestand", () => {
         return [];
       },
       async verwijder() {},
+      async bestaatWortel() {
+        return true;
+      },
+      async wisLegeMap() {},
     };
     await expect(
       bewaarBestand(db, kapot, { organisatieId, projectId, soort: "plan-raster", data: png(10, 10) }),

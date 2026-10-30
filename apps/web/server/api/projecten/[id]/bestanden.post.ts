@@ -10,9 +10,10 @@ import { defineBeveiligdeHandler, vereisProjecttoegang } from "../../../utils/to
 export default defineBeveiligdeHandler(async (event) => {
   const { project } = await vereisProjecttoegang(event, projectId(event));
   await vereisSchrijfrecht(project.organisatieId);
-  const { soort, data } = await leesPlanUpload(event);
+  const db = gebruikDb();
+  const { soort, data } = await leesPlanUpload(event, { db, organisatieId: project.organisatieId });
   const info = await metBestandFouten(() =>
-    bewaarBestand(gebruikDb(), gebruikOpslag(), {
+    bewaarBestand(db, gebruikOpslag(), {
       organisatieId: project.organisatieId,
       projectId: project.id,
       soort,

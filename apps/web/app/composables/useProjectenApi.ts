@@ -114,7 +114,8 @@ export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOptie
       haal(`/api/projecten/${id}/dupliceer`, {
         method: "POST",
         ...(opties.gebruikerId ? { headers: voorGebruiker } : {}),
-        ...(bestandIds.length > 0 ? { body: { bestandIds } } : {}),
+        // Altijd een body (ook een lege lijst), met een lengte: zo hangt dupliceren niet af van hoe een proxy een POST zonder body doorgeeft.
+        body: { bestandIds },
       }) as Promise<{ id: string; bestandIds?: Record<string, string> }>,
 
     /**

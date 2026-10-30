@@ -14,6 +14,7 @@ import {
 import { useAutosave, waarschuwBijVerlaten, type AutosaveOpties } from "../app/composables/useAutosave";
 import { ConflictFout, type Project } from "../app/composables/useProjectenApi";
 import { vertrekBevestiging } from "../app/editor/aanmelding";
+import { vertaalFout } from "../app/fouten";
 import { useEditorStore } from "../app/stores/editor";
 
 const KOPIE_DOC_ID = "kopie-document-id";
@@ -373,12 +374,28 @@ describe("useAutosave", () => {
     await autosave.bewaarAlsKopie();
     // Het duplicaat op de server is al de actuele versie, met eigen planbestanden.
     expect(dupliceer).toHaveBeenCalledTimes(1);
-    expect(dupliceer).toHaveBeenCalledWith("p1");
+    expect(dupliceer).toHaveBeenCalledWith("p1", []);
     expect(haal).not.toHaveBeenCalled();
     expect(bewaar).not.toHaveBeenCalled();
     expect(store.document).toBe(voor);
     expect(await conceptVan("p1")).toBeUndefined();
     expect(naarProject).toHaveBeenCalledWith("kopie1");
+  });
+
+  test("een volle opslag (413 OPSLAG_VOL) bij het dupliceren: de fout komt ongewijzigd door en er wordt niet genavigeerd", async () => {
+    const { store, bewaar, dupliceer, naarProject, autosave } = opzet();
+    bewaar.mockRejectedValueOnce(new ConflictFout(5));
+    wijzig(store, "Lokaal");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    const opslagVol = Object.assign(new Error("opslag vol"), { status: 413, data: { data: { code: "OPSLAG_VOL" } } });
+    dupliceer.mockRejectedValueOnce(opslagVol);
+
+    await expect(autosave.bewaarAlsKopie()).rejects.toBe(opslagVol);
+
+    expect(vertaalFout(opslagVol, (sleutel) => sleutel)).toBe("fouten.OPSLAG_VOL");
+    expect(naarProject).not.toHaveBeenCalled();
+    expect(autosave.status.value).toBe("conflict");
   });
 
   test("bewaarAlsKopie zonder lokale wijzigingen, maar met een wijziging tijdens het dupliceren: die gaat mee naar de kopie", async () => {
@@ -450,6 +467,41 @@ describe("useAutosave", () => {
       for (const [, , invoer] of kopieBewaringen) {
         expect(plannen(invoer.document as InstallatieDocument)).toEqual([["nieuw-o", "nieuw-r"]]);
       }
+    });
+
+    test("zonder lokale wijzigingen (een exportconflict) krijgt dupliceer toch de planbestanden van het lokale document", async () => {
+      const o = opzet();
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
+      o.autosave.meldConflict(7);
+      await o.autosave.bewaarAlsKopie();
+      expect(o.dupliceer).toHaveBeenCalledWith("p1", ["oud-o", "oud-r"]);
+      expect(o.bewaar).not.toHaveBeenCalled();
+    });
+
+    test("de plan-id's komen uit het document van vlak vóór het dupliceren, ook als dat na het conflict veranderde", async () => {
+      const o = opzet();
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
+      o.autosave.meldConflict(7);
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "nieuwer-o", "nieuwer-r") });
+      await o.autosave.bewaarAlsKopie();
+      expect(o.dupliceer).toHaveBeenCalledWith("p1", ["nieuwer-o", "nieuwer-r"]);
+    });
+
+    test("zonder lokale wijzigingen, maar met een wijziging tijdens het dupliceren: het bewaarde document heeft alleen nieuwe plan-id's uit de mapping", async () => {
+      const o = opzet();
+      o.store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: metPlan(startDocument(), "oud-o", "oud-r") });
+      o.autosave.meldConflict(7);
+      o.dupliceer.mockImplementationOnce(async () => {
+        wijzig(o.store, "Net veranderd");
+        return { id: "kopie1", bestandIds: { "oud-o": "nieuw-o", "oud-r": "nieuw-r" } };
+      });
+      await o.autosave.bewaarAlsKopie();
+      expect(o.dupliceer).toHaveBeenCalledWith("p1", ["oud-o", "oud-r"]);
+      expect(o.bewaar).toHaveBeenCalledTimes(1);
+      const invoer = o.bewaar.mock.lastCall?.[2];
+      expect(o.bewaar.mock.lastCall?.[0]).toBe("kopie1");
+      expect(plannen(invoer?.document as InstallatieDocument)).toEqual([["nieuw-o", "nieuw-r"]]);
+      expect(plannen(o.store.document)).toEqual([["oud-o", "oud-r"]]);
     });
 
     test("een id zonder toewijzing blijft staan", async () => {
@@ -851,6 +903,21 @@ describe("useAutosave: foutsoorten", () => {
     wijzig(store, "b");
     await leeg();
     expect(autosave.status.value).toBe("onbewaard");
+  });
+
+  test("een 422 met een bekende foutcode bewaart die code in fout, zodat de editor hem kan vertalen", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValue(
+      Object.assign(new Error("geweigerd"), {
+        statusCode: 422,
+        data: { statusCode: 422, data: { code: "PLANBESTAND_ONBEKEND" } },
+      }),
+    );
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("fout");
+    expect(autosave.fout.value).toEqual({ status: 422, code: "PLANBESTAND_ONBEKEND" });
   });
 
   test("een 422 zet de status op fout, zonder nieuwe poging of autosave", async () => {
@@ -1336,6 +1403,64 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     expect(autosave.verwijderd.value).toBe(false);
   });
 
+  describe("meldVerwijderd (een 404 buiten het bewaren, bv. bij het uploaden van een plan)", () => {
+    test("zet dezelfde toestand als een 404 bij het bewaren: verwijderd, concept lokaal, geen nieuwe poging", async () => {
+      const { store, bewaar, autosave } = opzet();
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(500);
+      autosave.meldVerwijderd();
+      expect(autosave.status.value).toBe("verwijderd");
+      expect(autosave.verwijderd.value).toBe(true);
+      expect(autosave.fout.value).toBeNull();
+      // De lopende debounce is weg en er wordt niets meer bewaard.
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await leeg();
+      await autosave.nuOpslaan();
+      expect(bewaar).not.toHaveBeenCalled();
+      expect((await autosave.wachtOpConcept()) && (await conceptVan("p1"))?.naam).toBe("a");
+      expect(waarschuwBijVerlaten(autosave.status.value)).toBe(true);
+    });
+
+    test("zonder wijzigingen staat het document toch in het concept", async () => {
+      const { store, autosave } = opzet();
+      autosave.meldVerwijderd();
+      expect(autosave.status.value).toBe("verwijderd");
+      expect(await autosave.wachtOpConcept()).toBe(true);
+      expect((await conceptVan("p1"))?.document).toEqual(store.document);
+    });
+
+    test("een kapot conceptarchief: onbewaard, verwijderd blijft true", async () => {
+      const concepten = {
+        bewaarConcept: vi.fn(async () => {
+          throw new Error("IndexedDB kapot");
+        }),
+        wisConcept: vi.fn(async () => {}),
+      };
+      const { autosave } = opzet({ concepten });
+      autosave.meldVerwijderd();
+      await autosave.wachtOpConcept();
+      expect(autosave.status.value).toBe("onbewaard");
+      expect(autosave.verwijderd.value).toBe(true);
+    });
+
+    test("tijdens een conflict: het conflict vervalt, het project is verwijderd", async () => {
+      const { autosave } = opzet();
+      autosave.meldConflict(7);
+      autosave.meldVerwijderd();
+      expect(autosave.conflict.value).toBeNull();
+      expect(autosave.status.value).toBe("verwijderd");
+    });
+
+    test("daarna maakt bewaarAlsNieuwProject een nieuw project", async () => {
+      const { maakNieuw, naarProject, autosave } = opzet();
+      autosave.meldVerwijderd();
+      await autosave.bewaarAlsNieuwProject();
+      expect(maakNieuw).toHaveBeenCalledTimes(1);
+      expect(naarProject).toHaveBeenCalledWith("nieuw1");
+    });
+  });
+
   test("bewaarAlsNieuwProject maakt een nieuw project met het huidige document en navigeert", async () => {
     const { store, bewaar, maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
     wijzig(store, "Daarna");
@@ -1415,6 +1540,19 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     expect(nieuwConcept?.document.id).toBe(NIEUW_DOC_ID);
     // Het concept van het verwijderde project is weg.
     expect(await conceptVan("p1")).toBeUndefined();
+  });
+
+  test("een volle opslag (413 OPSLAG_VOL) bij het maken: de fout komt ongewijzigd door, er wordt niet genavigeerd en het concept blijft", async () => {
+    const { maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    const opslagVol = Object.assign(new Error("opslag vol"), { status: 413, data: { data: { code: "OPSLAG_VOL" } } });
+    maakNieuw.mockRejectedValueOnce(opslagVol);
+
+    await expect(autosave.bewaarAlsNieuwProject()).rejects.toBe(opslagVol);
+
+    expect(vertaalFout(opslagVol, (sleutel) => sleutel)).toBe("fouten.OPSLAG_VOL");
+    expect(autosave.status.value).toBe("verwijderd");
+    expect(naarProject).not.toHaveBeenCalled();
+    expect((await conceptVan("p1"))?.naam).toBe("a");
   });
 
   test("mislukt het maken, dan blijft de status verwijderd en het concept staan, en kan het opnieuw", async () => {

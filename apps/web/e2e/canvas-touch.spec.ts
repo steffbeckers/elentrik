@@ -10,14 +10,6 @@ const naam = `Test Touch ${Date.now()}`;
 
 test.use({ hasTouch: true });
 
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as { id: string; naam: string }[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
-
 test("een pan met één vinger verschuift het eendraadschema", async ({ page, request }) => {
   const antwoord = await request.post("/api/projecten", {
     data: { naam, klantnaam: "", stroomtype: "2x230V" },

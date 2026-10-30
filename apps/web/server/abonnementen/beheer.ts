@@ -4,7 +4,7 @@
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
 import { eq, sql } from "drizzle-orm";
-import { createError, type H3Event } from "h3";
+import type { H3Event } from "h3";
 import Stripe from "stripe";
 import { z } from "zod";
 import {
@@ -16,11 +16,10 @@ import {
   type Formule,
   type Prijs,
 } from "../../shared/abonnement";
-import type { Foutcode } from "../../shared/foutcodes";
 import type { Taal } from "../../shared/taal";
 import { basisUrl } from "../auth/oorsprong";
 import { gebruikDb, type Db } from "../db";
-import { nietGevondenFout } from "../fouten";
+import { maakFout, nietGevondenFout } from "../fouten";
 import { abonnementen, organization } from "../db/schema";
 import { leesGebruikerstaal } from "../gebruikers/taal";
 import { leesBody } from "../utils/projecten";
@@ -49,15 +48,10 @@ const BLOKKEERT_CHECKOUT: ReadonlySet<AbonnementStatus> = new Set([
 
 type Ingeschakeld = { config: Extract<AbonnementConfig, { ingeschakeld: true }>; stripe: StripePoort };
 
-/** Een h3-fout met altijd een code uit FOUTCODES (test/foutcodes.test.ts dwingt het af). */
-function fout(statusCode: number, statusMessage: string, code: Foutcode) {
-  return createError({ statusCode, statusMessage, data: { code } });
-}
-
 /** De configuratie en Stripe-poort, of 409 `ABONNEMENTEN_UIT`. */
 function eisIngeschakeld(): Ingeschakeld {
   const { config, stripe } = gebruikAbonnementen();
-  if (!config.ingeschakeld || !stripe) throw fout(409, "Betalen is nog niet ingesteld", ABONNEMENTEN_UIT);
+  if (!config.ingeschakeld || !stripe) throw maakFout(409, "Betalen is nog niet ingesteld", ABONNEMENTEN_UIT);
   return { config, stripe };
 }
 
@@ -235,7 +229,7 @@ export async function startCheckout(
       .where(eq(abonnementen.organisatieId, i.organisatieId));
     return { url: sessie.url };
   });
-  if (resultaat === "bestaat") throw fout(409, "Deze organisatie heeft al een abonnement", ABONNEMENT_BESTAAT);
+  if (resultaat === "bestaat") throw maakFout(409, "Deze organisatie heeft al een abonnement", ABONNEMENT_BESTAAT);
   return resultaat;
 }
 
@@ -261,7 +255,7 @@ export async function portaalRoute(event: H3Event): Promise<{ url: string }> {
   const { stripe } = eisIngeschakeld();
   const db = gebruikDb();
   const rij = await haalAbonnementRij(db, organisatieId);
-  if (!rij) throw fout(409, "Er is nog geen klant bij Stripe", GEEN_KLANT);
+  if (!rij) throw maakFout(409, "Er is nog geen klant bij Stripe", GEEN_KLANT);
   return stripe.maakPortaal({
     klantId: rij.stripeKlantId,
     terugUrl: `${basisUrl()}/abonnement`,

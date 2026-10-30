@@ -2,6 +2,7 @@ import { nieuwProjectDocument, valideerStructuur, type InstallatieDocument } fro
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, test } from "vitest";
 import { haalBestand } from "../server/bestanden/repo";
 import { maakLokaleOpslag, type BestandOpslag } from "../server/bestanden/opslag";
@@ -406,7 +407,8 @@ describe("dupliceren met planbestanden", () => {
     // Een oude kopie B: het document verwijst nog naar de planbestanden van A, B zelf heeft geen rijen.
     const { id: oudeKopie } = await maakProject(db, org, { ...invoer, naam: "B" });
     const documentA = (await haalProject(db, org, a))!.document;
-    await bewaarProject(db, org, oudeKopie, 1, { document: documentA });
+    // Rechtstreeks in de tabel: bewaarProject weigert sinds plan 12 een nieuwe verwijzing naar een vreemd plan.
+    await db.update(projecten).set({ document: documentA }).where(eq(projecten.id, oudeKopie));
 
     const { id: nieuweKopie, bestandIds } = await dupliceerProject(db, opslag, org, oudeKopie);
 
