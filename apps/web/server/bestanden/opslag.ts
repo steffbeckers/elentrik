@@ -2,7 +2,7 @@
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module
 // rechtstreeks (ruling E1).
 import { createReadStream } from "node:fs";
-import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rmdir, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 
@@ -17,12 +17,29 @@ export interface BestandOpslag {
   lijst(): Promise<{ sleutel: string; gewijzigd: Date }[]>;
   /** Wist een bestand. Een bestand dat al weg is, is geen fout. */
   verwijder(sleutel: string): Promise<void>;
+  /** Bestaat de opslagmap zelf (als map)? Onwaar bij een niet-aangekoppeld volume. */
+  bestaatWortel(): Promise<boolean>;
+  /**
+   * Wist een map, maar alleen als ze leeg is: een map met iets erin, of die er niet is, blijft
+   * zoals ze is (geen fout). De opslagmap zelf wordt nooit gewist. Veilig naast een upload die
+   * tegelijk een bestand in die map maakt: het wissen van een niet-lege map faalt gewoon.
+   */
+  wisLegeMap(map: string): Promise<void>;
 }
 
 const STANDAARD_MAP = ".data/bestanden";
 
 /** Namen die met `@` of `.` beginnen zijn metadata van de NAS of het besturingssysteem, nooit onze sleutels. */
 const METADATA = /^[@.]/;
+
+/** Zoveel keer probeert `schrijf` het opnieuw als de map er net tussenuit gehaald is. */
+const SCHRIJF_POGINGEN = 5;
+
+/**
+ * Wat `rmdir` zegt als er (net) iets in de map staat of ze er niet meer is: dan is er niets te doen.
+ * Windows meldt een map waar op dat moment in geschreven wordt als `EPERM` of `EBUSY`.
+ */
+const NIET_LEEG_OF_WEG = new Set(["ENOTEMPTY", "EEXIST", "ENOENT", "EPERM", "EBUSY"]);
 
 export function maakLokaleOpslag(map: string): BestandOpslag {
   const wortel = resolve(map);
@@ -46,8 +63,18 @@ export function maakLokaleOpslag(map: string): BestandOpslag {
   return {
     async schrijf(sleutel, data) {
       const volledig = pad(sleutel);
-      await mkdir(dirname(volledig), { recursive: true });
-      await writeFile(volledig, data);
+      // `wisLegeMap` kan de map tussen `mkdir` en `writeFile` wegnemen: dan maken we ze opnieuw.
+      for (let poging = 1; ; poging++) {
+        try {
+          await mkdir(dirname(volledig), { recursive: true });
+          await writeFile(volledig, data);
+          return;
+        } catch (fout) {
+          // Windows meldt een map die net gewist wordt als `EPERM`.
+          const code = (fout as NodeJS.ErrnoException).code;
+          if ((code !== "ENOENT" && code !== "EPERM") || poging >= SCHRIJF_POGINGEN) throw fout;
+        }
+      }
     },
     async lees(sleutel) {
       const volledig = pad(sleutel);
@@ -92,6 +119,26 @@ export function maakLokaleOpslag(map: string): BestandOpslag {
         await unlink(pad(sleutel));
       } catch (fout) {
         if ((fout as NodeJS.ErrnoException).code === "ENOENT") return;
+        throw fout;
+      }
+    },
+    async bestaatWortel() {
+      try {
+        return (await stat(wortel)).isDirectory();
+      } catch (fout) {
+        if ((fout as NodeJS.ErrnoException).code === "ENOENT" || (fout as NodeJS.ErrnoException).code === "ENOTDIR") {
+          return false;
+        }
+        throw fout;
+      }
+    },
+    async wisLegeMap(map) {
+      // De opslagmap zelf ("", ".", "a/..") wordt nooit gewist; een pad erbuiten wordt geweigerd door `pad`.
+      if (resolve(wortel, map) === wortel) return;
+      try {
+        await rmdir(pad(map));
+      } catch (fout) {
+        if (NIET_LEEG_OF_WEG.has((fout as NodeJS.ErrnoException).code ?? "")) return;
         throw fout;
       }
     },

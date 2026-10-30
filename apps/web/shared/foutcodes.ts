@@ -42,8 +42,10 @@ export const SERVER_FOUTCODES = [
   // De opslag van het bedrijf is vol: een upload, een kopie of "Bewaar als nieuw project" zou
   // de limiet overschrijden (413). Exports worden nooit geweigerd.
   "OPSLAG_VOL",
-  // Een upload zonder geldige Content-Length (411)
+  // Een upload of een JSON-body zonder geldige Content-Length (411)
   "LENGTE_VEREIST",
+  // Een JSON-body boven 50 MB (413)
+  "VERZOEK_TE_GROOT",
   // Export (502, de code van `PdfFout`)
   "ONBEREIKBAAR",
   "TIMEOUT",

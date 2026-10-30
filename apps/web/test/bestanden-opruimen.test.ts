@@ -3,7 +3,7 @@
 // de opslag een lokale opslag in een tijdelijke map (met af en toe een defecte verwijderstap).
 // Nooit de echte database en nooit de echte bestandenmap.
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm, utimes } from "node:fs/promises";
+import { mkdtemp, rm, stat, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
@@ -428,6 +428,212 @@ describe("bestanden op schijf zonder rij", () => {
   });
 });
 
+const mapBestaat = async (naam: string) => {
+  try {
+    return (await stat(join(map, naam))).isDirectory();
+  } catch {
+    return false;
+  }
+};
+
+describe("een onbereikbare opslagmap", () => {
+  /** Een kopie van vroeger die het plan van een project in de prullenbak nog gebruikt: de bron is zo `geblokkeerd`. */
+  async function geblokkeerdeBron() {
+    const bron = await maakProject({ verwijderdDagen: 31 });
+    const plan = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
+    await maakProject({ document: document(plan.id), naam: "Kopie" });
+    // Ook de rest van de stappen heeft werk: een oud logo, een verweesd plan en een los bestand.
+    const logo = await maakBestand({ projectId: null, soort: "logo", leeftijdDagen: 20 });
+    const wees = await maakBestand({ projectId: await maakProject({}), soort: "plan-origineel", leeftijdDagen: 40 });
+    const los = await maakLosBestand(40);
+    return { bron, plan, logo, wees, los };
+  }
+
+  async function allesBlijftStaan(g: Awaited<ReturnType<typeof geblokkeerdeBron>>) {
+    expect(await projectBestaat(g.bron)).toBe(true);
+    for (const b of [g.plan, g.logo, g.wees]) {
+      expect(await rijBestaat(b.id)).toBe(true);
+      expect(await opslag.bestaat(b.sleutel)).toBe(true);
+    }
+    expect(await opslag.bestaat(g.los)).toBe(true);
+  }
+
+  test("een opslagmap die er niet is (een niet-aangekoppeld volume): de run wist niets en ontgrendelt geen project", async () => {
+    const g = await geblokkeerdeBron();
+    const weg = maakLokaleOpslag(join(map, "niet-aangekoppeld"));
+    const waarschuwingen: unknown[][] = [];
+    vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => void waarschuwingen.push(args));
+
+    const resultaat = await opruimen({ opslag: weg });
+
+    expect(resultaat).toEqual({
+      projecten: 0,
+      planbestanden: 0,
+      logos: 0,
+      losseBestanden: 0,
+      geblokkeerd: 0,
+      overgeslagen: "opslag-onbereikbaar",
+    });
+    await allesBlijftStaan(g);
+    expect(waarschuwingen).toHaveLength(1);
+  });
+
+  test("een lege opslagmap terwijl er bestandsrijen zijn: idem", async () => {
+    const g = await geblokkeerdeBron();
+    const leegPad = await mkdtemp(join(tmpdir(), "elentrik-leeg-"));
+    const waarschuwingen: unknown[][] = [];
+    vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => void waarschuwingen.push(args));
+
+    try {
+      const resultaat = await opruimen({ opslag: maakLokaleOpslag(leegPad) });
+
+      expect(resultaat.overgeslagen).toBe("opslag-onbereikbaar");
+      expect(resultaat.projecten + resultaat.planbestanden + resultaat.logos + resultaat.losseBestanden).toBe(0);
+      expect(resultaat.geblokkeerd).toBe(0);
+      await allesBlijftStaan(g);
+      expect(waarschuwingen).toHaveLength(1);
+    } finally {
+      await rm(leegPad, { recursive: true, force: true });
+    }
+  });
+
+  test("een opslagmap die zich niet laat lezen: idem", async () => {
+    const g = await geblokkeerdeBron();
+    const stuk: BestandOpslag = {
+      ...opslag,
+      async lijst() {
+        throw new Error(`EIO: ${map}`);
+      },
+    };
+    const waarschuwingen: unknown[][] = [];
+    vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => void waarschuwingen.push(args));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const resultaat = await opruimen({ opslag: stuk });
+
+    expect(resultaat.overgeslagen).toBe("opslag-onbereikbaar");
+    await allesBlijftStaan(g);
+    expect(JSON.stringify(waarschuwingen)).not.toContain(map);
+  });
+
+  test("de waarschuwing bevat alleen aantallen: geen paden, sleutels of id's", async () => {
+    const g = await geblokkeerdeBron();
+    const meldingen: unknown[][] = [];
+    for (const methode of ["log", "info", "warn", "error", "debug"] as const) {
+      vi.spyOn(console, methode).mockImplementation((...args: unknown[]) => void meldingen.push(args));
+    }
+    const pad = join(map, "niet-aangekoppeld");
+
+    await opruimen({ opslag: maakLokaleOpslag(pad) });
+
+    expect(meldingen.filter((m) => String(m[0]).startsWith("Opruimtaak"))).toHaveLength(1);
+    const log = JSON.stringify(meldingen);
+    for (const verboden of [pad, map, g.plan.sleutel, g.plan.id, g.bron, org, "Kopie"]) {
+      expect(log, verboden).not.toContain(verboden);
+    }
+    expect(log).toMatch(/"rijen":\d+/);
+  });
+
+  test("zonder bestandsrijen en met een lege (maar bestaande) opslagmap loopt de run gewoon", async () => {
+    const leeg = await maakProject({ verwijderdDagen: 31 });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const resultaat = await opruimen();
+
+    expect(resultaat).not.toHaveProperty("overgeslagen");
+    expect(resultaat.projecten).toBe(1);
+    expect(await projectBestaat(leeg)).toBe(false);
+  });
+
+  test("een bereikbare opslagmap met bestanden: geen vlag", async () => {
+    await omstander();
+    const resultaat = await opruimen();
+    expect(resultaat).not.toHaveProperty("overgeslagen");
+  });
+});
+
+describe("lege mappen", () => {
+  test("na het wissen van het laatste bestand van een project verdwijnt ook de map van het project", async () => {
+    await omstander();
+    const projectId = await maakProject({ verwijderdDagen: 31 });
+    const plan = await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 40 });
+    await maakBestand({ projectId, soort: "export", leeftijdDagen: 40 });
+    expect(await mapBestaat(projectId)).toBe(true);
+
+    expect((await opruimen()).projecten).toBe(1);
+
+    expect(await opslag.bestaat(plan.sleutel)).toBe(false);
+    expect(await mapBestaat(projectId)).toBe(false);
+  });
+
+  test("een map waarin nog een bestand staat, blijft staan", async () => {
+    await omstander();
+    const projectId = await maakProject({ verwijderdDagen: 31 });
+    await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 40 });
+    // Een vers bestand zonder rij (een upload die nog moet volgen) in dezelfde map.
+    const vers = `${projectId}/${randomUUID()}`;
+    await opslag.schrijf(vers, new Uint8Array([7]));
+    await utimes(join(map, vers), geleden(1), geleden(1));
+
+    expect((await opruimen()).projecten).toBe(1);
+
+    expect(await opslag.bestaat(vers)).toBe(true);
+    expect(await mapBestaat(projectId)).toBe(true);
+  });
+
+  test("de mappen van andere projecten blijven staan", async () => {
+    const blijft = await omstander();
+    const projectId = await maakProject({ verwijderdDagen: 31 });
+    await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 40 });
+
+    await opruimen();
+
+    expect(await opslag.bestaat(blijft.sleutel)).toBe(true);
+    expect(await mapBestaat(blijft.sleutel.split("/")[0]!)).toBe(true);
+  });
+
+  test("ook de map van een verweesd planbestand, een oud logo en een los bestand verdwijnt als ze leeg wordt", async () => {
+    await omstander();
+    const projectId = await maakProject({});
+    await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 40 });
+    await maakBestand({ projectId: null, soort: "logo", leeftijdDagen: 20 });
+    await maakLosBestand(40);
+
+    const resultaat = await opruimen();
+
+    expect(resultaat).toMatchObject({ planbestanden: 1, logos: 1, losseBestanden: 1 });
+    expect(await mapBestaat(projectId)).toBe(false);
+    expect(await mapBestaat(`org/${org}`)).toBe(false);
+    expect(await mapBestaat("weesmap")).toBe(false);
+  });
+
+  test("de opslagmap zelf blijft altijd staan", async () => {
+    const projectId = await maakProject({ verwijderdDagen: 31 });
+    await maakBestand({ projectId, soort: "plan-raster", leeftijdDagen: 40 });
+    await opruimen();
+    expect((await stat(map)).isDirectory()).toBe(true);
+  });
+
+  test("een map die niet gewist kan worden, houdt de rest niet tegen", async () => {
+    await omstander();
+    const a = await maakProject({ verwijderdDagen: 31 });
+    const b = await maakProject({ verwijderdDagen: 31 });
+    await maakBestand({ projectId: a, soort: "plan-raster", leeftijdDagen: 40 });
+    await maakBestand({ projectId: b, soort: "plan-raster", leeftijdDagen: 40 });
+    const stuk: BestandOpslag = {
+      ...opslag,
+      async wisLegeMap() {
+        throw new Error("EBUSY");
+      },
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const resultaat = await opruimen({ opslag: stuk });
+
+    expect(resultaat.projecten).toBe(2);
+  });
+});
+
 describe("lock", () => {
   test("met een bezet lock wordt er niets gewist", async () => {
     const weg = await maakProject({ verwijderdDagen: 31 });
@@ -554,6 +760,8 @@ describe("een project in de prullenbak waarvan een ander project bestanden gebru
   });
 
   test("een verwijzing naar een bestand dat niet meer op schijf staat, blokkeert niet", async () => {
+    // Er staat nog een ander bestand op schijf: de opslagmap is dus bereikbaar.
+    await omstander();
     const bron = await maakProject({ verwijderdDagen: 31 });
     const plan = await maakBestand({ projectId: bron, soort: "plan-raster", leeftijdDagen: 60 });
     await opslag.verwijder(plan.sleutel);
