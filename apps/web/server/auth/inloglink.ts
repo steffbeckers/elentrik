@@ -57,7 +57,7 @@ function mislukt(verzoek: Request): Response {
  * Voert `afhandelaar` uit. Is het de verificatie van een inloglink of een bevestigingslink en eindigt
  * die in een serverfout (status 500 of hoger, of een gegooide fout), dan een 302 naar
  * `/inloggen?fout=INLOGLINK_MISLUKT`, met `&terug=<callbackURL>` als die een veilig relatief pad is.
- * Het log noemt alleen de statuscode of de soort fout: nooit het adres, de token of de boodschap.
+ * Het log noemt alleen het pad (zonder query), de statuscode of de soort fout: nooit het adres, de token of de boodschap.
  */
 export async function metInloglinkVangnet(
   verzoek: Request,
@@ -68,10 +68,10 @@ export async function metInloglinkVangnet(
   try {
     antwoord = await afhandelaar(verzoek);
   } catch (fout) {
-    console.error(`Inloglink verifiëren mislukt: ${foutSoort(fout)}`);
+    console.error(`Inloglink verifiëren mislukt op ${new URL(verzoek.url).pathname}: ${foutSoort(fout)}`);
     return mislukt(verzoek);
   }
   if (antwoord.status < 500) return antwoord;
-  console.error(`Inloglink verifiëren mislukt: status ${antwoord.status}`);
+  console.error(`Inloglink verifiëren mislukt op ${new URL(verzoek.url).pathname}: status ${antwoord.status}`);
   return mislukt(verzoek);
 }

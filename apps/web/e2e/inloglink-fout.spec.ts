@@ -40,6 +40,8 @@ test("zonder geldige bestemming gaat de nieuwe link naar de start", async ({ pag
   expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT")).toBe("/");
   expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT&terug=%2F%2Fevil.example")).toBe("/");
   expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT&terug=https%3A%2F%2Fevil.example")).toBe("/");
+  // Puntsegmenten die na normalisatie `//evil.example` worden, ook met een `error` die het pad herschrijft.
+  expect(await callbackVanNieuweLink(page, "/inloggen?fout=INLOGLINK_MISLUKT&terug=%2F.%2F%2Fevil.example%3Ferror%3D1")).toBe("/");
 });
 
 test("een andere waarde in ?fout= toont niets (alleen de vaste code telt)", async ({ page }) => {

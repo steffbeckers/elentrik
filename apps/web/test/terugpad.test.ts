@@ -23,9 +23,22 @@ describe("veiligTerugpad", () => {
     "evil.example",
     " /projecten",
     "/%E0%A4%A",
+    // Puntsegmenten: de browser (WHATWG) normaliseert dit tot `//evil.example`.
+    "/.//evil.example?error=1",
+    "/..//evil",
+    "/%2E//evil",
+    "/%2e%2E//evil",
+    "/a/..//evil?error=1",
+    "/./\/evil",
     "",
   ])("%j wordt geweigerd", (pad) => {
     expect(veiligTerugpad(pad)).toBeNull();
+  });
+
+  test("het resultaat is het genormaliseerde pad: wat gevalideerd is, is wat gebruikt wordt", () => {
+    expect(veiligTerugpad("/a/../projecten?x=1#y")).toBe("/projecten?x=1#y");
+    expect(veiligTerugpad("/./projecten")).toBe("/projecten");
+    expect(veiligTerugpad("/projecten/./p1")).toBe("/projecten/p1");
   });
 
   test("een niet-string of een absurd lang pad wordt geweigerd", () => {

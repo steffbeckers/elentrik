@@ -3,7 +3,6 @@
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import { veiligTerugpad } from "../../shared/terugpad";
 
 /** De pagina's die zonder sessie bereikbaar zijn; al de rest vraagt een sessie. */
 const PUBLIEKE_PADEN = new Set(["/inloggen", "/registreren", "/wachtwoord-vergeten", "/wachtwoord-herstellen"]);
@@ -17,14 +16,6 @@ export const GEEN_ORGANISATIE = "/geen-organisatie";
 /** Een pad dat zonder sessie bereikbaar is. Alles wat hier niet staat, vraagt een sessie. */
 export function isPubliek(pad: string): boolean {
   return PUBLIEKE_PADEN.has(pad) || UITNODIGING.test(pad);
-}
-
-/**
- * De terugkeer-URL na inloggen als ze een lokaal pad is, anders null (zie `veiligTerugpad`, dat ook de
- * server gebruikt voor de bestemming van een mislukte link).
- */
-export function veiligTerug(terug: unknown): string | null {
-  return veiligTerugpad(terug);
 }
 
 /** De parameters waarmee Better Auth een mislukte link (verlopen, al gebruikt) terugmeldt. */

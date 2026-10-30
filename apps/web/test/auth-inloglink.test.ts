@@ -1,5 +1,6 @@
 // Een fout na een geldige inloglink (hier: de sessiehook faalt) geeft een redirect naar /inloggen met
-// een vertaalbare code, geen kale 500. Alleen de verificatie van de inloglink wordt zo opgevangen.
+// een vertaalbare code, geen kale 500. Alleen de verificatie van de inloglink en van de bevestigingslink
+// wordt zo opgevangen.
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { type Auth, maakAuth } from "../server/auth";
@@ -116,7 +117,7 @@ describe("een fout na een geldige inloglink", () => {
       .map((c) => String(c[0]))
       .filter((r) => r.startsWith("Inloglink"))
       .join("\n");
-    expect(regels).toBe("Inloglink verifiëren mislukt: status 500");
+    expect(regels).toBe(`Inloglink verifiëren mislukt op ${INLOGLINK_PAD}: status 500`);
     for (const verboden of [email, "ontvanger@voorbeeld.be", "abc123", new URL(url).searchParams.get("token")!]) {
       expect(regels).not.toContain(verboden);
     }
@@ -194,7 +195,7 @@ describe("de bevestigingslink (verify-email)", () => {
       .map((c) => String(c[0]))
       .filter((r) => r.startsWith("Inloglink"))
       .join("\n");
-    expect(regels).toBe("Inloglink verifiëren mislukt: status 500");
+    expect(regels).toBe(`Inloglink verifiëren mislukt op ${BEVESTIGING_PAD}: status 500`);
   });
 
   test("de bestemming blijft bewaard in de foutredirect", async () => {
@@ -262,7 +263,7 @@ describe("de bestemming (callbackURL) in de foutredirect", () => {
     expect(await foutlocatie("/")).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);
   });
 
-  test.each(["//evil.example", "https://evil.example", "/\\evil.example","%2F%2Fevil.example", "javascript:alert(1)", ""])(
+  test.each(["//evil.example", "https://evil.example", "/\\evil.example", "/.//evil.example", "%2F%2Fevil.example", "javascript:alert(1)", ""])(
     "%j valt weg",
     async (callbackURL) => {
       expect(await foutlocatie(callbackURL)).toBe(`/inloggen?fout=${INLOGLINK_MISLUKT}`);

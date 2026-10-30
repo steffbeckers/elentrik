@@ -19,7 +19,8 @@ useHead({ title: () => `${t("inloggen.titel")} · ${t("app.naam")}` });
  * Ook de server zet hier de bestemming van een mislukte link in (`&terug=`); dezelfde controle als daar.
  */
 const terugInfo = computed(() => terugZonderFout(veiligTerugpad(route.query.terug) ?? "/"));
-const terug = computed(() => terugInfo.value.pad);
+// Wat echt gebruikt wordt (navigatie, callbackURL) is het pad ná `terugZonderFout`: ook dat opnieuw controleren.
+const terug = computed(() => veiligTerugpad(terugInfo.value.pad) ?? "/");
 
 /** `nieuweLink`: de melding biedt de knop "Stuur een nieuwe link" aan (een mislukte inloglink). */
 type Melding = { kleur: "success" | "error" | "info"; tekst: string; nieuweLink?: true };
