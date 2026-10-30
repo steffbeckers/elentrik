@@ -64,9 +64,16 @@ export type AutosaveOpties = {
   instantieId?: string;
 };
 
+/**
+ * De server heeft een andere versie dan de editor toont. `lokaleWijzigingen`: staan er in de editor
+ * wijzigingen die nog niet op de server staan? Bij een 409 op het bewaren altijd; bij de export
+ * (die enkel van een opgeslagen project kan) meestal niet: dan toont de editor gewoon een oudere versie.
+ */
+export type Conflict = { huidigeVersie: number; lokaleWijzigingen: boolean };
+
 export type Autosave = {
   status: Ref<AutosaveStatus>;
-  conflict: Ref<{ huidigeVersie: number } | null>;
+  conflict: Ref<Conflict | null>;
   /** Gezet bij status `fout`: de HTTP-status waarmee de server het bewaren weigerde. */
   fout: Ref<{ status: number } | null>;
   /**
@@ -137,7 +144,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const plekVan = (projectId: string): ConceptPlek => ({ gebruikerId, projectId, instantieId });
 
   const status = ref<AutosaveStatus>("opgeslagen");
-  const conflict = ref<{ huidigeVersie: number } | null>(null);
+  const conflict = ref<Conflict | null>(null);
   const fout = ref<{ status: number } | null>(null);
   const afgemeld = ref(false);
   const alleenLezen = ref(false);
@@ -293,7 +300,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         if (store.laadGeneratie !== generatie) return;
         const httpCode = httpStatus(e);
         if (e instanceof ConflictFout) {
-          conflict.value = { huidigeVersie: e.huidigeVersie };
+          conflict.value = { huidigeVersie: e.huidigeVersie, lokaleWijzigingen: true };
           status.value = "conflict";
           wisTimer();
         } else if (httpCode === AFGEMELD) {
@@ -346,6 +353,8 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     if (id !== null && document !== null) {
       schrijfConcept(id, { document, versie: store.versie, naam: store.naam, tijd: Date.now() });
     }
+    // Een wijziging tijdens een conflict zonder lokale wijzigingen (de export): nu zijn er wel lokale wijzigingen.
+    if (conflict.value && !conflict.value.lokaleWijzigingen) conflict.value = { ...conflict.value, lokaleWijzigingen: true };
     // Bij een conflict, een fout of afgemeld blijft het concept staan, maar gaat er niets naar de server.
     if (!automatisch()) return;
     if (status.value !== "lokaal" && status.value !== "onbewaard") status.value = "bezig";
@@ -387,8 +396,14 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     await wisConceptVeilig(id);
   }
 
+  /**
+   * Een kopie van de editor met zijn lokale wijzigingen. Zonder lokale wijzigingen (een conflict bij
+   * de export) toont de editor een verouderde versie: dan wordt eerst de actuele versie van de server
+   * geladen, en dat is de versie die gekopieerd wordt.
+   */
   async function bewaarAlsKopie(): Promise<void> {
     while (lopend) await lopend;
+    if (conflict.value?.lokaleWijzigingen === false) await laadServerversie();
     const id = store.projectId;
     if (id === null || store.document === null) return;
     wisTimer();
@@ -418,7 +433,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   }
 
   function meldConflict(huidigeVersie: number): void {
-    conflict.value = { huidigeVersie };
+    conflict.value = { huidigeVersie, lokaleWijzigingen: onbewaard() };
     status.value = "conflict";
     wisTimer();
   }

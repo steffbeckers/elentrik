@@ -5,6 +5,7 @@ import {
   adresFormulierUitAdres,
   adresUitFormulier,
   ontbrekendeAdresvelden,
+  volledigAdresUitFormulier,
   type AdresFormulier,
 } from "./adres";
 
@@ -33,8 +34,8 @@ export type ProjectgegevensWijziging = {
   klantNaam: string;
   stroomtype: Stroomtype;
   klantAdres: Adres | null;
-  /** Ontbreekt als het formulier geen werfadres heeft: dan blijft het werfadres ongewijzigd. */
-  werfadres?: Adres;
+  /** Zonder ingevulde velden het lege adres, zoals een nieuw project het heeft: het oude werfadres wordt gewist. */
+  werfadres: Adres;
   ean: string;
   datum: string;
   dossierTaal: Taal;
@@ -70,16 +71,16 @@ export function valideerProjectFormulier(f: ProjectFormulier): ProjectFormulierF
 
 /**
  * Verwacht een geldig formulier (zie `valideerProjectFormulier`). Een leeg klantadres wordt `null`;
- * een leeg werfadres gaat niet mee, zodat het werfadres in het document ongewijzigd blijft.
+ * een leeg werfadres is het lege adres van een nieuw project (het document kent geen "geen werfadres"),
+ * zodat leegmaken het oude werfadres echt wist. Een document dat al leeg was, blijft zonder wijziging.
  */
 export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijziging {
-  const werfadres = adresUitFormulier(f.werf);
   return {
     naam: f.naam.trim(),
     klantNaam: f.klantNaam.trim(),
     stroomtype: f.stroomtype,
     klantAdres: adresUitFormulier(f.klant) ?? null,
-    ...(werfadres !== undefined ? { werfadres } : {}),
+    werfadres: volledigAdresUitFormulier(f.werf),
     ean: f.ean.trim(),
     datum: f.datum.trim(),
     dossierTaal: f.dossierTaal,
