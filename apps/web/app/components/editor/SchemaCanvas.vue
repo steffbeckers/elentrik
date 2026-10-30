@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { DocumentFout, magToevoegen } from "@elentrik/model";
+import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import { doelSoort, moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useCanvasWeergave } from "~/composables/useCanvasWeergave";
 import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
@@ -112,6 +113,7 @@ function verwijder(heleTak: boolean): void {
 }
 
 function bevestigTakVerwijderen(): void {
+  if (store.alleenLezen) return;
   teVerwijderenAantal.value = null;
   verwijder(true);
 }
@@ -299,6 +301,7 @@ watchPostEffect(() => {
 
     <UModal v-model:open="bevestigOpen" :title="$t('editor.canvas.takVerwijderen.titel')">
       <template #body>
+        <AlleenLezenMelding class="mb-4" />
         <p>{{ $t("editor.canvas.takVerwijderen.beschrijving", { aantal: teVerwijderenAantal ?? 0 }) }}</p>
       </template>
       <template #footer>
@@ -306,6 +309,7 @@ watchPostEffect(() => {
           <UButton color="neutral" variant="outline" :label="$t('algemeen.annuleren')" @click="bevestigOpen = false" />
           <UButton
             color="error"
+            :disabled="store.alleenLezen"
             :label="$t('editor.canvas.takVerwijderen.bevestigen')"
             data-testid="tak-verwijderen-bevestigen"
             @click="bevestigTakVerwijderen"

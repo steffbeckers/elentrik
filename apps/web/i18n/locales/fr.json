@@ -98,7 +98,9 @@
     },
     "alleenLezen": {
       "bewaardLokaal": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
-      "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire."
+      "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire.",
+      "dialoogTitel": "Lecture seule",
+      "dialoogBeschrijving": "Votre entreprise n'a pas d'abonnement actif. Les modifications de cette fenêtre ne peuvent plus être enregistrées."
     },
     "onderdelenPaneel": {
       "titel": "Éléments",

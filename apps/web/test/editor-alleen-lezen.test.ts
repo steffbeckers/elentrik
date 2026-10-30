@@ -1,7 +1,8 @@
 import { nieuwProjectDocument, type InstallatieDocument, type NodeId } from "@elentrik/model";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { sneltoets, type Toets } from "../app/composables/sneltoetsen";
+import { uploadFoutMelding } from "../app/situatie/plan-opladen";
 import { situatieSneltoets, type SituatieToets } from "../app/situatie/sneltoetsen";
 import { useEditorStore } from "../app/stores/editor";
 
@@ -251,5 +252,32 @@ describe("sneltoetsen in alleen-lezen", () => {
     }
     // Escape annuleert plaatsen en meten: dat wijzigt niets.
     expect(situatieSneltoets({ ...basis, key: "Escape", alleenLezen: true })).toEqual({ soort: "annuleer" });
+  });
+});
+
+describe("een plan uploaden zonder abonnement", () => {
+  /** Een `$fetch`-fout zoals de editor hem krijgt: status bovenaan, de foutcode in `data.data.code`. */
+  const fetchFout = (status: number, code: string) => Object.assign(new Error(`HTTP ${status}`), { status, data: { data: { code } } });
+
+  test("een 402 ABONNEMENT_VEREIST gaat langs de alleen-lezenafhandeling: niets meer te melden", async () => {
+    const alleenLezen = vi.fn(async () => true);
+    const fout = fetchFout(402, "ABONNEMENT_VEREIST");
+    expect(await uploadFoutMelding(fout, alleenLezen)).toBeNull();
+    expect(alleenLezen).toHaveBeenCalledWith(fout);
+  });
+
+  test("een 402 met een andere code, of een afhandeling die niets doet, blijft de algemene fout", async () => {
+    const alleenLezen = vi.fn(async () => false);
+    expect(await uploadFoutMelding(fetchFout(402, "ANDERE"), alleenLezen)).toBe("mislukt");
+    expect(alleenLezen).not.toHaveBeenCalled();
+    expect(await uploadFoutMelding(fetchFout(402, "ABONNEMENT_VEREIST"), alleenLezen)).toBe("mislukt");
+  });
+
+  test("andere fouten behouden hun eigen melding en raken de afhandeling niet", async () => {
+    const alleenLezen = vi.fn(async () => true);
+    expect(await uploadFoutMelding(fetchFout(413, "BESTAND_TE_GROOT"), alleenLezen)).toBe("teGroot");
+    expect(await uploadFoutMelding(fetchFout(415, "X"), alleenLezen)).toBe("onbekendType");
+    expect(await uploadFoutMelding(new Error("netwerk"), alleenLezen)).toBe("mislukt");
+    expect(alleenLezen).not.toHaveBeenCalled();
   });
 });

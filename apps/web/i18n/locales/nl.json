@@ -98,7 +98,9 @@
     },
     "alleenLezen": {
       "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
-      "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen."
+      "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen.",
+      "dialoogTitel": "Alleen lezen",
+      "dialoogBeschrijving": "Je bedrijf heeft geen actief abonnement. Wijzigingen in dit venster kunnen niet meer bewaard worden."
     },
     "onderdelenPaneel": {
       "titel": "Onderdelen",

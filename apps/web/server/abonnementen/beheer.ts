@@ -193,7 +193,11 @@ export async function startCheckout(
 
     let klantId = rij?.stripeKlantId;
     if (!klantId) {
-      klantId = (await stripe.maakKlant({ organisatieId: i.organisatieId, email: i.eigenaarEmail, naam: org.naam })).id;
+      // Een mislukte Checkout rolt de rij terug, maar de klant blijft in Stripe: eerst die zoeken.
+      // De zoekindex loopt even achter; de idempotency key van `maakKlant` vangt dat op.
+      klantId =
+        (await stripe.zoekKlant(i.organisatieId))?.id ??
+        (await stripe.maakKlant({ organisatieId: i.organisatieId, email: i.eigenaarEmail, naam: org.naam })).id;
       await tx.insert(abonnementen).values({ organisatieId: i.organisatieId, stripeKlantId: klantId });
     }
 
