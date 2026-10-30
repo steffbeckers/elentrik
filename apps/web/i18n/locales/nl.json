@@ -86,7 +86,14 @@
       "fout": "Opslaan mislukt",
       "alleen-lezen": "Niet opgeslagen: alleen lezen, je werk blijft lokaal bewaard",
       "alleenLezen": "Alleen lezen",
-      "opnieuwProberen": "Opnieuw proberen"
+      "opnieuwProberen": "Opnieuw proberen",
+      "verwijderd": "Project verwijderd"
+    },
+    "verwijderd": {
+      "melding": "Dit project werd verwijderd.",
+      "uitleg": "Je wijzigingen staan nog lokaal. Bewaar ze als nieuw project, of ga terug naar de projecten.",
+      "nieuwProject": "Bewaar als nieuw project",
+      "terug": "Terug naar de projecten"
     },
     "alleenLezen": {
       "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
@@ -567,6 +574,7 @@
       "verstuurd": "Als dit adres bekend is, ontvang je een nieuwe bevestigingsmail."
     },
     "linkOngeldig": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",
+    "nieuweLink": "Stuur een nieuwe link",
     "accountGemaakt": "Je account is aangemaakt. Log in met je e-mailadres en wachtwoord.",
     "wachtwoordGewijzigd": "Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.",
     "wachtwoordVergeten": "Wachtwoord vergeten?",
@@ -797,6 +805,7 @@
     "ACCOUNT_BESTAAT": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
     "TE_VEEL_UITNODIGINGEN": "Te veel uitnodigingen. Probeer het straks opnieuw.",
     "TE_VEEL_POGINGEN": "Te veel pogingen. Wacht even en probeer het opnieuw.",
+    "INLOGLINK_MISLUKT": "Inloggen met de link is niet gelukt. Vraag een nieuwe link aan.",
     "INVALID_EMAIL_OR_PASSWORD": "Het e-mailadres of het wachtwoord klopt niet.",
     "EMAIL_NOT_VERIFIED": "Je e-mailadres is nog niet bevestigd.",
     "INVALID_TOKEN": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",

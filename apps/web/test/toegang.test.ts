@@ -377,6 +377,16 @@ const TABEL: Record<string, Rij> = {
     lid: 201,
     eigenaar: 201,
   },
+  "POST /api/projecten/uit-document": {
+    // B maakt een project in B uit zijn eigen document (zie "een nieuw project uit een document").
+    verzoek: async () => {
+      const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+      return { methode: "POST", pad: "/api/projecten/uit-document", json: { naam: "Uit document", document } };
+    },
+    andereOrganisatie: 201,
+    lid: 201,
+    eigenaar: 201,
+  },
   "POST /api/projecten/:id/dupliceer": {
     verzoek: () => projectVerzoek("POST", "/dupliceer"),
     andereOrganisatie: 404,
@@ -696,6 +706,68 @@ describe("projecten per organisatie", () => {
     const { id: kopie } = (await antwoord.json()) as { id: string };
     const [rij] = await db.select({ org: projecten.organisatieId }).from(projecten).where(eq(projecten.id, kopie));
     expect(rij!.org).toBe(orgA);
+  });
+
+  test("een nieuw project uit een document: de plannen van een verwijderd project van dezelfde organisatie gaan mee, die van een andere niet", async () => {
+    const bron = await projectIn(orgA, "Wordt verwijderd");
+    const eigenPlan = (await bewaarBestand(db, opslag, { organisatieId: orgA, projectId: bron, soort: "plan-raster", data: png(10, 10) })).id;
+    const vreemdPlan = await planIn(orgB);
+    await verwijderProject(db, orgA, bron);
+    const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+    const metPlan = {
+      ...document,
+      situatie: {
+        ...document.situatie,
+        paginas: [
+          { id: "p1", titel: "Eigen", plaatsingen: [], achtergrond: { origineelBestandId: eigenPlan, rasterBestandId: eigenPlan, breedte_px: 10, hoogte_px: 10 } },
+          { id: "p2", titel: "Vreemd", plaatsingen: [], achtergrond: { origineelBestandId: vreemdPlan, rasterBestandId: vreemdPlan, breedte_px: 10, hoogte_px: 10 } },
+        ],
+      },
+    };
+
+    const antwoord = await stuur(
+      { methode: "POST", pad: "/api/projecten/uit-document", json: { naam: "Nieuw", document: metPlan } },
+      lidA.cookie,
+    );
+    expect(antwoord.status).toBe(201);
+    const nieuw = (await antwoord.json()) as { id: string; versie: number; documentId: string; bestandIds: Record<string, string> };
+    expect(nieuw.versie).toBe(1);
+    expect(Object.keys(nieuw.bestandIds)).toEqual([eigenPlan]);
+
+    const project = (await haalProject(db, orgA, nieuw.id))!;
+    const [p1, p2] = project.document.situatie.paginas;
+    expect(p1!.achtergrond!.origineelBestandId).toBe(nieuw.bestandIds[eigenPlan]);
+    expect(p2!.achtergrond!.origineelBestandId).toBe(vreemdPlan);
+    // Het nieuwe bestand is voor een lid van A te downloaden; het van B bleef van B.
+    const bestand = await stuur({ methode: "GET", pad: `/api/bestanden/${nieuw.bestandIds[eigenPlan]}` }, lidA.cookie);
+    expect(bestand.status).toBe(200);
+    await bestand.arrayBuffer();
+    // Het verwijderde bronproject is nog altijd onzichtbaar.
+    expect((await stuur({ methode: "GET", pad: `/api/projecten/${bron}` }, lidA.cookie)).status).toBe(404);
+  });
+
+  test("een nieuw project uit een document: een ongeldige body is 400, een ongeldig document 422", async () => {
+    const pad = "/api/projecten/uit-document";
+    for (const json of [{}, { naam: "", document: {} }, { naam: "x".repeat(301), document: {} }, { naam: "X", document: "x" }]) {
+      expect((await stuur({ methode: "POST", pad, json }, lidA.cookie)).status).toBe(400);
+    }
+    expect((await stuur({ methode: "POST", pad, json: { naam: "X", document: { onzin: true } } }, lidA.cookie)).status).toBe(422);
+  });
+
+  test("een nieuw project uit een document voor een andere gebruiker dan de sessie: 401, zonder iets aan te maken", async () => {
+    const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+    const voor = (await db.select({ id: projecten.id }).from(projecten)).length;
+    const antwoord = await stuur(
+      {
+        methode: "POST",
+        pad: "/api/projecten/uit-document",
+        json: { naam: "X", document },
+        headers: { [VERWACHTE_GEBRUIKER_HEADER]: eigenaarA.id },
+      },
+      lidA.cookie,
+    );
+    expect(antwoord.status).toBe(401);
+    expect((await db.select({ id: projecten.id }).from(projecten)).length).toBe(voor);
   });
 
   test("dupliceren met extra bestandsid's: een ongeldige body is 400, een geldige geeft de toewijzing terug", async () => {

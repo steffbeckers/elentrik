@@ -27,6 +27,15 @@ export const BewaarProjectSchema = z.object({
 });
 
 /**
+ * Een nieuw project uit het document van de editor ("Bewaar als nieuw project"). Het document wordt
+ * door de repo volledig gevalideerd; de naam is begrensd.
+ */
+export const ProjectUitDocumentSchema = z.object({
+  naam: z.string().trim().min(1).max(300),
+  document: z.record(z.string(), z.unknown()),
+});
+
+/**
  * De body van het dupliceren is optioneel: de planbestanden die de editor kent maar het opgeslagen
  * document niet. Begrensd; wat geen bestand van het project is, negeert de repo.
  */

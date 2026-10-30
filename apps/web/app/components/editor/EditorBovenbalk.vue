@@ -53,6 +53,7 @@ const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = 
   conflict: { icoon: "i-lucide-git-compare", klasse: "text-error" },
   fout: { icoon: "i-lucide-cloud-alert", klasse: "text-error" },
   "alleen-lezen": { icoon: "i-lucide-lock", klasse: "text-warning" },
+  verwijderd: { icoon: "i-lucide-trash-2", klasse: "text-error" },
 };
 
 /**
