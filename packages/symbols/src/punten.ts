@@ -111,7 +111,8 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
 /**
  * Lichtpunt volgens G in AREI tabel 2.23, 14 × 10 mm: een kruis (×) aan het einde van de
  * toevoerleiding, zonder cirkel. De leiding loopt van `in` door het snijpunt van het kruis tot
- * `uit`. De soort verandert het kruis:
+ * `uit`; bij de projector loopt ze niet door de lamp, maar eindigt ze aan de onderkant van de
+ * cirkel en begint ze weer aan de bovenkant. De soort verandert het kruis:
  * - "tl": het fluorescentietoestel, een lijn dwars op de leiding met een streepje aan beide
  *   uiteinden, zonder kruis;
  * - "spot": de projector, een kruis in een cirkel (⊗) met een boog aan de kant van `in`;
@@ -124,7 +125,10 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
   const hoogte = 10;
   const x = breedte / 2;
   const cy = 5;
-  let svg = lijn(x, hoogte, x, 0);
+  /** Halve armlengte van het kruis en straal van de cirkel van de projector, in mm. */
+  const arm = 2.5;
+  // Eén doorlopende leiding van `in` naar `uit`; de projector vervangt ze door twee stukken.
+  let svg = node.soort === "spot" ? "" : lijn(x, hoogte, x, 0);
   /** De twee diagonalen van het kruis, met halve armlengte `a` rond (x, cy). */
   const kruis = (a: number) =>
     lijn(x - a, cy + a, x + a, cy - a, { data: { rol: "kruis" } }) +
@@ -140,15 +144,19 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
       break;
     }
     case "spot": {
-      // De cirkel (r = 2,5) met het kruis tot op de rand; de boog (r = 3,6) is een stuk van 110°
-      // rond hetzelfde middelpunt, onderlangs aan de kant van `in` (sweep 0, van links naar rechts).
-      const r = 2.5;
+      // De cirkel met het kruis tot op de rand en zonder leiding erin: de leiding raakt de cirkel
+      // aan de onderkant en loopt vanaf de bovenkant verder. De boog (r = 3,6) is een stuk van 110°
+      // rond hetzelfde middelpunt, onderlangs aan de kant van `in` (sweep 0, van links naar rechts);
+      // de leiding kruist hem.
+      const r = arm;
       const boogR = 3.6;
       const hoek = (55 * Math.PI) / 180;
       const dx = boogR * Math.sin(hoek);
       const dy = boogR * Math.cos(hoek);
       svg +=
+        lijn(x, hoogte, x, cy + r) +
         cirkel(x, cy, r) +
+        lijn(x, cy - r, x, 0) +
         kruis(r * Math.SQRT1_2) +
         pad(
           `M${getal(x - dx)} ${getal(cy + dy)} A${getal(boogR)} ${getal(boogR)} 0 0 0 ${getal(x + dx)} ${getal(cy + dy)}`,
@@ -158,14 +166,14 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
     }
     case "led":
       // Basislijn cy + 0,6: de tekst (1,8 mm) staat rechtop naast het kruis.
-      svg += kruis(2.5) + tekst(x + 3, cy + 0.6, "LED", { anker: "start", grootte: 1.8 });
+      svg += kruis(arm) + tekst(x + 3, cy + 0.6, "LED", { anker: "start", grootte: 1.8 });
       break;
     case "noodverlichting":
-      svg += kruis(2.5) + cirkel(x, cy, 0.8, { gevuld: true, data: { rol: "nood" } });
+      svg += kruis(arm) + cirkel(x, cy, 0.8, { gevuld: true, data: { rol: "nood" } });
       break;
     case "standaard":
     case undefined:
-      svg += kruis(2.5);
+      svg += kruis(arm);
       break;
   }
   svg += aantalTekst(node.aantal, cy + 0.8);

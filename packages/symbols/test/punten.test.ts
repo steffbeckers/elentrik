@@ -340,8 +340,22 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(topY).toBeGreaterThan(cy);
       expect(y1).toBeGreaterThan(cy);
       expect(topY).toBeLessThan(10);
-      // De leiding loopt door.
-      expect(leidingLijn(svg)).toBeDefined();
+      // Geen leiding in de lamp: de twee stukken van de leiding raken de onderkant en de bovenkant
+      // van de cirkel, en geen enkel verticaal lijnstuk op x = 7 ligt (deels) binnen de cirkel.
+      const opLeiding = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
+      expect(opLeiding).toHaveLength(2);
+      for (const l of opLeiding) {
+        const [boven, onder] = [Math.min(l.y1, l.y2), Math.max(l.y1, l.y2)];
+        expect(onder <= cy - r + 1e-9 || boven >= cy + r - 1e-9).toBe(true);
+      }
+      const onderstuk = opLeiding.find((l) => Math.max(l.y1, l.y2) === 10);
+      const bovenstuk = opLeiding.find((l) => Math.min(l.y1, l.y2) === 0);
+      expect(onderstuk).toBeDefined();
+      expect(bovenstuk).toBeDefined();
+      expect(Math.min(onderstuk!.y1, onderstuk!.y2)).toBeCloseTo(cy + r, 9);
+      expect(Math.max(bovenstuk!.y1, bovenstuk!.y2)).toBeCloseTo(cy - r, 9);
+      // De leiding van `in` kruist de boog (op y = cy + boogstraal) en komt zo bij de cirkel.
+      expect(Math.min(onderstuk!.y1, onderstuk!.y2)).toBeLessThan(topY);
     });
 
     test("noodverlichting: het kruis plus een gevulde stip in het snijpunt, geen andere cirkel", () => {
@@ -363,6 +377,24 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(svgVan("standaard", 4)).toMatch(/data-rol="aantal"[^>]*>4×<\/text>/);
       expect(svgVan("tl", 3)).toMatch(/data-rol="aantal"[^>]*>3×<\/text>/);
     });
+
+    test.each(["standaard", "led", "tl", "spot", "noodverlichting"] as const)(
+      "het aantal eindigt links van het symbool: %s",
+      (soort) => {
+        const svg = svgVan(soort, 3);
+        const tekstX = Number(svg.match(/<text x="([^"]*)"[^>]*data-rol="aantal"/)?.[1]);
+        expect(svg).toMatch(/text-anchor="end"[^>]*data-rol="aantal"/);
+        // Het meest linkse deel van de getekende vorm; het aantal zelf telt niet mee.
+        const vorm = svg.replace(/<text[^>]*data-rol="aantal"[^>]*>[^<]*<\/text>/, "");
+        const xs: number[] = [];
+        for (const m of vorm.matchAll(/<line x1="([^"]*)"[^>]*x2="([^"]*)"/g)) xs.push(Number(m[1]), Number(m[2]));
+        for (const m of vorm.matchAll(/<circle cx="([^"]*)"[^>]*r="([^"]*)"/g)) xs.push(Number(m[1]) - Number(m[2]));
+        for (const m of vorm.matchAll(/<path d="M(\S+) \S+ A\S+ \S+ 0 0 \d (\S+) /g)) xs.push(Number(m[1]), Number(m[2]));
+        for (const m of vorm.matchAll(/<text x="([^"]*)"/g)) xs.push(Number(m[1]));
+        expect(xs.length).toBeGreaterThan(0);
+        expect(tekstX).toBeLessThanOrEqual(Math.min(...xs));
+      },
+    );
   });
 
   describe("schakelaar", () => {
