@@ -98,7 +98,9 @@
     },
     "alleenLezen": {
       "bewaardLokaal": "Your company has no active subscription. Your latest changes have not been saved, but they are kept locally.",
-      "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory."
+      "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory.",
+      "dialoogTitel": "Read-only",
+      "dialoogBeschrijving": "Your company has no active subscription. Changes in this window can no longer be saved."
     },
     "onderdelenPaneel": {
       "titel": "Components",

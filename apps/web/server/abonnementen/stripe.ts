@@ -38,7 +38,17 @@ export type StripePrijs = { id: string; bedrag: number; munt: string; interval: 
 export type StripeCheckout = { id: string; klantId: string | null; abonnementId: string | null };
 
 export interface StripePoort {
+  /**
+   * Maakt de Stripe-klant van een organisatie, met de idempotency key `klant-<organisatieId>`: een
+   * herhaalde aanroep (binnen de 24 uur dat Stripe de key onthoudt) geeft dezelfde klant terug.
+   */
   maakKlant(i: { organisatieId: string; email: string; naam: string }): Promise<{ id: string }>;
+  /**
+   * Zoekt de bestaande Stripe-klant met `metadata.organisatieId` van deze organisatie (bv. van een
+   * mislukte Checkout), of null. De zoekindex van Stripe loopt even achter: de idempotency key van
+   * `maakKlant` vangt dat op. Gooit bij een `organisatieId` dat geen uuid is.
+   */
+  zoekKlant(organisatieId: string): Promise<{ id: string } | null>;
   maakCheckout(i: {
     klantId: string;
     prijsId: string;
@@ -80,6 +90,8 @@ function idVan(waarde: Id): string | null {
   if (!waarde) return null;
   return typeof waarde === "string" ? waarde : waarde.id;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function bestaatNiet(fout: unknown): boolean {
   return fout instanceof Stripe.errors.StripeError && (fout.code === "resource_missing" || fout.statusCode === 404);
@@ -127,12 +139,26 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
 
   return {
     async maakKlant(i) {
-      const klant = await stripe.customers.create({
-        email: i.email,
-        name: i.naam,
-        metadata: { organisatieId: i.organisatieId },
-      });
+      const klant = await stripe.customers.create(
+        {
+          email: i.email,
+          name: i.naam,
+          metadata: { organisatieId: i.organisatieId },
+        },
+        { idempotencyKey: `klant-${i.organisatieId}` },
+      );
       return { id: klant.id };
+    },
+
+    async zoekKlant(organisatieId) {
+      // De id gaat in een Stripe-zoekquery: alleen een uuid, nooit vrije tekst.
+      if (!UUID.test(organisatieId)) throw new Error("Dit is geen geldig organisatie-id");
+      const resultaat = await stripe.customers.search({
+        query: `metadata['organisatieId']:'${organisatieId}'`,
+        limit: 10,
+      });
+      const klant = resultaat.data.find((k) => !("deleted" in k && k.deleted) && k.metadata?.organisatieId === organisatieId);
+      return klant ? { id: klant.id } : null;
     },
 
     async maakCheckout(i) {

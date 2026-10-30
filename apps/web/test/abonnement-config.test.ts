@@ -228,7 +228,13 @@ describe("leesWebhook", () => {
 });
 
 describe("maakStripePoort tegen een lokale nep-API", () => {
-  type Verzoek = { pad: string; zoek: URLSearchParams; versie: string | undefined; lichaam: URLSearchParams };
+  type Verzoek = {
+    pad: string;
+    zoek: URLSearchParams;
+    versie: string | undefined;
+    idempotentie: string | undefined;
+    lichaam: URLSearchParams;
+  };
   let server: Server;
   let verzoeken: Verzoek[];
   /** Per pad het antwoord; een functie krijgt de queryparameters (voor gepagineerde lijsten). */
@@ -244,6 +250,7 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
           pad: url.pathname,
           zoek: url.searchParams,
           versie: req.headers["stripe-version"] as string | undefined,
+          idempotentie: req.headers["idempotency-key"] as string | undefined,
           lichaam: new URLSearchParams(Buffer.concat(delen).toString("utf8")),
         });
         res.setHeader("content-type", "application/json");
@@ -315,6 +322,48 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       locale: "nl",
     });
     expect(verzoeken[0]!.lichaam.has("subscription_data[trial_end]")).toBe(false);
+  });
+
+  const ORG = "0b8f3c52-6f0e-4b8a-9d7c-3a1f5e2d4c6b";
+
+  test("maakKlant stuurt de idempotency key klant-<organisatieId> op de draad", async () => {
+    antwoorden["/v1/customers"] = { id: "cus_1", object: "customer" };
+    const r = await poort().maakKlant({ organisatieId: ORG, email: "a@b.be", naam: "Bedrijf" });
+    expect(r).toEqual({ id: "cus_1" });
+    const v = verzoeken[0]!;
+    expect(v.pad).toBe("/v1/customers");
+    expect(v.idempotentie).toBe(`klant-${ORG}`);
+    expect(Object.fromEntries(v.lichaam)).toMatchObject({ "metadata[organisatieId]": ORG });
+  });
+
+  test("zoekKlant zoekt op metadata.organisatieId en geeft het id van de gevonden klant", async () => {
+    antwoorden["/v1/customers/search"] = {
+      object: "search_result",
+      has_more: false,
+      data: [{ id: "cus_bestaand", object: "customer", metadata: { organisatieId: ORG } }],
+    };
+    expect(await poort().zoekKlant(ORG)).toEqual({ id: "cus_bestaand" });
+    const v = verzoeken[0]!;
+    expect(v.pad).toBe("/v1/customers/search");
+    expect(v.zoek.get("query")).toBe(`metadata['organisatieId']:'${ORG}'`);
+  });
+
+  test("zoekKlant zonder resultaat geeft null; een klant van een andere organisatie telt niet", async () => {
+    antwoorden["/v1/customers/search"] = { object: "search_result", has_more: false, data: [] };
+    expect(await poort().zoekKlant(ORG)).toBeNull();
+    antwoorden["/v1/customers/search"] = {
+      object: "search_result",
+      has_more: false,
+      data: [{ id: "cus_andere", object: "customer", metadata: { organisatieId: "iets-anders" } }],
+    };
+    expect(await poort().zoekKlant(ORG)).toBeNull();
+  });
+
+  test("zoekKlant weigert een organisatie-id dat geen uuid is, zonder verzoek", async () => {
+    for (const id of ["org_1", "' OR metadata['x']:'y", `${ORG}'`, ""]) {
+      await expect(poort().zoekKlant(id)).rejects.toThrow("geen geldig organisatie-id");
+    }
+    expect(verzoeken).toEqual([]);
   });
 
   test.each(["nl", "fr", "en"] as const)("maakCheckout stuurt locale=%s op de draad", async (locale) => {
@@ -551,6 +600,9 @@ describe("maakNepStripe", () => {
     expect(await nep.haalCheckout("cs_nep_1")).toEqual({ id: "cs_nep_1", klantId: "cus_nep_1", abonnementId: null });
     expect(await nep.haalCheckout("onbekend")).toBeNull();
     expect(nep.aanroepen.map((a) => a.methode)).toEqual(["maakKlant", "maakCheckout", "haalCheckout", "haalCheckout"]);
+    expect(await nep.zoekKlant("org_1")).toBeNull();
+    nep.klanten.set("org_1", "cus_bestaand");
+    expect(await nep.zoekKlant("org_1")).toEqual({ id: "cus_bestaand" });
     nep.faalPrijzen = true;
     await expect(nep.haalPrijs("price_maand")).rejects.toThrow();
   });

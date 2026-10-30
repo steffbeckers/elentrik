@@ -287,6 +287,29 @@ describe("checkout", () => {
     expect(rij?.openCheckoutSessie).toBe("cs_nep_1");
   });
 
+  test("zonder klantrij maar met een bestaande Stripe-klant: die klant wordt hergebruikt en bewaard", async () => {
+    // Een eerdere Checkout liet de klant in Stripe achter, maar de transactie rolde de rij terug.
+    stripe.klanten.set(eigenaarA.organisatieId, "cus_bestaand");
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    expect(aanroepen("zoekKlant").map((a) => a.invoer)).toEqual([eigenaarA.organisatieId]);
+    expect(aanroepen("maakKlant")).toEqual([]);
+    expect((aanroepen("maakCheckout")[0]!.invoer as { klantId: string }).klantId).toBe("cus_bestaand");
+    const [rij] = await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId));
+    expect(rij?.stripeKlantId).toBe("cus_bestaand");
+  });
+
+  test("een mislukte Checkout laat geen rij achter; de volgende poging zoekt de klant weer op", async () => {
+    stripe.faalCheckout = true;
+    expect((await checkout(eigenaarA.cookie)).status).toBe(500);
+    expect(await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, eigenaarA.organisatieId))).toEqual([]);
+    // Stripe heeft de klant wel gemaakt (maakKlant liep voor de fout).
+    stripe.klanten.set(eigenaarA.organisatieId, "cus_nep_1");
+    stripe.faalCheckout = false;
+    expect((await checkout(eigenaarA.cookie)).status).toBe(200);
+    expect(aanroepen("maakKlant")).toHaveLength(1);
+    expect((aanroepen("maakCheckout").at(-1)!.invoer as { klantId: string }).klantId).toBe("cus_nep_1");
+  });
+
   test("twee gelijktijdige checkouts geven één klant en hoogstens één open sessie", async () => {
     const [een, twee] = await Promise.all([checkout(eigenaarA.cookie), checkout(eigenaarA.cookie)]);
     expect([een.status, twee.status]).toEqual([200, 200]);

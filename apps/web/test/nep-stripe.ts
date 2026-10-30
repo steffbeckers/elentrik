@@ -11,6 +11,8 @@ import type {
 
 export type NepStripe = StripePoort & {
   aanroepen: { methode: string; invoer: unknown }[];
+  /** Bestaande Stripe-klanten per organisatie-id (`metadata.organisatieId`): wat `zoekKlant` vindt. */
+  klanten: Map<string, string>;
   /** Per klant-id. */
   abonnementen: Map<string, StripeAbonnement[]>;
   facturen: Map<string, StripeFactuur>;
@@ -19,6 +21,8 @@ export type NepStripe = StripePoort & {
   vervallen: Set<string>;
   /** Waar: `haalPrijs` gooit alsof Stripe onbereikbaar is. */
   faalPrijzen: boolean;
+  /** Waar: `maakCheckout` gooit, nadat de klant al gemaakt is (een mislukte Checkout). */
+  faalCheckout: boolean;
 };
 
 export function maakNepStripe(): NepStripe {
@@ -26,20 +30,29 @@ export function maakNepStripe(): NepStripe {
   let checkoutTeller = 0;
   const nep: NepStripe = {
     aanroepen: [],
+    klanten: new Map(),
     abonnementen: new Map(),
     facturen: new Map(),
     prijzen: new Map(),
     checkouts: new Map(),
     vervallen: new Set(),
     faalPrijzen: false,
+    faalCheckout: false,
 
     async maakKlant(i) {
       nep.aanroepen.push({ methode: "maakKlant", invoer: i });
       return { id: `cus_nep_${++klantTeller}` };
     },
 
+    async zoekKlant(organisatieId) {
+      nep.aanroepen.push({ methode: "zoekKlant", invoer: organisatieId });
+      const id = nep.klanten.get(organisatieId);
+      return id ? { id } : null;
+    },
+
     async maakCheckout(i) {
       nep.aanroepen.push({ methode: "maakCheckout", invoer: i });
+      if (nep.faalCheckout) throw new Error("Stripe is niet bereikbaar");
       const id = `cs_nep_${++checkoutTeller}`;
       nep.checkouts.set(id, { id, klantId: i.klantId, abonnementId: null });
       return { id, url: `https://checkout.nep/${id}` };

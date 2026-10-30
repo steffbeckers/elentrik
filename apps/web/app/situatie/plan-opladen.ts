@@ -3,6 +3,8 @@
 import type { SituatiePagina } from "@elentrik/model";
 import type { BestandenApi } from "../composables/useBestandenApi";
 import { httpStatus } from "../composables/useProjectenApi";
+import { foutCode } from "../sessie/fouten";
+import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
 
 export type PlanUploader = Pick<BestandenApi, "upload">;
 
@@ -70,4 +72,18 @@ export function foutSleutel(fout: unknown): UploadFoutSleutel {
     default:
       return "mislukt";
   }
+}
+
+/**
+ * Wat een mislukte upload de gebruiker meldt. Een 402 `ABONNEMENT_VEREIST` (de organisatie mag niet
+ * meer schrijven) gaat eerst langs `alleenLezen`, de bestaande alleen-lezenafhandeling (de sessie
+ * opnieuw lezen en de alleen-lezenmelding tonen): dan is er niets meer te melden (null). Anders de
+ * sleutel onder `editor.situatie.toevoegen.fout`.
+ */
+export async function uploadFoutMelding(
+  fout: unknown,
+  alleenLezen: (fout: unknown) => Promise<boolean>,
+): Promise<UploadFoutSleutel | null> {
+  if (httpStatus(fout) === 402 && foutCode(fout) === ABONNEMENT_VEREIST && (await alleenLezen(fout))) return null;
+  return foutSleutel(fout);
 }

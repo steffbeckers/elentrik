@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { SituatiePagina } from "@elentrik/model";
+import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import PaginaHernoemenDialoog from "~/components/situatie/PaginaHernoemenDialoog.vue";
 import { formatteerMmPerPx } from "~/situatie/schaal";
 import { useEditorStore } from "~/stores/editor";
@@ -47,6 +48,7 @@ function verwijder(pagina: SituatiePagina): void {
 }
 
 function bevestigVerwijderen(): void {
+  if (editor.alleenLezen) return;
   const pagina = teVerwijderen.value;
   verwijderOpen.value = false;
   if (pagina) voerUit(() => situatie.verwijderPagina(pagina.id));
@@ -170,6 +172,7 @@ function wisSchaal(): void {
 
     <UModal v-model:open="verwijderOpen" :title="$t('editor.situatie.verwijderen.titel')">
       <template #body>
+        <AlleenLezenMelding class="mb-4" />
         <p>
           {{
             $t(
@@ -185,6 +188,7 @@ function wisSchaal(): void {
           <UButton color="neutral" variant="outline" :label="$t('algemeen.annuleren')" @click="verwijderOpen = false" />
           <UButton
             color="error"
+            :disabled="editor.alleenLezen"
             :label="$t('editor.situatie.verwijderen.bevestigen')"
             data-testid="pagina-verwijderen-bevestigen"
             @click="bevestigVerwijderen"

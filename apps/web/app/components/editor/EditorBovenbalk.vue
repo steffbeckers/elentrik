@@ -82,7 +82,6 @@ const weergave = computed(() =>
       variant="ghost"
       class="min-w-24 max-w-64 truncate font-semibold"
       :title="$t('editor.bovenbalk.projectgegevens')"
-      :disabled="store.alleenLezen"
       data-testid="projectnaam"
       @click="projectgegevensOpen = true"
     >
