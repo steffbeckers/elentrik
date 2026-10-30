@@ -50,7 +50,7 @@ Daarnaast is er technische schuld uit de vorige plannen die het onderhoud trager
    - **Lege mappen:** na het wissen van de bestanden verdwijnt ook een lege projectmap.
 7. **Kopie na een conflict.** `bewaarAlsKopie` stuurt altijd de plan-id's van het lokale document mee, ook in het pad zonder lokale wijzigingen. Zo verdwijnt het kleine venster waarin een wijziging tijdens het dupliceren naar plannen van het origineel bleef verwijzen.
 8. **Grootte van een JSON-body.**
-   - `leesBody` weigert een verzoek zonder geldige `Content-Length` met `411 LENGTE_VEREIST`, en een body boven **10 MB** met `413` (mijn keuze voor de grens).
+   - `leesBody` weigert een verzoek zonder geldige `Content-Length` met `411 LENGTE_VEREIST`, en een body boven **50 MB** met `413` (de grens is beslist met de gebruiker).
    - Het grootste echte document moet daar ruim onder blijven. De bouwer meet een groot testproject en noteert de grootte in het rapport.
 
 ### B. Technische schuld
