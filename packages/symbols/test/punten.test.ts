@@ -253,9 +253,9 @@ describe("symbolen voor punten, leiding en onderbord", () => {
     expect(tekenSymbool(leiding).svg).toMatch(/^<line x1="1" y1="12" x2="1" y2="0"[^>]*\/>$/);
   });
 
-  test("verdeelbord is een rechthoek van 12 × 6 met een horizontale lijn bovenaan", () => {
+  test("verdeelbord is een gewone rechthoek van 12 × 6", () => {
     const svg = tekenSymbool(verdeelbord).svg;
     expect(svg).toContain('<rect x="0" y="0" width="12" height="6"');
-    expect(svg).toMatch(/<line x1="0" y1="1.5" x2="12" y2="1.5"/);
+    expect(svg).not.toContain("<line");
   });
 });

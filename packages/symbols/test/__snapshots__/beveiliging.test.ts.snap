@@ -14,7 +14,7 @@ exports[`symbolen voor voeding en beveiliging > snapshot: aansluiting 1`] = `
       "y": 0,
     },
   },
-  "svg": "<circle cx="5" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="4" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="5" y="6.9" font-size="2.5" text-anchor="middle" font-family="sans-serif" fill="currentColor">~</text>",
+  "svg": "<circle cx="5" cy="6" r="2" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="4" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><path d="M3.6 6 A0.7 0.7 0 0 1 5 6 A0.7 0.7 0 0 0 6.4 6" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="sinus"/>",
 }
 `;
 
@@ -140,7 +140,7 @@ exports[`symbolen voor voeding en beveiliging > snapshot: teller 1`] = `
       "y": 0,
     },
   },
-  "svg": "<line x1="5" y1="12" x2="5" y2="10.5" stroke="currentColor" stroke-width="0.35" fill="none"/><rect x="0" y="1.5" width="10" height="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><text x="5" y="7.4" font-size="2.5" text-anchor="middle" font-family="sans-serif" fill="currentColor">kWh</text>",
+  "svg": "<line x1="5" y1="12" x2="5" y2="10.5" stroke="currentColor" stroke-width="0.35" fill="none"/><rect x="0" y="1.5" width="10" height="9" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="5" y1="1.5" x2="5" y2="0" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="0" y1="3" x2="10" y2="3" stroke="currentColor" stroke-width="0.35" fill="none" data-rol="band"/><text x="5" y="7.4" font-size="2.5" text-anchor="middle" font-family="sans-serif" fill="currentColor">kWh</text>",
 }
 `;
 

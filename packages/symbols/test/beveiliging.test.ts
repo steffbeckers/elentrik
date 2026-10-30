@@ -99,8 +99,8 @@ describe("symbolen voor voeding en beveiliging", () => {
     expect(tekenSymbool(differentieel(2)).svg).toContain(">ΔI</text>");
   });
 
-  test("teller toont kWh en aansluiting toont ~", () => {
+  test("teller toont kWh en aansluiting toont een sinus als pad", () => {
     expect(tekenSymbool(teller).svg).toContain(">kWh</text>");
-    expect(tekenSymbool(aansluiting).svg).toContain(">~</text>");
+    expect(tekenSymbool(aansluiting).svg).toContain('data-rol="sinus"');
   });
 });

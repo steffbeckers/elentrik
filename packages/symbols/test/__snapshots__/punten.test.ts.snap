@@ -644,6 +644,6 @@ exports[`symbolen voor punten, leiding en onderbord > snapshot: verdeelbord 1`] 
       "y": 0,
     },
   },
-  "svg": "<rect x="0" y="0" width="12" height="6" stroke="currentColor" stroke-width="0.35" fill="none"/><line x1="0" y1="1.5" x2="12" y2="1.5" stroke="currentColor" stroke-width="0.35" fill="none"/>",
+  "svg": "<rect x="0" y="0" width="12" height="6" stroke="currentColor" stroke-width="0.35" fill="none"/>",
 }
 `;
