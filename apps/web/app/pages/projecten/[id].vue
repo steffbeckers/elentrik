@@ -67,6 +67,8 @@ const autosave = useAutosave({
   dupliceer: api.dupliceer,
   maakNieuw: api.maakUitDocument,
   naarProject: async (kopieId) => {
+    // Het werk staat nu in de kopie of het nieuwe project: dat verlaten vraagt niets.
+    vertrekBevestigd = true;
     await navigateTo(`/projecten/${kopieId}`);
   },
   gebruikerId,
@@ -218,6 +220,20 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
 // --- Project elders verwijderd -----------------------------------------------------
 
 const nieuwProjectBezig = ref(false);
+
+/**
+ * "Terug naar de projecten" in de melding is een uitdrukkelijke keuze om het werk los te laten: alleen
+ * die knop slaat de vertrekvraag over. Het tabblad sluiten, de pijl in de balk, van bedrijf wisselen en
+ * uitloggen vragen nog wel, want het concept van een verwijderd project is nooit meer te openen.
+ */
+function terugNaarProjecten(): void {
+  vertrekBevestigd = true;
+}
+
+/** Bij een mislukte conceptschrijfactie (status onbewaard) staat het werk alleen nog in het geheugen. */
+const verwijderdUitleg = computed(() =>
+  autosave.status.value === "onbewaard" ? t("editor.verwijderd.uitlegNietLokaal") : t("editor.verwijderd.uitleg"),
+);
 
 /**
  * Het project werd elders verwijderd: het lokale document wordt een nieuw project (met de plannen van
@@ -463,7 +479,7 @@ onBeforeUnmount(() => {
         orientation="horizontal"
         class="rounded-none border-b border-default py-2"
         :title="$t('editor.verwijderd.melding')"
-        :description="$t('editor.verwijderd.uitleg')"
+        :description="verwijderdUitleg"
         data-testid="verwijderd-melding"
       >
         <template #actions>
@@ -484,6 +500,7 @@ onBeforeUnmount(() => {
             to="/"
             :label="$t('editor.verwijderd.terug')"
             data-testid="verwijderd-terug"
+            @click="terugNaarProjecten"
           />
         </template>
       </UAlert>

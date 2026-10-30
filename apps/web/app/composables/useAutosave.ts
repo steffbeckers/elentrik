@@ -36,7 +36,9 @@ import {
  *   Lukt het concept niet (of niet meer), dan is de status `onbewaard`; `alleenLezen` blijft dan true.
  * - `verwijderd`: de server antwoordde 404: het project is intussen elders verwijderd. Het werk staat in het
  *   concept; er volgt geen nieuwe poging. De editor biedt `bewaarAlsNieuwProject()` of terug naar de projecten
- *   aan, en verlaten vraagt niets meer: er is op de server niets meer om te bewaren.
+ *   aan. Verlaten vraagt nog altijd om bevestiging (het concept van een verwijderd project is nooit meer te
+ *   openen), behalve via de uitdrukkelijke keuze "Terug naar de projecten". Lukt het concept niet (of niet
+ *   meer), dan is de status `onbewaard`; `verwijderd` blijft dan true.
  */
 export type AutosaveStatus =
   | "opgeslagen"
@@ -162,8 +164,9 @@ const BETALING_VEREIST = 402;
  * of de gebruiker de pagina echt wil verlaten.
  */
 export function waarschuwBijVerlaten(status: AutosaveStatus): boolean {
-  // Bij `verwijderd` is er op de server niets meer om te bewaren; het concept blijft lokaal staan.
-  return status !== "opgeslagen" && status !== "verwijderd";
+  // Ook bij `verwijderd`: het concept van een verwijderd project kan nooit meer geopend worden. Alleen
+  // de uitdrukkelijke keuze "Terug naar de projecten" slaat de vraag over (dat beslist de pagina).
+  return status !== "opgeslagen";
 }
 
 /**
@@ -222,7 +225,16 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     return conceptGelukt ? "alleen-lezen" : "onbewaard";
   }
 
+  /** Zoals `alleenLezenStatus`, voor een verwijderd project. */
+  function verwijderdStatus(): AutosaveStatus {
+    return conceptGelukt ? "verwijderd" : "onbewaard";
+  }
+
   function werkOfflineStatusBij(): void {
+    if (verwijderd.value) {
+      if (status.value === "verwijderd" || status.value === "onbewaard") status.value = verwijderdStatus();
+      return;
+    }
     if (alleenLezen.value) {
       if (status.value === "alleen-lezen" || status.value === "onbewaard") status.value = alleenLezenStatus();
       return;
@@ -371,7 +383,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           verwijderd.value = true;
           afgemeld.value = false;
           alleenLezen.value = false;
-          status.value = "verwijderd";
+          status.value = verwijderdStatus();
           const huidig = store.document;
           if (huidig !== null) {
             schrijfConcept(id, { document: huidig, versie: store.versie, naam: store.naam, tijd: Date.now() });
@@ -513,17 +525,28 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       let teller = store.gewijzigdSindsOpslaan;
       const nieuw = await maakNieuw({ naam: store.naam, document: store.document! });
       let versie = nieuw.versie;
-      while (store.gewijzigdSindsOpslaan !== teller) {
-        teller = store.gewijzigdSindsOpslaan;
+      // Het nieuwe project bestaat: vanaf hier nooit een tweede maken. Lukt het bewaren van een latere
+      // wijziging niet, dan gaat die naar het concept van het nieuwe project (de editor daar biedt het
+      // aan) en navigeren we toch.
+      const naarNieuw = (document: InstallatieDocument): InstallatieDocument => ({
+        ...metNieuweBestandIds(document, nieuw.bestandIds),
+        id: nieuw.documentId,
+      });
+      try {
+        while (store.gewijzigdSindsOpslaan !== teller) {
+          teller = store.gewijzigdSindsOpslaan;
+          const document = store.document;
+          if (document === null) break;
+          const resultaat = await bewaar(nieuw.id, versie, { naam: store.naam, document: naarNieuw(document) });
+          versie = resultaat.versie;
+        }
+        bewaardeTeller = store.gewijzigdSindsOpslaan;
+      } catch {
         const document = store.document;
-        if (document === null) return;
-        const resultaat = await bewaar(nieuw.id, versie, {
-          naam: store.naam,
-          document: { ...metNieuweBestandIds(document, nieuw.bestandIds), id: nieuw.documentId },
-        });
-        versie = resultaat.versie;
+        if (document !== null) {
+          schrijfConcept(nieuw.id, { document: naarNieuw(document), versie, naam: store.naam, tijd: Date.now() });
+        }
       }
-      bewaardeTeller = store.gewijzigdSindsOpslaan;
       await wisConceptVeilig(id);
       await naarProject(nieuw.id);
     });

@@ -102,15 +102,30 @@ test("'Terug naar de projecten' vraagt niets over onbewaarde wijzigingen, en het
   expect(sleutels.some((sleutel) => sleutel.includes(id))).toBe(true);
 });
 
-test("de bovenste pijl 'Naar de projecten' vraagt ook niets", async ({ page, request }) => {
-  await openVerwijderdProject(page, request, "pijl");
+test("de pijl in de balk vraagt nog wel om bevestiging: het concept van een verwijderd project is nooit meer te openen", async ({
+  page,
+  request,
+}) => {
+  const { id } = await openVerwijderdProject(page, request, "pijl");
   await expect(page.getByTestId("verwijderd-melding")).toBeVisible({ timeout: 15_000 });
   const dialogen: string[] = [];
+  let accepteer = false;
   page.on("dialog", async (dialog) => {
     dialogen.push(dialog.message());
-    await dialog.dismiss();
+    if (accepteer) await dialog.accept();
+    else await dialog.dismiss();
   });
-  await page.getByRole("link", { name: "Naar de projecten", exact: true }).click();
+
+  // Annuleren houdt de gebruiker in de editor, met de melding.
+  const pijl = page.getByRole("link", { name: "Naar de projecten", exact: true });
+  await pijl.click();
+  await expect.poll(() => dialogen).toEqual([bevestiging]);
+  await expect(page).toHaveURL(new RegExp(`/projecten/${id}$`));
+  await expect(page.getByTestId("verwijderd-melding")).toBeVisible();
+
+  // Bevestigen verlaat de pagina.
+  accepteer = true;
+  await pijl.click();
   await expect(page).toHaveURL(/\/$/);
-  expect(dialogen).toEqual([]);
+  expect(dialogen).toEqual([bevestiging, bevestiging]);
 });

@@ -92,6 +92,7 @@
     "verwijderd": {
       "melding": "This project was deleted.",
       "uitleg": "Your changes are still kept locally. Save them as a new project, or go back to the projects.",
+      "uitlegNietLokaal": "Your changes could not be kept locally either and only exist in memory. Save them as a new project now and do not close this window.",
       "nieuwProject": "Save as new project",
       "terug": "Back to the projects"
     },

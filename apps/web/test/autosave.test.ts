@@ -1235,7 +1235,7 @@ describe("useAutosave: foutsoorten", () => {
 });
 
 describe("waarschuwBijVerlaten", () => {
-  test.each(["bezig", "lokaal", "onbewaard", "conflict", "fout", "alleen-lezen"] as const)(
+  test.each(["bezig", "lokaal", "onbewaard", "conflict", "fout", "alleen-lezen", "verwijderd"] as const)(
     "status %s: waarschuwen bij het verlaten",
     (status) => {
       expect(waarschuwBijVerlaten(status)).toBe(true);
@@ -1246,9 +1246,6 @@ describe("waarschuwBijVerlaten", () => {
     expect(waarschuwBijVerlaten("opgeslagen")).toBe(false);
   });
 
-  test("status verwijderd: geen waarschuwing (op de server is er niets meer om te bewaren)", () => {
-    expect(waarschuwBijVerlaten("verwijderd")).toBe(false);
-  });
 });
 
 describe("useAutosave: project elders verwijderd (404)", () => {
@@ -1292,15 +1289,28 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     expect(autosave.status.value).toBe("verwijderd");
   });
 
-  test("een kapot conceptarchief verandert de status niet", async () => {
+  test("een kapot conceptarchief: status onbewaard (verwijderd blijft true), en na een gelukte schrijfactie weer verwijderd", async () => {
+    let stuk = true;
     const concepten = {
       bewaarConcept: vi.fn(async () => {
-        throw new Error("IndexedDB kapot");
+        if (stuk) throw new Error("IndexedDB kapot");
       }),
       wisConcept: vi.fn(async () => {}),
     };
-    const { autosave } = await verwijderdeOpzet({ concepten });
+    const { store, bewaar, autosave } = await verwijderdeOpzet({ concepten });
+    expect(autosave.status.value).toBe("onbewaard");
+    expect(autosave.verwijderd.value).toBe(true);
+    // Het werk staat alleen in het geheugen: verlaten vraagt de strengste bevestiging.
+    expect(waarschuwBijVerlaten(autosave.status.value)).toBe(true);
+    expect(vertrekBevestiging(autosave.status.value)).toBe("editor.vertrek.bevestigingOnbewaard");
+    expect(bewaar).toHaveBeenCalledTimes(1);
+
+    stuk = false;
+    wijzig(store, "b");
+    await leeg();
     expect(autosave.status.value).toBe("verwijderd");
+    expect(autosave.verwijderd.value).toBe(true);
+    expect(bewaar).toHaveBeenCalledTimes(1);
   });
 
   test("stop bewaart niets meer en laat het concept staan", async () => {
@@ -1312,10 +1322,10 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     expect((await conceptVan("p1"))?.naam).toBe("a");
   });
 
-  test("verlaten vraagt niets: geen waarschuwing en geen bevestiging bij wisselen of uitloggen", async () => {
+  test("verlaten vraagt nog altijd: het concept van een verwijderd project is nooit meer te openen", async () => {
     const { autosave } = await verwijderdeOpzet();
-    expect(waarschuwBijVerlaten(autosave.status.value)).toBe(false);
-    expect(vertrekBevestiging(autosave.status.value)).toBeNull();
+    expect(waarschuwBijVerlaten(autosave.status.value)).toBe(true);
+    expect(vertrekBevestiging(autosave.status.value)).toBe("editor.vertrek.bevestiging");
   });
 
   test("een vers geladen project (teller 0) wist de status verwijderd", async () => {
@@ -1383,6 +1393,27 @@ describe("useAutosave: project elders verwijderd (404)", () => {
       rasterBestandId: "nieuw-r",
     });
     expect(naarProject).toHaveBeenCalledWith("nieuw1");
+    expect(await conceptVan("p1")).toBeUndefined();
+  });
+
+  test("mislukt het bewaren van een latere wijziging, dan toch naar het nieuwe project: geen tweede project, de wijziging in zijn concept", async () => {
+    const { store, bewaar, maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    maakNieuw.mockImplementationOnce(async () => {
+      wijzig(store, "Tijdens");
+      return { id: "nieuw1", versie: 1, documentId: NIEUW_DOC_ID, bestandIds: {} };
+    });
+    bewaar.mockRejectedValueOnce(Object.assign(new Error("netwerk"), { status: 500 }));
+
+    await autosave.bewaarAlsNieuwProject();
+
+    expect(maakNieuw).toHaveBeenCalledTimes(1);
+    expect(naarProject).toHaveBeenCalledTimes(1);
+    expect(naarProject).toHaveBeenCalledWith("nieuw1");
+    // De wijziging staat in het concept van het nieuwe project, met zijn document-id en versie.
+    const nieuwConcept = await conceptVan("nieuw1");
+    expect(nieuwConcept).toMatchObject({ naam: "Tijdens", versie: 1 });
+    expect(nieuwConcept?.document.id).toBe(NIEUW_DOC_ID);
+    // Het concept van het verwijderde project is weg.
     expect(await conceptVan("p1")).toBeUndefined();
   });
 

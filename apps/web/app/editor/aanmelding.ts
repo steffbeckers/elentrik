@@ -59,8 +59,6 @@ export function vertrekBevestiging(
   status: AutosaveStatus,
 ): "editor.vertrek.bevestiging" | "editor.vertrek.bevestigingOnbewaard" | null {
   if (status === "opgeslagen") return null;
-  // Het project bestaat niet meer: er is op de server niets om te bewaren, het concept blijft lokaal.
-  if (status === "verwijderd") return null;
   // Ook het lokale concept mislukte: dan gaat het werk echt verloren.
   if (status === "onbewaard") return "editor.vertrek.bevestigingOnbewaard";
   return "editor.vertrek.bevestiging";

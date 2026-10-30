@@ -92,6 +92,7 @@
     "verwijderd": {
       "melding": "Ce projet a été supprimé.",
       "uitleg": "Vos modifications sont toujours conservées localement. Enregistrez-les comme nouveau projet ou retournez aux projets.",
+      "uitlegNietLokaal": "Vos modifications n'ont pas pu être conservées localement non plus et ne sont plus qu'en mémoire. Enregistrez-les maintenant comme nouveau projet et ne fermez pas cette fenêtre.",
       "nieuwProject": "Enregistrer comme nouveau projet",
       "terug": "Retour aux projets"
     },
