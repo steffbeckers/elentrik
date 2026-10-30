@@ -16,27 +16,19 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import type { Toegang } from "../../shared/abonnement";
+import type { Mij, MijOrganisatie, Rol } from "../../shared/mij";
 import type { Taal } from "../../shared/taal";
 import type { SessieInfo } from "../sessie/bestemming";
 import { foutStatus } from "../sessie/fouten";
 
-export type Rol = "eigenaar" | "lid";
+export type { Rol };
 
 export type Gebruiker = { id: string; naam: string; email: string };
 
 /** De gebruiker zoals /api/mij hem geeft: ook of zijn gratis proefperiode al gebruikt is, en zijn taal. */
 export type SessieGebruiker = Gebruiker & { proefGebruikt?: boolean; taal?: Taal };
 
-export type Organisatie = { id: string; naam: string; rol: Rol; toegang: Toegang };
-
-/** Het antwoord van GET /api/mij. */
-export type Mij = {
-  gebruiker: Gebruiker & { proefGebruikt: boolean; taal: Taal };
-  organisaties: Organisatie[];
-  actieveOrganisatieId: string | null;
-  /** Staan abonnementen aan? Uit is "zoals vóór plan 7". */
-  abonnementenIngeschakeld: boolean;
-};
+export type Organisatie = MijOrganisatie;
 
 export type SessieApi = {
   /** GET /api/mij; zonder sessie een fout met status 401. */

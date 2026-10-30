@@ -369,13 +369,7 @@
       "email": "E-mail"
     },
     "adres": {
-      "titel": "Adresse",
-      "straat": "Rue",
-      "nummer": "Numéro",
-      "bus": "Boîte",
-      "postcode": "Code postal",
-      "gemeente": "Commune",
-      "land": "Pays"
+      "titel": "Adresse"
     },
     "fouten": {
       "naamVerplicht": "Donnez un nom à votre entreprise.",
@@ -810,6 +804,8 @@
     "UITNODIGING_ANDER_ADRES": "Cette invitation est destinée à une autre adresse.",
     "EMAIL_NIET_BEVESTIGD": "Confirmez d'abord votre adresse e-mail, puis réessayez.",
     "ACCOUNT_BESTAAT": "Un compte existe déjà avec cette adresse. Connectez-vous pour accepter l'invitation.",
+    "UITNODIGINGEN_VOL": "Trop d'invitations sont déjà en attente. Annulez-en une ou attendez qu'elles soient acceptées.",
+    "LEDEN_VOL": "Cette entreprise a atteint le nombre maximal de membres.",
     "TE_VEEL_UITNODIGINGEN": "Trop d'invitations. Réessayez plus tard.",
     "TE_VEEL_POGINGEN": "Trop de tentatives. Patientez un instant et réessayez.",
     "INLOGLINK_MISLUKT": "La connexion avec le lien n'a pas abouti. Demandez un nouveau lien.",
@@ -820,6 +816,8 @@
     "PASSWORD_TOO_SHORT": "Un mot de passe doit contenir au moins 10 caractères.",
     "PASSWORD_TOO_LONG": "Un mot de passe doit contenir au maximum 128 caractères.",
     "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Un compte existe déjà avec cette adresse.",
-    "INVALID_EMAIL": "Saisissez une adresse e-mail valide."
+    "INVALID_EMAIL": "Saisissez une adresse e-mail valide.",
+    "ORGANIZATION_ALREADY_EXISTS": "Cette entreprise n'a pas pu être créée car elle existe déjà. Réessayez.",
+    "ORGANIZATION_SLUG_ALREADY_TAKEN": "Cette entreprise n'a pas pu être créée car elle existe déjà. Réessayez."
   }
 }

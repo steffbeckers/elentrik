@@ -369,13 +369,7 @@
       "email": "E-mail"
     },
     "adres": {
-      "titel": "Adres",
-      "straat": "Straat",
-      "nummer": "Nummer",
-      "bus": "Bus",
-      "postcode": "Postcode",
-      "gemeente": "Gemeente",
-      "land": "Land"
+      "titel": "Adres"
     },
     "fouten": {
       "naamVerplicht": "Geef je bedrijf een naam.",
@@ -810,6 +804,8 @@
     "UITNODIGING_ANDER_ADRES": "Deze uitnodiging is voor een ander adres.",
     "EMAIL_NIET_BEVESTIGD": "Bevestig eerst je e-mailadres en probeer het dan opnieuw.",
     "ACCOUNT_BESTAAT": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
+    "UITNODIGINGEN_VOL": "Er staan al te veel uitnodigingen open. Trek er een in of wacht tot ze aanvaard zijn.",
+    "LEDEN_VOL": "Dit bedrijf heeft het maximum aantal leden bereikt.",
     "TE_VEEL_UITNODIGINGEN": "Te veel uitnodigingen. Probeer het straks opnieuw.",
     "TE_VEEL_POGINGEN": "Te veel pogingen. Wacht even en probeer het opnieuw.",
     "INLOGLINK_MISLUKT": "Inloggen met de link is niet gelukt. Vraag een nieuwe link aan.",
@@ -820,6 +816,8 @@
     "PASSWORD_TOO_SHORT": "Een wachtwoord telt minstens 10 tekens.",
     "PASSWORD_TOO_LONG": "Een wachtwoord telt hoogstens 128 tekens.",
     "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Er bestaat al een account met dit adres.",
-    "INVALID_EMAIL": "Vul een geldig e-mailadres in."
+    "INVALID_EMAIL": "Vul een geldig e-mailadres in.",
+    "ORGANIZATION_ALREADY_EXISTS": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw.",
+    "ORGANIZATION_SLUG_ALREADY_TAKEN": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw."
   }
 }

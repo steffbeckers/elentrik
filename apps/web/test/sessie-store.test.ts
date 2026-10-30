@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { useSessieStore, type Mij, type SessieApi } from "../app/stores/sessie";
+import type { Mij } from "../shared/mij";
+import { useSessieStore, type SessieApi } from "../app/stores/sessie";
 
 const MIJ: Mij = {
   gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", proefGebruikt: true, taal: "nl" as const },

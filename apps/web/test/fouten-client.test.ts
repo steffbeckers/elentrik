@@ -44,6 +44,12 @@ describe("vertaalFout", () => {
     expect(vertaalFout(fout, t)).toBe("[fouten.INVALID_EMAIL_OR_PASSWORD]");
   });
 
+  test("een nieuw bedrijf met een bestaande slug (Better Auth, rechtstreeks vanuit de client): de vertaling", () => {
+    for (const code of ["ORGANIZATION_ALREADY_EXISTS", "ORGANIZATION_SLUG_ALREADY_TAKEN"]) {
+      expect(vertaalFout({ status: 400, code, message: "Organization already exists" }, t)).toBe(`[fouten.${code}]`);
+    }
+  });
+
   test("een onbekende code: fouten.onbekend", () => {
     expect(vertaalFout({ data: { code: "IETS_NIEUWS" }, statusMessage: "Iets nieuws" }, t)).toBe("[fouten.onbekend]");
   });

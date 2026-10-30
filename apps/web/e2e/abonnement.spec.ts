@@ -2,6 +2,7 @@
 // global-setup.ts). De server draait met Stripe aan, dus elke nieuwe organisatie krijgt een proef.
 // Een verlopen proef zetten we rechtstreeks in de e2e-database.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import type { Mij } from "../shared/mij";
 import { metE2eDatabase, zetProefEinde, zetVrijgesteld } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from "./hulp/inloggen";
@@ -12,10 +13,8 @@ gebruikTestgebruiker(test, { voorvoegsel: "abonnement", bedrijf: "Abonnement Ele
 const run = Date.now();
 const DAG_MS = 24 * 3600 * 1000;
 
-type Mij = { actieveOrganisatieId: string };
-
 async function organisatieId(request: APIRequestContext): Promise<string> {
-  return ((await (await request.get("/api/mij")).json()) as Mij).actieveOrganisatieId;
+  return ((await (await request.get("/api/mij")).json()) as Mij).actieveOrganisatieId!;
 }
 
 test.afterAll(async ({ request }) => {

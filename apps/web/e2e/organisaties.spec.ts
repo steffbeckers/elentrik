@@ -2,6 +2,7 @@
 // (met "Bedrijf Alfa") komt uit `storageState`, gebruiker B (met "Bedrijf Beta") wordt in
 // `beforeAll` aangemaakt; niemand logt per test in, zodat de rate limiter nooit in de weg zit.
 import { expect, test, type APIRequestContext, type Browser } from "@playwright/test";
+import type { Mij } from "../shared/mij";
 import { zetVrijgesteld } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres, type StorageState } from "./hulp/inloggen";
@@ -27,8 +28,6 @@ test.beforeAll(async ({ playwright }) => {
     await request.dispose();
   }
 });
-
-type Mij = { organisaties: { id: string; naam: string }[]; actieveOrganisatieId: string };
 
 async function leesMij(request: APIRequestContext): Promise<Mij> {
   return (await (await request.get("/api/mij")).json()) as Mij;

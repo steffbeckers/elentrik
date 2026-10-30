@@ -7,8 +7,9 @@
 // zet ook de cookie `elentrik_taal`). Tijdens SSR gebeurt dat in de middleware, vóór het renderen:
 // de eerste HTML is dus al in de taal van het account.
 import { appendResponseHeader } from "h3";
+import type { Mij } from "../../shared/mij";
 import { haalMijOpServer } from "~/sessie/ssr";
-import { useSessieStore, type Mij } from "~/stores/sessie";
+import { useSessieStore } from "~/stores/sessie";
 
 export default defineNuxtPlugin((nuxtApp) => {
   const event = import.meta.server ? useRequestEvent() : undefined;
