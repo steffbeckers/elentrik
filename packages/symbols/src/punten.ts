@@ -109,40 +109,63 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
 }
 
 /**
- * Lichtpunt: een cirkel (r = 3) met een kruis erin en een geleider van `in` onderaan naar `uit`
- * bovenaan. De soort voegt iets toe rechts van die geleider, boven de cirkel ("led": tekst, "tl":
- * balk, "spot": driehoek) of in het midden ("noodverlichting": gevulde stip). 14 × 10 mm.
+ * Lichtpunt volgens G in AREI tabel 2.23, 14 × 10 mm: een kruis (×) aan het einde van de
+ * toevoerleiding, zonder cirkel. De leiding loopt van `in` door het snijpunt van het kruis tot
+ * `uit`. De soort verandert het kruis:
+ * - "tl": het fluorescentietoestel, een lijn dwars op de leiding met een streepje aan beide
+ *   uiteinden, zonder kruis;
+ * - "spot": de projector, een kruis in een cirkel (⊗) met een boog aan de kant van `in`;
+ * - "noodverlichting": het veiligheidsverlichtingstoestel, een kruis met een gevulde stip;
+ * - "led": een kruis met de tekst "LED" (staat niet in de tabel).
+ * Het aantal komt als tekst "n×" links van het symbool.
  */
 export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
   const breedte = 14;
   const hoogte = 10;
   const x = breedte / 2;
   const cy = 5;
-  const r = 3;
-  const k = r * Math.SQRT1_2;
-  let svg =
-    lijn(x, hoogte, x, cy + r) +
-    cirkel(x, cy, r) +
-    lijn(x, cy - r, x, 0) +
-    lijn(x - k, cy + k, x + k, cy - k) +
-    lijn(x - k, cy - k, x + k, cy + k);
+  let svg = lijn(x, hoogte, x, 0);
+  /** De twee diagonalen van het kruis, met halve armlengte `a` rond (x, cy). */
+  const kruis = (a: number) =>
+    lijn(x - a, cy + a, x + a, cy - a, { data: { rol: "kruis" } }) +
+    lijn(x - a, cy - a, x + a, cy + a, { data: { rol: "kruis" } });
   switch (node.soort) {
+    case "tl": {
+      // Een lijn van 6 mm dwars op de leiding, met een streepje van 2 mm aan elk uiteinde.
+      const half = 3;
+      svg +=
+        lijn(x - half, cy, x + half, cy, { data: { rol: "tl" } }) +
+        lijn(x - half, cy - 1, x - half, cy + 1, { data: { rol: "tl-einde" } }) +
+        lijn(x + half, cy - 1, x + half, cy + 1, { data: { rol: "tl-einde" } });
+      break;
+    }
+    case "spot": {
+      // De cirkel (r = 2,5) met het kruis tot op de rand; de boog (r = 3,6) is een stuk van 110°
+      // rond hetzelfde middelpunt, onderlangs aan de kant van `in` (sweep 0, van links naar rechts).
+      const r = 2.5;
+      const boogR = 3.6;
+      const hoek = (55 * Math.PI) / 180;
+      const dx = boogR * Math.sin(hoek);
+      const dy = boogR * Math.cos(hoek);
+      svg +=
+        cirkel(x, cy, r) +
+        kruis(r * Math.SQRT1_2) +
+        pad(
+          `M${getal(x - dx)} ${getal(cy + dy)} A${getal(boogR)} ${getal(boogR)} 0 0 0 ${getal(x + dx)} ${getal(cy + dy)}`,
+          { data: { rol: "projector" } },
+        );
+      break;
+    }
     case "led":
-      // Basislijn 1,46: de tekst (1,8 mm) staat rechtop in de ruimte boven de cirkel.
-      svg += tekst(x + 1, 1.46, "LED", { anker: "start", grootte: 1.8 });
-      break;
-    case "tl":
-      svg += rechthoek(x + 1.2, 0.6, 3.8, 0.8);
-      break;
-    case "spot":
-      // De punt van de driehoek wijst net als de tekst omhoog.
-      svg += pad(punten([x + 3.75, 0.2], [x + 5, 1.7], [x + 2.5, 1.7]));
+      // Basislijn cy + 0,6: de tekst (1,8 mm) staat rechtop naast het kruis.
+      svg += kruis(2.5) + tekst(x + 3, cy + 0.6, "LED", { anker: "start", grootte: 1.8 });
       break;
     case "noodverlichting":
-      svg += cirkel(x, cy, 0.8, { gevuld: true });
+      svg += kruis(2.5) + cirkel(x, cy, 0.8, { gevuld: true, data: { rol: "nood" } });
       break;
     case "standaard":
     case undefined:
+      svg += kruis(2.5);
       break;
   }
   svg += aantalTekst(node.aantal, cy + 0.8);

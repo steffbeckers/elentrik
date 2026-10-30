@@ -75,6 +75,15 @@ const varianten: ReadonlyArray<[string, Node]> = [
   ["verdeelbord", verdeelbord],
 ];
 
+type Lijn = { x1: number; y1: number; x2: number; y2: number; rol: string | undefined };
+const lijnen = (svg: string): Lijn[] =>
+  [...svg.matchAll(/<line([^>]*)>/g)].map(([, a = ""]) => {
+    const n = (s: string) => Number(a.match(new RegExp(`${s}="([^"]*)"`))?.[1]);
+    return { x1: n("x1"), y1: n("y1"), x2: n("x2"), y2: n("y2"), rol: a.match(/data-rol="([^"]*)"/)?.[1] };
+  });
+const metRol = (svg: string, rol: string) => lijnen(svg).filter((l) => l.rol === rol);
+const waterpas = (l: Lijn) => Math.abs(l.y1 - l.y2) < 1e-9;
+
 describe("symbolen voor punten, leiding en onderbord", () => {
   test.each(varianten)("snapshot: %s", (_naam, node) => {
     expect(tekenSymbool(node)).toMatchSnapshot();
@@ -127,15 +136,6 @@ describe("symbolen voor punten, leiding en onderbord", () => {
   describe("contactdoos", () => {
     const svgVan = (opties: DoosOpties) => tekenSymbool(doos(opties)).svg;
     const aantalVan = (svg: string, rol: string) => svg.match(new RegExp(`data-rol="${rol}"`, "g"))?.length ?? 0;
-
-    type Lijn = { x1: number; y1: number; x2: number; y2: number; rol: string | undefined };
-    const lijnen = (svg: string): Lijn[] =>
-      [...svg.matchAll(/<line([^>]*)>/g)].map(([, a = ""]) => {
-        const n = (s: string) => Number(a.match(new RegExp(`${s}="([^"]*)"`))?.[1]);
-        return { x1: n("x1"), y1: n("y1"), x2: n("x2"), y2: n("y2"), rol: a.match(/data-rol="([^"]*)"/)?.[1] };
-      });
-    const metRol = (svg: string, rol: string) => lijnen(svg).filter((l) => l.rol === rol);
-    const waterpas = (l: Lijn) => Math.abs(l.y1 - l.y2) < 1e-9;
 
     /** De boog: middelpunt, straal en de y van de top (het punt het dichtst bij `in`). */
     function boog(svg: string) {
@@ -242,47 +242,126 @@ describe("symbolen voor punten, leiding en onderbord", () => {
 
   describe("lichtpunt", () => {
     const svgVan = (soort?: NodeVan<"lichtpunt">["soort"], aantal = 1) => tekenSymbool(licht(soort, aantal)).svg;
+    const kruis = (svg: string) => metRol(svg, "kruis");
+    /** De lijn van `in` naar `uit`: loodrecht, zonder rol. */
+    const leidingLijn = (svg: string) =>
+      lijnen(svg).find((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7 && Math.abs(l.y1 - l.y2) === 10);
 
-    test("is een cirkel met een kruis erin", () => {
-      const svg = svgVan();
-      expect(svg).toContain('<circle cx="7" cy="5" r="3"');
-      expect(svg.match(/<line /g)).toHaveLength(4);
-    });
-
-    test("de geleider loopt rechtdoor van cirkel naar uit, en de versiering ligt rechts ervan", () => {
-      expect(svgVan()).toContain('<line x1="7" y1="2" x2="7" y2="0"');
-      expect(svgVan("tl")).toMatch(/<rect x="8\.2" y="0\.6" width="3\.8" height="0\.8"/);
-      const padGetallen = [...(svgVan("spot").match(/<path d="([^"]+)"/)?.[1] ?? "").matchAll(/-?[\d.]+/g)].map((m) =>
-        Number(m[0]),
-      );
-      const padX = padGetallen.filter((_, i) => i % 2 === 0);
-      expect(padX).toHaveLength(3);
-      expect(Math.min(...padX)).toBeGreaterThanOrEqual(9.5);
-      expect(Math.max(...padX)).toBeLessThanOrEqual(12);
-      expect(svgVan("led")).toMatch(/<text x="8" y="1\.46" font-size="1\.8" text-anchor="start"/);
+    test("standaard en zonder soort: een kruis zonder cirkel", () => {
+      for (const soort of [undefined, "standaard"] as const) {
+        const svg = svgVan(soort);
+        expect(svg).not.toContain("<circle");
+        const [a, b, ...rest] = kruis(svg);
+        expect(rest).toHaveLength(0);
+        expect(a).toBeDefined();
+        expect(b).toBeDefined();
+        for (const l of [a!, b!]) {
+          // Diagonaal, en het midden van het lijnstuk ligt op x = breedte / 2.
+          expect(l.x1).not.toBe(l.x2);
+          expect(l.y1).not.toBe(l.y2);
+          expect((l.x1 + l.x2) / 2).toBeCloseTo(7, 9);
+        }
+        // Ze snijden elkaar: de ene loopt omhoog, de andere omlaag, rond hetzelfde midden.
+        expect(Math.sign((a!.x2 - a!.x1) * (a!.y2 - a!.y1))).toBe(-Math.sign((b!.x2 - b!.x1) * (b!.y2 - b!.y1)));
+        expect((a!.y1 + a!.y2) / 2).toBeCloseTo((b!.y1 + b!.y2) / 2, 9);
+        // De leiding loopt van in naar uit en gaat door het snijpunt.
+        const l = leidingLijn(svg);
+        expect(l).toBeDefined();
+        const midden = (a!.y1 + a!.y2) / 2;
+        expect(Math.min(l!.y1, l!.y2)).toBeLessThan(midden);
+        expect(Math.max(l!.y1, l!.y2)).toBeGreaterThan(midden);
+      }
     });
 
     test("standaard en zonder soort zijn gelijk", () => {
       expect(svgVan("standaard")).toBe(svgVan());
     });
 
-    test("led toont de tekst LED", () => {
-      expect(svgVan("led")).toContain(">LED</text>");
+    test("led: het kruis plus de tekst LED", () => {
+      const svg = svgVan("led");
+      expect(kruis(svg)).toHaveLength(2);
+      expect(svg).not.toContain("<circle");
+      expect(svg).toContain(">LED</text>");
       expect(svgVan("tl")).not.toContain("LED");
     });
 
-    test("tl heeft een balk, spot een driehoek en noodverlichting een gevulde stip", () => {
-      expect(svgVan("tl")).toContain("<rect");
-      expect(svgVan("spot")).toMatch(/<path d="M[^"]*Z"/);
-      expect(svgVan("noodverlichting")).toMatch(/<circle cx="7" cy="5" r="[^"]+" [^>]*fill="currentColor"/);
-      expect(svgVan("standaard")).not.toContain("<rect");
-      expect(svgVan("standaard")).not.toContain("<path");
+    test("tl: een lijn dwars op de leiding met een streepje aan beide uiteinden, zonder kruis", () => {
+      const svg = svgVan("tl");
+      expect(kruis(svg)).toHaveLength(0);
+      expect(svg).not.toContain("<circle");
+      const tl = metRol(svg, "tl");
+      expect(tl).toHaveLength(1);
+      const [t] = tl as [Lijn];
+      expect(waterpas(t)).toBe(true);
+      // De leiding kruist de lijn in het midden.
+      expect((t.x1 + t.x2) / 2).toBeCloseTo(7, 9);
+      const l = leidingLijn(svg);
+      expect(l).toBeDefined();
+      expect(Math.min(l!.y1, l!.y2)).toBeLessThan(t.y1);
+      expect(Math.max(l!.y1, l!.y2)).toBeGreaterThan(t.y1);
+      // Aan elk uiteinde een kort verticaal streepje, over het uiteinde heen.
+      const einden = metRol(svg, "tl-einde");
+      expect(einden).toHaveLength(2);
+      for (const e of einden) {
+        expect(e.x1).toBeCloseTo(e.x2, 9);
+        expect([t.x1, t.x2].some((x) => Math.abs(x - e.x1) < 1e-9)).toBe(true);
+        expect(Math.abs(e.y2 - e.y1)).toBeLessThan(Math.abs(t.x2 - t.x1));
+        expect(Math.min(e.y1, e.y2)).toBeLessThan(t.y1);
+        expect(Math.max(e.y1, e.y2)).toBeGreaterThan(t.y1);
+      }
+      expect(einden.filter((e) => e.x1 < 7)).toHaveLength(1);
+    });
+
+    test("spot: een cirkel met een kruis erin en een boog aan de kant van in", () => {
+      const svg = svgVan("spot");
+      const cirkels = [...svg.matchAll(/<circle cx="([^"]*)" cy="([^"]*)" r="([^"]*)"/g)];
+      expect(cirkels).toHaveLength(1);
+      const [cx, cy, r] = cirkels[0]!.slice(1).map(Number) as [number, number, number];
+      expect(cx).toBe(7);
+      // Beide diagonalen liggen in de cirkel (de uitvoer is op 0,01 mm afgerond).
+      const k = kruis(svg);
+      expect(k).toHaveLength(2);
+      for (const l of k) {
+        for (const [x, y] of [[l.x1, l.y1], [l.x2, l.y2]] as const) {
+          expect(Math.hypot(x - cx, y - cy)).toBeLessThanOrEqual(r + 0.01);
+        }
+      }
+      // De boog: een pad met rol projector, de uiteinden en de top onder de cirkel (kant van in, y = 10).
+      const m = svg.match(/<path d="M(\S+) (\S+) A(\S+) (\S+) 0 0 (\d) (\S+) (\S+)"[^>]*data-rol="projector"/);
+      expect(m).not.toBeNull();
+      const [x1, y1, br, , sweep, x2, y2] = m!.slice(1).map(Number) as [number, number, number, number, number, number, number];
+      expect(sweep).toBe(0);
+      expect(br).toBeGreaterThan(r);
+      expect(y1).toBeCloseTo(y2, 9);
+      expect(x1).toBeLessThan(x2);
+      // Sweep 0 van links naar rechts loopt onderlangs: de boogmidden ligt op y1 + (de pijl van de boog).
+      const sagitta = br - Math.sqrt(br * br - ((x2 - x1) / 2) ** 2);
+      const topY = y1 + sagitta;
+      expect(topY).toBeGreaterThan(cy);
+      expect(y1).toBeGreaterThan(cy);
+      expect(topY).toBeLessThan(10);
+      // De leiding loopt door.
+      expect(leidingLijn(svg)).toBeDefined();
+    });
+
+    test("noodverlichting: het kruis plus een gevulde stip in het snijpunt, geen andere cirkel", () => {
+      const svg = svgVan("noodverlichting");
+      const k = kruis(svg);
+      expect(k).toHaveLength(2);
+      const cirkels = [...svg.matchAll(/<circle([^>]*)\/>/g)];
+      expect(cirkels).toHaveLength(1);
+      const c = cirkels[0]![1]!;
+      expect(c).toContain('data-rol="nood"');
+      expect(c).toContain('fill="currentColor"');
+      expect(Number(c.match(/cx="([^"]*)"/)?.[1])).toBe(7);
+      expect(Number(c.match(/cy="([^"]*)"/)?.[1])).toBeCloseTo((k[0]!.y1 + k[0]!.y2) / 2, 9);
       expect(svgVan("standaard")).not.toContain('fill="currentColor"');
     });
 
-    test("het aantal wordt alleen getoond vanaf 2", () => {
+    test("het aantal wordt alleen getoond vanaf 2, als tekst n×", () => {
       expect(svgVan("standaard", 1)).not.toContain("<text");
-      expect(svgVan("standaard", 4)).toContain(">4×</text>");
+      expect(svgVan("standaard", 4)).toMatch(/data-rol="aantal"[^>]*>4×<\/text>/);
+      expect(svgVan("tl", 3)).toMatch(/data-rol="aantal"[^>]*>3×<\/text>/);
     });
   });
 
