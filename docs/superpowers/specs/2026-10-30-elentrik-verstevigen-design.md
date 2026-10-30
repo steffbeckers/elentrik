@@ -30,9 +30,12 @@ Daarnaast zijn er kleine fouten waar een installateur in zijn dagelijks werk teg
    - **Projecten in de prullenbak:**
      - een project dat **meer dan 30 dagen** geleden verwijderd werd, wordt definitief gewist;
      - dat omvat de projectrij, de snapshots, de exports, de bestandsrijen en de bestanden op schijf (mijn keuze voor 30 dagen; er is geen herstelknop, dus dit is de bewaartermijn).
-   - **Verweesde planbestanden:** een `plan-origineel` of `plan-raster` ouder dan 7 dagen, waarnaar het huidige document van zijn project en geen enkele snapshot van dat project nog verwijst (bv. een plan dat werd vervangen of verwijderd).
+   - **Verweesde planbestanden:** een `plan-origineel` of `plan-raster` ouder dan **30 dagen**, waarnaar niets meer verwijst (bv. een plan dat werd vervangen of verwijderd). Dat is ruimer dan de 7 dagen van de andere bestanden (mijn keuze): een plan dat alleen in een lokaal concept in de browser staat, en nog niet op de server bewaard is, mag een maand wachten, gelijk aan de bewaartijd van de prullenbak. Logo's en bestanden op schijf zonder rij blijven op 7 dagen.
    - **Oude logo's:** een `logo` ouder dan 7 dagen dat niet het huidige logo van zijn organisatie is.
    - **Bestanden op schijf zonder rij:** een bestand in de opslagmap ouder dan 7 dagen dat in geen enkele rij voorkomt.
+   - **Wat "verwijst ernaar" is:** de scan is globaal (mijn keuze). Een bestand-id in het huidige document van elk project (ook in de prullenbak), in elke snapshot, in de bedrijfsgegevens, in het logo van een organisatie of in een export telt als gebruik. Bij twijfel blijft een bestand staan.
+   - **Een project met bestanden die elders nog gebruikt worden:** gebruikt een ander project, een snapshot of een export van een ander project nog een bestand van een project in de prullenbak (een kopie van vroeger, van voor kopiëren de bestanden meenam), dan wordt dat project overgeslagen en geteld als `geblokkeerd` (mijn keuze). Een verwijzing naar een bestand dat niet meer op schijf staat, blokkeert niet.
+   - **Rem op de bestanden zonder rij:** de taak wist niets als de tabel `bestanden` leeg is, of als ze meer dan de helft van de oude bestanden en meer dan 10 bestanden zou wissen (mijn keuze): dat wijst op een verkeerde combinatie van database en opslagmap, bv. midden in een herstel. Er komt dan een waarschuwing met aantallen. Metadata van de NAS (namen die met `@` of `.` beginnen, zoals `@eaDir`) telt niet als bestand.
    - **Volgorde en logboek:** eerst de rij, dan het bestand (een half mislukte run laat hoogstens een bestand op schijf achter, dat de volgende run opruimt). De taak logt alleen aantallen.
 5. **Sessietokens in de database:**
    - Uitzoeken in Better Auth 1.7.7 of het sessiecookie ondertekend is (token plus een HMAC met `BETTER_AUTH_SECRET`), zodat een token uit een gelekte database zonder het geheim geen geldig cookie oplevert.
@@ -47,6 +50,7 @@ Daarnaast zijn er kleine fouten waar een installateur in zijn dagelijks werk teg
    - De conflictmelding bij een export spreekt niet meer van "lokale wijzigingen" als die er niet zijn.
    - De optie "kopie" bewaart een kopie van de **actuele** versie op de server, niet van de verouderde.
 9. **Project elders verwijderd.** Krijgt automatisch bewaren een 404 (het project is intussen verwijderd), dan toont de editor een duidelijke melding: "Dit project werd verwijderd." Hij biedt twee keuzes aan: "Bewaar als nieuw project" (met de huidige wijzigingen) of "Terug naar de projecten". Hij blijft niet hangen op "fout".
+   - Dupliceren van een project en "Bewaar als nieuw project" kopiëren de planbestanden naar het nieuwe project (eigen bestanden, de id's in het document herschreven), zodat een kopie nooit van het origineel afhangt (mijn keuze). Een kopie van vóór deze aanpak krijgt bij het dupliceren alsnog eigen bestanden.
 10. **Fout tijdens het inloggen met een link.** Faalt er iets na het klikken op een inloglink, dan komt de gebruiker op `/inloggen` met een vertaalde melding en de knop "Stuur een nieuwe link", in plaats van op een kale 500.
 11. **Alleen-lezen (geen abonnement):**
     - de projectgegevens zijn te bekijken in een alleen-lezenversie van de dialoog;

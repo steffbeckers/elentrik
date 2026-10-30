@@ -13,7 +13,8 @@ import { geplandeTakenAan, maakPostgresLock } from "../../taken/lock";
 export default defineTask({
   meta: {
     name: "bestanden:opruimen",
-    description: "Dagelijks de prullenbak (na 30 dagen) en verweesde bestanden (na 7 dagen) definitief wissen",
+    description:
+      "Dagelijks de prullenbak (na 30 dagen), verweesde planbestanden (na 30 dagen) en verweesde logo's en losse bestanden op schijf (na 7 dagen) definitief wissen",
   },
   async run() {
     if (!geplandeTakenAan()) return { result: { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 0 } };
