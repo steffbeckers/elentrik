@@ -23,6 +23,14 @@ describe("vertaalFout", () => {
     expect(vertaalFout(fout, t)).toBe("[fouten.LAATSTE_EIGENAAR]");
   });
 
+  test("PLANBESTAND_ONBEKEND van het bewaren (422): de vertaling", () => {
+    const fout = {
+      status: 422,
+      data: { statusCode: 422, statusMessage: "Het document verwijst naar een planbestand", data: { code: "PLANBESTAND_ONBEKEND" } },
+    };
+    expect(vertaalFout(fout, t)).toBe("[fouten.PLANBESTAND_ONBEKEND]");
+  });
+
   test("de Better Auth-client: de code bovenaan", () => {
     const fout = { status: 401, code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" };
     expect(vertaalFout(fout, t)).toBe("[fouten.INVALID_EMAIL_OR_PASSWORD]");

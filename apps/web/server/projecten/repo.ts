@@ -16,6 +16,7 @@ import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 import type { Db } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { bestanden, projecten } from "../db/schema";
+import { controleerPlanverwijzingen, nieuwePlanIds, planBestandIdsVan } from "./planverwijzingen";
 
 /** Een id in een uuid-kolom: een ander id zou de query laten falen in plaats van niets te vinden. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -126,9 +127,14 @@ function valideerDocument(invoer: unknown): InstallatieDocument {
 }
 
 /**
- * Bewaart een document als `versie` nog de huidige versie is. De controle en de
- * ophoging gebeuren in één UPDATE, zodat gelijktijdige bewaaracties niet kunnen
- * lopen: precies één wint, de andere krijgt CONFLICT.
+ * Bewaart een document als `versie` nog de huidige versie is. Het lezen van het bewaarde document, de
+ * versiecontrole, de controle van de nieuwe planverwijzingen en de ophoging gebeuren in één transactie
+ * met een rijslot (`for update`), zodat gelijktijdige bewaaracties niet kunnen lopen: precies één wint,
+ * de andere krijgt CONFLICT, en tussen de controle en het schrijven kan niets veranderen.
+ *
+ * Een planverwijzing (`origineelBestandId`, `rasterBestandId`) die niet al in het bewaarde document
+ * stond, moet een plan van dit project zijn, anders volgt 422 PLANBESTAND_ONBEKEND (zie
+ * planverwijzingen.ts). Een verwijzing die er al stond, blijft aanvaard.
  */
 export async function bewaarProject(
   db: Db,
@@ -139,35 +145,33 @@ export async function bewaarProject(
 ): Promise<{ versie: number }> {
   const document = valideerDocument(invoer.document);
 
-  const [bijgewerkt] = await db
-    .update(projecten)
-    .set({
-      ...(invoer.naam !== undefined ? { naam: invoer.naam } : {}),
-      klantnaam: document.meta.klant.naam,
-      document,
-      versie: sql`${projecten.versie} + 1`,
-      gewijzigd: sql`now()`,
-    })
-    .where(and(vanOrganisatie(organisatieId, id), eq(projecten.versie, versie)))
-    .returning({ versie: projecten.versie });
-  if (bijgewerkt) return bijgewerkt;
+  return db.transaction(async (tx) => {
+    const [huidig] = await tx
+      .select({ versie: projecten.versie, document: projecten.document })
+      .from(projecten)
+      .where(vanOrganisatie(organisatieId, id))
+      .for("update");
+    if (!huidig) throw new ProjectFout("NIET_GEVONDEN");
+    if (huidig.versie !== versie) throw new ProjectFout("CONFLICT", { versie: huidig.versie });
 
-  const [huidig] = await db
-    .select({ versie: projecten.versie })
-    .from(projecten)
-    .where(vanOrganisatie(organisatieId, id));
-  if (!huidig) throw new ProjectFout("NIET_GEVONDEN");
-  throw new ProjectFout("CONFLICT", { versie: huidig.versie });
+    await controleerPlanverwijzingen(tx, id, nieuwePlanIds(huidig.document as InstallatieDocument, document));
+
+    const [bijgewerkt] = await tx
+      .update(projecten)
+      .set({
+        ...(invoer.naam !== undefined ? { naam: invoer.naam } : {}),
+        klantnaam: document.meta.klant.naam,
+        document,
+        versie: sql`${projecten.versie} + 1`,
+        gewijzigd: sql`now()`,
+      })
+      .where(and(vanOrganisatie(organisatieId, id), eq(projecten.versie, versie)))
+      .returning({ versie: projecten.versie });
+    return bijgewerkt!;
+  });
 }
 
 type BestandRij = typeof bestanden.$inferSelect;
-
-/** De planbestanden (origineel en raster) waarnaar de situatiepagina's van een document verwijzen. */
-function planBestandIdsVan(document: InstallatieDocument): string[] {
-  return document.situatie.paginas.flatMap((p) =>
-    p.achtergrond ? [p.achtergrond.origineelBestandId, p.achtergrond.rasterBestandId] : [],
-  );
-}
 
 /**
  * De planbestanden (origineel of raster) met deze id's die bij een project van `organisatieId` horen,

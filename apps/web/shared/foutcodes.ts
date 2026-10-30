@@ -37,6 +37,8 @@ export const SERVER_FOUTCODES = [
   "BESTAND_TE_GROOT",
   "BESTANDSTYPE_NIET_TOEGELATEN",
   "RASTER_TE_GROOT",
+  // Een nieuwe verwijzing in het document naar een plan dat niet van dit project is (422)
+  "PLANBESTAND_ONBEKEND",
   // Een upload zonder geldige Content-Length (411)
   "LENGTE_VEREIST",
   // Export (502, de code van `PdfFout`)

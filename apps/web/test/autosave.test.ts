@@ -853,6 +853,21 @@ describe("useAutosave: foutsoorten", () => {
     expect(autosave.status.value).toBe("onbewaard");
   });
 
+  test("een 422 met een bekende foutcode bewaart die code in fout, zodat de editor hem kan vertalen", async () => {
+    const { store, bewaar, autosave } = opzet();
+    bewaar.mockRejectedValue(
+      Object.assign(new Error("geweigerd"), {
+        statusCode: 422,
+        data: { statusCode: 422, data: { code: "PLANBESTAND_ONBEKEND" } },
+      }),
+    );
+    wijzig(store, "a");
+    await vi.advanceTimersByTimeAsync(2000);
+    await leeg();
+    expect(autosave.status.value).toBe("fout");
+    expect(autosave.fout.value).toEqual({ status: 422, code: "PLANBESTAND_ONBEKEND" });
+  });
+
   test("een 422 zet de status op fout, zonder nieuwe poging of autosave", async () => {
     const code = 422;
     const { store, bewaar, autosave } = opzet();

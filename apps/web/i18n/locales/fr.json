@@ -792,6 +792,7 @@
     "BESTAND_TE_GROOT": "Ce fichier est trop volumineux.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "Ce type de fichier n'est pas accepté.",
     "RASTER_TE_GROOT": "Ce plan est trop grand (plus de 8 000 pixels).",
+    "PLANBESTAND_ONBEKEND": "Le projet renvoie à un plan qui n'en fait pas partie et n'a pas pu être enregistré. Importez à nouveau le plan.",
     "LENGTE_VEREIST": "Ce fichier n'a pas pu être envoyé, car sa taille est absente. Réessayez.",
     "ONBEREIKBAAR": "Le service PDF est injoignable. Réessayez dans quelques instants.",
     "TIMEOUT": "Le service PDF n'a pas répondu à temps. Réessayez dans quelques instants.",

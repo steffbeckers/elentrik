@@ -12,7 +12,7 @@ import { bewaarBedrijf, bewaarLogo } from "../server/bedrijf/repo";
 import { maakLokaleOpslag, type BestandOpslag } from "../server/bestanden/opslag";
 import { bewaarBestand } from "../server/bestanden/repo";
 import type { Db } from "../server/db";
-import { bedrijfsinstellingen, bestanden, exports, snapshots } from "../server/db/schema";
+import { bedrijfsinstellingen, bestanden, exports, projecten, snapshots } from "../server/db/schema";
 import { exportBestandsnaam, lijstExports, maakExport } from "../server/exports/repo";
 import { PdfFout, type PdfInvoer } from "../server/pdf/gotenberg";
 import { bewaarProject, maakProject, ProjectFout } from "../server/projecten/repo";
@@ -64,6 +64,15 @@ function invoer(extra: Partial<ExportInvoer> = {}): ExportInvoer {
     versieLabel: "V1",
     ...extra,
   };
+}
+
+/**
+ * Zet het document van een project rechtstreeks in de tabel (versie 2, zoals `opzet`), zonder de controle
+ * van `bewaarProject` op nieuwe planverwijzingen: voor documenten met een verwijzing die niet van het
+ * project is, zoals oudere documenten die kunnen hebben (de export slaat zo'n plan over).
+ */
+async function zetDocumentZonderControle(db: Db, projectId: string, document: InstallatieDocument) {
+  await db.update(projecten).set({ document, versie: VERSIE }).where(eq(projecten.id, projectId));
 }
 
 /** Een project met het gegeven document, bewaard zoals de editor dat doet (versie 2). */
@@ -265,7 +274,7 @@ describe("maakExport", () => {
     metSituatiePagina(doc, "Kelder", weg.id);
     metSituatiePagina(doc, "Zolder", ONBEKEND);
     metSituatiePagina(doc, "Garage", "geen-uuid");
-    await bewaarProject(db, org, projectId, 1, { document: doc });
+    await zetDocumentZonderControle(db, projectId, doc);
 
     const nep = nepPdf();
     const info = await maakExport(
@@ -300,7 +309,7 @@ describe("maakExport", () => {
     const eigen = await bewaarBestand(db, opslag, { organisatieId: org, projectId, soort: "plan-origineel", data: png(40, 20) });
     const doc = structuredClone(referentieWoning());
     metSituatiePagina(doc, "Gelijkvloers", eigen.id);
-    await bewaarProject(db, org, projectId, 1, { document: doc });
+    await zetDocumentZonderControle(db, projectId, doc);
 
     const nep = nepPdf();
     await maakExport(
@@ -348,7 +357,7 @@ describe("maakExport", () => {
     const vreemd = await maak(db, opslag, org, projectId);
     const doc = structuredClone(referentieWoning());
     metSituatiePagina(doc, "Vreemd plan", vreemd.id);
-    await bewaarProject(db, org, projectId, 1, { document: doc });
+    await zetDocumentZonderControle(db, projectId, doc);
 
     const nep = nepPdf();
     await maakExport(
@@ -377,7 +386,7 @@ describe("maakExport", () => {
     const { id: projectId } = await maakProject(db, org, { naam: "Huis", klantnaam: "", stroomtype: "3N400V" });
     const doc = structuredClone(referentieWoning());
     metSituatiePagina(doc, "Kelder", ONBEKEND);
-    await bewaarProject(db, org, projectId, 1, { document: doc });
+    await zetDocumentZonderControle(db, projectId, doc);
 
     const nep = nepPdf();
     await maakExport(db, opslag, org, projectId, VERSIE, invoer(), { maakPdf: nep.maakPdf });

@@ -10,6 +10,8 @@ import {
   type ConceptPlek,
 } from "./concepten";
 import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
+import type { Foutcode } from "../../shared/foutcodes";
+import { bekendeFoutcode } from "../fouten";
 import { foutCode } from "../sessie/fouten";
 import { metNieuweBestandIds, planBestandIds } from "../editor/kopie";
 import {
@@ -104,8 +106,8 @@ export type Conflict = { huidigeVersie: number; lokaleWijzigingen: boolean };
 export type Autosave = {
   status: Ref<AutosaveStatus>;
   conflict: Ref<Conflict | null>;
-  /** Gezet bij status `fout`: de HTTP-status waarmee de server het bewaren weigerde. */
-  fout: Ref<{ status: number } | null>;
+  /** Gezet bij status `fout`: de HTTP-status waarmee de server het bewaren weigerde, en zijn foutcode als die bekend is. */
+  fout: Ref<{ status: number; code?: Foutcode } | null>;
   /**
    * De server antwoordde 401: de sessie is verlopen. Het werk staat in het concept; er gaat
    * niets meer naar de server tot `nuOpslaan()`. Een geslaagd bewaar zet dit terug op false.
@@ -191,7 +193,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
 
   const status = ref<AutosaveStatus>("opgeslagen");
   const conflict = ref<Conflict | null>(null);
-  const fout = ref<{ status: number } | null>(null);
+  const fout = ref<{ status: number; code?: Foutcode } | null>(null);
   const afgemeld = ref(false);
   const alleenLezen = ref(false);
   const verwijderd = ref(false);
@@ -392,7 +394,8 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         } else if (httpCode !== undefined && httpCode >= 400 && httpCode < 500 && !TIJDELIJK.has(httpCode)) {
           // De server weigert dit document; opnieuw proberen verandert daar niets aan. De server
           // antwoordde met een sessie: afgemeld vervalt, zodat er maar een melding tegelijk staat.
-          fout.value = { status: httpCode };
+          const code = bekendeFoutcode(e);
+          fout.value = code === undefined ? { status: httpCode } : { status: httpCode, code };
           afgemeld.value = false;
           alleenLezen.value = false;
           status.value = "fout";
