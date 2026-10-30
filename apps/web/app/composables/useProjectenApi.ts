@@ -114,7 +114,7 @@ export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOptie
       haal(`/api/projecten/${id}/dupliceer`, {
         method: "POST",
         ...(opties.gebruikerId ? { headers: voorGebruiker } : {}),
-        // Altijd een body (ook een lege lijst): de server leest hem met `leesBody`, en die weigert een POST zonder lengte.
+        // Altijd een body (ook een lege lijst), met een lengte: zo hangt dupliceren niet af van hoe een proxy een POST zonder body doorgeeft.
         body: { bestandIds },
       }) as Promise<{ id: string; bestandIds?: Record<string, string> }>,
 
