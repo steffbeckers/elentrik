@@ -1,10 +1,13 @@
 name: web-image
 
+# De tests draaien alleen voor `develop` (elke PR ernaartoe en elke push). `staging` en `main` krijgen
+# alleen merges van de vorige branch, met dezelfde inhoud die op `develop` al getest is: daar bouwt de
+# workflow alleen het image.
 on:
   push:
     branches: [main, staging, develop]
   pull_request:
-    branches: [main, staging, develop]
+    branches: [develop]
 
 concurrency:
   group: web-image-${{ github.ref }}
@@ -15,6 +18,7 @@ permissions:
 
 jobs:
   test:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -40,7 +44,6 @@ jobs:
       - run: pnpm typecheck
 
   image:
-    needs: test
     # Alleen `main` (productie) en `staging` bouwen een image; `develop` draait alleen de tests.
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
     runs-on: ubuntu-latest
