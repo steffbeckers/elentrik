@@ -86,11 +86,21 @@
       "fout": "Opslaan mislukt",
       "alleen-lezen": "Niet opgeslagen: alleen lezen, je werk blijft lokaal bewaard",
       "alleenLezen": "Alleen lezen",
-      "opnieuwProberen": "Opnieuw proberen"
+      "opnieuwProberen": "Opnieuw proberen",
+      "verwijderd": "Project verwijderd"
+    },
+    "verwijderd": {
+      "melding": "Dit project werd verwijderd.",
+      "uitleg": "Je wijzigingen staan nog lokaal. Bewaar ze als nieuw project, of ga terug naar de projecten.",
+      "uitlegNietLokaal": "Je wijzigingen konden ook niet lokaal bewaard worden en staan alleen nog in het geheugen. Bewaar ze nu als nieuw project en sluit dit venster niet.",
+      "nieuwProject": "Bewaar als nieuw project",
+      "terug": "Terug naar de projecten"
     },
     "alleenLezen": {
       "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
-      "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen."
+      "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen.",
+      "dialoogTitel": "Alleen lezen",
+      "dialoogBeschrijving": "Je bedrijf heeft geen actief abonnement. Wijzigingen in deze dialoog kunnen niet meer bewaard worden."
     },
     "onderdelenPaneel": {
       "titel": "Onderdelen",
@@ -172,6 +182,7 @@
       "titel": "Lokaal concept gevonden",
       "beschrijving": "Op dit toestel staat een concept van dit project met wijzigingen die nog niet op de server staan ({tijd}).",
       "laden": "Concept laden",
+      "later": "Later",
       "verwerpen": "Verwerpen"
     },
     "verlaten": {
@@ -183,7 +194,13 @@
       "serverversie": "Serverversie laden",
       "serverversieUitleg": "Je lokale wijzigingen gaan verloren.",
       "kopie": "Mijn versie als kopie bewaren",
-      "kopieUitleg": "Je versie komt in een nieuw project; het origineel blijft ongewijzigd."
+      "kopieUitleg": "Je versie komt in een nieuw project; het origineel blijft ongewijzigd.",
+      "zonderLokaal": {
+        "beschrijving": "Het project is intussen gewijzigd, bijvoorbeeld in een ander venster. De PDF is niet gemaakt, want je ziet een oudere versie dan die op de server.",
+        "serverversieUitleg": "Je ziet daarna de nieuwste versie; er gaat niets verloren.",
+        "kopie": "Nieuwste versie als kopie bewaren",
+        "kopieUitleg": "De nieuwste versie van de server komt in een nieuw project; het origineel blijft ongewijzigd."
+      }
     },
     "fouten": {
       "NIET_TOEGELATEN_KIND": "Dat onderdeel kan hier niet komen.",
@@ -561,6 +578,7 @@
       "verstuurd": "Als dit adres bekend is, ontvang je een nieuwe bevestigingsmail."
     },
     "linkOngeldig": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",
+    "nieuweLink": "Stuur een nieuwe link",
     "accountGemaakt": "Je account is aangemaakt. Log in met je e-mailadres en wachtwoord.",
     "wachtwoordGewijzigd": "Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.",
     "wachtwoordVergeten": "Wachtwoord vergeten?",
@@ -774,6 +792,7 @@
     "BESTAND_TE_GROOT": "Dit bestand is te groot.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "Dit bestandstype wordt niet aanvaard.",
     "RASTER_TE_GROOT": "Dit plan is te groot (meer dan 8.000 pixels).",
+    "LENGTE_VEREIST": "Dit bestand kon niet verstuurd worden, omdat de grootte ervan ontbreekt. Probeer het opnieuw.",
     "ONBEREIKBAAR": "De PDF-dienst is niet bereikbaar. Probeer het straks opnieuw.",
     "TIMEOUT": "De PDF-dienst antwoordde niet op tijd. Probeer het straks opnieuw.",
     "MISLUKT": "De PDF kon niet gemaakt worden. Probeer het opnieuw.",
@@ -790,6 +809,7 @@
     "ACCOUNT_BESTAAT": "Er bestaat al een account met dit adres. Log in om de uitnodiging te aanvaarden.",
     "TE_VEEL_UITNODIGINGEN": "Te veel uitnodigingen. Probeer het straks opnieuw.",
     "TE_VEEL_POGINGEN": "Te veel pogingen. Wacht even en probeer het opnieuw.",
+    "INLOGLINK_MISLUKT": "Inloggen met de link is niet gelukt. Vraag een nieuwe link aan.",
     "INVALID_EMAIL_OR_PASSWORD": "Het e-mailadres of het wachtwoord klopt niet.",
     "EMAIL_NOT_VERIFIED": "Je e-mailadres is nog niet bevestigd.",
     "INVALID_TOKEN": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",

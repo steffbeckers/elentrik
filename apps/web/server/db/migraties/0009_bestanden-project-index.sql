@@ -1,0 +1,1 @@
+CREATE INDEX "bestanden_project_id_idx" ON "bestanden" USING btree ("project_id");

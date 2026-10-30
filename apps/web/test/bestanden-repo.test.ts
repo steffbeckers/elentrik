@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { MAX_UPLOAD_BYTES } from "../shared/bestandsinhoud";
 import { maakLokaleOpslag, type BestandOpslag } from "../server/bestanden/opslag";
@@ -202,6 +202,10 @@ describe("bewaarBestand", () => {
       async bestaat() {
         return false;
       },
+      async lijst() {
+        return [];
+      },
+      async verwijder() {},
     };
     await expect(
       bewaarBestand(db, kapot, { organisatieId, projectId, soort: "plan-raster", data: png(10, 10) }),
@@ -240,6 +244,17 @@ describe("bestanden zonder project", () => {
   });
 });
 
+describe("index op bestanden.project_id", () => {
+  test("de migratie maakt een index op project_id", async () => {
+    const { db } = await opzet();
+    const resultaat = (await db.execute(
+      sql`select indexdef from pg_indexes where tablename = 'bestanden' and indexname = 'bestanden_project_id_idx'`,
+    )) as unknown as { rows: { indexdef: string }[] };
+    expect(resultaat.rows).toHaveLength(1);
+    expect(resultaat.rows[0]!.indexdef).toMatch(/\(project_id\)/);
+  });
+});
+
 describe("haalBestand", () => {
   test("een onbekend id geeft null", async () => {
     const { db } = await opzet();
@@ -261,7 +276,20 @@ describe("haalBestand", () => {
       sleutel: `${projectId}/${info.id}`,
       projectId,
       organisatieId,
+      projectVerwijderd: false,
     });
+  });
+
+  test("meldt dat het project verwijderd is; een logo zonder project is nooit verwijderd", async () => {
+    const { db, organisatieId, projectId, opslag } = await opzet();
+    const info = await bewaarBestand(db, opslag, { organisatieId, projectId, soort: "plan-raster", data: png(10, 10) });
+    await verwijderProject(db, organisatieId, projectId);
+    expect((await haalBestand(db, info.id))!.projectVerwijderd).toBe(true);
+    const [logo] = await db
+      .insert(bestanden)
+      .values({ organisatieId, soort: "logo", mime: "image/png", grootte: 1, sleutel: "bedrijf/z" })
+      .returning({ id: bestanden.id });
+    expect((await haalBestand(db, logo!.id))!.projectVerwijderd).toBe(false);
   });
 
   test("de organisatie van een logo komt uit de eigen kolom; zonder organisatie is ze null", async () => {

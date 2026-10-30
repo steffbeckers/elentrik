@@ -29,7 +29,7 @@ bezoeker -> Cloudflare -> tunnel (cloudflared) -> elentrik-web:3000
 - De gegevens staan in mappen op de NAS onder `ELENTRIK_DATA` (standaard `/volume1/docker/elentrik`):
   `postgres/`, `bestanden/`, `backups/` en `staging/bestanden/`.
 - Het image komt van GitHub: `ghcr.io/steffbeckers/elentrik-web`, met de tags `latest` (push naar `main`), `staging` (push naar
-  `staging`) en `sha-<korte commit>`. GitHub Actions bouwt het bij zo'n push, nadat de tests en de typecheck slaagden.
+  `staging`) en `sha-<korte commit>`. GitHub Actions bouwt het bij zo'n push; de tests en de typecheck draaien al op `develop`.
 
 ### Voor je begint
 
@@ -366,8 +366,8 @@ Regels die ertoe doen:
 Het project haalt het image zonder aanmelding op uit GHCR, dus het package moet publiek zijn. Het image
 bevat geen geheimen (alle configuratie komt bij het opstarten uit `.env`).
 
-1. Controleer op GitHub, tabblad **Actions**, dat de run van de workflow `web-image` groen is (eerst de job
-   `test`, dan `image`). Alleen een push naar `main` (`:latest`) of `staging` (`:staging`) bouwt en pusht een image.
+1. Controleer op GitHub, tabblad **Actions**, dat de run van de workflow `web-image` groen is (de job `image`;
+   de job `test` draait alleen voor `develop`). Alleen een push naar `main` (`:latest`) of `staging` (`:staging`) bouwt en pusht een image.
 2. Ga naar je GitHub-profiel, **Packages**, `elentrik-web`, **Package settings** (rechts), onderaan
    **Danger Zone**, **Change visibility**, **Public** (de naam kan per versie licht verschillen).
 3. Controleer vanaf een ander apparaat of de NAS: `docker pull ghcr.io/steffbeckers/elentrik-web:latest` werkt

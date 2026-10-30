@@ -9,12 +9,13 @@ import { bestandId } from "../../utils/bestanden";
 import { defineBeveiligdeHandler, vereisLid } from "../../utils/toegang";
 
 // Een bestand is alleen bereikbaar voor een lid van de organisatie waartoe het hoort: via zijn
-// project, of voor een logo via zijn eigen organisatie. Anders 404, voor een onbekend bestand en
-// voor het bestand van een andere organisatie dezelfde (zie server/fouten.ts).
+// project, of voor een logo via zijn eigen organisatie. Anders 404, voor een onbekend bestand, het
+// bestand van een andere organisatie en dat van een verwijderd project dezelfde (zie
+// server/fouten.ts).
 export default defineBeveiligdeHandler(async (event) => {
   const db = gebruikDb();
   const bestand = await haalBestand(db, bestandId(event));
-  if (!bestand?.organisatieId) throw nietGevondenFout();
+  if (!bestand?.organisatieId || bestand.projectVerwijderd) throw nietGevondenFout();
   await vereisLid(event, { organisatieId: bestand.organisatieId });
   const stroom = await gebruikOpslag().lees(bestand.sleutel);
   if (!stroom) throw nietGevondenFout();

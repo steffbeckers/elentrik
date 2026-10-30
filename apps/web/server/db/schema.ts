@@ -30,19 +30,23 @@ export const projecten = pgTable(
   (table) => [index("projecten_organisatie_id_idx").on(table.organisatieId)],
 );
 
-export const bestanden = pgTable("bestanden", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  // Null voor een bestand dat bij geen project hoort, zoals het logo van de installateur.
-  projectId: uuid("project_id").references(() => projecten.id),
-  // Alleen voor een logo: de organisatie waartoe het hoort. Plan- en exportbestanden horen via
-  // hun project bij een organisatie en laten dit leeg.
-  organisatieId: text("organisatie_id").references(() => organization.id),
-  soort: text("soort", { enum: ["plan-origineel", "plan-raster", "logo", "export"] }).notNull(),
-  mime: text("mime").notNull(),
-  grootte: integer("grootte").notNull(),
-  sleutel: text("sleutel").notNull(),
-  aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
-});
+export const bestanden = pgTable(
+  "bestanden",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Null voor een bestand dat bij geen project hoort, zoals het logo van de installateur.
+    projectId: uuid("project_id").references(() => projecten.id),
+    // Alleen voor een logo: de organisatie waartoe het hoort. Plan- en exportbestanden horen via
+    // hun project bij een organisatie en laten dit leeg.
+    organisatieId: text("organisatie_id").references(() => organization.id),
+    soort: text("soort", { enum: ["plan-origineel", "plan-raster", "logo", "export"] }).notNull(),
+    mime: text("mime").notNull(),
+    grootte: integer("grootte").notNull(),
+    sleutel: text("sleutel").notNull(),
+    aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("bestanden_project_id_idx").on(table.projectId)],
+);
 
 /**
  * De gegevens van de installateur per organisatie, voor de cartouche van elke export.

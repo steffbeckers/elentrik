@@ -377,6 +377,16 @@ const TABEL: Record<string, Rij> = {
     lid: 201,
     eigenaar: 201,
   },
+  "POST /api/projecten/uit-document": {
+    // B maakt een project in B uit zijn eigen document (zie "een nieuw project uit een document").
+    verzoek: async () => {
+      const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+      return { methode: "POST", pad: "/api/projecten/uit-document", json: { naam: "Uit document", document } };
+    },
+    andereOrganisatie: 201,
+    lid: 201,
+    eigenaar: 201,
+  },
   "POST /api/projecten/:id/dupliceer": {
     verzoek: () => projectVerzoek("POST", "/dupliceer"),
     andereOrganisatie: 404,
@@ -698,6 +708,116 @@ describe("projecten per organisatie", () => {
     expect(rij!.org).toBe(orgA);
   });
 
+  test("een nieuw project uit een document: de plannen van een verwijderd project van dezelfde organisatie gaan mee, die van een andere niet", async () => {
+    const bron = await projectIn(orgA, "Wordt verwijderd");
+    const eigenPlan = (await bewaarBestand(db, opslag, { organisatieId: orgA, projectId: bron, soort: "plan-raster", data: png(10, 10) })).id;
+    const vreemdPlan = await planIn(orgB);
+    await verwijderProject(db, orgA, bron);
+    const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+    const metPlan = {
+      ...document,
+      situatie: {
+        ...document.situatie,
+        paginas: [
+          { id: "p1", titel: "Eigen", plaatsingen: [], achtergrond: { origineelBestandId: eigenPlan, rasterBestandId: eigenPlan, breedte_px: 10, hoogte_px: 10 } },
+          { id: "p2", titel: "Vreemd", plaatsingen: [], achtergrond: { origineelBestandId: vreemdPlan, rasterBestandId: vreemdPlan, breedte_px: 10, hoogte_px: 10 } },
+        ],
+      },
+    };
+
+    const antwoord = await stuur(
+      { methode: "POST", pad: "/api/projecten/uit-document", json: { naam: "Nieuw", document: metPlan } },
+      lidA.cookie,
+    );
+    expect(antwoord.status).toBe(201);
+    const nieuw = (await antwoord.json()) as { id: string; versie: number; documentId: string; bestandIds: Record<string, string> };
+    expect(nieuw.versie).toBe(1);
+    expect(Object.keys(nieuw.bestandIds)).toEqual([eigenPlan]);
+
+    const project = (await haalProject(db, orgA, nieuw.id))!;
+    const [p1, p2] = project.document.situatie.paginas;
+    expect(p1!.achtergrond!.origineelBestandId).toBe(nieuw.bestandIds[eigenPlan]);
+    expect(p2!.achtergrond!.origineelBestandId).toBe(vreemdPlan);
+    // Het nieuwe bestand is voor een lid van A te downloaden; het van B bleef van B.
+    const bestand = await stuur({ methode: "GET", pad: `/api/bestanden/${nieuw.bestandIds[eigenPlan]}` }, lidA.cookie);
+    expect(bestand.status).toBe(200);
+    await bestand.arrayBuffer();
+    // Het verwijderde bronproject is nog altijd onzichtbaar.
+    expect((await stuur({ methode: "GET", pad: `/api/projecten/${bron}` }, lidA.cookie)).status).toBe(404);
+  });
+
+  test("een nieuw project uit een document: elke projectnaam kan (geen maximum), en hoogstens 200 verschillende planbestanden", async () => {
+    const pad = "/api/projecten/uit-document";
+    const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+    const metPlannen = (aantalPaginas: number) => ({
+      ...document,
+      situatie: {
+        ...document.situatie,
+        paginas: Array.from({ length: aantalPaginas }, (_, i) => ({
+          id: `p${i}`,
+          titel: `Pagina ${i}`,
+          plaatsingen: [],
+          achtergrond: {
+            origineelBestandId: crypto.randomUUID(),
+            rasterBestandId: crypto.randomUUID(),
+            breedte_px: 10,
+            hoogte_px: 10,
+          },
+        })),
+      },
+    });
+
+    // Een naam van meer dan 300 tekens (zoals een bestaand project kan hebben) is geen probleem.
+    const lang = await stuur({ methode: "POST", pad, json: { naam: "L".repeat(500), document } }, lidA.cookie);
+    expect(lang.status).toBe(201);
+    await lang.arrayBuffer();
+    // 100 pagina's met elk twee ids: precies 200 verschillende ids is toegelaten.
+    const grens = await stuur({ methode: "POST", pad, json: { naam: "Grens", document: metPlannen(100) } }, lidA.cookie);
+    expect(grens.status).toBe(201);
+    await grens.arrayBuffer();
+    // Eén pagina meer: 202 verschillende ids is 400 ONGELDIGE_INVOER, en er wordt niets aangemaakt.
+    const voor = (await db.select({ id: projecten.id }).from(projecten)).length;
+    const teVeel = await stuur({ methode: "POST", pad, json: { naam: "Te veel", document: metPlannen(101) } }, lidA.cookie);
+    expect(teVeel.status).toBe(400);
+    expect(((await teVeel.json()) as { data?: { code?: string } }).data?.code).toBe("ONGELDIGE_INVOER");
+    expect((await db.select({ id: projecten.id }).from(projecten)).length).toBe(voor);
+  });
+
+  test("een nieuw project uit een document: een ongeldige body is 400, een ongeldig document 422", async () => {
+    const pad = "/api/projecten/uit-document";
+    for (const json of [{}, { naam: "", document: {} }, { naam: "   ", document: {} }, { naam: "X", document: "x" }]) {
+      expect((await stuur({ methode: "POST", pad, json }, lidA.cookie)).status).toBe(400);
+    }
+    expect((await stuur({ methode: "POST", pad, json: { naam: "X", document: { onzin: true } } }, lidA.cookie)).status).toBe(422);
+  });
+
+  test("een nieuw project uit een document voor een andere gebruiker dan de sessie: 401, zonder iets aan te maken", async () => {
+    const { document } = (await haalProject(db, orgA, await projectIn(orgA)))!;
+    const voor = (await db.select({ id: projecten.id }).from(projecten)).length;
+    const antwoord = await stuur(
+      {
+        methode: "POST",
+        pad: "/api/projecten/uit-document",
+        json: { naam: "X", document },
+        headers: { [VERWACHTE_GEBRUIKER_HEADER]: eigenaarA.id },
+      },
+      lidA.cookie,
+    );
+    expect(antwoord.status).toBe(401);
+    expect((await db.select({ id: projecten.id }).from(projecten)).length).toBe(voor);
+  });
+
+  test("dupliceren met extra bestandsid's: een ongeldige body is 400, een geldige geeft de toewijzing terug", async () => {
+    const id = await projectIn(orgA);
+    const pad = `/api/projecten/${id}/dupliceer`;
+    for (const json of [{ bestandIds: "x" }, { bestandIds: [1] }, { bestandIds: Array.from({ length: 201 }, () => "a") }]) {
+      expect((await stuur({ methode: "POST", pad, json }, lidA.cookie)).status).toBe(400);
+    }
+    const antwoord = await stuur({ methode: "POST", pad, json: { bestandIds: [crypto.randomUUID()] } }, lidA.cookie);
+    expect(antwoord.status).toBe(201);
+    expect(await antwoord.json()).toMatchObject({ bestandIds: {} });
+  });
+
   test("een project zonder organisatie, of een verwijderd project, is voor niemand zichtbaar", async () => {
     const [wees] = await db
       .insert(projecten)
@@ -815,6 +935,59 @@ describe("bestanden per organisatie", () => {
     const voorB = await stuur({ methode: "GET", pad: `/api/bestanden/${id}` }, eigenaarB.cookie);
     expect([voorA.status, voorB.status]).toEqual([200, 404]);
     expect((await haalBestand(db, id))!.sleutel).toBe(`bedrijf/${id}`);
+  });
+
+  test("plan en export van een verwijderd project geven dezelfde 404 als een onbekend id, ook voor een lid", async () => {
+    const projectId = await projectIn(orgA);
+    const plan = (await bewaarBestand(db, opslag, { organisatieId: orgA, projectId, soort: "plan-raster", data: png(10, 10) })).id;
+    const exportInfo = await maakExport(db, opslag, orgA, projectId, 1, EXPORT_INVOER, {
+      maakPdf: async () => new TextEncoder().encode("%PDF-1.7\n%%EOF\n"),
+    });
+    for (const id of [plan, exportInfo.bestandId]) {
+      const voor = await stuur({ methode: "GET", pad: `/api/bestanden/${id}` }, lidA.cookie);
+      await voor.arrayBuffer();
+      expect(voor.status, id).toBe(200);
+    }
+    await verwijderProject(db, orgA, projectId);
+    const onbekend = await stuur({ methode: "GET", pad: `/api/bestanden/${crypto.randomUUID()}` }, lidA.cookie);
+    const verwacht = { status: onbekend.status, body: await onbekend.text() };
+    expect(verwacht.status).toBe(404);
+    for (const id of [plan, exportInfo.bestandId]) {
+      for (const cookie of [lidA.cookie, eigenaarA.cookie]) {
+        const antwoord = await stuur({ methode: "GET", pad: `/api/bestanden/${id}` }, cookie);
+        expect({ status: antwoord.status, body: await antwoord.text() }, id).toEqual(verwacht);
+      }
+    }
+  });
+
+  test("een upload zonder content-length geeft 411 LENGTE_VEREIST, voor een plan en voor het logo", async () => {
+    const projectId = await projectIn(orgA);
+    const grens = "----elentrik-zonder-lengte";
+    const inhoud = Buffer.concat([
+      Buffer.from(
+        `--${grens}\r\nContent-Disposition: form-data; name="soort"\r\n\r\nplan-raster\r\n--${grens}\r\n` +
+          `Content-Disposition: form-data; name="bestand"; filename="plan.png"\r\nContent-Type: image/png\r\n\r\n`,
+      ),
+      Buffer.from(png(10, 10)),
+      Buffer.from(`\r\n--${grens}--\r\n`),
+    ]);
+    for (const pad of [`/api/projecten/${projectId}/bestanden`, "/api/bedrijfsgegevens/logo"]) {
+      // Een stroom als body gaat met `Transfer-Encoding: chunked`, dus zonder content-length.
+      const stroom = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array(inhoud));
+          controller.close();
+        },
+      });
+      const antwoord = await fetch(`${basis}${pad}`, {
+        method: "POST",
+        headers: { cookie: eigenaarA.cookie, "content-type": `multipart/form-data; boundary=${grens}` },
+        body: stroom,
+        duplex: "half",
+      } as RequestInit);
+      const json = (await antwoord.json()) as { data?: { code?: string } };
+      expect([antwoord.status, json.data?.code], pad).toEqual([411, "LENGTE_VEREIST"]);
+    }
   });
 
   test("een logo zonder organisatie is voor niemand bereikbaar", async () => {

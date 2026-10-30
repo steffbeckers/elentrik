@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from "vue";
+import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
+import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useBestandenApi } from "~/composables/useBestandenApi";
 import { laadPdf, verkleinAfbeelding, type PdfDocument } from "~/situatie/pdf";
-import { foutSleutel, isAfgebroken, laadPlanOp, type UploadFoutSleutel } from "~/situatie/plan-opladen";
+import { isAfgebroken, laadPlanOp, uploadFoutMelding, type UploadFoutSleutel } from "~/situatie/plan-opladen";
 import { paginaTitel } from "~/situatie/raster";
 import { useEditorStore } from "~/stores/editor";
 import { useSituatieStore } from "~/stores/situatie";
@@ -24,6 +26,7 @@ const toast = useToast();
 const editor = useEditorStore();
 const situatie = useSituatieStore();
 const bestanden = useBestandenApi();
+const alleenLezen = useAlleenLezen();
 
 type Voorbeeld = { nr: number; url: string | null; fout: boolean };
 
@@ -42,6 +45,7 @@ let sessie = 0;
 
 const kanBevestigen = computed(
   () =>
+    !editor.alleenLezen &&
     bezigMet.value === null &&
     bestand.value !== null &&
     (soort.value !== "pdf" || (pdf.value !== null && gekozenPagina.value !== null)),
@@ -179,6 +183,9 @@ async function bevestig() {
     );
     if (afbreker.signal.aborted) return;
 
+    // Werd de editor intussen alleen-lezen, dan kan het plan niet meer in het document: de dialoog blijft
+    // open met de melding in plaats van stil te sluiten.
+    if (editor.alleenLezen) return;
     // Pas nu, na elke geslaagde upload, verandert het document.
     let paginaId: string;
     if (props.vervangPaginaId) {
@@ -193,7 +200,8 @@ async function bevestig() {
     emit("klaar", paginaId);
   } catch (fout) {
     if (afbreker.signal.aborted || isAfgebroken(fout) || dezeSessie !== sessie) return;
-    meld(foutSleutel(fout));
+    const sleutel = await uploadFoutMelding(fout, alleenLezen);
+    if (sleutel && dezeSessie === sessie) meld(sleutel);
   } finally {
     if (dezeSessie === sessie) {
       controller = null;
@@ -216,6 +224,7 @@ function annuleer() {
   >
     <template #body>
       <div class="space-y-4">
+        <AlleenLezenMelding />
         <input
           ref="invoer"
           type="file"

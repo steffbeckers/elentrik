@@ -23,6 +23,7 @@ import { useNodeTekst } from "~/composables/useNodeTekst";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import {
   opnieuwProberen as probeerOpnieuw,
+  slaVertrekvraagOver,
   toonAfgemeld,
   vertrekBevestiging,
   type SessieControle,
@@ -65,7 +66,10 @@ const autosave = useAutosave({
   bewaar: api.bewaar,
   haal: api.haal,
   dupliceer: api.dupliceer,
+  maakNieuw: api.maakUitDocument,
   naarProject: async (kopieId) => {
+    // Het werk staat nu in de kopie of het nieuwe project: dat verlaten vraagt niets.
+    vertrekBevestigd = true;
     await navigateTo(`/projecten/${kopieId}`);
   },
   gebruikerId,
@@ -187,6 +191,11 @@ async function laadConcept(): Promise<void> {
   if (await autosave.wachtOpConcept()) await wisAangebodenConcept(aangeboden).catch(() => {});
 }
 
+/** Alleen-lezen: het concept blijft in het archief staan voor later; de dialoog gaat weg zonder iets te wissen. */
+function laterConcept(): void {
+  concept.value = null;
+}
+
 async function verwerpConcept(): Promise<void> {
   const aangeboden = concept.value;
   concept.value = null;
@@ -211,6 +220,43 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
     if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
   } finally {
     conflictBezig.value = false;
+  }
+}
+
+// --- Project elders verwijderd -----------------------------------------------------
+
+const nieuwProjectBezig = ref(false);
+
+/**
+ * "Terug naar de projecten" in de melding is een uitdrukkelijke keuze om het werk los te laten: alleen
+ * die knop slaat de vertrekvraag over. Het tabblad sluiten, de pijl in de balk, van bedrijf wisselen en
+ * uitloggen vragen nog wel, want het concept van een verwijderd project is nooit meer te openen. Ook
+ * bij `onbewaard` (het werk staat alleen in het geheugen) en bij een klik die elders opent (ctrl, cmd,
+ * shift, middelste knop) blijft de vraag (zie `slaVertrekvraagOver`).
+ */
+function terugNaarProjecten(klik: MouseEvent): void {
+  if (slaVertrekvraagOver(autosave.status.value, klik)) vertrekBevestigd = true;
+}
+
+/** Bij een mislukte conceptschrijfactie (status onbewaard) staat het werk alleen nog in het geheugen. */
+const verwijderdUitleg = computed(() =>
+  autosave.status.value === "onbewaard" ? t("editor.verwijderd.uitlegNietLokaal") : t("editor.verwijderd.uitleg"),
+);
+
+/**
+ * Het project werd elders verwijderd: het lokale document wordt een nieuw project (met de plannen van
+ * het bedrijf). Een 402 geeft de alleen-lezenmelding, een andere fout een toast; de editor blijft dan
+ * staan zoals hij was, met het concept lokaal.
+ */
+async function bewaarAlsNieuwProject(): Promise<void> {
+  if (nieuwProjectBezig.value) return;
+  nieuwProjectBezig.value = true;
+  try {
+    await autosave.bewaarAlsNieuwProject();
+  } catch (fout) {
+    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
+  } finally {
+    nieuwProjectBezig.value = false;
   }
 }
 
@@ -433,6 +479,39 @@ onBeforeUnmount(() => {
         @toon-bevindingen="toonBevindingen"
         @exporteren="exportOpen = true"
       />
+      <UAlert
+        v-if="autosave.verwijderd.value"
+        color="error"
+        variant="subtle"
+        icon="i-lucide-trash-2"
+        orientation="horizontal"
+        class="rounded-none border-b border-default py-2"
+        :title="$t('editor.verwijderd.melding')"
+        :description="verwijderdUitleg"
+        data-testid="verwijderd-melding"
+      >
+        <template #actions>
+          <UButton
+            size="xs"
+            color="error"
+            icon="i-lucide-copy-plus"
+            :label="$t('editor.verwijderd.nieuwProject')"
+            :loading="nieuwProjectBezig"
+            data-testid="verwijderd-nieuw-project"
+            @click="bewaarAlsNieuwProject"
+          />
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-arrow-left"
+            to="/"
+            :label="$t('editor.verwijderd.terug')"
+            data-testid="verwijderd-terug"
+            @click="terugNaarProjecten"
+          />
+        </template>
+      </UAlert>
       <AbonnementBanner />
       <div class="grid min-h-0 flex-1 grid-cols-[14rem_minmax(0,1fr)_20rem]">
         <template v-if="store.tabblad === 'eendraadschema'">
@@ -529,6 +608,7 @@ onBeforeUnmount(() => {
       v-model:open="conceptOpen"
       :tijd="concept.concept.tijd"
       @laden="laadConcept"
+      @later="laterConcept"
       @verwerpen="verwerpConcept"
     />
     <ExportDialoog
@@ -540,6 +620,7 @@ onBeforeUnmount(() => {
     <ConflictDialoog
       v-model:open="conflictOpen"
       :bezig="conflictBezig"
+      :lokale-wijzigingen="autosave.conflict.value?.lokaleWijzigingen ?? true"
       @serverversie="losConflictOp(autosave.laadServerversie)"
       @kopie="losConflictOp(autosave.bewaarAlsKopie)"
     />

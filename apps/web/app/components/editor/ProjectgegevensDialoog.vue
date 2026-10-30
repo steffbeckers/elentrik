@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { StroomtypeSchema } from "@elentrik/model";
 import AdresVelden from "~/components/editor/AdresVelden.vue";
+import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import { leegAdresFormulier } from "~/editor/adres";
 import {
   formulierUitProject,
@@ -49,6 +50,8 @@ function valideer(waarden: ProjectFormulier) {
 }
 
 function bewaar(): void {
+  // Alleen-lezen (ook als de dialoog al open stond): niets bewaren en niet stil sluiten.
+  if (store.alleenLezen) return;
   const gelukt = voerUit(() => store.wijzigProjectgegevens(gegevensUitFormulier(formulier)));
   if (gelukt) open.value = false;
 }
@@ -57,7 +60,15 @@ function bewaar(): void {
 <template>
   <UModal v-model:open="open" :title="$t('editor.projectgegevens.titel')">
     <template #body>
-      <UForm id="projectgegevens-formulier" :state="formulier" :validate="valideer" class="space-y-6" @submit="bewaar">
+      <AlleenLezenMelding class="mb-4" />
+      <UForm
+        id="projectgegevens-formulier"
+        :state="formulier"
+        :validate="valideer"
+        :disabled="store.alleenLezen"
+        class="space-y-6"
+        @submit="bewaar"
+      >
         <div class="space-y-4">
           <UFormField name="naam" :label="$t('editor.projectgegevens.naam')" required>
             <UInput v-model="formulier.naam" class="w-full" autofocus />
@@ -102,7 +113,12 @@ function bewaar(): void {
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton color="neutral" variant="outline" :label="$t('algemeen.annuleren')" @click="open = false" />
-        <UButton type="submit" form="projectgegevens-formulier" :label="$t('editor.projectgegevens.bewaren')" />
+        <UButton
+          v-if="!store.alleenLezen"
+          type="submit"
+          form="projectgegevens-formulier"
+          :label="$t('editor.projectgegevens.bewaren')"
+        />
       </div>
     </template>
   </UModal>

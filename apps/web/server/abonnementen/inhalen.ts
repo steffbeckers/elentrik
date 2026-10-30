@@ -8,9 +8,8 @@
 // Dubbel werk is ongevaarlijk (beide stappen zijn idempotent), maar twee instanties tegelijk
 // zouden dezelfde Stripe-aanroepen dubbel doen. Daarom houdt de run een advisory lock.
 //
-// Het lock staat los van het werk. Het is een sessielock (`pg_try_advisory_lock`) op een
-// gereserveerde verbinding (`sql.reserve()` van postgres-js): lock en unlock lopen zo gegarandeerd
-// op dezelfde verbinding, ook al is er een pool. Het werk loopt op de gewone `db`, dus elke
+// Het lock (server/taken/lock.ts) staat los van het werk. Het is een sessielock op een
+// gereserveerde verbinding. Het werk loopt op de gewone `db`, dus elke
 // `synchroniseerKlant` en elke `stuurFactuurDoor` commit voor zichzelf. Zo is een claim in
 // `doorgestuurde_facturen` meteen definitief, ook als de run later sneuvelt (stoppen, herstart,
 // verbroken verbinding): een mail die al weg is, gaat nooit een tweede keer, en rijlocks worden
@@ -26,6 +25,7 @@ import { and, inArray, lt, or } from "drizzle-orm";
 import type postgres from "postgres";
 import { gebruikPostgres, type Db } from "../db";
 import { abonnementen } from "../db/schema";
+import { geplandeTakenAan, maakPostgresLock, type MetLock } from "../taken/lock";
 import { stuurFactuurDoor } from "./boekhouding";
 import type { AbonnementConfig } from "./config";
 import type { StripePoort } from "./stripe";
@@ -40,43 +40,14 @@ const STATUSSEN = ["active", "trialing", "past_due"];
 
 export type InhaalResultaat = { gesynchroniseerd: number; doorgestuurd: number };
 
-/**
- * Voert `werk` uit terwijl het lock gehouden wordt. Geeft `false` zonder `werk` uit te voeren als
- * een andere run het lock heeft. In tests (PGlite heeft maar een sessie, waarin een advisory lock
- * altijd opnieuw te nemen is) geven de tests hun eigen `MetLock`.
- */
-export type MetLock = (werk: () => Promise<void>) => Promise<boolean>;
-
 const LOCK = "abonnementen:inhalen";
 
-/** Het echte lock: een sessielock op een gereserveerde verbinding, altijd opgeruimd in `finally`. */
+/** Het lock van de inhaaltaak; zie server/taken/lock.ts. */
 export function postgresLock(client: Pick<postgres.Sql, "reserve">): MetLock {
-  return async (werk) => {
-    const verbinding = await client.reserve();
-    try {
-      const [genomen] = await verbinding`select pg_try_advisory_lock(hashtext(${LOCK})) as genomen`;
-      if (genomen?.genomen !== true) return false;
-      try {
-        await werk();
-      } finally {
-        await verbinding`select pg_advisory_unlock(hashtext(${LOCK}))`;
-      }
-      return true;
-    } finally {
-      verbinding.release();
-    }
-  };
+  return maakPostgresLock(client, LOCK);
 }
 
-/**
- * In productie draaien de geplande taken standaard; daarbuiten (`nuxt dev`, tests) alleen met
- * `ELENTRIK_GEPLANDE_TAKEN=aan`. `uit` zet ze altijd uit (de e2e-server, een noodstop).
- */
-export function geplandeTakenAan(env: Record<string, string | undefined> = process.env): boolean {
-  const keuze = env.ELENTRIK_GEPLANDE_TAKEN?.trim().toLowerCase();
-  if (keuze === "uit") return false;
-  return env.NODE_ENV === "production" || keuze === "aan";
-}
+export { geplandeTakenAan, type MetLock };
 
 function soort(fout: unknown): string {
   return fout instanceof Error ? fout.name : "onbekend";

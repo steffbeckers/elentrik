@@ -37,6 +37,8 @@ export const SERVER_FOUTCODES = [
   "BESTAND_TE_GROOT",
   "BESTANDSTYPE_NIET_TOEGELATEN",
   "RASTER_TE_GROOT",
+  // Een upload zonder geldige Content-Length (411)
+  "LENGTE_VEREIST",
   // Export (502, de code van `PdfFout`)
   "ONBEREIKBAAR",
   "TIMEOUT",
@@ -57,6 +59,9 @@ export const SERVER_FOUTCODES = [
   // Begrenzing: ook de rate limiter van Better Auth (429 zonder code) is voor de client dit
   "TE_VEEL_UITNODIGINGEN",
   "TE_VEEL_POGINGEN",
+  // Een serverfout na het klikken op een geldige inloglink: een redirect naar /inloggen?fout=<CODE>
+  // (server/auth/inloglink.ts), geen h3-fout.
+  "INLOGLINK_MISLUKT",
 ] as const;
 
 /**

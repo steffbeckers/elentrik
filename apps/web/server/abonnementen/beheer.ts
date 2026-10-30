@@ -5,6 +5,7 @@
 // (ruling E1).
 import { eq, sql } from "drizzle-orm";
 import { createError, type H3Event } from "h3";
+import Stripe from "stripe";
 import { z } from "zod";
 import {
   ABONNEMENT_BESTAAT,
@@ -144,6 +145,24 @@ export function trialEindeVoor(proefEinde: Date, nu: Date): Date | null {
 }
 
 /**
+ * Maakt de Stripe-klant. Kent Stripe de idempotency key al met andere gegevens (een eerdere poging met een
+ * ander e-mailadres), dan bestaat de klant al: nog één keer zoeken en die hergebruiken, anders de fout doorgeven.
+ */
+async function maakKlantOfZoek(
+  stripe: StripePoort,
+  i: { organisatieId: string; email: string; naam: string },
+): Promise<string> {
+  try {
+    return (await stripe.maakKlant(i)).id;
+  } catch (fout) {
+    if (!(fout instanceof Stripe.errors.StripeIdempotencyError)) throw fout;
+    const bestaand = await stripe.zoekKlant(i.organisatieId);
+    if (!bestaand) throw fout;
+    return bestaand.id;
+  }
+}
+
+/**
  * Start een Checkout-sessie voor de organisatie. Alles gebeurt achter een advisory lock per
  * organisatie, zodat twee gelijktijdige klikken één klant en hoogstens één open sessie geven:
  * de rij lezen, een voltooide vorige sessie synchroniseren, de klant maken, de vorige sessie
@@ -193,7 +212,11 @@ export async function startCheckout(
 
     let klantId = rij?.stripeKlantId;
     if (!klantId) {
-      klantId = (await stripe.maakKlant({ organisatieId: i.organisatieId, email: i.eigenaarEmail, naam: org.naam })).id;
+      // Een mislukte Checkout rolt de rij terug, maar de klant blijft in Stripe: eerst die zoeken.
+      // De zoekindex loopt even achter; de idempotency key van `maakKlant` vangt dat op.
+      klantId =
+        (await stripe.zoekKlant(i.organisatieId))?.id ??
+        (await maakKlantOfZoek(stripe, { organisatieId: i.organisatieId, email: i.eigenaarEmail, naam: org.naam }));
       await tx.insert(abonnementen).values({ organisatieId: i.organisatieId, stripeKlantId: klantId });
     }
 

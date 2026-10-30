@@ -34,9 +34,10 @@ export default defineNuxtConfig({
     build: { rolldownOptions: { makeAbsoluteExternalsRelative: false } },
   },
   nitro: {
-    // Taken (server/tasks) en hun planning: de uurlijkse inhaaltaak voor gemiste Stripe-meldingen.
+    // Taken (server/tasks) en hun planning: de uurlijkse inhaaltaak voor gemiste Stripe-meldingen en
+    // het dagelijkse opruimen van de prullenbak en van verweesde bestanden (04:00, tijdzone van de container).
     experimental: { tasks: true },
-    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"] },
+    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"], "0 4 * * *": ["bestanden:opruimen"] },
     publicAssets: [
       pdfjsBron("wasm"),
       pdfjsBron("standard_fonts"),
