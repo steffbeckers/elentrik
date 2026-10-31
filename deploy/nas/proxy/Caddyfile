@@ -30,6 +30,13 @@
 			header Cache-Control "no-store"
 			header Retry-After "10"
 
+			# De API, ook voor een verzoek met Accept: text/html (het is geen navigatie), zoals /api/gezondheid die ook
+			# geeft als de database weg is. Staat daarom vóór de navigatie.
+			handle /api/* {
+				header Content-Type "application/json; charset=utf-8"
+				respond `{"ok":false}` 503
+			}
+
 			# Een navigatie van de browser: de onderhoudspagina.
 			@navigatie {
 				method GET
@@ -41,12 +48,6 @@
 				file_server {
 					status 503
 				}
-			}
-
-			# De API, zoals /api/gezondheid die ook geeft als de database weg is.
-			handle /api/* {
-				header Content-Type "application/json; charset=utf-8"
-				respond `{"ok":false}` 503
 			}
 
 			# Al het andere (/_nuxt/..., afbeeldingen, ...).

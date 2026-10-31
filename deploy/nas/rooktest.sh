@@ -918,6 +918,10 @@ via_proxy elentrik.app "${PROXY}/api/gezondheid"
 [ "$P_BODY" = '{"ok":false}' ] || faal "met web gestopt is het lichaam van /api/gezondheid '${P_BODY}', verwacht {\"ok\":false}"
 case "$(p_kop content-type)" in application/json*) ;; *) faal "/api/gezondheid heeft content-type '$(p_kop content-type)'" ;; esac
 [ "$(p_kop cache-control)" = no-store ] && [ "$(p_kop retry-after)" = 10 ] || faal "de 503 van /api/gezondheid mist no-store of Retry-After: 10"
+# Een /api-verzoek is nooit een navigatie, ook niet met Accept: text/html (R5): altijd JSON.
+via_proxy elentrik.app -H 'Accept: text/html,application/xhtml+xml,*/*;q=0.8' "${PROXY}/api/gezondheid"
+[ "$P_STATUS" = 503 ] && [ "$P_BODY" = '{"ok":false}' ] || faal "GET /api/gezondheid met Accept: text/html gaf niet het JSON-antwoord: '${P_STATUS} ${P_BODY}'"
+case "$(p_kop content-type)" in application/json*) ;; *) faal "GET /api/gezondheid met Accept: text/html heeft content-type '$(p_kop content-type)'" ;; esac
 via_proxy elentrik.app -X POST -H 'Accept: application/json' -H "origin: ${BASIS}" "${PROXY}/api/projecten"
 [ "$P_STATUS" = 503 ] && [ "$P_BODY" = '{"ok":false}' ] || faal "een POST naar /api gaf niet het JSON-antwoord: '${P_STATUS} ${P_BODY}'"
 via_proxy elentrik.app "${PROXY}/api/projecten"
