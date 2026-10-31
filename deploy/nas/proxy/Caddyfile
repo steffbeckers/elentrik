@@ -1,0 +1,79 @@
+# De vaste proxy tussen de Cloudflare Tunnel en de web-diensten (zie docs/online.md). Hij wordt bij een
+# update van de app niet herstart: zo antwoordt er altijd iets, ook als `web` of `web-staging` even weg is.
+#
+# - Gewoon HTTP op 8080: TLS eindigt bij Cloudflare.
+# - Geen toegangslog; de app logt zelf wat nodig is.
+# - Een verzoek gaat onveranderd door (Host, CF-Connecting-IP, cookies). Er is bewust geen limiet op de
+#   grootte van een verzoek en geen time-out op een antwoord: plan-uploads en PDF-exports (tot 60 s) moeten
+#   lukken. Daarom hier nooit `request_body`, `read_timeout` of `write_timeout` zetten.
+# - Alleen als de app niet bereikbaar is (verbinding geweigerd, de naam bestaat even niet, verbinden duurt te
+#   lang) maakt Caddy zelf een 502, 503 of 504. Alleen die vervangt `handle_errors` door een 503 met de
+#   onderhoudspagina. Elk antwoord van de app zelf, ook een 5xx, gaat ongewijzigd door.
+# - De dienstnamen van compose (web, web-staging), niet de containernamen: de rooktest geeft de containers
+#   een andere naam.
+{
+	auto_https off
+}
+
+# De healthcheck van de proxy zelf: antwoordt zonder door te sturen, op elke host.
+(gezondheid) {
+	handle /__proxy/gezond {
+		respond "ok" 200
+	}
+}
+
+# Wat de bezoeker krijgt als de app niet antwoordt. Altijd 503, nooit in een cache, en probeer het over 10 s opnieuw.
+(onderhoud) {
+	handle_errors {
+		@onderhoud expression {err.status_code} in [502, 503, 504]
+		handle @onderhoud {
+			header Cache-Control "no-store"
+			header Retry-After "10"
+
+			# Een navigatie van de browser: de onderhoudspagina.
+			@navigatie {
+				method GET
+				header Accept *text/html*
+			}
+			handle @navigatie {
+				root * /srv
+				rewrite * /onderhoud.html
+				file_server {
+					status 503
+				}
+			}
+
+			# De API, zoals /api/gezondheid die ook geeft als de database weg is.
+			handle /api/* {
+				header Content-Type "application/json; charset=utf-8"
+				respond `{"ok":false}` 503
+			}
+
+			# Al het andere (/_nuxt/..., afbeeldingen, ...).
+			handle {
+				header Content-Type "text/plain; charset=utf-8"
+				respond "Elentrik wordt bijgewerkt. Probeer het zo opnieuw." 503
+			}
+		}
+	}
+}
+
+http://elentrik.app:8080 {
+	import gezondheid
+	import onderhoud
+	reverse_proxy web:3000
+}
+
+http://staging.elentrik.app:8080 {
+	import gezondheid
+	import onderhoud
+	reverse_proxy web-staging:3000
+}
+
+# Elke andere host: een eigen 404, zonder door te sturen.
+:8080 {
+	import gezondheid
+	handle {
+		respond "Niet gevonden" 404
+	}
+}

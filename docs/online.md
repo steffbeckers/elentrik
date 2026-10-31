@@ -17,14 +17,22 @@ in een chatbericht.
 ## Hoe het in elkaar zit
 
 ```
-bezoeker -> Cloudflare -> tunnel (cloudflared) -> elentrik-web:3000
-                                                    |-> postgres   (database)
-                                                    |-> gotenberg  (pdf's)
-                                                    '-> bestanden  (map op de NAS)
+bezoeker -> Cloudflare -> tunnel (cloudflared) -> elentrik-proxy:8080 (Caddy, op hostnaam)
+                                                    |-> web:3000          (elentrik.app)
+                                                    |     |-> postgres   (database)
+                                                    |     |-> gotenberg  (pdf's)
+                                                    |     '-> bestanden  (map op de NAS)
+                                                    '-> web-staging:3000  (staging.elentrik.app)
 ```
 
-- Zes containers in een compose-project: `web` (container `elentrik-web`), `postgres`, `gotenberg` en
-  `backup`, plus `web-staging` en `mailpit` voor staging (sectie 11). Ze delen het Docker-netwerk `elentrik` (subnet `172.30.70.0/24`).
+- Zeven containers in een compose-project: `web` (container `elentrik-web`), `postgres`, `gotenberg` en
+  `backup`, plus `web-staging` en `mailpit` voor staging (sectie 11), en de `proxy` (container
+  `elentrik-proxy`). Ze delen het Docker-netwerk `elentrik` (subnet `172.30.70.0/24`).
+- **De proxy** (Caddy, `deploy/nas/proxy/`) staat tussen de tunnel en de web-diensten en stuurt op hostnaam
+  door. Intern stuurt hij door naar de dienstnamen `web:3000` en `web-staging:3000`, niet naar de containernamen.
+  Antwoordt de app niet (bijvoorbeeld tijdens een update), dan toont de proxy zelf een onderhoudspagina (status
+  503) in plaats van de 502-pagina van Cloudflare. Antwoorden van de app zelf gaan ongewijzigd door. `bijwerken.sh`
+  werkt de proxy nooit bij, zodat hij blijft antwoorden terwijl de app herstart.
 - **Er wordt geen enkele poort gepubliceerd.** De enige weg naar binnen is de tunnel.
 - De gegevens staan in mappen op de NAS onder `ELENTRIK_DATA` (standaard `/volume1/docker/elentrik`):
   `postgres/`, `bestanden/`, `backups/` en `staging/bestanden/`.
@@ -74,8 +82,9 @@ buiten de tunnel toevoegen zonder verrassingen. Zet daarna eventueel **Always Us
    - Domain: `elentrik.app`
    - Path: leeg laten
    - Service type: **HTTP**
-   - URL: `elentrik-web:3000` (dat is `http://elentrik-web:3000`; `elentrik-web` is de containernaam uit
-     `compose.yaml`)
+   - URL: `elentrik-proxy:8080` (dat is `http://elentrik-proxy:8080`; `elentrik-proxy` is de containernaam van
+     de proxy uit `compose.yaml`). Wijs de tunnel dus **niet** rechtstreeks naar een web-container: dan krijgen
+     bezoekers tijdens een update weer de 502-pagina van Cloudflare.
 4. Opslaan. Cloudflare maakt zelf het DNS-record `elentrik.app` aan. Bestaat er al een record met die naam,
    dan weigert Cloudflare het: verwijder het oude record eerst.
 
@@ -99,7 +108,7 @@ sudo docker network connect elentrik <naam-van-de-cloudflared-container>
 ```
 
 Controleer: `sudo docker network inspect elentrik --format '{{range .Containers}}{{.Name}} {{end}}'` toont
-onder meer `elentrik-web` en je tunnelcontainer.
+onder meer `elentrik-proxy`, `elentrik-web` en je tunnelcontainer.
 
 **Belangrijk, en waarom:**
 
@@ -286,13 +295,16 @@ Zet deze bestanden samen in `/volume1/docker/elentrik-compose/`:
   `./backup.sh`; ontbreekt het bestand, dan maakt Docker er een lege map van en start de back-up niet);
 - `deploy/nas/bijwerken.sh` uit de repo (sectie 11) en de map `deploy/nas/postgres-init/` (met
   `10-databases.sh`), ook naast `compose.yaml`: zonder die map maakt Postgres de databases en rollen niet aan;
+- de map `deploy/nas/proxy/` (met `Caddyfile` en `onderhoud.html`), ook naast `compose.yaml`: compose koppelt
+  ze als `./proxy/Caddyfile` en `./proxy/onderhoud.html`; ontbreken ze, dan maakt Docker er lege mappen van en
+  start de proxy niet;
 - `.env`, gemaakt van `deploy/nas/.env.voorbeeld`.
 
 Kopieer ze bijvoorbeeld vanaf je ontwikkelmachine met `scp` (de NAS-gebruiker moet SSH mogen), of upload ze met
 File Station:
 
 ```
-scp -r deploy/nas/compose.yaml deploy/nas/backup.sh deploy/nas/bijwerken.sh deploy/nas/postgres-init deploy/nas/.env.voorbeeld <gebruiker>@<nas>:/volume1/docker/elentrik-compose/
+scp -r deploy/nas/compose.yaml deploy/nas/backup.sh deploy/nas/bijwerken.sh deploy/nas/postgres-init deploy/nas/proxy deploy/nas/.env.voorbeeld <gebruiker>@<nas>:/volume1/docker/elentrik-compose/
 ```
 
 Faalt `scp` met "subsystem request failed" (nieuwere `scp`-versies gebruiken SFTP, dat op de NAS uit kan
@@ -303,7 +315,7 @@ cd /volume1/docker/elentrik-compose
 sudo cp .env.voorbeeld .env
 sudo chmod 600 .env
 sudo chmod 755 backup.sh bijwerken.sh
-sudo chmod -R a+rX postgres-init
+sudo chmod -R a+rX postgres-init proxy
 ```
 
 Eisen voor `backup.sh`:
@@ -398,7 +410,7 @@ Het image van staging (`:staging`) bestaat pas na de eerste push naar de branch 
 image laat het hele `up` mislukken. Het eenvoudigst zorg je eerst dat `:staging` bestaat (merge `develop` een
 keer in `staging`, dan bouwt GitHub Actions het image); dan werken manier A (Container Manager start alle
 diensten) en manier B. Alleen voor manier B kan het ook zonder staging:
-`sudo docker compose up -d web postgres gotenberg backup` (`mailpit` hoort alleen bij staging). Staging volgt in
+`sudo docker compose up -d web proxy postgres gotenberg backup` (`mailpit` hoort alleen bij staging). Staging volgt in
 sectie 11.
 
 Bij de eerste start haalt Docker de images binnen en maakt Postgres de database aan. De app migreert de
@@ -412,10 +424,18 @@ sudo docker compose ps
 sudo docker compose logs --tail 50 web
 ```
 
-- Alle diensten staan op `running`, en `postgres`, `gotenberg` en `web` op `healthy` (die laatste kan
+- Alle diensten staan op `running`, en `postgres`, `gotenberg`, `proxy` en `web` op `healthy` (die laatste kan
   tot een minuut duren). `web-staging` en `mailpit` horen bij staging (sectie 11).
 - In de log van `web` staat "Migraties uitgevoerd."
-- Geen enkele poort is gepubliceerd: de kolom Ports in `docker compose ps` is leeg of toont alleen `3000/tcp`.
+- Geen enkele poort is gepubliceerd: de kolom Ports in `docker compose ps` is leeg of toont alleen `3000/tcp` en `8080/tcp`.
+
+Test de proxy van binnenuit, met de hostnaam die Cloudflare meestuurt:
+
+```
+sudo docker exec elentrik-proxy wget -qO- --header "Host: elentrik.app" http://127.0.0.1:8080/api/gezondheid
+```
+
+Verwacht: `{"ok":true}`. Een andere hostnaam geeft een 404 van de proxy.
 
 Test de gezondheidsroute van binnenuit (er is nog geen tunnel nodig):
 
@@ -433,7 +453,7 @@ curl -s https://elentrik.app/api/gezondheid
 ```
 
 Verwacht: `{"ok":true}`. Een 502 van Cloudflare betekent meestal dat `cloudflared` niet aan het netwerk
-`elentrik` hangt, of dat de public hostname een verkeerde URL heeft.
+`elentrik` hangt, of dat de public hostname een verkeerde URL heeft (die hoort `elentrik-proxy:8080` te zijn).
 
 Het is geen goed teken als `web` blijft herstarten: de app weigert in productie te starten bij een
 onvolledige configuratie. De log van `web` noemt dan de **naam** van de variabele (nooit de waarde); zie
@@ -611,6 +631,33 @@ Een nieuwe versie komt tot stand als er iets in `main` gemerged is en de workflo
 heeft (Actions, groen). **Er is geen automatische update**: jij beslist wanneer. Met staging erbij werk je
 per omgeving bij met `bijwerken.sh` (sectie 11); `pull` + `up -d` hieronder werkt alle diensten tegelijk bij.
 
+**De proxy wordt niet mee bijgewerkt.** `bijwerken.sh` raakt hem nooit aan: zijn image heeft een vaste versie in
+`compose.yaml` en `Caddyfile` en `onderhoud.html` staan naast `compose.yaml`. Tijdens een update van `web` of
+`web-staging` blijft hij dus antwoorden en toont hij de onderhoudspagina. Een eigen update van de proxy (een
+nieuwe Caddy-versie in `compose.yaml`, of een gewijzigde `Caddyfile` of `onderhoud.html`) doe je zo:
+
+```
+cd /volume1/docker/elentrik-compose
+sudo docker compose pull proxy && sudo docker compose up -d --no-deps proxy
+```
+
+Dat onderbreekt alle omgevingen (productie en staging) een paar seconden: in die tijd geeft Cloudflare zijn eigen
+502-pagina, want er staat niets tussen de tunnel en de app. Doe het dus op een rustig moment. Na een wijziging
+van alleen `Caddyfile` of `onderhoud.html` volstaat `sudo docker compose restart proxy`. Controleer daarna met
+`sudo docker compose ps` dat `elentrik-proxy` `healthy` is. Het algemene `up -d` hieronder maakt de proxy alleen
+opnieuw aan als `compose.yaml` zijn dienst wijzigde.
+
+**De proxy voor het eerst uitrollen (bestaande installatie).** Zet eerst de nieuwe `compose.yaml` en de map `proxy/`
+neer (sectie 3, stap 2) en volg dan deze volgorde, zodat er nooit een route naar niets wijst:
+
+1. `sudo docker compose up -d --no-deps proxy`: alleen de proxy start, de rest blijft ongemoeid.
+2. Controleer dat `elentrik-proxy` `healthy` is (`sudo docker compose ps`).
+3. Zet **eerst de tunnelroute van staging** om naar `elentrik-proxy:8080` (sectie 11, stap 1) en test
+   `https://staging.elentrik.app`.
+4. Zet daarna de tunnelroute van productie om (sectie 1, stap 3) en test `https://elentrik.app`.
+
+Terug naar de oude route kan altijd: zet de URL van de public hostname weer op de web-container.
+
 ### Aanbevolen: `pull` + `up -d` (zonder `down`)
 
 ```
@@ -686,10 +733,19 @@ sudo docker compose logs --tail 100 web
 sudo docker compose logs --tail 100 postgres
 sudo docker compose logs --tail 100 gotenberg
 sudo docker compose logs --tail 100 backup
+sudo docker compose logs --tail 100 proxy
 ```
 
 In Container Manager: **Container**, kies `elentrik-web`, **Details**, **Logboek**. Geheimen komen nooit in de
 logs, ook niet het databasewachtwoord; meldingen noemen alleen de naam van een variabele.
+
+### Bezoekers zien de onderhoudspagina ("Elentrik wordt bijgewerkt")
+
+De pagina komt van de proxy, niet van de app, en alleen als de proxy de app niet bereikt (status 503). Tijdens een
+update is dat normaal en herlaadt de pagina vanzelf zodra de app terug is. **Blijft de onderhoudspagina staan, dan
+wordt de web-container niet gezond**: de proxy is zelf in orde. Kijk in de logs van `web` (of `web-staging`), zoals
+hieronder bij "De app start niet, of blijft herstarten", en met `sudo docker compose ps` of de container draait.
+De proxy zelf logt geen verzoeken; de oorzaak staat dus in de log van de web-container.
 
 ### De app start niet, of blijft herstarten
 
@@ -753,9 +809,9 @@ status 403, code ErrorAccessDenied". Meestal:
 
 ### Andere
 
-- **Cloudflare geeft 502 of 1033:** hangt `cloudflared` aan het netwerk `elentrik`
-  (`sudo docker network inspect elentrik`)? Klopt de public hostname (`elentrik-web:3000`)? Draait de tunnel
-  zelf?
+- **Cloudflare geeft 502 of 1033:** de proxy zelf is dan niet bereikbaar (een onderhoudspagina van de app zie je
+  hier niet). Hangt `cloudflared` aan het netwerk `elentrik` (`sudo docker network inspect elentrik`)? Draait en is
+  `elentrik-proxy` `healthy`? Klopt de public hostname (`elentrik-proxy:8080`)? Draait de tunnel zelf?
 - **Alle bezoekers delen een limiet voor inlogpogingen** (iedereen krijgt "te veel pogingen" tegelijk): de
   verzoeken komen niet uit het vertrouwde subnet, of `cloudflared` zit niet op dit netwerk. Controleer
   `ELENTRIK_VERTROUWD_PROXYNET` in `docker compose config`.
@@ -887,6 +943,12 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 | --- | --- | --- |
 | `ELENTRIK_GEPLANDE_TAKEN` | nee | Weglaten. Met `uit` doet de uurlijkse inhaaltaak niets. |
 
+### Opslag
+
+| Variabele | Verplicht | Waar je de waarde vindt |
+| --- | --- | --- |
+| `ELENTRIK_OPSLAG_PER_BEDRIJF_MB` | nee | Weglaten voor de standaard van 5120 MB (5 GB) per bedrijf. Een positief geheel getal verandert de limiet voor plannen en exports. |
+
 ### Staging (naast productie)
 
 De stappen voor staging (Cloudflare, Postgres, mappen, Stripe, bijwerken) staan in sectie 11.
@@ -924,12 +986,12 @@ niet geback-upt. Doe stap 1 tot en met 4 vóór je staging voor het eerst start 
 
 ### Stap 1. Cloudflare
 
-Twee public hostnames op dezelfde tunnel (sectie 1, stap 3), elk met service type **HTTP**. Maak de hostname
+Twee public hostnames op dezelfde tunnel (sectie 1, stap 3), elk met service type **HTTP**. Staging gaat net als productie via de proxy (`elentrik-proxy:8080`), die op de hostnaam `staging.elentrik.app` naar `web-staging` doorstuurt. Zet bij een bestaande installatie **eerst staging** om en test het, pas daarna productie (sectie 7). Maak de hostname
 `mailpit-staging` pas aan nadat de Access-toepassing hieronder bestaat, zodat de mail van staging nooit even openbaar is:
 
 | Subdomain | Domain | URL |
 | --- | --- | --- |
-| `staging` | `elentrik.app` | `elentrik-web-staging:3000` |
+| `staging` | `elentrik.app` | `elentrik-proxy:8080` |
 | `mailpit-staging` | `elentrik.app` | `elentrik-mailpit:8025` |
 
 De naam is `mailpit-staging` en niet `mailpit.staging`: het gratis Universal SSL-certificaat dekt alleen één
