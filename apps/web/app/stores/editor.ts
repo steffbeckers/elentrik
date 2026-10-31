@@ -48,9 +48,14 @@ export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst";
 export type TeLadenProject = { id: string; naam: string; versie: number; document: InstallatieDocument };
 
 /** De voorinstellingen bij het openen van de editor: toestel begint bij de wasmachine, de rest bij de standaard. */
-export const BEGIN_VOORINSTELLINGEN: Readonly<Partial<Record<Onderdeel, Voorinstelling>>> = {
-  toestel: { soort: "wasmachine" },
-};
+export const BEGIN_VOORINSTELLINGEN: Readonly<Partial<Record<Onderdeel, Readonly<Voorinstelling>>>> = Object.freeze({
+  toestel: Object.freeze({ soort: "wasmachine" }),
+});
+
+/** Een verse, losse kopie van de beginvoorinstellingen: de store muteert nooit de constante. */
+function beginVoorinstellingen(): Partial<Record<Onderdeel, Voorinstelling>> {
+  return { toestel: { ...BEGIN_VOORINSTELLINGEN.toestel } };
+}
 
 /** De datum van vandaag als `JJJJ-MM-DD`, in lokale tijd (zoals `meta.datum`). */
 function vandaag(): string {
@@ -82,7 +87,7 @@ export const useEditorStore = defineStore("editor", () => {
   const selectie = ref<NodeId[]>([]);
   const onderdeel = ref<Onderdeel>("contactdoos");
   /** Per onderdeel de gekozen variant; een onderdeel zonder sleutel gebruikt de standaard van het model. */
-  const voorinstellingen = ref<Partial<Record<Onderdeel, Voorinstelling>>>({ ...BEGIN_VOORINSTELLINGEN });
+  const voorinstellingen = ref<Partial<Record<Onderdeel, Voorinstelling>>>(beginVoorinstellingen());
   /** De voorinstelling van het gekozen onderdeel, of `{}`. */
   const voorinstelling = computed<Voorinstelling>(() => voorinstellingen.value[onderdeel.value] ?? {});
   /** Leest en schrijft `voorinstellingen.toestel.soort`. */
@@ -167,6 +172,7 @@ export const useEditorStore = defineStore("editor", () => {
     naam.value = project.naam;
     versie.value = project.versie;
     selectie.value = [];
+    symbolenOpen.value = false;
     tabblad.value = "eendraadschema";
     terug.value = [];
     vooruit.value = [];
@@ -248,7 +254,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (alleenLezen.value) return;
     const { [gekozen]: _weg, ...rest } = voorinstellingen.value;
     const begin = BEGIN_VOORINSTELLINGEN[gekozen];
-    voorinstellingen.value = begin ? { ...rest, [gekozen]: begin } : rest;
+    voorinstellingen.value = begin ? { ...rest, [gekozen]: { ...begin } } : rest;
   }
 
   /** Voegt `onderdeel` toe op de aanknoping en selecteert de bovenste nieuwe node. */

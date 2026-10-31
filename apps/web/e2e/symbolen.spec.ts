@@ -49,11 +49,13 @@ test("combinatie kiezen en tekenen", async ({ page, request }) => {
   // 3. De kaart van de contactdoos.
   await venster.getByTestId("symbolenkaart-contactdoos").click();
 
-  // 4. De combinatie randaarde + kinderbeveiliging, niet waterdicht: op naam, niet op volgorde.
+  // 4. Een combinatie die afwijkt van de standaard (randaarde + kinderbeveiliging): randaarde +
+  // waterdicht, zonder kinderbeveiliging. Op naam, niet op volgorde.
   const combinatie = venster.getByTestId(/^combinatie-\d+$/).filter({
-    has: page.getByText("Randaarde, kinderbeveiliging", { exact: true }),
+    has: page.getByText("Randaarde, waterdicht", { exact: true }),
   });
   await expect(combinatie).toHaveCount(1);
+  await expect(combinatie).toHaveAttribute("aria-pressed", "false");
   await combinatie.click();
   await expect(combinatie).toHaveAttribute("aria-pressed", "true");
 
@@ -83,8 +85,8 @@ test("combinatie kiezen en tekenen", async ({ page, request }) => {
         kinderbeveiliging: doos.kinderbeveiliging,
         waterdicht: doos.waterdicht,
       };
-    })
-    .toEqual({ randaarde: true, kinderbeveiliging: true, waterdicht: false });
+    }, { timeout: 30_000 })
+    .toEqual({ randaarde: true, kinderbeveiliging: false, waterdicht: true });
 });
 
 test("sneltoets a opent het venster en Escape sluit het", async ({ page, request }) => {
@@ -112,7 +114,7 @@ test("zoeken: wissel toont de schakelaar, xyz de melding", async ({ page, reques
   await expect(venster.getByTestId("symbolen-geen")).toHaveCount(0);
 
   await zoek.fill("xyz");
-  const melding = venster.getByRole("status");
+  const melding = venster.getByTestId("symbolen-geen");
   await expect(melding).toContainText("Geen symbool gevonden voor \"xyz\".");
   await expect(venster.locator('[data-testid^="symbolenkaart-"]')).toHaveCount(0);
 });
@@ -136,6 +138,24 @@ test("alleen-lezen: het venster opent, maar kiezen kan niet", async ({ page, req
     await venster.getByTestId("symbolenkaart-contactdoos").click();
     await expect(venster.getByTestId(/^combinatie-\d+$/).first()).toBeVisible();
     await expect(venster.getByTestId("symbolen-kiezen")).toBeDisabled();
+
+    // Dubbelklikken op een niet-standaardcombinatie kiest niets: het venster blijft open.
+    const waterdicht = venster.getByTestId(/^combinatie-\d+$/).filter({
+      has: page.getByText("Randaarde, waterdicht", { exact: true }),
+    });
+    await expect(waterdicht).toHaveCount(1);
+    await waterdicht.dblclick();
+    await expect(venster).toBeVisible();
+    await expect(venster.getByTestId("symbolen-kiezen")).toBeDisabled();
+
+    // Sluiten: het paneel is ongewijzigd (onderdeel en variant), ook na de sneltoets a.
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByText("Randaarde, waterdicht", { exact: true })).toHaveCount(0);
+    await page.keyboard.press("a");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog").getByTestId("dialoog-alleen-lezen")).toBeVisible();
   } finally {
     await zetProefEinde(organisatie, new Date(Date.now() + 20 * DAG_MS));
   }
