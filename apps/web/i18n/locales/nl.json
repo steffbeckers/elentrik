@@ -854,6 +854,7 @@
     "TE_VEEL_UITNODIGINGEN": "Te veel uitnodigingen. Probeer het straks opnieuw.",
     "TE_VEEL_POGINGEN": "Te veel pogingen. Wacht even en probeer het opnieuw.",
     "INLOGLINK_MISLUKT": "Inloggen met de link is niet gelukt. Vraag een nieuwe link aan.",
+    "NIEUWE_VERSIE_VEREIST": "Elentrik is bijgewerkt. Herlaad de app om verder te werken.",
     "INVALID_EMAIL_OR_PASSWORD": "Het e-mailadres of het wachtwoord klopt niet.",
     "EMAIL_NOT_VERIFIED": "Je e-mailadres is nog niet bevestigd.",
     "INVALID_TOKEN": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",

@@ -854,6 +854,7 @@
     "TE_VEEL_UITNODIGINGEN": "Too many invitations. Try again later.",
     "TE_VEEL_POGINGEN": "Too many attempts. Wait a moment and try again.",
     "INLOGLINK_MISLUKT": "Signing in with the link did not work. Request a new link.",
+    "NIEUWE_VERSIE_VEREIST": "Elentrik has been updated. Reload the app to continue.",
     "INVALID_EMAIL_OR_PASSWORD": "The email address or password is incorrect.",
     "EMAIL_NOT_VERIFIED": "Your email address has not been confirmed yet.",
     "INVALID_TOKEN": "This link has expired or has already been used. Request a new one.",

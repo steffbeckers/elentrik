@@ -70,12 +70,15 @@ describe("beveiligde routes", () => {
     ).toBe(false);
   });
 
-  // De enige middleware is die voor /robots.txt op staging (plan 10): zonder sessie, en alleen voor dat pad.
-  // Een andere middleware moet hier met naam bekend zijn.
-  test("server/middleware bevat alleen robots.ts, en die antwoordt alleen op /robots.txt", () => {
+  // De middleware is met naam bekend: robots.ts (plan 10, /robots.txt op staging, zonder sessie) en
+  // clientversie.ts (alleen /api, geeft nooit een lichaam, alleen een header of een 426). Een andere
+  // middleware moet hier met naam bekend zijn.
+  test("server/middleware bevat alleen robots.ts en clientversie.ts, elk met een eigen pad", () => {
     const map = join(SERVER, "middleware");
-    expect(readdirSync(map)).toEqual(["robots.ts"]);
-    const inhoud = readFileSync(join(map, "robots.ts"), "utf8");
-    expect(inhoud).toMatch(/pathname\s*!==\s*"\/robots\.txt"\)\s*return;/);
+    expect(readdirSync(map).sort()).toEqual(["clientversie.ts", "robots.ts"]);
+    const robots = readFileSync(join(map, "robots.ts"), "utf8");
+    expect(robots).toMatch(/pathname\s*!==\s*"\/robots\.txt"\)\s*return;/);
+    const versie = readFileSync(join(map, "clientversie.ts"), "utf8");
+    expect(versie).toMatch(/pathname\.startsWith\("\/api\/"\)\)\s*return;/);
   });
 });
