@@ -63,11 +63,19 @@ describe("beveiligde routes", () => {
     expect(PUBLIEK.test(zonderCommentaar("export default defineBeveiligdeHandler(() => 1, { publiek: true });"))).toBe(true);
   });
 
-  test("server/routes bestaat niet (Nitro zou het ongecontroleerd serveren)", () => {
+  // Nitro serveert server/routes zonder de toegangswrapper. De enige route daar is het manifest
+  // (Task 6 van de updates zonder onderbreking): publiek, zonder sessie of database, alleen de naam
+  // volgens de omgeving. Een andere route moet hier met naam bekend zijn.
+  test("server/routes bevat alleen manifest.webmanifest.ts, zonder sessie of database", () => {
+    const map = join(SERVER, "routes");
     expect(
-      existsSync(join(SERVER, "routes")),
-      "server/routes bestaat: breid deze test en de routetabel uit voor je het toevoegt",
-    ).toBe(false);
+      readdirSync(map).sort(),
+      "een nieuwe route in server/routes: breid deze test en de routetabel uit voor je het toevoegt",
+    ).toEqual(["manifest.webmanifest.ts"]);
+    const imports = [...readFileSync(join(map, "manifest.webmanifest.ts"), "utf8").matchAll(/from\s+"([^"]+)"/g)]
+      .map((treffer) => treffer[1])
+      .sort();
+    expect(imports).toEqual(["../../shared/omgeving", "h3"]);
   });
 
   // De middleware is met naam bekend: robots.ts (plan 10, /robots.txt op staging, zonder sessie) en
