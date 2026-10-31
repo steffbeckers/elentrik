@@ -25,6 +25,7 @@ import {
   type ProjectWijziging,
   type Stroomtype,
   type Toestelsoort,
+  type Voorinstelling,
 } from "@elentrik/model";
 import { schemaStripSvg } from "@elentrik/render";
 import { defineStore } from "pinia";
@@ -218,6 +219,11 @@ export const useEditorStore = defineStore("editor", () => {
     zetDocument(doc);
   }
 
+  /** Tijdelijk (tot Task 10): alleen een toestel krijgt de gekozen soort; andere punten hebben een andere soort. */
+  function voorinstellingVoorToestel(): Voorinstelling | undefined {
+    return onderdeel.value === "toestel" ? { soort: toestelsoort.value } : undefined;
+  }
+
   /** Voegt `onderdeel` toe op de aanknoping en selecteert de bovenste nieuwe node. */
   function voegToe(aanknoping: Aanknoping): void {
     if (alleenLezen.value) return;
@@ -225,7 +231,7 @@ export const useEditorStore = defineStore("editor", () => {
       vereisDocument(),
       { soort: aanknoping.soort, nodeId: aanknoping.nodeId },
       onderdeel.value,
-      toestelsoort.value,
+      voorinstellingVoorToestel(),
     );
     pasToe(r);
     selectie.value = [r.ids[r.ids.length - 1]!];
@@ -296,7 +302,8 @@ export const useEditorStore = defineStore("editor", () => {
     const doc = document.value;
     if (!doc) return;
     const aanknoping = aanknopingBijSelectie(doc);
-    if (!aanknoping || !magToevoegen(doc, aanknoping, onderdeel.value, toestelsoort.value)) return;
+    if (!aanknoping) return;
+    if (!magToevoegen(doc, aanknoping, onderdeel.value, voorinstellingVoorToestel())) return;
     voegToe(aanknoping);
   }
 
