@@ -6,6 +6,8 @@ import { httpStatus } from "../composables/useProjectenApi";
 import { foutCode } from "../sessie/fouten";
 import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
 
+const OPSLAG_VOL = "OPSLAG_VOL";
+
 export type PlanUploader = Pick<BestandenApi, "upload">;
 
 export type PlanInvoer = {
@@ -58,15 +60,19 @@ export async function laadPlanOp(
   };
 }
 
-export type UploadFoutSleutel = "onbekendType" | "teGroot" | "tePixels" | "mislukt";
+/**
+ * `opslagVol` (413 OPSLAG_VOL) heeft geen eigen tekst onder `editor.situatie.toevoegen.fout`: de
+ * dialoog toont dan `fouten.OPSLAG_VOL`, de vertaling van de foutcode.
+ */
+export type UploadFoutSleutel = "onbekendType" | "teGroot" | "tePixels" | "opslagVol" | "mislukt";
 
-/** De sleutel onder `editor.situatie.toevoegen.fout` voor een mislukte upload. */
+/** De sleutel onder `editor.situatie.toevoegen.fout` voor een mislukte upload (of `opslagVol`, zie `UploadFoutSleutel`). */
 export function foutSleutel(fout: unknown): UploadFoutSleutel {
   switch (httpStatus(fout)) {
     case 415:
       return "onbekendType";
     case 413:
-      return "teGroot";
+      return foutCode(fout) === OPSLAG_VOL ? "opslagVol" : "teGroot";
     case 422:
       return "tePixels";
     default:
@@ -77,13 +83,21 @@ export function foutSleutel(fout: unknown): UploadFoutSleutel {
 /**
  * Wat een mislukte upload de gebruiker meldt. Een 402 `ABONNEMENT_VEREIST` (de organisatie mag niet
  * meer schrijven) gaat eerst langs `alleenLezen`, de bestaande alleen-lezenafhandeling (de sessie
- * opnieuw lezen en de alleen-lezenmelding tonen): dan is er niets meer te melden (null). Anders de
- * sleutel onder `editor.situatie.toevoegen.fout`.
+ * opnieuw lezen en de alleen-lezenmelding tonen): dan is er niets meer te melden (null). Een 404
+ * (het project is verwijderd) gaat naar `verwijderd`, de verwijderd-toestand van de editor: ook null.
+ * Anders de sleutel onder `editor.situatie.toevoegen.fout`.
  */
 export async function uploadFoutMelding(
   fout: unknown,
   alleenLezen: (fout: unknown) => Promise<boolean>,
+  verwijderd?: () => void,
 ): Promise<UploadFoutSleutel | null> {
   if (httpStatus(fout) === 402 && foutCode(fout) === ABONNEMENT_VEREIST && (await alleenLezen(fout))) return null;
+  // Een 404 op het uploaden betekent dat het project elders verwijderd werd: de editor toont zijn
+  // verwijderd-melding en er is niets algemeens meer te melden.
+  if (httpStatus(fout) === 404 && verwijderd) {
+    verwijderd();
+    return null;
+  }
   return foutSleutel(fout);
 }

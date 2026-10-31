@@ -4,21 +4,12 @@ import { gebruikTestgebruiker } from "./hulp/inloggen";
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "editor" });
 
-// Elke run gebruikt een unieke naam, zodat de opruiming enkel de projecten van deze run raakt.
+// Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Editor ${Date.now()}`;
 const xssLabel = "<img src=x onerror=alert(1)>";
 
-type Samenvatting = { id: string; naam: string };
 type Knoop = { id: string; type: string; label?: string; kabeltype?: string; kinderen: string[] };
 type Project = { document: { nodes: Record<string, Knoop> } };
-
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as Samenvatting[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
 
 /** De tekstlabels in de SVG van het schema (puntlabels als "A1", kringlabels, leidingen). */
 function schemaTekst(page: Page, tekst: string) {
@@ -95,7 +86,7 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   // 2. De + van de rail voegt een kring toe: automaat, leiding en een + op het kring-einde.
   await pasTeMaken(page);
   await railPlus.click();
-  await expect(schemaTekst(page, "16 A B")).toHaveCount(1);
+  await expect(schemaTekst(page, "B16 2P")).toHaveCount(1);
   await expect(schemaTekst(page, "XVB 3G2,5")).toHaveCount(1);
   await expect(kringPlus).toHaveCount(1);
 

@@ -8,7 +8,8 @@ import { beheerAbonnement, kiesFormule, verwerkTerug } from "../app/abonnement/a
 import { behandelSchrijfweigering, paginaWeergave } from "../app/abonnement/weergave";
 import { maakAbonnementApi } from "../app/composables/useAbonnementApi";
 import { maakProjectenApi, type ProjectenFetch } from "../app/composables/useProjectenApi";
-import { useSessieStore, type Mij, type SessieApi } from "../app/stores/sessie";
+import type { Mij } from "../shared/mij";
+import { useSessieStore, type SessieApi } from "../app/stores/sessie";
 
 const HEADER = "x-elentrik-organisatie";
 const NU = new Date("2026-11-01T12:00:00.000Z");

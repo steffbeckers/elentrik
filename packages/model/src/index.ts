@@ -32,9 +32,11 @@ export {
   NIEUWE_KRING_AUTOMAAT,
   SJABLONEN,
   STANDAARD,
+  VISUELE_VELDEN,
   nieuwProjectDocument,
   sjabloonVoor,
   type Onderdeel,
+  type Voorinstelling,
 } from "./standaarden";
 export {
   magToevoegen,

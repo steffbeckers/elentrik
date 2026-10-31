@@ -2,29 +2,20 @@
 // global-setup.ts). De server draait met Stripe aan, dus elke nieuwe organisatie krijgt een proef.
 // Een verlopen proef zetten we rechtstreeks in de e2e-database.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import type { Mij } from "../shared/mij";
 import { metE2eDatabase, zetProefEinde, zetVrijgesteld } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from "./hulp/inloggen";
 import { E2E_STRIPE_URL, E2E_URL } from "./omgeving";
 
-gebruikTestgebruiker(test, { voorvoegsel: "abonnement", bedrijf: "Abonnement Elektro" });
+const { spoor } = gebruikTestgebruiker(test, { voorvoegsel: "abonnement", bedrijf: "Abonnement Elektro" });
 
 const run = Date.now();
 const DAG_MS = 24 * 3600 * 1000;
 
-type Mij = { actieveOrganisatieId: string };
-
 async function organisatieId(request: APIRequestContext): Promise<string> {
-  return ((await (await request.get("/api/mij")).json()) as Mij).actieveOrganisatieId;
+  return ((await (await request.get("/api/mij")).json()) as Mij).actieveOrganisatieId!;
 }
-
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as { id: string; naam: string }[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(`Abonnement ${run}`))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
 
 test.describe.configure({ mode: "serial" });
 
@@ -52,6 +43,7 @@ test("een lid ziet op /abonnement geen knoppen", async ({ page, browser, playwri
   const thuis = await organisatieId(request);
   const api = await playwright.request.newContext({ baseURL: E2E_URL });
   const lid = { naam: "Lid Tester", email: uniekAdres("abonnement-lid"), bedrijf: "Lid Elektro" };
+  spoor.emails.add(lid.email);
   const staat = await maakTestgebruiker(api, lid).finally(() => api.dispose());
 
   // Het lid wordt rechtstreeks in de database lid van de organisatie van de eigenaar.
@@ -171,12 +163,7 @@ test("een dialoog die openstaat bij de overgang naar alleen-lezen blijft open me
 
     // Het abonnement vervalt en de sessie wordt opnieuw gelezen terwijl de dialoog openstaat.
     await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
-    await page.evaluate(async () => {
-      const app = (
-        window as unknown as { useNuxtApp: () => { $pinia: { _s: Map<string, { laad(): Promise<void> }> } } }
-      ).useNuxtApp();
-      await app.$pinia._s.get("sessie")!.laad();
-    });
+    await keerTerugInTabblad(page);
 
     await expect(dialoog).toBeVisible();
     await expect(dialoog.getByTestId("dialoog-alleen-lezen")).toContainText("kunnen niet meer bewaard worden");
@@ -246,12 +233,7 @@ test("conceptdialoog die alleen-lezen wordt: 'Later' sluit zonder het concept te
 
     // Het abonnement vervalt terwijl de dialoog openstaat: laden kan niet meer, "Later" wel.
     await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
-    await page.evaluate(async () => {
-      const app = (
-        window as unknown as { useNuxtApp: () => { $pinia: { _s: Map<string, { laad(): Promise<void> }> } } }
-      ).useNuxtApp();
-      await app.$pinia._s.get("sessie")!.laad();
-    });
+    await keerTerugInTabblad(page);
     await expect(dialoog.getByRole("button", { name: "Concept laden" })).toHaveCount(0);
     await expect(dialoog.getByRole("button", { name: "Verwerpen" })).toBeVisible();
     await dialoog.getByTestId("concept-later").click();
@@ -273,6 +255,17 @@ test("een vrijgesteld bedrijf ziet op /abonnement geen Kies-kaarten, alleen de s
     await metE2eDatabase((sql) => sql`update organization set vrijgesteld = false where id = ${thuis}`);
   }
 });
+
+/**
+ * De gebruiker komt terug in het tabblad: de editor leest dan de sessie opnieuw (een `focus` op het
+ * venster, zoals bij het terugkeren uit een ander tabblad). Zo volgt de pagina een abonnement dat
+ * intussen in de database veranderde, zonder in de interne toestand van de app te grijpen.
+ */
+async function keerTerugInTabblad(page: Page): Promise<void> {
+  const sessie = page.waitForResponse((r) => r.url().endsWith("/api/mij") && r.request().method() === "GET");
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  expect((await sessie).ok()).toBe(true);
+}
 
 async function controleerVrijgesteld(page: Page): Promise<void> {
   await ga(page, "/abonnement");

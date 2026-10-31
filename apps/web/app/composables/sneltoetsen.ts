@@ -11,7 +11,9 @@ export type Actie =
   | { soort: "ongedaan" }
   | { soort: "opnieuw" }
   | { soort: "navigeer"; richting: Richting }
-  | { soort: "wisSelectie" };
+  | { soort: "wisSelectie" }
+  /** Opent het symbolenvenster; ook in alleen-lezen, want bekijken wijzigt niets. */
+  | { soort: "symbolen" };
 
 export type Toets = {
   key: string;
@@ -26,7 +28,8 @@ export type Toets = {
   herhaald?: boolean;
   /**
    * De editor is alleen-lezen (geen abonnement): alles wat het document wijzigt (toevoegen,
-   * verwijderen, ongedaan maken, opnieuw) geeft `null`. Kiezen, navigeren en de selectie wissen blijven.
+   * verwijderen, ongedaan maken, opnieuw) geeft `null`. Kiezen, navigeren, de selectie wissen en het
+   * symbolenvenster openen blijven.
    */
   alleenLezen?: boolean;
 };
@@ -80,6 +83,9 @@ export function spatieSchuift(key: string, soort: DoelSoort): boolean {
   return key === " " && soort === "overig";
 }
 
+/** De sneltoets (kleine letter) van het symbolenvenster; ook getoond in het paneel Onderdelen. */
+export const SYMBOLEN_TOETS = "a";
+
 /** De sneltoets (kleine letter) per onderdeel; ook getoond in het paneel Onderdelen. */
 export const ONDERDEEL_PER_TOETS: Readonly<Record<string, Onderdeel>> = {
   c: "contactdoos",
@@ -119,6 +125,7 @@ export function sneltoets(toets: Toets): Actie | null {
 
   const richting = RICHTINGEN[key];
   if (richting) return { soort: "navigeer", richting };
+  if (key === SYMBOLEN_TOETS) return { soort: "symbolen" };
 
   const onderdeel = ONDERDEEL_PER_TOETS[key];
   return onderdeel ? { soort: "kies", onderdeel } : null;

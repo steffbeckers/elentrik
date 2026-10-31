@@ -9,6 +9,7 @@ import EigenschappenPaneel from "~/components/editor/EigenschappenPaneel.vue";
 import ExportDialoog from "~/components/editor/ExportDialoog.vue";
 import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
+import SymbolenVenster from "~/components/editor/SymbolenVenster.vue";
 import KringenlijstTabel from "~/components/kringenlijst/KringenlijstTabel.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
 import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
@@ -209,6 +210,11 @@ const conflictBezig = ref(false);
 
 watch(autosave.status, (status) => {
   conflictOpen.value = status === "conflict";
+});
+
+// De server weigerde het document met een bekende foutcode (bv. PLANBESTAND_ONBEKEND): de vertaalde reden.
+watch(autosave.fout, (fout) => {
+  if (fout?.code) toast.add({ title: t(`fouten.${fout.code}`), color: "error" });
 });
 
 async function losConflictOp(actie: () => Promise<void>): Promise<void> {
@@ -600,8 +606,14 @@ onBeforeUnmount(() => {
       {{ $t("editor.pagina.laden") }}
     </div>
 
-    <PlanToevoegenDialoog v-model:open="planDialoogOpen" :vervang-pagina-id="vervangPaginaId" @klaar="planKlaar" />
+    <PlanToevoegenDialoog
+      v-model:open="planDialoogOpen"
+      :vervang-pagina-id="vervangPaginaId"
+      @klaar="planKlaar"
+      @verwijderd="autosave.meldVerwijderd"
+    />
     <SchaalDialoog v-model:open="schaalOpen" :pagina-id="meetPaginaId" :afstand-px="schaalAfstandPx" />
+    <SymbolenVenster />
 
     <ConceptDialoog
       v-if="concept"

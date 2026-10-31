@@ -6,7 +6,9 @@
 // echt gebruikt wordt.
 //
 // De scan in die test ziet alleen h3-`createError` (en hulpfuncties met een statusCode-parameter);
-// de `APIError`-guards in server/auth/index.ts (bv. ALLEEN_EIGENAAR) worden niet gescand.
+// de `APIError`-guards in server/auth/index.ts (bv. ALLEEN_EIGENAAR) worden niet gescand. De
+// fouten van `auth.api.*` in de routes van organisaties, leden en uitnodigingen vertaalt
+// `vertaalAuthFout` (server/organisaties/auth-fouten.ts) naar codes uit deze lijst.
 //
 // Expliciete import in de server en client (ruling E1): dit bestand importeert niets.
 
@@ -37,8 +39,15 @@ export const SERVER_FOUTCODES = [
   "BESTAND_TE_GROOT",
   "BESTANDSTYPE_NIET_TOEGELATEN",
   "RASTER_TE_GROOT",
-  // Een upload zonder geldige Content-Length (411)
+  // Een nieuwe verwijzing in het document naar een plan dat niet van dit project is (422)
+  "PLANBESTAND_ONBEKEND",
+  // De opslag van het bedrijf is vol: een upload, een kopie of "Bewaar als nieuw project" zou
+  // de limiet overschrijden (413). Exports worden nooit geweigerd.
+  "OPSLAG_VOL",
+  // Een upload of een JSON-body zonder geldige Content-Length (411)
   "LENGTE_VEREIST",
+  // Een JSON-body boven 50 MB (413)
+  "VERZOEK_TE_GROOT",
   // Export (502, de code van `PdfFout`)
   "ONBEREIKBAAR",
   "TIMEOUT",
@@ -56,6 +65,9 @@ export const SERVER_FOUTCODES = [
   "UITNODIGING_ANDER_ADRES",
   "EMAIL_NIET_BEVESTIGD",
   "ACCOUNT_BESTAAT",
+  // De grenzen van Better Auth: 100 openstaande uitnodigingen en 100 leden per bedrijf (409)
+  "UITNODIGINGEN_VOL",
+  "LEDEN_VOL",
   // Begrenzing: ook de rate limiter van Better Auth (429 zonder code) is voor de client dit
   "TE_VEEL_UITNODIGINGEN",
   "TE_VEEL_POGINGEN",
@@ -65,7 +77,8 @@ export const SERVER_FOUTCODES = [
 ] as const;
 
 /**
- * De codes van Better Auth 1.7.7 die de aanmeld- en herstelpagina's kunnen bereiken, met hun
+ * De codes van Better Auth 1.7.7 die de aanmeld- en herstelpagina's en het formulier voor een
+ * nieuw bedrijf (`organization.create`, rechtstreeks vanuit de client) kunnen bereiken, met hun
  * Engelse naam zoals Better Auth ze stuurt (`error.code` van de client, of `?error=` in de URL
  * van een mail). Elke naam bestaat in `auth.$ERROR_CODES` (de test controleert dat). Een andere
  * code van Better Auth krijgt in de UI de algemene foutmelding.
@@ -84,6 +97,9 @@ export const AUTH_FOUTCODES = [
   /** Registreren met een adres dat al bestaat (422; normaal geeft Better Auth dan een neutraal antwoord). */
   "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
   "INVALID_EMAIL",
+  /** Een nieuw bedrijf met een slug die al bestaat (400; de client voegt aan de slug 6 willekeurige tekens toe). */
+  "ORGANIZATION_ALREADY_EXISTS",
+  "ORGANIZATION_SLUG_ALREADY_TAKEN",
 ] as const;
 
 /** Alle codes die de server kan sturen, zonder dubbels. */

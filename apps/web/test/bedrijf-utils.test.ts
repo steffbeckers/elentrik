@@ -5,15 +5,23 @@ import { Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEvent, type H3Event } from "h3";
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { MAX_LOGO_BYTES } from "../shared/bestandsinhoud";
 import { bewaarBedrijf, bewaarLogo, haalBedrijf } from "../server/bedrijf/repo";
 import { maakLokaleOpslag } from "../server/bestanden/opslag";
 import { leesBedrijfBody } from "../server/utils/bedrijf";
-import { leesLogoUpload, leesPlanUpload } from "../server/utils/bestanden";
+import { leesLogoUpload, leesPlanUpload, type UploadRuimte } from "../server/utils/bestanden";
 import { maakTestDb, maakTestOrganisatie } from "./db";
 
 const GRENS = "----elentrik";
+
+/** Een bedrijf met een lege opslag: de uploadhulpen controleren de ruimte voor ze iets lezen. */
+let ruimte: UploadRuimte;
+
+beforeAll(async () => {
+  const db = await maakTestDb();
+  ruimte = { db, organisatieId: await maakTestOrganisatie(db) };
+});
 
 function maakEvent(opties: { headers?: Record<string, string>; body?: Buffer } = {}) {
   const req = new IncomingMessage(new Socket());
@@ -60,25 +68,25 @@ describe("leesLogoUpload", () => {
   test("leest de bytes van het veld bestand", async () => {
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 255]);
     const { body, headers } = multipart([{ naam: "bestand", inhoud: bytes, bestand: true }]);
-    expect(await leesLogoUpload(maakEvent({ body, headers }))).toEqual(bytes);
+    expect(await leesLogoUpload(maakEvent({ body, headers }), ruimte)).toEqual(bytes);
   });
 
   test("een ontbrekend bestandsveld geeft 400", async () => {
     const { body, headers } = multipart([{ naam: "iets", inhoud: "x" }]);
-    expect(await statusVan(() => leesLogoUpload(maakEvent({ body, headers })))).toBe(400);
+    expect(await statusVan(() => leesLogoUpload(maakEvent({ body, headers }), ruimte))).toBe(400);
   });
 
   test("een content-length boven MAX_LOGO_BYTES plus 1 MB geeft 413, de grens zelf niet", async () => {
     const grens = MAX_LOGO_BYTES + 1024 * 1024;
     expect(
       await statusVan(() =>
-        leesLogoUpload(maakEvent({ headers: { "content-length": String(grens + 1) } })),
+        leesLogoUpload(maakEvent({ headers: { "content-length": String(grens + 1) } }), ruimte),
       ),
     ).toBe(413);
     // Op de grens volgt de body; zonder multipart is dat 400, nooit 413.
     expect(
       await statusVan(() =>
-        leesLogoUpload(maakEvent({ headers: { "content-length": String(grens) } })),
+        leesLogoUpload(maakEvent({ headers: { "content-length": String(grens) } }), ruimte),
       ),
     ).toBe(400);
   });
@@ -91,7 +99,7 @@ describe("de planupload blijft beperkt tot plannen", () => {
         { naam: "soort", inhoud: soort },
         { naam: "bestand", inhoud: new Uint8Array([1]), bestand: true },
       ]);
-      expect(await statusVan(() => leesPlanUpload(maakEvent({ body, headers })))).toBe(400);
+      expect(await statusVan(() => leesPlanUpload(maakEvent({ body, headers }), ruimte))).toBe(400);
     }
   });
 });

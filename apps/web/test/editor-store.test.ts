@@ -8,7 +8,7 @@ import {
 } from "@elentrik/model";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test } from "vitest";
-import { MAX_STAPPEN, useEditorStore } from "../app/stores/editor";
+import { BEGIN_VOORINSTELLINGEN, MAX_STAPPEN, useEditorStore } from "../app/stores/editor";
 import { useSessieStore } from "../app/stores/sessie";
 
 type Store = ReturnType<typeof useEditorStore>;
@@ -79,6 +79,82 @@ describe("laad", () => {
     const eerste = store.laadGeneratie;
     store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
     expect(store.laadGeneratie).toBe(eerste + 1);
+  });
+});
+
+describe("voorinstelling per onderdeel", () => {
+  test("kiesVariant zet onderdeel en voorinstelling, en toevoegen gebruikt ze", () => {
+    const store = laadNieuw();
+    const kringId = nieuweKring(store);
+    store.kiesVariant("contactdoos", { waterdicht: true });
+    expect(store.onderdeel).toBe("contactdoos");
+    expect(store.voorinstelling).toEqual({ waterdicht: true });
+    store.voegToe({ soort: "kring-einde", nodeId: kringId });
+    const nieuw = node(store, store.selectie[0]!);
+    expect(nieuw.type).toBe("contactdoos");
+    expect(nieuw).toMatchObject({ waterdicht: true });
+  });
+
+  test("de voorinstelling blijft per onderdeel", () => {
+    const store = laadNieuw();
+    store.kiesVariant("schakelaar", { soort: "wissel" });
+    store.onderdeel = "contactdoos";
+    expect(store.voorinstelling).toEqual({});
+    store.onderdeel = "schakelaar";
+    expect(store.voorinstelling).toEqual({ soort: "wissel" });
+  });
+
+  test("zetStandaard zet een onderdeel terug naar zijn beginwaarde", () => {
+    const store = laadNieuw();
+    store.kiesVariant("toestel", { soort: "boiler" });
+    store.zetStandaard("toestel");
+    expect(store.toestelsoort).toBe("wasmachine");
+    store.kiesVariant("schakelaar", { soort: "wissel" });
+    store.zetStandaard("schakelaar");
+    expect(store.voorinstelling).toEqual({});
+  });
+
+  test("toestelsoort blijft bruikbaar als lees- en schrijfwaarde", () => {
+    const store = laadNieuw();
+    expect(store.toestelsoort).toBe("wasmachine");
+    store.toestelsoort = "boiler";
+    expect(store.voorinstellingen.toestel?.soort).toBe("boiler");
+  });
+
+  test("laad raakt de voorinstellingen niet aan", () => {
+    const store = laadNieuw();
+    store.kiesVariant("contactdoos", { waterdicht: true });
+    store.laad({ id: "p2", naam: "Andere", versie: 1, document: startDocument() });
+    expect(store.voorinstelling).toEqual({ waterdicht: true });
+  });
+
+  test("laad sluit het symbolenvenster", () => {
+    const store = laadNieuw();
+    store.symbolenOpen = true;
+    store.laad({ id: "p2", naam: "Andere", versie: 1, document: startDocument() });
+    expect(store.symbolenOpen).toBe(false);
+  });
+
+  test("de store muteert de beginvoorinstellingen niet", () => {
+    const store = laadNieuw();
+    expect(Object.isFrozen(BEGIN_VOORINSTELLINGEN)).toBe(true);
+    expect(Object.isFrozen(BEGIN_VOORINSTELLINGEN.toestel)).toBe(true);
+    expect(store.voorinstellingen.toestel).not.toBe(BEGIN_VOORINSTELLINGEN.toestel);
+    store.toestelsoort = "boiler";
+    expect(BEGIN_VOORINSTELLINGEN.toestel).toEqual({ soort: "wasmachine" });
+    store.zetStandaard("toestel");
+    expect(store.voorinstellingen.toestel).toEqual({ soort: "wasmachine" });
+    expect(store.voorinstellingen.toestel).not.toBe(BEGIN_VOORINSTELLINGEN.toestel);
+  });
+
+  test("alleen-lezen: kiesVariant verandert niets, het venster mag wel open", () => {
+    const store = laadNieuw();
+    store.zetAlleenLezen(true);
+    store.kiesVariant("contactdoos", { waterdicht: true });
+    expect(store.voorinstelling).toEqual({});
+    expect(store.voorinstellingen.contactdoos).toBeUndefined();
+    store.symbolenOpen = true;
+    expect(store.symbolenOpen).toBe(true);
   });
 });
 

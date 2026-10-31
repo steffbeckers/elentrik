@@ -3,6 +3,7 @@ import type { Partij } from "@elentrik/model";
 import { MAX_LOGO_BYTES } from "../shared/bestandsinhoud";
 import {
   controleerLogo,
+  logoUploadFout,
   formulierUitPartij,
   leegFormulier,
   partijUitFormulier,
@@ -157,6 +158,22 @@ describe("valideerFormulier", () => {
     expect(
       valideerFormulier(formulier({ straat: "K", nummer: "1", postcode: "2000", gemeente: "A" })),
     ).toEqual([]);
+  });
+});
+
+describe("logoUploadFout", () => {
+  const fetchFout = (status: number, code?: string) =>
+    Object.assign(new Error(`HTTP ${status}`), { status, ...(code ? { data: { data: { code } } } : {}) });
+
+  test.each([
+    [fetchFout(413, "OPSLAG_VOL"), "opslagVol"],
+    [fetchFout(413, "BESTAND_TE_GROOT"), "teGroot"],
+    [fetchFout(413), "teGroot"],
+    [fetchFout(415, "BESTANDSTYPE_NIET_TOEGELATEN"), "onbekendType"],
+    [fetchFout(500), "mislukt"],
+    [new Error("netwerk"), "mislukt"],
+  ])("%#: %s", (fout, sleutel) => {
+    expect(logoUploadFout(fout)).toBe(sleutel);
   });
 });
 

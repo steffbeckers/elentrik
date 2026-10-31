@@ -4,21 +4,10 @@ import { gebruikTestgebruiker } from "./hulp/inloggen";
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "projecten" });
 
-// Elke run gebruikt een unieke naam, zodat herhaalde runs niet botsen en de
-// opruiming enkel de projecten van deze run raakt.
+// Elke run gebruikt een unieke naam, zodat herhaalde runs niet botsen; `ruimOp` wist ze na afloop.
 const naam = `Test Janssens ${Date.now()}`;
 const kopieNaam = `${naam} (kopie)`;
 const klantnaam = "<img src=x onerror=alert(1)>";
-
-type Samenvatting = { id: string; naam: string };
-
-test.afterAll(async ({ request }) => {
-  const antwoord = await request.get("/api/projecten");
-  const projecten = (await antwoord.json()) as Samenvatting[];
-  for (const project of projecten.filter((p) => p.naam.startsWith(naam))) {
-    await request.delete(`/api/projecten/${project.id}`);
-  }
-});
 
 test("een mislukte lijst toont een foutmelding in plaats van de lege staat", async ({ page }) => {
   await page.route("**/api/projecten", (route) =>

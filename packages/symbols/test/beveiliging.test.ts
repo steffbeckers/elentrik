@@ -75,32 +75,60 @@ describe("symbolen voor voeding en beveiliging", () => {
     expect(maat(aansluiting)).toEqual([10, 8]);
     expect(maat(teller)).toEqual([10, 12]);
     expect(maat(automaat(1))).toEqual([10, 14]);
-    expect(maat(differentieel(2))).toEqual([14, 14]);
+    expect(maat(differentieel(2))).toEqual([10, 14]);
     expect(maat(zekering)).toEqual([8, 14]);
   });
 
-  test.each([1, 2, 3, 4] as const)("automaat met %i polen heeft evenveel poolstreepjes", (polen) => {
-    const { svg } = tekenSymbool(automaat(polen));
-    expect(svg.match(/data-rol="pool"/g)).toHaveLength(polen);
+  describe.each([1, 2, 3, 4] as const)("automaat volgens AREI met %i polen", (polen) => {
+    const symbool = tekenSymbool(automaat(polen));
+    const { svg, maat } = symbool;
+
+    test("heeft geen poolstreepjes en geen kruisje", () => {
+      expect(svg).not.toContain('data-rol="pool"');
+      expect(svg).not.toContain('data-rol="kruis"');
+      expect(svg.match(/<line /g)?.length ?? 0).toBeLessThanOrEqual(3);
+    });
+
+    test("heeft precies één gevuld blokje op het vrije uiteinde van het contact", () => {
+      const blokjes = svg.match(/<[a-z]+ [^>]*data-rol="blokje"[^>]*\/>/g) ?? [];
+      expect(blokjes).toHaveLength(1);
+      expect(blokjes[0]).toContain('fill="currentColor"');
+    });
+
+    test("het blokje ligt links van het midden, op 50 tot 90 procent van de hoogte vanaf in", () => {
+      const blokje = svg.match(/<path [^>]*data-rol="blokje"[^>]*\/>/)?.[0] ?? "";
+      const d = blokje.match(/ d="([^"]*)"/)?.[1] ?? "";
+      const getallen = (d.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+      const xs = getallen.filter((_, i) => i % 2 === 0);
+      const ys = getallen.filter((_, i) => i % 2 === 1);
+      const middenX = xs.reduce((a, b) => a + b, 0) / xs.length;
+      const middenY = ys.reduce((a, b) => a + b, 0) / ys.length;
+      expect(xs.length).toBeGreaterThanOrEqual(4);
+      expect(middenX).toBeLessThan(maat.breedte / 2);
+      const afstand = (maat.in.y - middenY) / maat.hoogte;
+      expect(afstand).toBeGreaterThanOrEqual(0.5);
+      expect(afstand).toBeLessThanOrEqual(0.9);
+    });
   });
 
-  test.each([2, 4] as const)("differentieel met %i polen heeft evenveel poolstreepjes", (polen) => {
-    const { svg } = tekenSymbool(differentieel(polen));
-    expect(svg.match(/data-rol="pool"/g)).toHaveLength(polen);
+  test("automaat is gelijk voor elk aantal polen", () => {
+    expect(tekenSymbool(automaat(1)).svg).toBe(tekenSymbool(automaat(4)).svg);
   });
 
-  test("poolstreepjes zijn lijnen", () => {
-    const { svg } = tekenSymbool(automaat(4));
-    const lijnen = svg.match(/<line [^>]*data-rol="pool"[^>]*\/>/g) ?? [];
-    expect(lijnen).toHaveLength(4);
+  describe.each([2, 4] as const)("differentieel met %i polen", (polen) => {
+    test("tekent hetzelfde contact als de automaat", () => {
+      expect(tekenSymbool(differentieel(polen))).toEqual(tekenSymbool(automaat(1)));
+    });
+
+    test("heeft geen rechthoek en geen ΔI", () => {
+      const { svg } = tekenSymbool(differentieel(polen));
+      expect(svg).not.toContain("<rect");
+      expect(svg).not.toContain("ΔI");
+    });
   });
 
-  test("het differentieel toont ΔI", () => {
-    expect(tekenSymbool(differentieel(2)).svg).toContain(">ΔI</text>");
-  });
-
-  test("teller toont kWh en aansluiting toont ~", () => {
+  test("teller toont kWh en aansluiting toont een sinus als pad", () => {
     expect(tekenSymbool(teller).svg).toContain(">kWh</text>");
-    expect(tekenSymbool(aansluiting).svg).toContain(">~</text>");
+    expect(tekenSymbool(aansluiting).svg).toContain('data-rol="sinus"');
   });
 });

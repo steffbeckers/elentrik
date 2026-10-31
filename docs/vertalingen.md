@@ -215,6 +215,22 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | taal | langue | language |
 | testomgeving | environnement de test | test environment |
 | echte gegevens | données réelles | real data |
+| symbool | symbole | symbol |
+| combinatie (van varianten) | combinaison | combination |
+| AREI tabel 2.23 | RGIE tableau 2.23 | AREI table 2.23 |
+
+De rubrieken van tabel 2.23 (de symbolen) volgen in het Nederlands en het Frans de officiële tekst; het Engels is eigen vertaling:
+
+| NL | FR | EN |
+|---|---|---|
+| A. Algemeenheden | A. Généralités | A. General |
+| B. Elektrische toestellen | B. Appareillages électriques | B. Electrical equipment |
+| C. Elektrische leidingen | C. Canalisations électriques | C. Electrical wiring |
+| D. Beschermingstoestellen | D. Dispositifs de protection | D. Protective devices |
+| E. Schakelaars | E. Interrupteurs | E. Switches |
+| F. Contactdozen | F. Socles de prise de courant | F. Sockets |
+| G. Gebruikstoestellen | G. Appareils d'utilisation | G. Current-using equipment |
+| H. Bronnen | H. Sources | H. Sources |
 
 "Staging" blijft in elke taal "Staging" (de naam van de omgeving). De balk bovenaan op staging luidt: nl "Staging: testomgeving, geen echte gegevens", fr "Staging : environnement de test, aucune donnée réelle", en "Staging: test environment, no real data".
 

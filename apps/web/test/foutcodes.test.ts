@@ -7,11 +7,16 @@
 // - een `createError` met `statusCode,` (geen letterlijke status): alleen toegelaten in een
 //   hulpfunctie `function naam(statusCode: number, ..., code: Foutcode)`, waarvan de aanroepen
 //   (`naam(404, "...", "CODE")`) dan de status en de code letterlijk meegeven;
-// - tuples van `AUTH_CODES` in server/organisaties/leden.ts.
+// - tuples van `AUTH_CODES` in server/organisaties/auth-fouten.ts.
+//
+// De hulpfunctie is `maakFout` uit server/fouten.ts: lokale `fout()`-hulpen bestaan niet meer
+// (zie "geen lokale fout()" hieronder). De scanner kent elke `function naam(statusCode: number, ...)`
+// in server/ en leest de aanroepen in alle bestanden.
 // Wat 5xx is (de PDF-dienst, een webhook die faalt) is geen 4xx en valt buiten de eis.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { betterAuth } from "better-auth";
+import { organization } from "better-auth/plugins";
 import { describe, expect, test } from "vitest";
 import { AUTH_FOUTCODES, FOUTCODES, isFoutcode, SERVER_FOUTCODES } from "../shared/foutcodes";
 
@@ -112,6 +117,18 @@ function regelVan(bron: string, index: number): number {
   return bron.slice(0, index).split("\n").length;
 }
 
+/** Alle hulpfuncties met een `statusCode: number`-parameter in server/, bv. `maakFout`. */
+function hulpNamen(): Set<string> {
+  const namen = new Set<string>();
+  for (const pad of tsBestanden(SERVER)) {
+    const bron = zonderCommentaar(readFileSync(pad, "utf8"));
+    for (const m of bron.matchAll(/\bfunction\s+(\w+)\(\s*statusCode: number/g)) namen.add(m[1]!);
+  }
+  return namen;
+}
+
+const HULPNAMEN = hulpNamen();
+
 function scan(): { plaatsen: Plaats[]; perBestand: Map<string, number> } {
   const plaatsen: Plaats[] = [];
   const perBestand = new Map<string, number>();
@@ -156,13 +173,13 @@ function scan(): { plaatsen: Plaats[]; perBestand: Map<string, number> } {
       );
     }
 
-    for (const [functie] of hulp) {
+    for (const functie of HULPNAMEN) {
       for (const m of bron.matchAll(new RegExp(`(?<![\\w.])${functie}\\(`, "g"))) {
         if (/function\s+$/.test(bron.slice(Math.max(0, m.index! - 10), m.index!))) continue;
         const { argumenten } = lees(bron, m.index! + m[0].length - 1);
         tel();
         if (uitzondering) continue;
-        // `fout(...bekend)` met een tuple uit AUTH_CODES: de test "AUTH_CODES" hieronder controleert die codes.
+        // `maakFout(bekend[0], ...)` met een tuple uit AUTH_CODES: de test "AUTH_CODES" hieronder controleert die codes.
         if (argumenten[0] === "bekend[0]") continue;
         const status = Number(argumenten[0]);
         if (!Number.isInteger(status)) {
@@ -233,6 +250,8 @@ describe("FOUTCODES", () => {
       secret: "vitest-geheim-alleen-voor-tests-0123456789abcdef",
       baseURL: "http://127.0.0.1:3000",
       telemetry: { enabled: false },
+      // De codes van de organisatie-plugin (ORGANIZATION_ALREADY_EXISTS, ...) horen er ook bij.
+      plugins: [organization()],
     });
     const bestaand = Object.keys(auth.$ERROR_CODES);
     for (const code of AUTH_FOUTCODES) expect(bestaand).toContain(code);
@@ -263,7 +282,7 @@ describe("foutcodes in de server (statisch)", () => {
     // Er zijn er nu 20+ met een letterlijke 4xx-status; een scanner die er veel minder vindt, is stuk.
     expect(plaatsen.length).toBeGreaterThanOrEqual(30);
     expect(plaatsen.some((p) => p.soort === "createError")).toBe(true);
-    expect(plaatsen.some((p) => p.soort === "fout()")).toBe(true);
+    expect(plaatsen.some((p) => p.soort === "maakFout()")).toBe(true);
     expect(plaatsen.map((p) => p.bestand)).toEqual(
       expect.arrayContaining(["utils/toegang.ts", "utils/projecten.ts", "utils/bestanden.ts", "organisaties/leden.ts"]),
     );
@@ -284,17 +303,71 @@ describe("foutcodes in de server (statisch)", () => {
     }
   });
 
-  test("AUTH_CODES in leden.ts: elke tuple heeft een code uit FOUTCODES", () => {
-    const bron = zonderCommentaar(readFileSync(join(SERVER, "organisaties/leden.ts"), "utf8"));
+  test("AUTH_CODES in auth-fouten.ts: elke tuple heeft een code uit FOUTCODES", () => {
+    const bron = zonderCommentaar(readFileSync(join(SERVER, "organisaties/auth-fouten.ts"), "utf8"));
     const start = bron.indexOf("const AUTH_CODES");
     expect(start).toBeGreaterThan(-1);
     const blok = bron.slice(bron.indexOf("{", start + 40), bron.indexOf("\n};", start));
-    const tuples = [...blok.matchAll(/^\s+\w+:\s*\[(\d{3}),\s*([^\]]*)\],?$/gm)];
-    expect(tuples.length).toBeGreaterThanOrEqual(8);
+    const tuples = [...blok.matchAll(/^\s+[A-Z_]+:\s*\[\s*(\d{3}),([^\]]*)\],?$/gm)];
+    // Een tuple per sleutel van de tabel.
+    expect(tuples.length).toBe([...blok.matchAll(/^\s+[A-Z_]+:\s*\[/gm)].length);
+    expect(tuples.length).toBeGreaterThanOrEqual(12);
     for (const t of tuples) {
       // [status, boodschap, code]: de code is het laatste deel (de boodschap kan een komma bevatten).
-      const code = codeUit(t[2]!.slice(t[2]!.lastIndexOf(",") + 1).trim());
+      const rest = t[2]!.trim().replace(/,$/, "").trim();
+      const code = codeUit(rest.slice(rest.lastIndexOf(",") + 1).trim());
       expect(code !== undefined && isFoutcode(code), t[0]).toBe(true);
+    }
+  });
+
+  test("elke tekst die naar maakFout gaat is printbare ASCII (h3 haalt andere tekens uit een statusMessage)", () => {
+    const tekstConstanten = new Map<string, string>();
+    for (const bestand of [...tsBestanden(SERVER), ...tsBestanden(SHARED)]) {
+      const bron = zonderCommentaar(readFileSync(bestand, "utf8"));
+      for (const m of bron.matchAll(/\bconst\s+(\w+)\s*=\s*"([^"\n]*)"/g)) tekstConstanten.set(m[1]!, m[2]!);
+    }
+    const ascii = (tekst: string) => /^[\x20-\x7e]*$/.test(tekst);
+    let aanroepen = 0;
+    const fouten: string[] = [];
+    for (const pad of tsBestanden(SERVER)) {
+      const naam = pad.slice(SERVER.length + 1).replaceAll("\\", "/");
+      const bron = zonderCommentaar(readFileSync(pad, "utf8"));
+      for (const m of bron.matchAll(/(?<![\w.])maakFout\(/g)) {
+        if (/function\s+$/.test(bron.slice(Math.max(0, m.index! - 10), m.index!))) continue;
+        const { argumenten } = lees(bron, m.index! + m[0].length - 1);
+        aanroepen++;
+        const tekst = argumenten[1] ?? "";
+        const letterlijk = tekst.match(/^["'`]([^"'`]*)["'`]$/)?.[1];
+        if (letterlijk !== undefined) {
+          if (!ascii(letterlijk)) fouten.push(`${naam}: ${letterlijk}`);
+        } else if (tekst === "bekend[1]") {
+          // De tuples van AUTH_CODES: hun boodschappen staan in het blok zelf.
+          const start = bron.indexOf("const AUTH_CODES");
+          const blok = bron.slice(start, bron.indexOf("\n};", start));
+          for (const l of blok.matchAll(/"([^"\n]*)"/g)) if (!ascii(l[1]!)) fouten.push(`${naam}: ${l[1]}`);
+        } else if (tekst !== "statusMessage") {
+          // (statusMessage: de definitie van maakFout zelf, in server/fouten.ts.)
+          const waarde = tekstConstanten.get(tekst);
+          if (waarde === undefined) fouten.push(`${naam}: niet te lezen: ${tekst}`);
+          else if (!ascii(waarde)) fouten.push(`${naam}: ${tekst} = ${waarde}`);
+        }
+      }
+    }
+    expect(aanroepen).toBeGreaterThanOrEqual(15);
+    expect(fouten).toEqual([]);
+  });
+
+  test("geen lokale fout()-hulp meer: alle servercode gebruikt maakFout uit server/fouten.ts", () => {
+    const lokaal = tsBestanden(SERVER)
+      .filter((pad) => !pad.endsWith("fouten.ts"))
+      .filter((pad) => /\bfunction\s+fout\s*\(/.test(zonderCommentaar(readFileSync(pad, "utf8"))))
+      .map((pad) => pad.slice(SERVER.length + 1).replaceAll("\\", "/"));
+    expect(lokaal).toEqual([]);
+    for (const bestand of ["abonnementen/beheer.ts", "organisaties/leden.ts"]) {
+      const bron = zonderCommentaar(readFileSync(join(SERVER, bestand), "utf8"));
+      expect(bron, bestand).not.toMatch(/\bfunction\s+fout\b|\bconst\s+fout\s*=/);
+      expect(bron, bestand).not.toMatch(/(?<![\w.])fout\(/);
+      expect(bron, bestand).toMatch(/import \{[^}]*\bmaakFout\b[^}]*\} from "\.\.\/fouten"/);
     }
   });
 });

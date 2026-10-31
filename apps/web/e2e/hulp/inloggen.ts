@@ -8,6 +8,7 @@
 import type { APIRequestContext, APIResponse, BrowserContextOptions, test as basis } from "@playwright/test";
 import { E2E_URL } from "../omgeving";
 import { laatsteMailAan, linkUit } from "./mailpit";
+import { nieuwSpoor, ruimOp, type E2eSpoor } from "./opruimen";
 
 export type StorageState = Exclude<BrowserContextOptions["storageState"], string | undefined>;
 
@@ -73,17 +74,29 @@ export async function maakTestgebruiker(
 /**
  * Eén testgebruiker met een eigen organisatie voor het hele specbestand: aangemaakt in
  * `beforeAll`, en via `storageState` ingelogd in elke test (ook in `page` en `request`).
+ *
+ * De hulp geeft ook het spoor van het bestand terug, met de gebruiker er al in. Een spec die meer
+ * aanmaakt (nog een gebruiker, een gezaaid project) registreert dat daarin, vóór hij het maakt.
+ * In `afterAll` wist `ruimOp` alles van het spoor echt uit de e2e-database en de e2e-bestandenmap,
+ * ook als een test faalde.
  */
 export function gebruikTestgebruiker(
   test: typeof basis,
   opties: { naam?: string; bedrijf?: string; voorvoegsel?: string } = {},
-): { gebruiker: () => Testgebruiker } {
+): { gebruiker: () => Testgebruiker; spoor: E2eSpoor } {
   const gebruiker: Testgebruiker = {
     naam: opties.naam ?? "E2E Tester",
     email: uniekAdres(opties.voorvoegsel ?? "e2e"),
     bedrijf: opties.bedrijf ?? "E2E Elektro",
   };
+  const spoor = nieuwSpoor();
+  // Vóór het aanmaken geregistreerd: ook een halve registratie wordt opgeruimd.
+  spoor.emails.add(gebruiker.email);
   let staat: StorageState | undefined;
+
+  test.afterAll(async () => {
+    await ruimOp(spoor);
+  });
 
   test.beforeAll(async ({ playwright }) => {
     const request = await playwright.request.newContext({ baseURL: E2E_URL });
@@ -102,5 +115,5 @@ export function gebruikTestgebruiker(
     },
   });
 
-  return { gebruiker: () => gebruiker };
+  return { gebruiker: () => gebruiker, spoor };
 }

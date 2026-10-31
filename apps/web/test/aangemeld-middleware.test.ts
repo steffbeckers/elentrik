@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { bestemming, isPubliek, terugZonderFout, veiligTerug } from "../app/sessie/bestemming";
+import { bestemming, isPubliek, terugZonderFout } from "../app/sessie/bestemming";
+import { veiligTerugpad } from "../shared/terugpad";
 
 const metOrganisatie = { actieveOrganisatieId: "org-1" };
 const zonderOrganisatie = { actieveOrganisatieId: null };
@@ -65,11 +66,11 @@ describe("bestemming", () => {
   });
 });
 
-describe("veiligTerug", () => {
+describe("veiligTerugpad", () => {
   test("een lokaal pad blijft", () => {
-    expect(veiligTerug("/")).toBe("/");
-    expect(veiligTerug("/projecten/p1?tab=x#y")).toBe("/projecten/p1?tab=x#y");
-    expect(veiligTerug("/uitnodiging/abc")).toBe("/uitnodiging/abc");
+    expect(veiligTerugpad("/")).toBe("/");
+    expect(veiligTerugpad("/projecten/p1?tab=x#y")).toBe("/projecten/p1?tab=x#y");
+    expect(veiligTerugpad("/uitnodiging/abc")).toBe("/uitnodiging/abc");
   });
 
   test.each([
@@ -85,18 +86,18 @@ describe("veiligTerug", () => {
     "",
     " /projecten",
   ])("%j wordt geweigerd", (terug) => {
-    expect(veiligTerug(terug)).toBeNull();
+    expect(veiligTerugpad(terug)).toBeNull();
   });
 
   test("geen tekst of een lijst: geweigerd", () => {
-    expect(veiligTerug(undefined)).toBeNull();
-    expect(veiligTerug(null)).toBeNull();
-    expect(veiligTerug(["/a", "/b"])).toBeNull();
-    expect(veiligTerug(42)).toBeNull();
+    expect(veiligTerugpad(undefined)).toBeNull();
+    expect(veiligTerugpad(null)).toBeNull();
+    expect(veiligTerugpad(["/a", "/b"])).toBeNull();
+    expect(veiligTerugpad(42)).toBeNull();
   });
 
   test("absurd lang: geweigerd", () => {
-    expect(veiligTerug(`/${"a".repeat(3000)}`)).toBeNull();
+    expect(veiligTerugpad(`/${"a".repeat(3000)}`)).toBeNull();
   });
 });
 

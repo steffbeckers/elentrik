@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -107,6 +107,68 @@ describe("lokale opslag: oplijsten en verwijderen", () => {
     await opslag.schrijf("map/bestand", new Uint8Array([1]));
     await expect(opslag.verwijder("map")).rejects.toThrow();
     expect(await opslag.bestaat("map/bestand")).toBe(true);
+  });
+});
+
+describe("lokale opslag: de wortel en lege mappen", () => {
+  test("bestaatWortel: waar voor een bestaande map, onwaar voor een ontbrekende of voor een bestand", async () => {
+    expect(await maakLokaleOpslag(map).bestaatWortel()).toBe(true);
+    expect(await maakLokaleOpslag(join(map, "bestaat-niet")).bestaatWortel()).toBe(false);
+    await writeFile(join(map, "bestand"), "x");
+    expect(await maakLokaleOpslag(join(map, "bestand")).bestaatWortel()).toBe(false);
+  });
+
+  test("wisLegeMap wist een lege map", async () => {
+    const opslag = maakLokaleOpslag(map);
+    await mkdir(join(map, "project-a"));
+    await opslag.wisLegeMap("project-a");
+    await expect(stat(join(map, "project-a"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test("wisLegeMap laat een map met een bestand staan, zonder fout", async () => {
+    const opslag = maakLokaleOpslag(map);
+    await opslag.schrijf("project-a/bestand-1", new Uint8Array([1]));
+    await expect(opslag.wisLegeMap("project-a")).resolves.toBeUndefined();
+    expect(await opslag.bestaat("project-a/bestand-1")).toBe(true);
+  });
+
+  test("wisLegeMap laat een map met alleen een lege submap staan", async () => {
+    const opslag = maakLokaleOpslag(map);
+    await mkdir(join(map, "org", "organisatie-1"), { recursive: true });
+    await opslag.wisLegeMap("org");
+    expect((await stat(join(map, "org"))).isDirectory()).toBe(true);
+  });
+
+  test("wisLegeMap op een ontbrekende map is geen fout", async () => {
+    await expect(maakLokaleOpslag(map).wisLegeMap("bestaat/nooit")).resolves.toBeUndefined();
+  });
+
+  test("wisLegeMap wist nooit de wortel zelf, ook niet als ze leeg is", async () => {
+    const wortel = join(map, "wortel");
+    await mkdir(wortel);
+    const opslag = maakLokaleOpslag(wortel);
+    for (const naam of ["", ".", "./", "a/.."]) {
+      await opslag.wisLegeMap(naam);
+      expect((await stat(wortel)).isDirectory(), naam).toBe(true);
+    }
+  });
+
+  test("wisLegeMap weigert een map buiten de opslagmap", async () => {
+    const wortel = join(map, "wortel");
+    await mkdir(wortel);
+    await mkdir(join(map, "buiten"));
+    await expect(maakLokaleOpslag(wortel).wisLegeMap("../buiten")).rejects.toThrow();
+    expect((await stat(join(map, "buiten"))).isDirectory()).toBe(true);
+  });
+
+  test("schrijf en wisLegeMap tegelijk: elke upload slaagt en elk bestand blijft", async () => {
+    const opslag = maakLokaleOpslag(map);
+    const uploads = Array.from({ length: 40 }, (_, i) => `project-a/bestand-${i}`);
+    await Promise.all([
+      ...uploads.map((sleutel) => opslag.schrijf(sleutel, new Uint8Array([1]))),
+      ...uploads.map(() => opslag.wisLegeMap("project-a")),
+    ]);
+    expect((await opslag.lijst()).map((b) => b.sleutel).sort()).toEqual([...uploads].sort());
   });
 });
 

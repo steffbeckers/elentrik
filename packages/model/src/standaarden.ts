@@ -39,6 +39,25 @@ export const STANDAARD: { [O in Onderdeel]: NodeInvoer } = {
   onderbord: { type: "verdeelbord" },
 };
 
+/** De instelling die een nieuw punt meekrijgt, bovenop `STANDAARD` (spec §4.3). */
+export type Voorinstelling = {
+  aantal?: number;
+  randaarde?: boolean;
+  kinderbeveiliging?: boolean;
+  waterdicht?: boolean;
+  soort?: string;
+};
+
+/** Per onderdeel de sleutels die een voorinstelling mag zetten; andere onderdelen: geen. */
+export const VISUELE_VELDEN: Readonly<
+  Partial<Record<Onderdeel, readonly (keyof Voorinstelling)[]>>
+> = {
+  contactdoos: ["aantal", "randaarde", "kinderbeveiliging", "waterdicht"],
+  lichtpunt: ["aantal", "soort"],
+  schakelaar: ["soort", "waterdicht"],
+  toestel: ["soort"],
+};
+
 /** De beveiliging van een nieuwe kring op een rail. */
 export const NIEUWE_KRING_AUTOMAAT: NodeInvoer = {
   type: "automaat",

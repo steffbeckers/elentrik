@@ -13,6 +13,16 @@
 // 4. Een bestand op schijf zonder rij in `bestanden` gaat na 7 dagen weg, tenzij dat verdacht veel
 //    is (een lege of verse database naast een volle opslagmap, bv. midden in een herstel).
 //
+// Vóór alles een controle op de opslagmap: staan er rijen in `bestanden` en is ze er niet (een
+// niet-aangekoppeld volume), laat ze zich niet lezen of is ze leeg, dan doet de hele run niets en volgt één waarschuwing met
+// aantallen. Zonder die controle zouden alle bestanden "ontbrekend" lijken en zou stap 1 projecten
+// ontgrendelen en wissen die een kopie nog gebruikt. De uitslag heeft dan `overgeslagen`.
+//
+// Na het wissen van een bestand verdwijnt ook zijn map als ze leeg is (`<projectId>/`,
+// `org/<organisatieId>/`), nooit de opslagmap zelf. Een upload die tegelijk een bestand in die
+// map maakt, is veilig: het wissen van een niet-lege map faalt gewoon, en `schrijf` maakt de map
+// opnieuw als ze er net tussenuit gehaald is.
+//
 // Wat "in gebruik" is: een bestand-id dat voorkomt in het huidige document van een project, in een
 // snapshot, in de bedrijfsgegevens (het logo), in `organization.logo` of in `exports.bestand_id`.
 // De documenten en snapshots worden niet gelezen via het model maar als JSON doorzocht op elke
@@ -35,7 +45,8 @@
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import { and, eq, gt, inArray, isNotNull, isNull, lt } from "drizzle-orm";
+import { dirname } from "node:path/posix";
+import { and, count, eq, gt, inArray, isNotNull, isNull, lt } from "drizzle-orm";
 import type { Db } from "../db";
 import { bedrijfsinstellingen, bestanden, exports, organization, projecten, snapshots } from "../db/schema";
 import type { MetLock } from "../taken/lock";
@@ -71,6 +82,8 @@ export type OpruimResultaat = {
   losseBestanden: number;
   /** Projecten uit de prullenbak die blijven staan omdat een ander project hun bestanden nog gebruikt. */
   geblokkeerd: number;
+  /** Aanwezig als de run niets deed omdat de opslagmap onbereikbaar lijkt (niet aangekoppeld of leeg naast rijen). */
+  overgeslagen?: "opslag-onbereikbaar";
 };
 
 export type OpruimAfhankelijkheden = {
@@ -143,15 +156,47 @@ async function gebruikteIds(db: Db): Promise<Verwijzers> {
   return verwijzers;
 }
 
-/** Wist een bestand op schijf; een fout wordt geteld, niet gelogd met details. Geeft terug of het gelukt is. */
+/**
+ * Wist een bestand op schijf, en daarna zijn map als die leeg is. Een fout wordt geteld, niet gelogd
+ * met details. Geeft terug of het bestand gewist is; een map die blijft staan, telt alleen als fout.
+ */
 async function wisOpSchijf(opslag: BestandOpslag, sleutel: string, fouten: { aantal: number }): Promise<boolean> {
   try {
     await opslag.verwijder(sleutel);
-    return true;
   } catch {
     fouten.aantal++;
     return false;
   }
+  const map = dirname(sleutel);
+  if (map !== ".") {
+    try {
+      await opslag.wisLegeMap(map);
+    } catch {
+      fouten.aantal++;
+    }
+  }
+  return true;
+}
+
+/**
+ * Is de opslagmap bruikbaar? Niet als er rijen in `bestanden` staan en de opslagmap er niet is, zich
+ * niet laat lezen, of leeg is. Dan lijkt elk bestand te ontbreken en mag niets gewist worden.
+ * Staan er geen rijen in `bestanden`, dan valt er niets verkeerd te beoordelen (een verse
+ * installatie heeft nog geen opslagmap) en loopt de run gewoon. Geeft de aantallen voor de
+ * waarschuwing, of `undefined` als alles in orde is.
+ */
+async function onbereikbaarheid(db: Db, opslag: BestandOpslag): Promise<{ rijen: number; opSchijf: number } | undefined> {
+  const [{ aantal: rijen } = { aantal: 0 }] = await db.select({ aantal: count() }).from(bestanden);
+  if (rijen === 0) return undefined;
+  let opSchijf = 0;
+  try {
+    if (!(await opslag.bestaatWortel())) return { rijen, opSchijf };
+    opSchijf = (await opslag.lijst()).length;
+  } catch {
+    // Kunnen we de opslagmap niet lezen, dan is ze voor ons onbereikbaar.
+    return { rijen, opSchijf };
+  }
+  return opSchijf === 0 ? { rijen, opSchijf } : undefined;
 }
 
 /** Een project dat tussen het zoeken en het wissen teruggezet is: de transactie draait terug. */
@@ -317,7 +362,25 @@ export async function ruimOp(deps: OpruimAfhankelijkheden): Promise<OpruimResult
     }
   }
 
+  let afgebroken = false;
   const uitgevoerd = await deps.metLock(async () => {
+    // Zonder zekerheid dat de opslagmap er is, doet de run niets (zie de uitleg bovenaan). Lukt de
+    // controle zelf niet (de database), dan evenmin.
+    let onbereikbaar: { rijen: number; opSchijf: number } | undefined;
+    try {
+      onbereikbaar = await onbereikbaarheid(deps.db, deps.opslag);
+    } catch (fout) {
+      fouten.aantal++;
+      console.error("Opruimtaak: de opslagmap kon niet gecontroleerd worden", { fout: soortFout(fout) });
+      afgebroken = true;
+      return;
+    }
+    if (onbereikbaar) {
+      console.warn("Opruimtaak: de opslagmap lijkt onbereikbaar, er is niets gewist", onbereikbaar);
+      resultaat.overgeslagen = "opslag-onbereikbaar";
+      afgebroken = true;
+      return;
+    }
     // Stap 1 weet pas of een project nog in gebruik is na een volledige scan; lukt die niet, dan
     // wordt er niets gewist.
     await stap(async () => {
@@ -346,6 +409,7 @@ export async function ruimOp(deps: OpruimAfhankelijkheden): Promise<OpruimResult
     });
   });
   if (!uitgevoerd) return { projecten: 0, planbestanden: 0, logos: 0, losseBestanden: 0, geblokkeerd: 0 };
+  if (afgebroken) return resultaat;
 
   if (fouten.aantal > 0) console.error("Opruimtaak: fouten", { aantal: fouten.aantal });
   console.info("Opruimtaak klaar", resultaat);

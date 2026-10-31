@@ -25,14 +25,27 @@ export function leidingLabel(node: NodeVan<"leiding">): string {
   return `${kabeltype} ${node.aantalGeleiders}G${doorsnede}`;
 }
 
-/** Bijvoorbeeld "16 A B", "20 A" of "300 mA A". */
+/** De gevoeligheid in ampere uit milliampere: maximaal 3 decimalen, zonder overbodige nullen en met een komma. Zonder Intl, voor een vast resultaat. */
+function ampereTekst(mA: number): string {
+  return (mA / 1000)
+    .toFixed(3)
+    .replace(/\.?0+$/, "")
+    .replace(".", ",");
+}
+
+/** Bijvoorbeeld "C20", "B16 2P", "40/0,03A type A 2P", "63/0,3A type AC" of "20 A" (AREI tabel 2.23: het aantal polen staat er vanaf twee). */
 export function beveiligingLabel(node: NodeVan<"automaat"> | NodeVan<"zekering"> | NodeVan<"differentieel">): string {
   switch (node.type) {
     case "automaat":
-      return `${node.nominaal_A} A ${node.curve}`;
+      return `${node.curve}${node.nominaal_A}${polenSuffix(node.polen)}`;
     case "zekering":
       return `${node.nominaal_A} A`;
     case "differentieel":
-      return `${node.gevoeligheid_mA} mA ${node.klasse}`;
+      return `${node.nominaal_A}/${ampereTekst(node.gevoeligheid_mA)}A type ${node.klasse}${polenSuffix(node.polen)}`;
   }
+}
+
+/** " 2P" vanaf twee polen, anders niets. */
+function polenSuffix(polen: number): string {
+  return polen > 1 ? ` ${polen}P` : "";
 }

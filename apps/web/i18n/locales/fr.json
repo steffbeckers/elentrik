@@ -108,6 +108,51 @@
       "sjablonen": "Modèles",
       "geenSneltoets": "—"
     },
+    "symbolen": {
+      "openen": "Tous les symboles",
+      "titel": "Symboles",
+      "zoeken": "Rechercher un symbole…",
+      "geenResultaten": "Aucun symbole trouvé pour « {zoek} ».",
+      "kiezen": "Choisir et dessiner",
+      "standaard": "Par défaut",
+      "zonderOpties": "Sans options",
+      "metAantal": "{naam}, nombre : {aantal}",
+      "combinaties": "Toutes les combinaisons",
+      "arei": "RGIE tableau 2.23, {rubriek}",
+      "rubrieken": {
+        "A": "A. Généralités",
+        "B": "B. Appareillages électriques",
+        "C": "C. Canalisations électriques",
+        "D": "D. Dispositifs de protection",
+        "E": "E. Interrupteurs",
+        "F": "F. Socles de prise de courant",
+        "G": "G. Appareils d'utilisation",
+        "H": "H. Sources"
+      },
+      "categorieen": {
+        "punten": "Points",
+        "leidingenEnBorden": "Câbles et tableaux",
+        "beveiliging": "Protection",
+        "voeding": "Alimentation"
+      },
+      "waaromNiet": {
+        "automatisch": "Est ajouté automatiquement avec un nouveau circuit.",
+        "altijd": "Figure dans chaque schéma."
+      },
+      "uitleg": {
+        "contactdoos": "Une prise de courant, avec ou sans contact de terre, sécurité enfants ou version étanche.",
+        "lichtpunt": "Un point lumineux fixe, par exemple une LED, un tube fluorescent, un spot ou un éclairage de secours.",
+        "schakelaar": "Commande un point lumineux : simple, double, va-et-vient, permutateur, variateur ou bouton-poussoir.",
+        "toestel": "Un appareil raccordé à demeure, comme un lave-linge, une plaque de cuisson ou une borne de recharge.",
+        "leiding": "Un câble entre deux éléments d'un circuit.",
+        "verdeelbord": "Un tableau de distribution avec ses propres protections, comme un tableau divisionnaire.",
+        "differentieel": "Coupe le courant dès qu'un courant de fuite s'écoule vers la terre.",
+        "zekering": "Un fusible qui protège le circuit contre les surintensités.",
+        "automaat": "Protège un circuit contre les surcharges et les courts-circuits.",
+        "aansluiting": "Le point de raccordement au réseau public, en haut du schéma.",
+        "teller": "Le compteur d'électricité, juste après le raccordement."
+      }
+    },
     "sjablonen": {
       "kring-stopcontacten": "Circuit de prises",
       "kring-verlichting": "Circuit d'éclairage",
@@ -369,13 +414,7 @@
       "email": "E-mail"
     },
     "adres": {
-      "titel": "Adresse",
-      "straat": "Rue",
-      "nummer": "Numéro",
-      "bus": "Boîte",
-      "postcode": "Code postal",
-      "gemeente": "Commune",
-      "land": "Pays"
+      "titel": "Adresse"
     },
     "fouten": {
       "naamVerplicht": "Donnez un nom à votre entreprise.",
@@ -578,7 +617,7 @@
       "verstuurd": "Si cette adresse est connue, vous recevrez un nouvel e-mail de confirmation."
     },
     "linkOngeldig": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
-    "nieuweLink": "Envoyer un nouveau lien",
+    "nieuweLink": "Envoyer un nouveau lien de connexion",
     "accountGemaakt": "Votre compte a été créé. Connectez-vous avec votre adresse e-mail et votre mot de passe.",
     "wachtwoordGewijzigd": "Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe.",
     "wachtwoordVergeten": "Mot de passe oublié ?",
@@ -792,7 +831,10 @@
     "BESTAND_TE_GROOT": "Ce fichier est trop volumineux.",
     "BESTANDSTYPE_NIET_TOEGELATEN": "Ce type de fichier n'est pas accepté.",
     "RASTER_TE_GROOT": "Ce plan est trop grand (plus de 8 000 pixels).",
-    "LENGTE_VEREIST": "Ce fichier n'a pas pu être envoyé, car sa taille est absente. Réessayez.",
+    "PLANBESTAND_ONBEKEND": "Le projet renvoie à un plan qui n'en fait pas partie et n'a pas pu être enregistré. Envoyez à nouveau le plan.",
+    "OPSLAG_VOL": "L'espace de stockage de cette entreprise est plein. Supprimez d'anciens projets pour libérer de la place.",
+    "LENGTE_VEREIST": "L'envoi a échoué, car la taille est absente. Réessayez.",
+    "VERZOEK_TE_GROOT": "Le projet est trop volumineux pour être enregistré.",
     "ONBEREIKBAAR": "Le service PDF est injoignable. Réessayez dans quelques instants.",
     "TIMEOUT": "Le service PDF n'a pas répondu à temps. Réessayez dans quelques instants.",
     "MISLUKT": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
@@ -807,6 +849,8 @@
     "UITNODIGING_ANDER_ADRES": "Cette invitation est destinée à une autre adresse.",
     "EMAIL_NIET_BEVESTIGD": "Confirmez d'abord votre adresse e-mail, puis réessayez.",
     "ACCOUNT_BESTAAT": "Un compte existe déjà avec cette adresse. Connectez-vous pour accepter l'invitation.",
+    "UITNODIGINGEN_VOL": "Trop d'invitations sont déjà en attente. Annulez-en une ou attendez qu'elles soient acceptées.",
+    "LEDEN_VOL": "Cette entreprise a atteint le nombre maximal de membres.",
     "TE_VEEL_UITNODIGINGEN": "Trop d'invitations. Réessayez plus tard.",
     "TE_VEEL_POGINGEN": "Trop de tentatives. Patientez un instant et réessayez.",
     "INLOGLINK_MISLUKT": "La connexion avec le lien n'a pas abouti. Demandez un nouveau lien.",
@@ -817,6 +861,8 @@
     "PASSWORD_TOO_SHORT": "Un mot de passe doit contenir au moins 10 caractères.",
     "PASSWORD_TOO_LONG": "Un mot de passe doit contenir au maximum 128 caractères.",
     "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "Un compte existe déjà avec cette adresse.",
-    "INVALID_EMAIL": "Saisissez une adresse e-mail valide."
+    "INVALID_EMAIL": "Saisissez une adresse e-mail valide.",
+    "ORGANIZATION_ALREADY_EXISTS": "Cette entreprise n'a pas pu être créée car elle existe déjà. Réessayez.",
+    "ORGANIZATION_SLUG_ALREADY_TAKEN": "Cette entreprise n'a pas pu être créée car elle existe déjà. Réessayez."
   }
 }

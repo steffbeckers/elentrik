@@ -65,9 +65,26 @@ function lijnstijl(vulling: "none" | "currentColor" = "none"): string {
   return `stroke="currentColor" stroke-width="${getal(LIJNDIKTE_MM)}" fill="${vulling}"`;
 }
 
-/** `<line>`; attributen: x1 y1 x2 y2, stroke, stroke-width, fill, daarna data-*. */
-export function lijn(x1: number, y1: number, x2: number, y2: number, opties?: MetData): string {
-  return `<line x1="${getal(x1)}" y1="${getal(y1)}" x2="${getal(x2)}" y2="${getal(y2)}" ${lijnstijl()}${dataAttributen(opties?.data)}/>`;
+const STREEP_TEKENS = /^[0-9]+(\.[0-9]+)?( [0-9]+(\.[0-9]+)?)*$/;
+
+/**
+ * `<line>`; attributen: x1 y1 x2 y2, stroke, stroke-width, fill, daarna eventueel `stroke-dasharray`
+ * en dan data-*. `streep` is de lijst met streeplengtes in mm, gescheiden door spaties ("0.8 0.6");
+ * andere tekens dan getallen en spaties geven een `RangeError`.
+ */
+export function lijn(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  opties?: MetData & { streep?: string },
+): string {
+  let streep = "";
+  if (opties?.streep !== undefined) {
+    if (!STREEP_TEKENS.test(opties.streep)) throw new RangeError(`Ongeldige streep: "${opties.streep}"`);
+    streep = ` stroke-dasharray="${opties.streep}"`;
+  }
+  return `<line x1="${getal(x1)}" y1="${getal(y1)}" x2="${getal(x2)}" y2="${getal(y2)}" ${lijnstijl()}${streep}${dataAttributen(opties?.data)}/>`;
 }
 
 /** `<circle>`; met `gevuld` is `fill="currentColor"`. */
