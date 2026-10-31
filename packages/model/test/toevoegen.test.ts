@@ -248,10 +248,73 @@ describe("voegOnderdeelToe op een kring-einde", () => {
     const { doc, leidingId, puntId } = kring();
     expect(puntId).not.toBe(leidingId);
     const aanknoping = { soort: "kring-einde", nodeId: puntId } as const;
-    const was = voegOnderdeelToe(doc, aanknoping, "toestel", "wasmachine");
+    const was = voegOnderdeelToe(doc, aanknoping, "toestel", { soort: "wasmachine" });
     expect(haal(was.doc, was.ids[0]!)).toMatchObject({ type: "toestel", soort: "wasmachine" });
     const zonder = voegOnderdeelToe(doc, aanknoping, "toestel");
     expect(haal(zonder.doc, zonder.ids[0]!)).toMatchObject({ soort: "andere" });
+  });
+
+  describe("voorinstelling", () => {
+    test("voorinstelling wordt over STANDAARD gelegd", () => {
+      const { doc, puntId } = kring();
+      const aanknoping = { soort: "kring-einde", nodeId: puntId } as const;
+      const r = voegOnderdeelToe(doc, aanknoping, "contactdoos", {
+        randaarde: true,
+        kinderbeveiliging: true,
+        waterdicht: true,
+        aantal: 2,
+      });
+      expect(haal(r.doc, r.ids[0]!)).toMatchObject({
+        type: "contactdoos",
+        randaarde: true,
+        kinderbeveiliging: true,
+        waterdicht: true,
+        aantal: 2,
+      });
+      const deels = voegOnderdeelToe(doc, aanknoping, "contactdoos", { randaarde: false });
+      expect(haal(deels.doc, deels.ids[0]!)).toMatchObject({
+        aantal: 1,
+        randaarde: false,
+        kinderbeveiliging: true,
+        waterdicht: false,
+      });
+    });
+
+    test("alleen visuele velden van het onderdeel", () => {
+      const { doc, puntId } = kring();
+      const aanknoping = { soort: "kring-einde", nodeId: puntId } as const;
+      const r = voegOnderdeelToe(doc, aanknoping, "toestel", {
+        soort: "boiler",
+        waterdicht: true,
+        randaarde: true,
+      });
+      const node = haal(r.doc, r.ids[0]!);
+      expect(node).toMatchObject({ type: "toestel", soort: "boiler" });
+      expect(node).not.toHaveProperty("waterdicht");
+      expect(node).not.toHaveProperty("randaarde");
+    });
+
+    test("een voorinstelling geldt niet voor beveiligingen", () => {
+      const { doc, bordId } = start();
+      const r = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "differentieel", {
+        soort: "x",
+      });
+      const { id, parentId, kinderen, ...rest } = haal(r.doc, r.ids[0]!);
+      expect(rest).toEqual(STANDAARD.differentieel);
+      expect(id).toBeDefined();
+      expect(parentId).toBe(bordId);
+      expect(kinderen).toEqual([]);
+    });
+
+    test("ongeldige soort wordt geweigerd", () => {
+      const { doc, puntId } = kring();
+      const aanknoping = { soort: "kring-einde", nodeId: puntId } as const;
+      expect(magToevoegen(doc, aanknoping, "lichtpunt", { soort: "x" })).toBe(false);
+      const fout = vangFout(() => voegOnderdeelToe(doc, aanknoping, "lichtpunt", { soort: "x" }));
+      expect(fout.code).toBe("ONGELDIG_SCHEMA");
+      expect(magToevoegen(doc, aanknoping, "lichtpunt", { soort: "led", aantal: 2 })).toBe(true);
+      expect(magToevoegen(doc, aanknoping, "lichtpunt", { aantal: 0 })).toBe(false);
+    });
   });
 
   test("leiding komt bovenop een blad", () => {

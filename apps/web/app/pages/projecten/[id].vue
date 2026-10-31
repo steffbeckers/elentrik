@@ -9,6 +9,7 @@ import EigenschappenPaneel from "~/components/editor/EigenschappenPaneel.vue";
 import ExportDialoog from "~/components/editor/ExportDialoog.vue";
 import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
+import SymbolenVenster from "~/components/editor/SymbolenVenster.vue";
 import KringenlijstTabel from "~/components/kringenlijst/KringenlijstTabel.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
 import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
@@ -612,6 +613,7 @@ onBeforeUnmount(() => {
       @verwijderd="autosave.meldVerwijderd"
     />
     <SchaalDialoog v-model:open="schaalOpen" :pagina-id="meetPaginaId" :afstand-px="schaalAfstandPx" />
+    <SymbolenVenster />
 
     <ConceptDialoog
       v-if="concept"

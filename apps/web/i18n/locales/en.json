@@ -108,6 +108,51 @@
       "sjablonen": "Templates",
       "geenSneltoets": "—"
     },
+    "symbolen": {
+      "openen": "All symbols",
+      "titel": "Symbols",
+      "zoeken": "Search for a symbol…",
+      "geenResultaten": "No symbol found for \"{zoek}\".",
+      "kiezen": "Choose and draw",
+      "standaard": "Default",
+      "zonderOpties": "No options",
+      "metAantal": "{naam}, quantity: {aantal}",
+      "combinaties": "All combinations",
+      "arei": "AREI table 2.23, {rubriek}",
+      "rubrieken": {
+        "A": "A. General",
+        "B": "B. Electrical equipment",
+        "C": "C. Electrical wiring",
+        "D": "D. Protective devices",
+        "E": "E. Switches",
+        "F": "F. Sockets",
+        "G": "G. Current-using equipment",
+        "H": "H. Sources"
+      },
+      "categorieen": {
+        "punten": "Points",
+        "leidingenEnBorden": "Cables and boards",
+        "beveiliging": "Protection",
+        "voeding": "Supply"
+      },
+      "waaromNiet": {
+        "automatisch": "Added automatically with a new circuit.",
+        "altijd": "Part of every diagram."
+      },
+      "uitleg": {
+        "contactdoos": "A socket for a plug, with or without earth contact, child protection or waterproofing.",
+        "lichtpunt": "A fixed light point, such as an LED, a fluorescent tube, a spotlight or emergency lighting.",
+        "schakelaar": "Controls a light point: single, double, two-way, intermediate, dimmer or push button.",
+        "toestel": "A permanently connected appliance, such as a washing machine, a hob or an EV charger.",
+        "leiding": "A cable between two components of a circuit.",
+        "verdeelbord": "A distribution board with its own protective devices, such as a sub-board.",
+        "differentieel": "Disconnects as soon as current leaks to earth.",
+        "zekering": "A fuse that protects the circuit against excess current.",
+        "automaat": "Protects a circuit against overload and short circuit.",
+        "aansluiting": "The connection point to the public grid, at the top of the diagram.",
+        "teller": "The electricity meter, just after the supply connection."
+      }
+    },
     "sjablonen": {
       "kring-stopcontacten": "Socket circuit",
       "kring-verlichting": "Lighting circuit",

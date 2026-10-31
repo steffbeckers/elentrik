@@ -178,6 +178,9 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     case "wisSelectie":
       store.selectie = [];
       break;
+    case "symbolen":
+      store.symbolenOpen = true;
+      break;
   }
 }
 
@@ -207,7 +210,12 @@ const plusknoppen = computed(() => {
   const opmaak = store.opmaak;
   if (!doc || !opmaak) return [];
   return opmaak.strook.aanknopingen.filter((a) =>
-    magToevoegen(doc, { soort: a.soort, nodeId: a.nodeId }, store.onderdeel, store.toestelsoort),
+    magToevoegen(
+      doc,
+      { soort: a.soort, nodeId: a.nodeId },
+      store.onderdeel,
+      store.voorinstelling,
+    ),
   );
 });
 
