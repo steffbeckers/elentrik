@@ -140,7 +140,7 @@ De bestaande afhandeling in de app vangt een 503 al op: de autosave gaat naar `l
   - productie: naam "Elentrik";
   - staging: naam "Elentrik (staging)".
 - `start_url: "/"`, `display: "standalone"`, en een themakleur en achtergrondkleur uit de huisstijl van de app.
-- **Iconen:** 192 px, 512 px en een maskable versie, plus een `apple-touch-icon` en een favicon. De repo heeft nog geen logo of favicon. De bouwer maakt een eenvoudig, eigen icoon (bv. een gestileerde "E" in de themakleur, als SVG met PNG's ervan afgeleid) dat later te vervangen is (mijn keuze). Clean room: niets overnemen van andere software.
+- **Iconen:** 192 px, 512 px en een maskable versie, plus een `apple-touch-icon` en een favicon. De repo heeft nog geen logo of favicon. Het icoon is een bliksemschicht in de primaire kleur van de app, zoals de schicht naast "Elentrik" in de bovenbalk en het aanmeldkader (`i-lucide-zap` in `AppBovenbalk.vue` en `AuthKader.vue`) (beslist met de gebruiker). De bouwer tekent die schicht zelf als eenvoudige SVG en maakt de PNG's ervan. Hij kopieert het pad van Lucide niet (mijn keuze: clean room, en geen licentievermelding nodig). Het icoon is later te vervangen.
 
 ## 5. Onderdeel C: melding bij een nieuwe versie en verplichte update
 
