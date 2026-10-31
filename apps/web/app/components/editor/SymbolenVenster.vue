@@ -60,6 +60,8 @@ watch(
 );
 
 function zet(sleutel: keyof Voorinstelling, waarde: unknown): void {
+  // Het aantal is een heel getal van minstens 1, ook als het veld leeg of kommagetal geeft.
+  if (sleutel === "aantal") waarde = Math.max(1, Math.round(typeof waarde === "number" ? waarde : 1));
   stand.value = { ...stand.value, [sleutel]: waarde };
 }
 

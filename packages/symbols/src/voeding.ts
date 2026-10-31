@@ -1,5 +1,5 @@
 import type { NodeVan } from "@elentrik/model";
-import { cirkel, lijn, pad, rechthoek, tekst } from "./svg";
+import { cirkel, getal, lijn, pad, rechthoek, tekst } from "./svg";
 import type { Symbool } from "./types";
 
 /** Straal van de aansluitcirkel in mm; de lijn loopt boven de cirkel uit. */
@@ -24,9 +24,11 @@ export function tekenAansluiting(_node: NodeVan<"aansluiting">): Symbool {
     svg:
       cirkel(x, cy, r) +
       lijn(x, cy - r, x, 0) +
-      pad(`M${x - s} ${cy} A${s / 2} ${s / 2} 0 0 1 ${x} ${cy} A${s / 2} ${s / 2} 0 0 0 ${x + s} ${cy}`, {
-        data: { rol: "sinus" },
-      }),
+      pad(
+        `M${getal(x - s)} ${getal(cy)} A${getal(s / 2)} ${getal(s / 2)} 0 0 1 ${getal(x)} ${getal(cy)} ` +
+          `A${getal(s / 2)} ${getal(s / 2)} 0 0 0 ${getal(x + s)} ${getal(cy)}`,
+        { data: { rol: "sinus" } },
+      ),
   };
 }
 

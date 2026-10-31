@@ -95,20 +95,20 @@ export function combinaties(kaart: Kaart): Voorinstelling[] {
 }
 
 /** Een vaste dummy-structuur: een voorbeeld hoort in geen document. */
-const DUMMY = { id: "voorbeeld", parentId: "voorbeeld-ouder", kinderen: [] as string[] };
+const DUMMY = { id: "voorbeeld", parentId: "voorbeeld-ouder" };
 
 /** Een geldige node voor `tekenSymbool`: de standaard van het onderdeel met daarover de voorinstelling. */
 export function voorbeeldNode(kaart: Kaart, voorinstelling: Voorinstelling): Node {
   const { onderdeel } = kaart;
   if (onderdeel === null) {
     const invoer = kaart.type === "automaat" ? NIEUWE_KRING_AUTOMAAT : { type: kaart.type };
-    return { ...DUMMY, parentId: kaart.type === "aansluiting" ? null : DUMMY.parentId, ...invoer } as Node;
+    return { ...DUMMY, kinderen: [] as string[], parentId: kaart.type === "aansluiting" ? null : DUMMY.parentId, ...invoer } as Node;
   }
   const invoer: Record<string, unknown> = { ...STANDAARD[onderdeel] };
   for (const sleutel of VISUELE_VELDEN[onderdeel] ?? []) {
     if (voorinstelling[sleutel] !== undefined) invoer[sleutel] = voorinstelling[sleutel];
   }
-  return { ...DUMMY, ...invoer } as Node;
+  return { ...DUMMY, kinderen: [] as string[], ...invoer } as Node;
 }
 
 /** Kleine letters zonder accenten, zodat "Prisé" en "PRISE" hetzelfde zoeken. */

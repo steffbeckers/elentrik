@@ -97,6 +97,15 @@ describe("kaartenbron", () => {
     expect(voorbeeldNode(kaartVan("aansluiting"), {})).toMatchObject({ parentId: null });
   });
 
+  test("elk voorbeeld heeft zijn eigen kinderen-array", () => {
+    const a = voorbeeldNode(kaartVan("contactdoos"), {});
+    const b = voorbeeldNode(kaartVan("contactdoos"), {});
+    const c = voorbeeldNode(kaartVan("aansluiting"), {});
+    expect(a.kinderen).toEqual([]);
+    expect(a.kinderen).not.toBe(b.kinderen);
+    expect(a.kinderen).not.toBe(c.kinderen);
+  });
+
   test("voorbeeldNode negeert sleutels die het onderdeel niet toelaat", () => {
     const node = voorbeeldNode(kaartVan("toestel"), { soort: "oven", aantal: 4, waterdicht: true });
     expect(node).toMatchObject({ soort: "oven" });
