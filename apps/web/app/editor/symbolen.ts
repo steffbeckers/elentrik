@@ -125,3 +125,63 @@ export function zoekKaarten(kaarten: readonly Kaart[], zoek: string, tekst: (k: 
   if (term === "") return [...kaarten];
   return kaarten.filter((k) => normaliseer(tekst(k)).includes(term));
 }
+
+/** De waarde die een veld heeft zonder voorinstelling: die van `STANDAARD`, anders de eerste (lichtpunt: "standaard"). */
+function standaardWaarde(kaart: Kaart, veld: Kaart["velden"][number]): boolean | string | undefined {
+  const standaard = kaart.onderdeel === null ? undefined : (STANDAARD[kaart.onderdeel] as Record<string, unknown>);
+  const waarde = standaard?.[veld.sleutel];
+  return typeof waarde === "boolean" || typeof waarde === "string" ? waarde : veld.waarden[0];
+}
+
+/**
+ * De volledige stand van de bediening voor een voorinstelling: elk veld van de kaart krijgt een
+ * waarde (die van de voorinstelling, anders de standaard), plus het aantal als de kaart er een heeft.
+ */
+export function bediening(kaart: Kaart, voorinstelling: Voorinstelling): Voorinstelling {
+  const stand: Record<string, unknown> = {};
+  for (const veld of kaart.velden) stand[veld.sleutel] = voorinstelling[veld.sleutel] ?? standaardWaarde(kaart, veld);
+  if (kaart.heeftAantal && kaart.onderdeel !== null) {
+    const standaard = STANDAARD[kaart.onderdeel] as { aantal?: number };
+    stand.aantal = voorinstelling.aantal ?? standaard.aantal ?? 1;
+  }
+  return stand as Voorinstelling;
+}
+
+/** De voorinstelling om te kiezen uit een stand van de bediening. Lichtpunt "standaard" is geen soort. */
+export function naarVoorinstelling(kaart: Kaart, stand: Voorinstelling): Voorinstelling {
+  const uit: Record<string, unknown> = {};
+  for (const veld of kaart.velden) {
+    const waarde = stand[veld.sleutel];
+    if (waarde === undefined || (kaart.type === "lichtpunt" && veld.sleutel === "soort" && waarde === "standaard")) continue;
+    uit[veld.sleutel] = waarde;
+  }
+  if (kaart.heeftAantal && stand.aantal !== undefined) uit.aantal = stand.aantal;
+  return uit as Voorinstelling;
+}
+
+/** Of twee voorinstellingen dezelfde combinatie van het raster geven (het aantal telt niet mee). */
+export function zelfdeCombinatie(kaart: Kaart, a: Voorinstelling, b: Voorinstelling): boolean {
+  const x = bediening(kaart, a);
+  const y = bediening(kaart, b);
+  return kaart.velden.every((veld) => x[veld.sleutel] === y[veld.sleutel]);
+}
+
+/** Of een voorinstelling iets anders tekent dan de beginwaarde, het aantal inbegrepen. */
+export function wijktAf(kaart: Kaart, voorinstelling: Voorinstelling, begin: Voorinstelling): boolean {
+  return (
+    !zelfdeCombinatie(kaart, voorinstelling, begin) ||
+    bediening(kaart, voorinstelling).aantal !== bediening(kaart, begin).aantal
+  );
+}
+
+/** Een deel van de korte naam van een combinatie: de soort, of een ja/nee-veld dat aan staat. */
+export type NaamDeel = { soort: string } | { veld: "randaarde" | "kinderbeveiliging" | "waterdicht" };
+
+/** De delen van de korte naam (bv. "randaarde, kinderbeveiliging"), in de volgorde van de velden. */
+export function aanDelen(kaart: Kaart, voorinstelling: Voorinstelling): NaamDeel[] {
+  const stand = bediening(kaart, voorinstelling);
+  return kaart.velden.flatMap((veld): NaamDeel[] => {
+    if (veld.sleutel === "soort") return [{ soort: String(stand.soort) }];
+    return stand[veld.sleutel] === true ? [{ veld: veld.sleutel }] : [];
+  });
+}

@@ -178,6 +178,9 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     case "wisSelectie":
       store.selectie = [];
       break;
+    case "symbolen":
+      store.symbolenOpen = true;
+      break;
   }
 }
 

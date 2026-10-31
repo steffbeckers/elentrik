@@ -1,7 +1,18 @@
 import { NodeSchema, ToestelsoortSchema, type NodeType, type Onderdeel } from "@elentrik/model";
 import { tekenSymbool } from "@elentrik/symbols";
 import { describe, expect, test } from "vitest";
-import { KAARTEN, combinaties, voorbeeldNode, zoekKaarten, type Kaart } from "../app/editor/symbolen";
+import {
+  KAARTEN,
+  aanDelen,
+  bediening,
+  combinaties,
+  naarVoorinstelling,
+  voorbeeldNode,
+  wijktAf,
+  zelfdeCombinatie,
+  zoekKaarten,
+  type Kaart,
+} from "../app/editor/symbolen";
 
 const kaartVan = (type: NodeType): Kaart => KAARTEN.find((k) => k.type === type)!;
 
@@ -114,5 +125,88 @@ describe("zoekKaarten", () => {
   test("een lege zoekterm geeft alle kaarten", () => {
     expect(zoekKaarten(KAARTEN, "", tekst)).toEqual([...KAARTEN]);
     expect(zoekKaarten(KAARTEN, "  ", tekst)).toEqual([...KAARTEN]);
+  });
+});
+
+describe("bediening", () => {
+  test("vult elk veld met de voorinstelling, anders de standaard van het model", () => {
+    expect(bediening(kaartVan("contactdoos"), {})).toEqual({
+      randaarde: true,
+      kinderbeveiliging: true,
+      waterdicht: false,
+      aantal: 1,
+    });
+    expect(bediening(kaartVan("contactdoos"), { waterdicht: true, aantal: 2 })).toEqual({
+      randaarde: true,
+      kinderbeveiliging: true,
+      waterdicht: true,
+      aantal: 2,
+    });
+    expect(bediening(kaartVan("toestel"), {})).toEqual({ soort: "andere" });
+    expect(bediening(kaartVan("schakelaar"), { soort: "wissel" })).toEqual({ soort: "wissel", waterdicht: false });
+  });
+
+  test("lichtpunt zonder soort is standaard", () => {
+    expect(bediening(kaartVan("lichtpunt"), {})).toEqual({ soort: "standaard", aantal: 1 });
+  });
+
+  test("een kaart zonder velden geeft niets", () => {
+    expect(bediening(kaartVan("leiding"), {})).toEqual({});
+  });
+
+  test("negeert sleutels die de kaart niet kent", () => {
+    expect(bediening(kaartVan("toestel"), { soort: "oven", waterdicht: true })).toEqual({ soort: "oven" });
+  });
+});
+
+describe("naarVoorinstelling", () => {
+  test("neemt de velden en het aantal over", () => {
+    expect(naarVoorinstelling(kaartVan("contactdoos"), { randaarde: false, kinderbeveiliging: true, waterdicht: true, aantal: 3 }))
+      .toEqual({ randaarde: false, kinderbeveiliging: true, waterdicht: true, aantal: 3 });
+    expect(naarVoorinstelling(kaartVan("toestel"), { soort: "oven" })).toEqual({ soort: "oven" });
+  });
+
+  test("lichtpunt standaard wordt geen soort", () => {
+    expect(naarVoorinstelling(kaartVan("lichtpunt"), { soort: "standaard", aantal: 2 })).toEqual({ aantal: 2 });
+    expect(naarVoorinstelling(kaartVan("lichtpunt"), { soort: "led", aantal: 1 })).toEqual({ soort: "led", aantal: 1 });
+  });
+});
+
+describe("zelfdeCombinatie en wijktAf", () => {
+  test("zelfdeCombinatie kijkt alleen naar de velden van het raster", () => {
+    const k = kaartVan("contactdoos");
+    expect(zelfdeCombinatie(k, { waterdicht: true }, { randaarde: true, kinderbeveiliging: true, waterdicht: true })).toBe(true);
+    expect(zelfdeCombinatie(k, { waterdicht: true, aantal: 2 }, { waterdicht: true })).toBe(true);
+    expect(zelfdeCombinatie(k, { waterdicht: true }, {})).toBe(false);
+  });
+
+  test("wijktAf telt ook het aantal mee", () => {
+    const k = kaartVan("contactdoos");
+    expect(wijktAf(k, {}, {})).toBe(false);
+    expect(wijktAf(k, { randaarde: true }, {})).toBe(false);
+    expect(wijktAf(k, { aantal: 2 }, {})).toBe(true);
+    expect(wijktAf(kaartVan("lichtpunt"), { soort: "standaard" }, {})).toBe(false);
+    expect(wijktAf(kaartVan("toestel"), { soort: "wasmachine" }, { soort: "wasmachine" })).toBe(false);
+    expect(wijktAf(kaartVan("toestel"), { soort: "oven" }, { soort: "wasmachine" })).toBe(true);
+  });
+});
+
+describe("aanDelen", () => {
+  test("de soort en de velden die aan staan, in de volgorde van de kaart", () => {
+    expect(aanDelen(kaartVan("contactdoos"), {})).toEqual([{ veld: "randaarde" }, { veld: "kinderbeveiliging" }]);
+    expect(aanDelen(kaartVan("contactdoos"), { randaarde: false, kinderbeveiliging: false })).toEqual([]);
+    expect(aanDelen(kaartVan("schakelaar"), { soort: "wissel", waterdicht: true })).toEqual([
+      { soort: "wissel" },
+      { veld: "waterdicht" },
+    ]);
+    expect(aanDelen(kaartVan("lichtpunt"), {})).toEqual([{ soort: "standaard" }]);
+    expect(aanDelen(kaartVan("leiding"), {})).toEqual([]);
+  });
+
+  test("elke combinatie heeft andere delen", () => {
+    for (const k of KAARTEN) {
+      const namen = combinaties(k).map((c) => JSON.stringify(aanDelen(k, c)));
+      expect(new Set(namen).size).toBe(namen.length);
+    }
   });
 });

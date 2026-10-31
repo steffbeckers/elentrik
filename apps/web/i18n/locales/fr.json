@@ -108,6 +108,51 @@
       "sjablonen": "Modèles",
       "geenSneltoets": "—"
     },
+    "symbolen": {
+      "openen": "Tous les symboles",
+      "titel": "Symboles",
+      "zoeken": "Rechercher un symbole…",
+      "geenResultaten": "Aucun symbole trouvé pour « {zoek} ».",
+      "kiezen": "Choisir et dessiner",
+      "standaard": "Standard",
+      "zonderOpties": "Sans options",
+      "metAantal": "{naam}, nombre : {aantal}",
+      "combinaties": "Toutes les combinaisons",
+      "arei": "RGIE tableau 2.23, {rubriek}",
+      "rubrieken": {
+        "A": "A. Généralités",
+        "B": "B. Appareillages électriques",
+        "C": "C. Canalisations électriques",
+        "D": "D. Dispositifs de protection",
+        "E": "E. Interrupteurs",
+        "F": "F. Socles de prise de courant",
+        "G": "G. Appareils d'utilisation",
+        "H": "H. Sources"
+      },
+      "categorieen": {
+        "punten": "Points",
+        "leidingenEnBorden": "Câbles et tableaux",
+        "beveiliging": "Protection",
+        "voeding": "Alimentation"
+      },
+      "waaromNiet": {
+        "automatisch": "Est ajouté automatiquement avec un nouveau circuit.",
+        "altijd": "Figure dans chaque schéma."
+      },
+      "uitleg": {
+        "contactdoos": "Une prise de courant, avec ou sans contact de terre, sécurité enfants ou version étanche.",
+        "lichtpunt": "Un point lumineux fixe, par exemple une LED, un tube fluorescent, un spot ou un éclairage de secours.",
+        "schakelaar": "Commande un point lumineux : simple, double, va-et-vient, permutateur, variateur ou bouton-poussoir.",
+        "toestel": "Un appareil raccordé à demeure, comme un lave-linge, une plaque de cuisson ou une borne de recharge.",
+        "leiding": "Un câble entre deux éléments d'un circuit.",
+        "verdeelbord": "Un tableau de distribution avec ses propres protections, comme un tableau divisionnaire.",
+        "differentieel": "Coupe le courant dès qu'un courant de fuite s'écoule vers la terre.",
+        "zekering": "Un fusible qui protège le circuit contre les surintensités.",
+        "automaat": "Protège un circuit contre les surcharges et les courts-circuits.",
+        "aansluiting": "Le point de raccordement au réseau public, en haut du schéma.",
+        "teller": "Le compteur d'électricité, juste après le raccordement."
+      }
+    },
     "sjablonen": {
       "kring-stopcontacten": "Circuit de prises",
       "kring-verlichting": "Circuit d'éclairage",

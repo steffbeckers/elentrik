@@ -108,6 +108,51 @@
       "sjablonen": "Sjablonen",
       "geenSneltoets": "—"
     },
+    "symbolen": {
+      "openen": "Alle symbolen",
+      "titel": "Symbolen",
+      "zoeken": "Zoek een symbool…",
+      "geenResultaten": "Geen symbool gevonden voor \"{zoek}\".",
+      "kiezen": "Kiezen en tekenen",
+      "standaard": "Standaard",
+      "zonderOpties": "Zonder opties",
+      "metAantal": "{naam}, aantal: {aantal}",
+      "combinaties": "Alle combinaties",
+      "arei": "AREI tabel 2.23, {rubriek}",
+      "rubrieken": {
+        "A": "A. Algemeenheden",
+        "B": "B. Elektrische toestellen",
+        "C": "C. Elektrische leidingen",
+        "D": "D. Beschermingstoestellen",
+        "E": "E. Schakelaars",
+        "F": "F. Contactdozen",
+        "G": "G. Gebruikstoestellen",
+        "H": "H. Bronnen"
+      },
+      "categorieen": {
+        "punten": "Punten",
+        "leidingenEnBorden": "Leidingen en borden",
+        "beveiliging": "Beveiliging",
+        "voeding": "Voeding"
+      },
+      "waaromNiet": {
+        "automatisch": "Komt automatisch met een nieuwe kring.",
+        "altijd": "Staat in elk schema."
+      },
+      "uitleg": {
+        "contactdoos": "Een contactdoos voor een stekker, met of zonder randaarde, kinderbeveiliging of waterdicht.",
+        "lichtpunt": "Een vast lichtpunt, zoals een led, een TL, een spot of noodverlichting.",
+        "schakelaar": "Bedient een lichtpunt: enkel, dubbel, wissel, kruis, dimmer of drukknop.",
+        "toestel": "Een vast aangesloten toestel, zoals een wasmachine, een kookplaat of een laadpaal.",
+        "leiding": "Een kabel tussen twee onderdelen van een kring.",
+        "verdeelbord": "Een verdeelbord met eigen beveiligingen, zoals een onderbord.",
+        "differentieel": "Schakelt af zodra er stroom naar de aarde weglekt.",
+        "zekering": "Een smeltzekering die de kring beveiligt tegen te hoge stroom.",
+        "automaat": "Beveiligt een kring tegen overbelasting en kortsluiting.",
+        "aansluiting": "Het aansluitpunt op het openbare net, bovenaan het schema.",
+        "teller": "De elektriciteitsteller, net na de aansluiting."
+      }
+    },
     "sjablonen": {
       "kring-stopcontacten": "Kring stopcontacten",
       "kring-verlichting": "Kring verlichting",

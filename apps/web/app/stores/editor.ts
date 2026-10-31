@@ -47,6 +47,11 @@ export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst";
 
 export type TeLadenProject = { id: string; naam: string; versie: number; document: InstallatieDocument };
 
+/** De voorinstellingen bij het openen van de editor: toestel begint bij de wasmachine, de rest bij de standaard. */
+export const BEGIN_VOORINSTELLINGEN: Readonly<Partial<Record<Onderdeel, Voorinstelling>>> = {
+  toestel: { soort: "wasmachine" },
+};
+
 /** De datum van vandaag als `JJJJ-MM-DD`, in lokale tijd (zoals `meta.datum`). */
 function vandaag(): string {
   const nu = new Date();
@@ -77,9 +82,7 @@ export const useEditorStore = defineStore("editor", () => {
   const selectie = ref<NodeId[]>([]);
   const onderdeel = ref<Onderdeel>("contactdoos");
   /** Per onderdeel de gekozen variant; een onderdeel zonder sleutel gebruikt de standaard van het model. */
-  const voorinstellingen = ref<Partial<Record<Onderdeel, Voorinstelling>>>({
-    toestel: { soort: "wasmachine" },
-  });
+  const voorinstellingen = ref<Partial<Record<Onderdeel, Voorinstelling>>>({ ...BEGIN_VOORINSTELLINGEN });
   /** De voorinstelling van het gekozen onderdeel, of `{}`. */
   const voorinstelling = computed<Voorinstelling>(() => voorinstellingen.value[onderdeel.value] ?? {});
   /** Leest en schrijft `voorinstellingen.toestel.soort`. */
@@ -244,7 +247,8 @@ export const useEditorStore = defineStore("editor", () => {
   function zetStandaard(gekozen: Onderdeel): void {
     if (alleenLezen.value) return;
     const { [gekozen]: _weg, ...rest } = voorinstellingen.value;
-    voorinstellingen.value = gekozen === "toestel" ? { ...rest, toestel: { soort: "wasmachine" } } : rest;
+    const begin = BEGIN_VOORINSTELLINGEN[gekozen];
+    voorinstellingen.value = begin ? { ...rest, [gekozen]: begin } : rest;
   }
 
   /** Voegt `onderdeel` toe op de aanknoping en selecteert de bovenste nieuwe node. */
