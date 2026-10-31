@@ -82,6 +82,63 @@ describe("laad", () => {
   });
 });
 
+describe("voorinstelling per onderdeel", () => {
+  test("kiesVariant zet onderdeel en voorinstelling, en toevoegen gebruikt ze", () => {
+    const store = laadNieuw();
+    const kringId = nieuweKring(store);
+    store.kiesVariant("contactdoos", { waterdicht: true });
+    expect(store.onderdeel).toBe("contactdoos");
+    expect(store.voorinstelling).toEqual({ waterdicht: true });
+    store.voegToe({ soort: "kring-einde", nodeId: kringId });
+    const nieuw = node(store, store.selectie[0]!);
+    expect(nieuw.type).toBe("contactdoos");
+    expect(nieuw).toMatchObject({ waterdicht: true });
+  });
+
+  test("de voorinstelling blijft per onderdeel", () => {
+    const store = laadNieuw();
+    store.kiesVariant("schakelaar", { soort: "wissel" });
+    store.onderdeel = "contactdoos";
+    expect(store.voorinstelling).toEqual({});
+    store.onderdeel = "schakelaar";
+    expect(store.voorinstelling).toEqual({ soort: "wissel" });
+  });
+
+  test("zetStandaard zet een onderdeel terug naar zijn beginwaarde", () => {
+    const store = laadNieuw();
+    store.kiesVariant("toestel", { soort: "boiler" });
+    store.zetStandaard("toestel");
+    expect(store.toestelsoort).toBe("wasmachine");
+    store.kiesVariant("schakelaar", { soort: "wissel" });
+    store.zetStandaard("schakelaar");
+    expect(store.voorinstelling).toEqual({});
+  });
+
+  test("toestelsoort blijft bruikbaar als lees- en schrijfwaarde", () => {
+    const store = laadNieuw();
+    expect(store.toestelsoort).toBe("wasmachine");
+    store.toestelsoort = "boiler";
+    expect(store.voorinstellingen.toestel?.soort).toBe("boiler");
+  });
+
+  test("laad raakt de voorinstellingen niet aan", () => {
+    const store = laadNieuw();
+    store.kiesVariant("contactdoos", { waterdicht: true });
+    store.laad({ id: "p2", naam: "Andere", versie: 1, document: startDocument() });
+    expect(store.voorinstelling).toEqual({ waterdicht: true });
+  });
+
+  test("alleen-lezen: kiesVariant verandert niets, het venster mag wel open", () => {
+    const store = laadNieuw();
+    store.zetAlleenLezen(true);
+    store.kiesVariant("contactdoos", { waterdicht: true });
+    expect(store.voorinstelling).toEqual({});
+    expect(store.voorinstellingen.contactdoos).toBeUndefined();
+    store.symbolenOpen = true;
+    expect(store.symbolenOpen).toBe(true);
+  });
+});
+
 describe("tabblad", () => {
   test("kan de kringenlijst zijn en wordt bij laad teruggezet", () => {
     const store = laadNieuw();

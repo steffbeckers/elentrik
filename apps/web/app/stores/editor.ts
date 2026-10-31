@@ -76,7 +76,21 @@ export const useEditorStore = defineStore("editor", () => {
   /** De laatst geklikte node staat achteraan. */
   const selectie = ref<NodeId[]>([]);
   const onderdeel = ref<Onderdeel>("contactdoos");
-  const toestelsoort = ref<Toestelsoort>("wasmachine");
+  /** Per onderdeel de gekozen variant; een onderdeel zonder sleutel gebruikt de standaard van het model. */
+  const voorinstellingen = ref<Partial<Record<Onderdeel, Voorinstelling>>>({
+    toestel: { soort: "wasmachine" },
+  });
+  /** De voorinstelling van het gekozen onderdeel, of `{}`. */
+  const voorinstelling = computed<Voorinstelling>(() => voorinstellingen.value[onderdeel.value] ?? {});
+  /** Leest en schrijft `voorinstellingen.toestel.soort`. */
+  const toestelsoort = computed<Toestelsoort>({
+    get: () => (voorinstellingen.value.toestel?.soort ?? "wasmachine") as Toestelsoort,
+    set: (soort) => {
+      voorinstellingen.value = { ...voorinstellingen.value, toestel: { ...voorinstellingen.value.toestel, soort } };
+    },
+  });
+  /** Open het symbolenvenster? Een weergavekeuze, ook open in alleen-lezen. */
+  const symbolenOpen = ref(false);
   const tabblad = ref<Tabblad>("eendraadschema");
   // Elke wijziging vervangt de array, zodat een shallowRef volstaat.
   const terug = shallowRef<Stap[]>([]);
@@ -219,9 +233,18 @@ export const useEditorStore = defineStore("editor", () => {
     zetDocument(doc);
   }
 
-  /** Tijdelijk (tot Task 10): alleen een toestel krijgt de gekozen soort; andere punten hebben een andere soort. */
-  function voorinstellingVoorToestel(): Voorinstelling | undefined {
-    return onderdeel.value === "toestel" ? { soort: toestelsoort.value } : undefined;
+  /** Kiest `onderdeel` met de variant `v`; toevoegen gebruikt ze tot een andere keuze. */
+  function kiesVariant(gekozen: Onderdeel, v: Voorinstelling): void {
+    if (alleenLezen.value) return;
+    onderdeel.value = gekozen;
+    voorinstellingen.value = { ...voorinstellingen.value, [gekozen]: v };
+  }
+
+  /** Zet de voorinstelling van `gekozen` terug naar de beginwaarde (toestel: wasmachine, de rest: geen). */
+  function zetStandaard(gekozen: Onderdeel): void {
+    if (alleenLezen.value) return;
+    const { [gekozen]: _weg, ...rest } = voorinstellingen.value;
+    voorinstellingen.value = gekozen === "toestel" ? { ...rest, toestel: { soort: "wasmachine" } } : rest;
   }
 
   /** Voegt `onderdeel` toe op de aanknoping en selecteert de bovenste nieuwe node. */
@@ -231,7 +254,7 @@ export const useEditorStore = defineStore("editor", () => {
       vereisDocument(),
       { soort: aanknoping.soort, nodeId: aanknoping.nodeId },
       onderdeel.value,
-      voorinstellingVoorToestel(),
+      voorinstelling.value,
     );
     pasToe(r);
     selectie.value = [r.ids[r.ids.length - 1]!];
@@ -303,7 +326,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (!doc) return;
     const aanknoping = aanknopingBijSelectie(doc);
     if (!aanknoping) return;
-    if (!magToevoegen(doc, aanknoping, onderdeel.value, voorinstellingVoorToestel())) return;
+    if (!magToevoegen(doc, aanknoping, onderdeel.value, voorinstelling.value)) return;
     voegToe(aanknoping);
   }
 
@@ -447,7 +470,12 @@ export const useEditorStore = defineStore("editor", () => {
     versie,
     selectie,
     onderdeel,
+    voorinstellingen,
+    voorinstelling,
     toestelsoort,
+    symbolenOpen,
+    kiesVariant,
+    zetStandaard,
     tabblad,
     terug,
     vooruit,

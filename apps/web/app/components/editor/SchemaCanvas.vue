@@ -211,7 +211,7 @@ const plusknoppen = computed(() => {
       doc,
       { soort: a.soort, nodeId: a.nodeId },
       store.onderdeel,
-      store.onderdeel === "toestel" ? { soort: store.toestelsoort } : undefined,
+      store.voorinstelling,
     ),
   );
 });
