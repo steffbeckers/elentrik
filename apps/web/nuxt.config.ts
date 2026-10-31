@@ -21,6 +21,15 @@ export default defineNuxtConfig({
   buildDir: process.env.ELENTRIK_BUILD_DIR || ".nuxt",
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
   css: ["~/assets/css/main.css"],
+  experimental: {
+    // De app-manifest (`/_nuxt/builds/latest.json`) blijft aan: de eigen versiecontrole
+    // (app/plugins/versiecontrole.client.ts) leest hem. De controle van Nuxt zelf stopt na de eerste
+    // nieuwe build en na een mislukte controle, en herlaadt bij de volgende navigatie; beide kunnen
+    // we niet gebruiken. Met "manual" geeft Nuxt alleen nog de fout bij het laden van code door
+    // (`app:chunkError`); de eigen plugin chunkfout.client.ts beslist wat daarmee gebeurt.
+    checkOutdatedBuildInterval: false,
+    emitRouteChunkError: "manual",
+  },
   runtimeConfig: {
     // Alleen op de server: de basis-URL waarmee de auth-client tijdens SSR Better Auth aanspreekt.
     authBasisUrl: process.env.BETTER_AUTH_URL || "http://127.0.0.1:3000",

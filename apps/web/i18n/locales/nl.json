@@ -5,6 +5,11 @@
   "omgeving": {
     "staging": "Staging: testomgeving, geen echte gegevens"
   },
+  "versie": {
+    "nieuw": "Er is een nieuwe versie van Elentrik",
+    "herladen": "Herladen",
+    "vereist": "Elentrik is bijgewerkt. Herlaad de app om verder te werken. Je werk in de editor blijft bewaard."
+  },
   "algemeen": {
     "annuleren": "Annuleren"
   },
