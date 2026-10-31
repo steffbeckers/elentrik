@@ -1,20 +1,6 @@
-import type { NodeVan, Toestelsoort } from "@elentrik/model";
+import type { NodeVan } from "@elentrik/model";
 import { cirkel, getal, lijn, pad, rechthoek, tekst } from "./svg";
 import type { Symbool } from "./types";
-
-/** Afkorting in het toestelsymbool, per soort. */
-export const TOESTEL_AFKORTINGEN: Readonly<Record<Toestelsoort, string>> = {
-  wasmachine: "WM",
-  droogkast: "DK",
-  vaatwasser: "VW",
-  kookplaat: "KP",
-  oven: "OV",
-  boiler: "B",
-  warmtepomp: "WP",
-  laadpaal: "LP",
-  omvormer: "OMV",
-  andere: "T",
-};
 
 /** Het vermenigvuldigingsteken U+00D7. */
 const KEER = "×";
@@ -244,20 +230,115 @@ export function tekenSchakelaar(node: NodeVan<"schakelaar">): Symbool {
   return { maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
 }
 
+/** Rol van de pictogramelementen in een toestel; het vierkant en de aansluitlijntjes hebben geen rol. */
+const PICTO = { data: { rol: "picto" } } as const;
+
 /**
- * Toestel: een vierkant van 10 × 10 mm met de afkorting van de soort erin, met aansluitlijntjes
- * onder (`in`) en boven (`uit`). 12 × 12 mm.
+ * Toestel volgens G en H in AREI tabel 2.23, 12 × 12 mm: een vierkant van 10 × 10 mm (het vaste
+ * elektrische huishoudtoestel, algemeen symbool) met aansluitlijntjes onder (`in`) en boven
+ * (`uit`) en het pictogram van de soort erin. Elk pictogramelement heeft de rol "picto". Een
+ * pictogram heeft geen tekst, op de warmtepomp na (staat niet in de tabel):
+ * - "andere": leeg, het algemene symbool;
+ * - "wasmachine": een cirkel met een gevulde stip;
+ * - "droogkast": een ∞ bovenaan en een gevulde stip eronder;
+ * - "vaatwasser": de twee diagonalen met een cirkel in het midden;
+ * - "kookplaat": drie gevulde stippen, twee boven en één rechtsonder;
+ * - "oven": een band bovenaan en een gevulde stip in het midden;
+ * - "boiler": geen vierkant maar een cirkel met verticale arcering;
+ * - "laadpaal": de laadinrichting voor elektrische wegvoertuigen, vereenvoudigd tot een zuil met
+ *   schermpje en voet en een kabel met stekker (geen vierkant);
+ * - "omvormer": de omvormer DC → AC (H): een diagonaal van linksonder naar rechtsboven, linksboven
+ *   het gelijkstroomteken (volle lijn boven een stippellijn) en rechtsonder het wisselstroomteken;
+ * - "warmtepomp": de tekst "WP".
  */
 export function tekenToestel(node: NodeVan<"toestel">): Symbool {
   const breedte = 12;
   const hoogte = 12;
   const x = breedte / 2;
-  return {
-    maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } },
-    svg:
-      lijn(x, hoogte, x, hoogte - 1) +
-      rechthoek(1, 1, 10, 10) +
-      lijn(x, 1, x, 0) +
-      tekst(x, 7.1, TOESTEL_AFKORTINGEN[node.soort], { anker: "middle", grootte: 3 }),
-  };
+  /** Het midden van het vierkant. */
+  const y = hoogte / 2;
+  const maat = { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } };
+  /** Het vierkant van het algemene symbool, met aansluitlijntjes van 1 mm onder en boven. */
+  const vierkant = lijn(x, hoogte, x, hoogte - 1) + rechthoek(1, 1, 10, 10) + lijn(x, 1, x, 0);
+  /** Gevulde stip met straal 1,2 mm; `r` kan kleiner. */
+  const stip = (cx: number, cy: number, r = 1.2) => cirkel(cx, cy, r, { gevuld: true, ...PICTO });
+  switch (node.soort) {
+    case "andere":
+      return { maat, svg: vierkant };
+    case "wasmachine":
+      return { maat, svg: vierkant + cirkel(x, y, 3.8, PICTO) + stip(x, y, 1.3) };
+    case "droogkast": {
+      // De ∞ is de omtrek van twee elkaar overlappende cirkels (r = 1,25, middelpunten 1,1 mm links
+      // en rechts van het midden): twee grote bogen tussen de twee snijpunten, boven en onder het midden.
+      const cy = 4.3;
+      const [r, s] = [1.25, Math.sqrt(1.25 ** 2 - 1.1 ** 2)];
+      return {
+        maat,
+        svg:
+          vierkant +
+          pad(
+            `M${getal(x)} ${getal(cy - s)} A${getal(r)} ${getal(r)} 0 1 0 ${getal(x)} ${getal(cy + s)} A${getal(r)} ${getal(r)} 0 1 0 ${getal(x)} ${getal(cy - s)} Z`,
+            PICTO,
+          ) +
+          stip(x, 7.6),
+      };
+    }
+    case "vaatwasser":
+      return {
+        maat,
+        svg:
+          vierkant +
+          lijn(1, 11, 11, 1, PICTO) +
+          lijn(1, 1, 11, 11, PICTO) +
+          cirkel(x, y, 2, PICTO),
+      };
+    case "kookplaat":
+      return { maat, svg: vierkant + stip(3.7, 3.7) + stip(8.3, 3.7) + stip(8.3, 8.3) };
+    case "oven":
+      return { maat, svg: vierkant + lijn(1, 3, 11, 3, PICTO) + stip(x, 7.2) };
+    case "boiler": {
+      // Een cirkel (r = 5) met negen verticale lijnen, 1 mm van elkaar, tot op de rand.
+      const r = 5;
+      let arcering = "";
+      for (let dx = -4; dx <= 4; dx++) {
+        const h = Math.sqrt(r * r - dx * dx);
+        arcering += lijn(x + dx, y - h, x + dx, y + h, PICTO);
+      }
+      return { maat, svg: lijn(x, hoogte, x, hoogte - 1) + cirkel(x, y, r) + arcering + lijn(x, 1, x, 0) };
+    }
+    case "laadpaal":
+      return {
+        maat,
+        svg:
+          lijn(x, hoogte, x, 11) +
+          // De voet, de zuil en het schermpje.
+          rechthoek(1.5, 9.8, 8, 1.2, PICTO) +
+          rechthoek(2.5, 2.5, 6, 7.3, PICTO) +
+          rechthoek(3.5, 3.6, 4, 2.4, PICTO) +
+          // De kabel uit de zijkant van de zuil, omhoog naar de stekker.
+          lijn(8.5, 8.2, 10.2, 8.2, PICTO) +
+          lijn(10.2, 8.2, 10.2, 3.2, PICTO) +
+          pad("M9.7 1.2 L10.7 1.2 L10.7 3.2 L9.7 3.2 Z", { gevuld: true, ...PICTO }) +
+          lijn(x, 2.5, x, 0),
+      };
+    case "omvormer": {
+      // Het wisselstroomteken: een sinus van twee halve cirkels (r = 0,8), rechtsonder.
+      const [x0, y0, w] = [6.6, 8.6, 0.8];
+      return {
+        maat,
+        svg:
+          vierkant +
+          lijn(1, 11, 11, 1, PICTO) +
+          // Het gelijkstroomteken linksboven: een volle lijn boven een stippellijn.
+          lijn(2.4, 3.6, 5.4, 3.6, PICTO) +
+          lijn(2.4, 4.9, 5.4, 4.9, { streep: "0.7 0.5", ...PICTO }) +
+          pad(
+            `M${getal(x0)} ${getal(y0)} A${getal(w)} ${getal(w)} 0 0 1 ${getal(x0 + 2 * w)} ${getal(y0)} A${getal(w)} ${getal(w)} 0 0 0 ${getal(x0 + 4 * w)} ${getal(y0)}`,
+            PICTO,
+          ),
+      };
+    }
+    case "warmtepomp":
+      return { maat, svg: vierkant + tekst(x, 7.1, "WP", { anker: "middle", grootte: 3, ...PICTO }) };
+  }
 }

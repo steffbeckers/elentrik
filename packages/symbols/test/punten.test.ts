@@ -576,16 +576,205 @@ describe("symbolen voor punten, leiding en onderbord", () => {
   });
 
   describe("toestel", () => {
-    test.each(ToestelsoortSchema.options)("%s toont de afkorting in een vierkant van 10 × 10", (soort) => {
-      const svg = tekenSymbool(toestel(soort)).svg;
-      expect(svg).toContain('width="10" height="10"');
-      expect(svg).toMatch(/>(WM|DK|VW|KP|OV|B|WP|LP|OMV|T)<\/text>/);
+    type Element = { naam: string; a: Map<string, string> };
+    const elementen = (svg: string): Element[] =>
+      [...svg.matchAll(/<(line|circle|rect|path|text)\b([^>]*)>/g)].map(([, naam = "", tekst = ""]) => ({
+        naam,
+        a: new Map([...tekst.matchAll(/([\w:-]+)="([^"]*)"/g)].map(([, k = "", w = ""]) => [k, w] as const)),
+      }));
+    const alle = (soort: NodeVan<"toestel">["soort"]) => elementen(tekenSymbool(toestel(soort)).svg);
+    /** De pictogramelementen: die met rol "picto". */
+    const picto = (soort: NodeVan<"toestel">["soort"], naam?: string) =>
+      alle(soort).filter((e) => e.a.get("data-rol") === "picto" && (naam === undefined || e.naam === naam));
+    const getal = (e: Element, sleutel: string) => Number(e.a.get(sleutel));
+    const gevuld = (e: Element) => e.a.get("fill") === "currentColor";
+    const geheel = (e: Element) => ({ x1: getal(e, "x1"), y1: getal(e, "y1"), x2: getal(e, "x2"), y2: getal(e, "y2") });
+    const diagonaal = (e: Element) => {
+      const { x1, y1, x2, y2 } = geheel(e);
+      return Math.abs(x1 - x2) > 1e-9 && Math.abs(y1 - y2) > 1e-9;
+    };
+    const waterpasLijn = (e: Element) => Math.abs(getal(e, "y1") - getal(e, "y2")) < 1e-9;
+    const verticaal = (e: Element) => Math.abs(getal(e, "x1") - getal(e, "x2")) < 1e-9;
+    const aantalBogen = (e: Element) => e.a.get("d")?.match(/A/g)?.length ?? 0;
+    /** De eindpunten (x, y) van elke padopdracht; bij een boog zijn dat de laatste twee getallen. */
+    const padPunten = (e: Element) =>
+      [...(e.a.get("d") ?? "").matchAll(/[MLA]([^MLAZ]*)/g)].map(([, getallen = ""]) => {
+        const n = getallen.trim().split(/\s+/).map(Number);
+        return [n[n.length - 2]!, n[n.length - 1]!] as const;
+      });
+
+    const vierkantSoorten = [
+      "andere",
+      "wasmachine",
+      "droogkast",
+      "vaatwasser",
+      "kookplaat",
+      "oven",
+      "omvormer",
+      "warmtepomp",
+    ] as const;
+
+    test("alle soorten hebben een test", () => {
+      expect([...vierkantSoorten, "boiler", "laadpaal"].sort()).toEqual([...ToestelsoortSchema.options].sort());
     });
 
-    test("toont de juiste afkorting", () => {
-      expect(tekenSymbool(toestel("wasmachine")).svg).toContain(">WM</text>");
-      expect(tekenSymbool(toestel("omvormer")).svg).toContain(">OMV</text>");
-      expect(tekenSymbool(toestel("andere")).svg).toContain(">T</text>");
+    test.each(vierkantSoorten)("%s is een vierkant van 10 × 10 in een kader van 12 × 12", (soort) => {
+      const rechthoeken = alle(soort).filter((e) => e.naam === "rect");
+      expect(rechthoeken).toHaveLength(1);
+      const [r] = rechthoeken as [Element];
+      expect([getal(r, "width"), getal(r, "height")]).toEqual([10, 10]);
+      expect([getal(r, "x"), getal(r, "y")]).toEqual([1, 1]);
+      // Het vierkant zelf is geen pictogram.
+      expect(r.a.get("data-rol")).toBeUndefined();
+    });
+
+    test.each(ToestelsoortSchema.options)("%s heeft geen tekst, behalve de warmtepomp", (soort) => {
+      const teksten = alle(soort).filter((e) => e.naam === "text");
+      expect(teksten).toHaveLength(soort === "warmtepomp" ? 1 : 0);
+    });
+
+    test("andere: het algemene symbool, een leeg vierkant", () => {
+      expect(picto("andere")).toEqual([]);
+    });
+
+    test("wasmachine: een cirkel met een gevulde stip erin", () => {
+      const cirkels = picto("wasmachine", "circle");
+      expect(picto("wasmachine")).toHaveLength(2);
+      const [leeg, vol] = [cirkels.filter((c) => !gevuld(c)), cirkels.filter(gevuld)];
+      expect(leeg).toHaveLength(1);
+      expect(vol).toHaveLength(1);
+      expect(getal(vol[0]!, "r")).toBeLessThan(getal(leeg[0]!, "r"));
+      expect([getal(vol[0]!, "cx"), getal(vol[0]!, "cy")]).toEqual([getal(leeg[0]!, "cx"), getal(leeg[0]!, "cy")]);
+    });
+
+    test("droogkast: een ∞ van twee bogen met een gevulde stip eronder", () => {
+      const paden = picto("droogkast", "path");
+      expect(paden).toHaveLength(1);
+      expect(aantalBogen(paden[0]!)).toBe(2);
+      const stippen = picto("droogkast", "circle");
+      expect(stippen).toHaveLength(1);
+      expect(gevuld(stippen[0]!)).toBe(true);
+      // De ∞ staat bovenaan, de stip eronder.
+      const ys = padPunten(paden[0]!).map(([, y]) => y);
+      expect(Math.max(...ys)).toBeLessThan(getal(stippen[0]!, "cy"));
+      expect(picto("droogkast")).toHaveLength(2);
+    });
+
+    test("vaatwasser: twee diagonalen met een cirkel in het midden", () => {
+      const diagonalen = picto("vaatwasser", "line");
+      expect(diagonalen).toHaveLength(2);
+      expect(diagonalen.every(diagonaal)).toBe(true);
+      // Eén stijgend en één dalend.
+      const helling = (e: Element) => Math.sign((getal(e, "x2") - getal(e, "x1")) * (getal(e, "y2") - getal(e, "y1")));
+      expect(new Set(diagonalen.map(helling)).size).toBe(2);
+      const cirkels = picto("vaatwasser", "circle");
+      expect(cirkels).toHaveLength(1);
+      expect(gevuld(cirkels[0]!)).toBe(false);
+      expect([getal(cirkels[0]!, "cx"), getal(cirkels[0]!, "cy")]).toEqual([6, 6]);
+      expect(picto("vaatwasser")).toHaveLength(3);
+    });
+
+    test("kookplaat: precies drie gevulde stippen, twee boven en één rechtsonder", () => {
+      const stippen = picto("kookplaat", "circle");
+      expect(picto("kookplaat")).toHaveLength(3);
+      expect(stippen).toHaveLength(3);
+      expect(stippen.every(gevuld)).toBe(true);
+      const boven = stippen.filter((s) => getal(s, "cy") < 6);
+      const onder = stippen.filter((s) => getal(s, "cy") >= 6);
+      expect(boven).toHaveLength(2);
+      expect(onder).toHaveLength(1);
+      expect(boven.filter((s) => getal(s, "cx") < 6)).toHaveLength(1);
+      expect(getal(onder[0]!, "cx")).toBeGreaterThan(6);
+      expect(getal(onder[0]!, "cx")).toBeCloseTo(Math.max(...boven.map((s) => getal(s, "cx"))), 9);
+    });
+
+    test("oven: een band bovenaan en een gevulde stip in het midden", () => {
+      const banden = picto("oven", "line");
+      expect(banden).toHaveLength(1);
+      expect(waterpasLijn(banden[0]!)).toBe(true);
+      // De band loopt over de volle breedte van het vierkant, in het bovenste kwart.
+      expect([getal(banden[0]!, "x1"), getal(banden[0]!, "x2")].sort((a, b) => a - b)).toEqual([1, 11]);
+      expect(getal(banden[0]!, "y1")).toBeGreaterThan(1);
+      expect(getal(banden[0]!, "y1")).toBeLessThan(4.5);
+      const stippen = picto("oven", "circle");
+      expect(stippen).toHaveLength(1);
+      expect(gevuld(stippen[0]!)).toBe(true);
+      expect(getal(stippen[0]!, "cx")).toBe(6);
+      expect(getal(stippen[0]!, "cy")).toBeGreaterThan(getal(banden[0]!, "y1"));
+      expect(picto("oven")).toHaveLength(2);
+    });
+
+    test("boiler: een cirkel met verticale arcering, zonder vierkant", () => {
+      const svg = tekenSymbool(toestel("boiler")).svg;
+      expect(svg).not.toContain("<rect");
+      const cirkels = alle("boiler").filter((e) => e.naam === "circle");
+      expect(cirkels).toHaveLength(1);
+      const [c] = cirkels as [Element];
+      expect(gevuld(c)).toBe(false);
+      const [cx, cy, r] = [getal(c, "cx"), getal(c, "cy"), getal(c, "r")];
+      const arcering = picto("boiler", "line");
+      expect(arcering.length).toBeGreaterThanOrEqual(3);
+      expect(picto("boiler")).toHaveLength(arcering.length);
+      for (const l of arcering) {
+        expect(verticaal(l)).toBe(true);
+        // Beide uiteinden liggen in (of op) de cirkel.
+        for (const [x, y] of [[getal(l, "x1"), getal(l, "y1")], [getal(l, "x2"), getal(l, "y2")]] as const) {
+          expect(Math.hypot(x - cx, y - cy)).toBeLessThanOrEqual(r + 0.01);
+        }
+      }
+    });
+
+    test("laadpaal: een zuil met een schermpje en een kabel", () => {
+      const rechthoeken = picto("laadpaal", "rect");
+      expect(rechthoeken.length).toBeGreaterThanOrEqual(2);
+      expect(picto("laadpaal", "line").length).toBeGreaterThanOrEqual(1);
+      expect(alle("laadpaal").filter((e) => e.naam === "text")).toEqual([]);
+      // Het schermpje ligt binnen de zuil: er is een rechthoek die een andere rechthoek omsluit.
+      const omsluit = (z: Element, s: Element) =>
+        z !== s &&
+        getal(s, "x") > getal(z, "x") &&
+        getal(s, "y") > getal(z, "y") &&
+        getal(s, "x") + getal(s, "width") < getal(z, "x") + getal(z, "width") &&
+        getal(s, "y") + getal(s, "height") < getal(z, "y") + getal(z, "height");
+      expect(rechthoeken.some((z) => rechthoeken.some((s) => omsluit(z, s)))).toBe(true);
+    });
+
+    test("omvormer: een diagonaal, het gelijkstroomteken linksboven en het wisselstroomteken rechtsonder", () => {
+      const lijnen2 = picto("omvormer", "line");
+      const diagonalen = lijnen2.filter(diagonaal);
+      expect(diagonalen).toHaveLength(1);
+      // Van linksonder naar rechtsboven.
+      const { x1, y1, x2, y2 } = geheel(diagonalen[0]!);
+      const [linksY, rechtsY] = x1 < x2 ? [y1, y2] : [y2, y1];
+      expect(linksY).toBeGreaterThan(rechtsY);
+      // Het gelijkstroomteken: een volle en een gestippelde horizontale lijn, de volle boven, links van het midden.
+      const waterpas = lijnen2.filter(waterpasLijn);
+      expect(waterpas).toHaveLength(2);
+      const volle = waterpas.filter((l) => !l.a.has("stroke-dasharray"));
+      const gestippeld = waterpas.filter((l) => l.a.has("stroke-dasharray"));
+      expect(volle).toHaveLength(1);
+      expect(gestippeld).toHaveLength(1);
+      expect(getal(volle[0]!, "y1")).toBeLessThan(getal(gestippeld[0]!, "y1"));
+      for (const l of waterpas) {
+        expect(Math.max(getal(l, "x1"), getal(l, "x2"))).toBeLessThan(6);
+        expect(getal(l, "y1")).toBeLessThan(6);
+      }
+      // Het wisselstroomteken: een sinus van twee bogen, rechtsonder.
+      const sinussen = picto("omvormer", "path");
+      expect(sinussen).toHaveLength(1);
+      expect(aantalBogen(sinussen[0]!)).toBe(2);
+      for (const [x, y] of padPunten(sinussen[0]!)) {
+        expect(x).toBeGreaterThan(6);
+        expect(y).toBeGreaterThan(6);
+      }
+      expect(picto("omvormer")).toHaveLength(4);
+    });
+
+    test("warmtepomp: het algemene vierkant met de tekst WP", () => {
+      const teksten = alle("warmtepomp").filter((e) => e.naam === "text");
+      expect(teksten).toHaveLength(1);
+      expect(tekenSymbool(toestel("warmtepomp")).svg).toContain(">WP</text>");
+      expect(picto("warmtepomp")).toHaveLength(1);
     });
   });
 

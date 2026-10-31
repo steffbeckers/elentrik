@@ -81,6 +81,21 @@ describe("builders", () => {
     );
   });
 
+  test("lijn met streep geeft stroke-dasharray vóór de data-attributen", () => {
+    expect(lijn(0, 0, 1, 0, { streep: "0.8 0.6" })).toBe(
+      '<line x1="0" y1="0" x2="1" y2="0" stroke="currentColor" stroke-width="0.35" fill="none" stroke-dasharray="0.8 0.6"/>',
+    );
+    expect(lijn(0, 0, 1, 0, { streep: "1 1", data: { rol: "x" } })).toContain(
+      ' stroke-dasharray="1 1" data-rol="x"/>',
+    );
+    expect(lijn(0, 0, 1, 0)).not.toContain("stroke-dasharray");
+  });
+
+  test("lijn weigert een streep met andere tekens dan getallen", () => {
+    expect(() => lijn(0, 0, 1, 0, { streep: '1"/><script>' })).toThrow(RangeError);
+    expect(() => lijn(0, 0, 1, 0, { streep: "" })).toThrow(RangeError);
+  });
+
   test("cirkel ongevuld en gevuld", () => {
     expect(cirkel(1, 2, 3)).toBe(
       '<circle cx="1" cy="2" r="3" stroke="currentColor" stroke-width="0.35" fill="none"/>',
