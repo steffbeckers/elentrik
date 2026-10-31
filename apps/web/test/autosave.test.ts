@@ -1061,6 +1061,83 @@ describe("useAutosave: foutsoorten", () => {
     expect(autosave.afgemeld.value).toBe(false);
   });
 
+  describe("426 NIEUWE_VERSIE_VEREIST", () => {
+    const nieuweVersieVereist = () =>
+      Object.assign(new Error("Nieuwe versie vereist"), {
+        status: 426,
+        data: { data: { code: "NIEUWE_VERSIE_VEREIST" } },
+      });
+
+    test("een 426 NIEUWE_VERSIE_VEREIST: lokaal en versieVerouderd, zonder nieuwe poging; het concept blijft", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValue(nieuweVersieVereist());
+      expect(autosave.versieVerouderd.value).toBe(false);
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.status.value).toBe("lokaal");
+      expect(autosave.versieVerouderd.value).toBe(true);
+      expect(autosave.fout.value).toBeNull();
+      expect(autosave.afgemeld.value).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+
+      // Verder tekenen: het concept volgt, maar er gaat niets naar de server.
+      wijzig(store, "b");
+      await vi.advanceTimersByTimeAsync(60_000);
+      await leeg();
+      expect(bewaar).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(autosave.status.value).toBe("lokaal");
+      expect((await conceptVan("p1"))?.naam).toBe("b");
+      expect(waarschuwBijVerlaten(autosave.status.value)).toBe(true);
+    });
+
+    test("een 426 met een andere code volgt het pad van fout", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValue(
+        Object.assign(new Error("Andere code"), { status: 426, data: { data: { code: "ONGELDIG_DOCUMENT" } } }),
+      );
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.status.value).toBe("fout");
+      expect(autosave.versieVerouderd.value).toBe(false);
+      expect(autosave.fout.value?.status).toBe(426);
+    });
+
+    test("een geslaagd nuOpslaan na een 426 zet versieVerouderd terug op false", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValueOnce(nieuweVersieVereist());
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.versieVerouderd.value).toBe(true);
+
+      bewaar.mockImplementation(async (_id, versie) => ({ versie: versie + 1 }));
+      await autosave.nuOpslaan();
+      await leeg();
+      expect(bewaar).toHaveBeenCalledTimes(2);
+      expect(autosave.versieVerouderd.value).toBe(false);
+      expect(autosave.status.value).toBe("opgeslagen");
+      expect(await conceptVan("p1")).toBeUndefined();
+    });
+
+    test("versieVerouderd en dan een netwerkfout bij opnieuw proberen: geen lus van nieuwe pogingen", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValueOnce(nieuweVersieVereist());
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      bewaar.mockRejectedValueOnce(new TypeError("netwerk"));
+      await autosave.nuOpslaan();
+      expect(autosave.versieVerouderd.value).toBe(true);
+      expect(autosave.status.value).toBe("lokaal");
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(bewaar).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe("402 ABONNEMENT_VEREIST", () => {
     const abonnementVereist = () =>
       Object.assign(new Error("Abonnement vereist"), {

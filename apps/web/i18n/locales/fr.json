@@ -228,7 +228,8 @@
       "beschrijving": "Cet appareil contient un brouillon de ce projet avec des modifications qui ne sont pas encore sur le serveur ({tijd}).",
       "laden": "Charger le brouillon",
       "later": "Plus tard",
-      "verwerpen": "Ignorer"
+      "verwerpen": "Ignorer",
+      "herstelMislukt": "Le travail enregistré localement n'a pas pu être chargé. Il reste conservé."
     },
     "verlaten": {
       "bevestiging": "Vos modifications ne sont pas encore sur le serveur. Voulez-vous quand même quitter l'éditeur ?"

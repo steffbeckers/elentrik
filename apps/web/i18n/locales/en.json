@@ -228,7 +228,8 @@
       "beschrijving": "This device has a draft of this project with changes that are not on the server yet ({tijd}).",
       "laden": "Load draft",
       "later": "Later",
-      "verwerpen": "Discard"
+      "verwerpen": "Discard",
+      "herstelMislukt": "The locally saved work could not be loaded. It is still kept."
     },
     "verlaten": {
       "bevestiging": "Your changes are not on the server yet. Do you still want to leave the editor?"

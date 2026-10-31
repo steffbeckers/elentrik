@@ -13,6 +13,7 @@ import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
 import type { Foutcode } from "../../shared/foutcodes";
 import { bekendeFoutcode } from "../fouten";
 import { foutCode } from "../sessie/fouten";
+import { isNieuweVersieFout } from "../versie/regels";
 import { metNieuweBestandIds, planBestandIds } from "../editor/kopie";
 import {
   ConflictFout,
@@ -27,7 +28,9 @@ import {
  * - `bezig`: er is een wijziging die nog naar de server moet (wacht op de vertraging) of ze is onderweg.
  * - `lokaal`: bewaren op de server lukt niet (netwerk, 5xx, 408 of 429), maar het concept staat in IndexedDB.
  *   Er volgt een nieuwe poging. Na een 401 (de sessie is verlopen) ook `lokaal`, maar met `afgemeld`:
- *   dan volgt geen nieuwe poging tot `nuOpslaan()`, na opnieuw inloggen.
+ *   dan volgt geen nieuwe poging tot `nuOpslaan()`, na opnieuw inloggen. Ook na een 426
+ *   `NIEUWE_VERSIE_VEREIST` (de app is verouderd) is de status `lokaal`, met `versieVerouderd`: dan
+ *   volgt evenmin een nieuwe poging, tot de pagina herlaadt.
  * - `onbewaard`: idem, maar ook het concept kon niet bewaard worden: de wijziging bestaat alleen in het geheugen.
  * - `conflict`: de server heeft een nieuwere versie (409). Er wordt niets overschreven en niets meer verstuurd
  *   tot `laadServerversie` of `bewaarAlsKopie` het oplost.
@@ -113,6 +116,12 @@ export type Autosave = {
    * niets meer naar de server tot `nuOpslaan()`. Een geslaagd bewaar zet dit terug op false.
    */
   afgemeld: Ref<boolean>;
+  /**
+   * De server antwoordde 426 `NIEUWE_VERSIE_VEREIST`: deze versie van de app mag niet meer schrijven. Het
+   * werk staat in het concept; er gaat niets meer naar de server tot `nuOpslaan()`, en na het herladen
+   * van de pagina wordt het concept aangeboden. Een geslaagd bewaar zet dit terug op false.
+   */
+  versieVerouderd: Ref<boolean>;
   /**
    * De server antwoordde 402 `ABONNEMENT_VEREIST`. Het werk staat in het concept; er gaat niets
    * meer naar de server tot `nuOpslaan()` (na een abonnement). Een geslaagd bewaar zet dit terug op false.
@@ -200,6 +209,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const conflict = ref<Conflict | null>(null);
   const fout = ref<{ status: number; code?: Foutcode } | null>(null);
   const afgemeld = ref(false);
+  const versieVerouderd = ref(false);
   const alleenLezen = ref(false);
   const verwijderd = ref(false);
 
@@ -301,11 +311,18 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   }
 
   /**
-   * Bewaart de autosave vanzelf? Niet bij een conflict, een fout, na een 401 (afgemeld), een 402
-   * (alleen-lezen) of een 404 (verwijderd).
+   * Bewaart de autosave vanzelf? Niet bij een conflict, een fout, na een 401 (afgemeld), een 426
+   * (versieVerouderd), een 402 (alleen-lezen) of een 404 (verwijderd).
    */
   function automatisch(): boolean {
-    return !conflict.value && !fout.value && !afgemeld.value && !alleenLezen.value && !verwijderd.value;
+    return (
+      !conflict.value &&
+      !fout.value &&
+      !afgemeld.value &&
+      !versieVerouderd.value &&
+      !alleenLezen.value &&
+      !verwijderd.value
+    );
   }
 
   /** Wijzigingen die tijdens een bewaar binnenkwamen krijgen hier hun eigen, gedebouncete bewaar. */
@@ -335,6 +352,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   function zetVerwijderd(id: string): void {
     verwijderd.value = true;
     afgemeld.value = false;
+    versieVerouderd.value = false;
     alleenLezen.value = false;
     status.value = verwijderdStatus();
     const huidig = store.document;
@@ -365,6 +383,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         store.versie = resultaat.versie;
         bewaardeTeller = teller;
         afgemeld.value = false;
+        versieVerouderd.value = false;
         alleenLezen.value = false;
         if (store.gewijzigdSindsOpslaan === teller) {
           conceptGelukt = true;
@@ -390,6 +409,16 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           // De sessie is verlopen: het werk staat in het concept. Opnieuw proberen heeft pas zin
           // na opnieuw inloggen, dus geen nieuwe poging tot `nuOpslaan()`.
           afgemeld.value = true;
+          versieVerouderd.value = false;
+          alleenLezen.value = false;
+          status.value = offlineStatus();
+          wisTimer();
+        } else if (isNieuweVersieFout(e)) {
+          // De app is verouderd: de server weigert elke schrijfactie van deze versie. Het werk staat in
+          // het concept; opnieuw proberen heeft pas zin na het herladen, dus geen nieuwe poging tot
+          // `nuOpslaan()`. Er staat maar een melding tegelijk.
+          versieVerouderd.value = true;
+          afgemeld.value = false;
           alleenLezen.value = false;
           status.value = offlineStatus();
           wisTimer();
@@ -398,6 +427,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           // heeft pas zin na een abonnement, dus geen nieuwe poging tot `nuOpslaan()`.
           alleenLezen.value = true;
           afgemeld.value = false;
+          versieVerouderd.value = false;
           status.value = alleenLezenStatus();
           wisTimer();
         } else if (httpCode === NIET_GEVONDEN) {
@@ -411,6 +441,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           const code = bekendeFoutcode(e);
           fout.value = code === undefined ? { status: httpCode } : { status: httpCode, code };
           afgemeld.value = false;
+          versieVerouderd.value = false;
           alleenLezen.value = false;
           status.value = "fout";
           wisTimer();
@@ -418,7 +449,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           // Netwerk, 5xx, 408 of 429: later opnieuw; maar na een 401 alleen via `nuOpslaan()`.
           // In alleen-lezen weten we niet of het abonnement intussen terug is: geen timer, de status blijft.
           status.value = alleenLezen.value ? alleenLezenStatus() : offlineStatus();
-          if (!afgemeld.value && !alleenLezen.value) plan(herprobeerMs);
+          if (!afgemeld.value && !versieVerouderd.value && !alleenLezen.value) plan(herprobeerMs);
         }
       }
     });
@@ -433,6 +464,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       conflict.value = null;
       fout.value = null;
       afgemeld.value = false;
+      versieVerouderd.value = false;
       alleenLezen.value = false;
       verwijderd.value = false;
       status.value = "opgeslagen";
@@ -445,7 +477,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     }
     // Een wijziging tijdens een conflict zonder lokale wijzigingen (de export): nu zijn er wel lokale wijzigingen.
     if (conflict.value && !conflict.value.lokaleWijzigingen) conflict.value = { ...conflict.value, lokaleWijzigingen: true };
-    // Bij een conflict, een fout of afgemeld blijft het concept staan, maar gaat er niets naar de server.
+    // Bij een conflict, een fout, afgemeld of versieVerouderd blijft het concept staan, maar gaat er niets naar de server.
     if (!automatisch()) return;
     if (status.value !== "lokaal" && status.value !== "onbewaard") status.value = "bezig";
     // Loopt er een bewaar, dan plant dat zelf een nieuw bewaar als het klaar is.
@@ -481,6 +513,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     conflict.value = null;
     fout.value = null;
     afgemeld.value = false;
+    versieVerouderd.value = false;
     alleenLezen.value = false;
     verwijderd.value = false;
     status.value = "opgeslagen";
@@ -526,6 +559,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         bewaardeTeller = store.gewijzigdSindsOpslaan;
       }
       afgemeld.value = false;
+      versieVerouderd.value = false;
       alleenLezen.value = false;
       await wisConceptVeilig(id);
       await naarProject(kopie.id);
@@ -625,6 +659,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     conflict,
     fout,
     afgemeld,
+    versieVerouderd,
     alleenLezen,
     verwijderd,
     nuOpslaan,

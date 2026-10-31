@@ -228,7 +228,8 @@
       "beschrijving": "Op dit toestel staat een concept van dit project met wijzigingen die nog niet op de server staan ({tijd}).",
       "laden": "Concept laden",
       "later": "Later",
-      "verwerpen": "Verwerpen"
+      "verwerpen": "Verwerpen",
+      "herstelMislukt": "Het lokaal bewaarde werk kon niet geladen worden. Het blijft bewaard."
     },
     "verlaten": {
       "bevestiging": "Je wijzigingen staan nog niet op de server. Wil je de editor toch verlaten?"
