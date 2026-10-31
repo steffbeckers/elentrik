@@ -1,7 +1,7 @@
-import { NodeSchema, TOEGELATEN_KINDEREN, ToestelsoortSchema } from "@elentrik/model";
+import { NodeSchema, TOEGELATEN_KINDEREN } from "@elentrik/model";
 import type { Node, NodeType } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { KOLOM_BREEDTE_MM, TOESTEL_AFKORTINGEN, tekenSymbool } from "../src/index";
+import { KOLOM_BREEDTE_MM, tekenSymbool } from "../src/index";
 import { buitenVak, isGoedgevormd, nietRechtop, raakt } from "./hulp";
 
 const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
@@ -57,27 +57,6 @@ describe("alle nodetypes", () => {
       expect(isGoedgevormd(symbool)).toBe(true);
       expect(nietRechtop(symbool)).toEqual([]);
       expect(symbool.svg).not.toMatch(/NaN|undefined|Infinity/);
-    });
-  });
-});
-
-describe("TOESTEL_AFKORTINGEN", () => {
-  test("heeft een sleutel voor elke toestelsoort, en niet meer", () => {
-    expect(Object.keys(TOESTEL_AFKORTINGEN).sort()).toEqual([...ToestelsoortSchema.options].sort());
-  });
-
-  test("bevat de vastgelegde afkortingen", () => {
-    expect(TOESTEL_AFKORTINGEN).toEqual({
-      wasmachine: "WM",
-      droogkast: "DK",
-      vaatwasser: "VW",
-      kookplaat: "KP",
-      oven: "OV",
-      boiler: "B",
-      warmtepomp: "WP",
-      laadpaal: "LP",
-      omvormer: "OMV",
-      andere: "T",
     });
   });
 });

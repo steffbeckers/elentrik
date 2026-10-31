@@ -57,6 +57,24 @@ describe("sneltoets", () => {
     expect(sneltoets(invoer)).toBeNull();
   });
 
+  describe("symbolenvenster (a)", () => {
+    test("a opent het symbolenvenster", () => {
+      expect(sneltoets(toets("a"))).toEqual({ soort: "symbolen" });
+    });
+
+    test("ook in alleen-lezen: bekijken mag", () => {
+      expect(sneltoets(toets("a", { alleenLezen: true }))).toEqual({ soort: "symbolen" });
+    });
+
+    test("niet in een invoerveld", () => {
+      expect(sneltoets(toets("a", { doelIsInvoer: true }))).toBeNull();
+    });
+
+    test("niet met Ctrl", () => {
+      expect(sneltoets(toets("a", { ctrlKey: true }))).toBeNull();
+    });
+  });
+
   describe("in een invoerveld", () => {
     test.each<[string, Toets]>([
       ["c", toets("c", { doelIsInvoer: true })],

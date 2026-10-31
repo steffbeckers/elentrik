@@ -1,13 +1,15 @@
 import { DocumentFout } from "./fouten";
 import { controleerType, vereis, type NodeInvoer, type OperatieResultaat } from "./operaties";
-import type { InstallatieDocument, NodeId, Toestelsoort } from "./schema";
+import { NodeSchema, type InstallatieDocument, type NodeId } from "./schema";
 import { pasSjabloonToe, type Sjabloon } from "./sjablonen";
 import {
   NIEUWE_KRING_AUTOMAAT,
   STANDAARD,
+  VISUELE_VELDEN,
   keten,
   sjabloonVoor,
   type Onderdeel,
+  type Voorinstelling,
 } from "./standaarden";
 
 /**
@@ -22,11 +24,15 @@ function nietToegelaten(details: object): DocumentFout {
   return new DocumentFout("NIET_TOEGELATEN_KIND", details);
 }
 
-function onderdeelInvoer(onderdeel: Onderdeel, toestelsoort?: Toestelsoort): NodeInvoer {
-  if (onderdeel === "toestel" && toestelsoort !== undefined) {
-    return { ...STANDAARD.toestel, soort: toestelsoort } as NodeInvoer;
+/** `STANDAARD` met daarover de sleutels van de voorinstelling die dit onderdeel mag zetten. */
+function onderdeelInvoer(onderdeel: Onderdeel, voorinstelling?: Voorinstelling): NodeInvoer {
+  const toegelaten = VISUELE_VELDEN[onderdeel];
+  if (!voorinstelling || !toegelaten) return STANDAARD[onderdeel];
+  const invoer: Record<string, unknown> = { ...STANDAARD[onderdeel] };
+  for (const sleutel of toegelaten) {
+    if (voorinstelling[sleutel] !== undefined) invoer[sleutel] = voorinstelling[sleutel];
   }
-  return STANDAARD[onderdeel];
+  return invoer as NodeInvoer;
 }
 
 /** De nieuwe nodes van boven naar onder (elke node is het kind van de vorige). */
@@ -34,7 +40,7 @@ function nieuweNodes(
   doc: InstallatieDocument,
   aanknoping: Aanknoping,
   onderdeel: Onderdeel,
-  toestelsoort?: Toestelsoort,
+  voorinstelling?: Voorinstelling,
 ): NodeInvoer[] {
   const node = vereis(doc, aanknoping.nodeId);
   if (aanknoping.soort === "kring-einde") {
@@ -47,7 +53,7 @@ function nieuweNodes(
         ? [STANDAARD.onderbord]
         : [STANDAARD.leiding, STANDAARD.onderbord];
     }
-    return [onderdeelInvoer(onderdeel, toestelsoort)];
+    return [onderdeelInvoer(onderdeel, voorinstelling)];
   }
 
   if (node.type !== "verdeelbord" && node.type !== "differentieel") {
@@ -67,12 +73,22 @@ function maakPlan(
   doc: InstallatieDocument,
   aanknoping: Aanknoping,
   onderdeel: Onderdeel,
-  toestelsoort?: Toestelsoort,
+  voorinstelling?: Voorinstelling,
 ): Plan {
-  const nodes = nieuweNodes(doc, aanknoping, onderdeel, toestelsoort);
+  const nodes = nieuweNodes(doc, aanknoping, onderdeel, voorinstelling);
   let ouderType = vereis(doc, aanknoping.nodeId).type;
   for (const invoer of nodes) {
     controleerType({ type: ouderType }, invoer);
+    // Een ongeldige voorinstelling (een onbekende soort, aantal 0) mag niet pas bij het toepassen falen.
+    const geparsed = NodeSchema.safeParse({
+      ...invoer,
+      id: "controle",
+      parentId: "controle",
+      kinderen: [],
+    });
+    if (!geparsed.success) {
+      throw new DocumentFout("ONGELDIG_SCHEMA", { issues: geparsed.error.issues });
+    }
     ouderType = invoer.type;
   }
   const [eerste, ...rest] = nodes as [NodeInvoer, ...NodeInvoer[]];
@@ -88,10 +104,10 @@ export function magToevoegen(
   doc: InstallatieDocument,
   aanknoping: Aanknoping,
   onderdeel: Onderdeel,
-  toestelsoort?: Toestelsoort,
+  voorinstelling?: Voorinstelling,
 ): boolean {
   try {
-    maakPlan(doc, aanknoping, onderdeel, toestelsoort);
+    maakPlan(doc, aanknoping, onderdeel, voorinstelling);
     return true;
   } catch (fout) {
     if (fout instanceof DocumentFout) return false;
@@ -102,15 +118,15 @@ export function magToevoegen(
 /**
  * Voegt een onderdeel toe volgens de regels van spec §4.3, in één operatie
  * (één undo-stap). `ids` zijn de nieuwe node-id's van onder naar boven.
- * Gooit `ONBEKENDE_NODE` of `NIET_TOEGELATEN_KIND`.
+ * Gooit `ONBEKENDE_NODE`, `NIET_TOEGELATEN_KIND` of `ONGELDIG_SCHEMA` (ongeldige voorinstelling).
  */
 export function voegOnderdeelToe(
   doc: InstallatieDocument,
   aanknoping: Aanknoping,
   onderdeel: Onderdeel,
-  toestelsoort?: Toestelsoort,
+  voorinstelling?: Voorinstelling,
 ): OperatieResultaat & { ids: NodeId[] } {
-  const plan = maakPlan(doc, aanknoping, onderdeel, toestelsoort);
+  const plan = maakPlan(doc, aanknoping, onderdeel, voorinstelling);
   const r = pasSjabloonToe(doc, plan.ouderId, plan.sjabloon);
   const ids: NodeId[] = [r.id];
   while (ids.length < plan.aantal) {

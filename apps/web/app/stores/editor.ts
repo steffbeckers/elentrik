@@ -25,6 +25,7 @@ import {
   type ProjectWijziging,
   type Stroomtype,
   type Toestelsoort,
+  type Voorinstelling,
 } from "@elentrik/model";
 import { schemaStripSvg } from "@elentrik/render";
 import { defineStore } from "pinia";
@@ -45,6 +46,16 @@ export const MAX_STAPPEN = 200;
 export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst";
 
 export type TeLadenProject = { id: string; naam: string; versie: number; document: InstallatieDocument };
+
+/** De voorinstellingen bij het openen van de editor: toestel begint bij de wasmachine, de rest bij de standaard. */
+export const BEGIN_VOORINSTELLINGEN: Readonly<Partial<Record<Onderdeel, Readonly<Voorinstelling>>>> = Object.freeze({
+  toestel: Object.freeze({ soort: "wasmachine" }),
+});
+
+/** Een verse, losse kopie van de beginvoorinstellingen: de store muteert nooit de constante. */
+function beginVoorinstellingen(): Partial<Record<Onderdeel, Voorinstelling>> {
+  return { toestel: { ...BEGIN_VOORINSTELLINGEN.toestel } };
+}
 
 /** De datum van vandaag als `JJJJ-MM-DD`, in lokale tijd (zoals `meta.datum`). */
 function vandaag(): string {
@@ -75,7 +86,19 @@ export const useEditorStore = defineStore("editor", () => {
   /** De laatst geklikte node staat achteraan. */
   const selectie = ref<NodeId[]>([]);
   const onderdeel = ref<Onderdeel>("contactdoos");
-  const toestelsoort = ref<Toestelsoort>("wasmachine");
+  /** Per onderdeel de gekozen variant; een onderdeel zonder sleutel gebruikt de standaard van het model. */
+  const voorinstellingen = ref<Partial<Record<Onderdeel, Voorinstelling>>>(beginVoorinstellingen());
+  /** De voorinstelling van het gekozen onderdeel, of `{}`. */
+  const voorinstelling = computed<Voorinstelling>(() => voorinstellingen.value[onderdeel.value] ?? {});
+  /** Leest en schrijft `voorinstellingen.toestel.soort`. */
+  const toestelsoort = computed<Toestelsoort>({
+    get: () => (voorinstellingen.value.toestel?.soort ?? "wasmachine") as Toestelsoort,
+    set: (soort) => {
+      voorinstellingen.value = { ...voorinstellingen.value, toestel: { ...voorinstellingen.value.toestel, soort } };
+    },
+  });
+  /** Open het symbolenvenster? Een weergavekeuze, ook open in alleen-lezen. */
+  const symbolenOpen = ref(false);
   const tabblad = ref<Tabblad>("eendraadschema");
   // Elke wijziging vervangt de array, zodat een shallowRef volstaat.
   const terug = shallowRef<Stap[]>([]);
@@ -149,6 +172,7 @@ export const useEditorStore = defineStore("editor", () => {
     naam.value = project.naam;
     versie.value = project.versie;
     selectie.value = [];
+    symbolenOpen.value = false;
     tabblad.value = "eendraadschema";
     terug.value = [];
     vooruit.value = [];
@@ -218,6 +242,21 @@ export const useEditorStore = defineStore("editor", () => {
     zetDocument(doc);
   }
 
+  /** Kiest `onderdeel` met de variant `v`; toevoegen gebruikt ze tot een andere keuze. */
+  function kiesVariant(gekozen: Onderdeel, v: Voorinstelling): void {
+    if (alleenLezen.value) return;
+    onderdeel.value = gekozen;
+    voorinstellingen.value = { ...voorinstellingen.value, [gekozen]: v };
+  }
+
+  /** Zet de voorinstelling van `gekozen` terug naar de beginwaarde (toestel: wasmachine, de rest: geen). */
+  function zetStandaard(gekozen: Onderdeel): void {
+    if (alleenLezen.value) return;
+    const { [gekozen]: _weg, ...rest } = voorinstellingen.value;
+    const begin = BEGIN_VOORINSTELLINGEN[gekozen];
+    voorinstellingen.value = begin ? { ...rest, [gekozen]: { ...begin } } : rest;
+  }
+
   /** Voegt `onderdeel` toe op de aanknoping en selecteert de bovenste nieuwe node. */
   function voegToe(aanknoping: Aanknoping): void {
     if (alleenLezen.value) return;
@@ -225,7 +264,7 @@ export const useEditorStore = defineStore("editor", () => {
       vereisDocument(),
       { soort: aanknoping.soort, nodeId: aanknoping.nodeId },
       onderdeel.value,
-      toestelsoort.value,
+      voorinstelling.value,
     );
     pasToe(r);
     selectie.value = [r.ids[r.ids.length - 1]!];
@@ -296,7 +335,8 @@ export const useEditorStore = defineStore("editor", () => {
     const doc = document.value;
     if (!doc) return;
     const aanknoping = aanknopingBijSelectie(doc);
-    if (!aanknoping || !magToevoegen(doc, aanknoping, onderdeel.value, toestelsoort.value)) return;
+    if (!aanknoping) return;
+    if (!magToevoegen(doc, aanknoping, onderdeel.value, voorinstelling.value)) return;
     voegToe(aanknoping);
   }
 
@@ -440,7 +480,12 @@ export const useEditorStore = defineStore("editor", () => {
     versie,
     selectie,
     onderdeel,
+    voorinstellingen,
+    voorinstelling,
     toestelsoort,
+    symbolenOpen,
+    kiesVariant,
+    zetStandaard,
     tabblad,
     terug,
     vooruit,

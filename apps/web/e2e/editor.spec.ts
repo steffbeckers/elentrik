@@ -86,7 +86,7 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   // 2. De + van de rail voegt een kring toe: automaat, leiding en een + op het kring-einde.
   await pasTeMaken(page);
   await railPlus.click();
-  await expect(schemaTekst(page, "16 A B")).toHaveCount(1);
+  await expect(schemaTekst(page, "B16 2P")).toHaveCount(1);
   await expect(schemaTekst(page, "XVB 3G2,5")).toHaveCount(1);
   await expect(kringPlus).toHaveCount(1);
 
