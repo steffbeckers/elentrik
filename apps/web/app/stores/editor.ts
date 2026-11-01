@@ -43,7 +43,7 @@ export type Stap = { patches: Patch[]; inversePatches: Patch[]; groep?: string }
 export const MAX_STAPPEN = 200;
 
 /** De tabbladen van de editor. */
-export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst";
+export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst" | "materiaallijst";
 
 export type TeLadenProject = { id: string; naam: string; versie: number; document: InstallatieDocument };
 
