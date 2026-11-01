@@ -54,6 +54,33 @@ watch(error, useSessieHerstel());
 
 const formulier = reactive<BedrijfFormulier>(leegFormulier());
 const logoBestandId = ref<string | undefined>(undefined);
+const bewaardeVelden = ref<string | null>(null);
+const bewaard = ref(false);
+const gewijzigd = computed(() => bewaardeVelden.value !== null && JSON.stringify(formulier) !== bewaardeVelden.value);
+watch(gewijzigd, (waarde) => { if (waarde) bewaard.value = false; });
+
+let vertrekBevestigd = false;
+let afmeldenVoorVertrek: (() => void) | undefined;
+function bevestigVertrek() {
+  if (!gewijzigd.value || vertrekBevestigd) return true;
+  vertrekBevestigd = window.confirm(t("werkbaarheidBeheer.verlaten"));
+  return vertrekBevestigd;
+}
+watch(formulier, () => { vertrekBevestigd = false; }, { deep: true, flush: "sync" });
+onBeforeRouteLeave(bevestigVertrek);
+function beschermVerversen(event: BeforeUnloadEvent) {
+  if (!gewijzigd.value) return;
+  event.preventDefault();
+  event.returnValue = "";
+}
+onMounted(() => {
+  window.addEventListener("beforeunload", beschermVerversen);
+  afmeldenVoorVertrek = sessie.registreerVoorVertrek(bevestigVertrek, () => { vertrekBevestigd = false; });
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", beschermVerversen);
+  afmeldenVoorVertrek?.();
+});
 
 const toestand = reactive<BewaarderToestand>({ geladenVoor: null, bezig: false, logoBezig: false });
 const bewaarder = maakBedrijfBewaarder(toestand, {
@@ -74,7 +101,11 @@ watch(
   geladenBedrijf,
   (geladen) => {
     if (!geladen) return;
+    // Een achtergrondverversing van hetzelfde bedrijf mag lokale invoer niet overschrijven.
+    if (toestand.geladenVoor === geladen.organisatieId && gewijzigd.value) return;
     Object.assign(formulier, formulierUitPartij(geladen.partij));
+    bewaardeVelden.value = JSON.stringify(formulier);
+    bewaard.value = false;
     logoBestandId.value = geladen.partij.logoBestandId;
     toestand.geladenVoor = geladen.organisatieId;
   },
@@ -93,6 +124,8 @@ async function bewaar() {
     const uitkomst = await bewaarder.bewaar(partijUitFormulier(formulier));
     if (uitkomst.status !== "gedaan") return;
     Object.assign(formulier, formulierUitPartij(uitkomst.waarde));
+    bewaardeVelden.value = JSON.stringify(formulier);
+    bewaard.value = true;
     logoBestandId.value = uitkomst.waarde.logoBestandId;
     toast.add({ title: t("bedrijf.bewaard"), color: "success" });
   } catch (fout) {
@@ -138,19 +171,12 @@ async function opLogoGekozen(gebeurtenis: Event) {
   <div class="min-h-dvh">
     <AppBovenbalk />
     <AbonnementBanner />
-    <UContainer class="max-w-3xl py-8">
+    <UContainer class="comfortabele-formulieren max-w-3xl py-8">
       <div class="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div>
           <h1 class="text-2xl font-semibold">{{ $t("bedrijf.titel") }}</h1>
           <p class="mt-1 text-sm text-muted">{{ $t("bedrijf.beschrijving") }}</p>
         </div>
-        <UButton
-          to="/"
-          icon="i-lucide-arrow-left"
-          color="neutral"
-          variant="outline"
-          :label="$t('bedrijf.terug')"
-        />
       </div>
 
       <UAlert
@@ -193,6 +219,7 @@ async function opLogoGekozen(gebeurtenis: Event) {
             </div>
             <div class="space-y-2">
               <p class="text-sm text-muted">{{ $t("bedrijf.logo.beschrijving") }}</p>
+              <p class="text-sm text-muted">{{ $t("werkbaarheidBeheer.logoDirect") }}</p>
               <input
                 ref="invoer"
                 type="file"
@@ -219,7 +246,7 @@ async function opLogoGekozen(gebeurtenis: Event) {
           id="bedrijf-formulier"
           :state="formulier"
           :validate="valideer"
-          :disabled="laadt || alleenLezen"
+          :disabled="laadt || alleenLezen || toestand.bezig"
           class="space-y-6"
           @submit="bewaar"
         >
@@ -248,12 +275,15 @@ async function opLogoGekozen(gebeurtenis: Event) {
             <AdresVelden :model-value="formulier" />
           </UCard>
 
-          <div v-if="!alleenLezen" class="flex justify-end">
+          <div v-if="!alleenLezen" class="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default bg-default p-4 shadow-sm">
+            <p role="status" class="text-sm text-muted" data-testid="bedrijf-opslagstatus">
+              {{ $t(toestand.bezig ? 'werkbaarheidBeheer.bewaren' : gewijzigd ? 'werkbaarheidBeheer.gewijzigd' : bewaard ? 'bedrijf.bewaard' : 'werkbaarheidBeheer.geenWijzigingen') }}
+            </p>
             <UButton
               type="submit"
               :label="$t('bedrijf.bewaren')"
               :loading="toestand.bezig"
-              :disabled="toestand.bezig || laadt"
+              :disabled="toestand.bezig || laadt || !gewijzigd"
               data-testid="bedrijf-bewaar"
             />
           </div>

@@ -26,6 +26,8 @@ export {
   voegPaginaToe,
   zetAchtergrond,
   zetSchaal,
+  zetPaginaOpmaak,
+  zetLabelOffset,
 } from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
 export {

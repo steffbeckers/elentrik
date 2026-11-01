@@ -11,6 +11,7 @@ const emit = defineEmits<{ aangemaakt: [id: string] }>();
 
 const { t } = useI18n();
 const sessie = useSessieStore();
+const proefHintId = useId();
 
 const formulier = reactive({ naam: "" });
 const bezig = ref(false);
@@ -54,16 +55,19 @@ async function maak() {
       <UFormField
         name="naam"
         :label="$t('geenOrganisatie.nieuw.naam')"
-        :hint="sessie.toonGeenProefHint ? $t('geenOrganisatie.nieuw.geenProef') : undefined"
         required
       >
         <UInput
           v-model="formulier.naam"
           autocomplete="organization"
+          :aria-describedby="sessie.toonGeenProefHint ? proefHintId : undefined"
           class="w-full"
           data-testid="organisatie-nieuw-naam"
         />
       </UFormField>
+      <p v-if="sessie.toonGeenProefHint" :id="proefHintId" class="text-sm text-muted">
+        {{ $t('geenOrganisatie.nieuw.geenProef') }}
+      </p>
       <UButton
         type="submit"
         block

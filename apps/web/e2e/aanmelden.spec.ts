@@ -1,3 +1,4 @@
+import { verwachtOrganisatie } from "./hulp/navigatie";
 // De volledige stromen van aanmelden: registreren met overname van bestaande gegevens, de
 // inlogmethoden (wachtwoord en inloglink) en een collega uitnodigen. Eén gebruiker doorloopt de
 // tests in volgorde; rate limiting (aanmelden 3 per 10 s, inloglink 5 per 60 s) blijft ruim
@@ -73,7 +74,7 @@ test("registreren: bevestigen en inloggen, en de bestaande projecten en bedrijfs
   const link = linkUit(await laatsteMailAan(eigenaar.email, { na: sinds }));
   await ga(page, link);
   await expect(page).toHaveURL(`${E2E_URL}/`);
-  await expect(page.getByTestId("organisatie-keuze")).toContainText(eigenaar.bedrijf);
+  await verwachtOrganisatie(page, eigenaar.bedrijf);
 
   // Beide projecten staan in de lijst van de nieuwe organisatie.
   for (const naam of projectNamen) await expect(page.getByRole("row").filter({ hasText: naam })).toHaveCount(1);
@@ -92,7 +93,7 @@ test("inloggen met een wachtwoord en met een inloglink; een onbekend adres krijg
   // het wachtwoord, dan uitloggen.
   await meldAan(page, eigenaar.email, eigenaar.wachtwoord);
   await expect(page).toHaveURL(`${E2E_URL}/`);
-  await expect(page.getByTestId("organisatie-keuze")).toContainText(eigenaar.bedrijf);
+  await verwachtOrganisatie(page, eigenaar.bedrijf);
   await meldAf(page);
 
   // Een inloglink voor een onbekend adres: dezelfde, neutrale melding, en er komt geen mail.
@@ -116,7 +117,7 @@ test("inloggen met een wachtwoord en met een inloglink; een onbekend adres krijg
   // De link logt in, op de pagina waar de gebruiker heen wilde (de startpagina).
   await ga(page, link);
   await expect(page).toHaveURL(`${E2E_URL}/`);
-  await expect(page.getByTestId("organisatie-keuze")).toContainText(eigenaar.bedrijf);
+  await verwachtOrganisatie(page, eigenaar.bedrijf);
 
   // De link is eenmalig: na uitloggen geeft dezelfde link een melding op de inlogpagina.
   await meldAf(page);
@@ -156,7 +157,7 @@ test("een collega uitnodigen: registreren via de link zonder bedrijfsnaam, de pr
     await pagina.getByTestId("uitnodiging-wachtwoord").fill(collega.wachtwoord);
     await pagina.getByTestId("uitnodiging-registreren").click();
     await expect(pagina).toHaveURL(`${E2E_URL}/`);
-    await expect(pagina.getByTestId("organisatie-keuze")).toContainText(eigenaar.bedrijf);
+    await verwachtOrganisatie(pagina, eigenaar.bedrijf);
 
     // De projecten van de eigenaar staan in de lijst, ook de overgenomen.
     for (const naam of projectNamen) await expect(pagina.getByRole("row").filter({ hasText: naam })).toHaveCount(1);

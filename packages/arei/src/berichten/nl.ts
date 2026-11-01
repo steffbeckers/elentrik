@@ -1,5 +1,8 @@
 /** Nederlandse berichtteksten per berichtSleutel; aangevuld door de regels (Task 13–15); `waarde.*` vertaalt ruimtes en toestelsoorten in parameters. */
 export const NL: Readonly<Record<string, string>> = {
+  "arei.differentieel.aanvullend.ontbreekt": "Dit gewone contactdoos- of lichtpunt mist aanvullende differentieelbescherming van maximaal 30 mA voor een nieuwe huishoudelijke installatie.",
+  "arei.differentieel.aanvullend.context": "Dit gewone contactdoos- of lichtpunt heeft geen aanvullende bescherming van maximaal 30 mA. Controleer de installatiecontext en eventuele overgangsbepalingen; een bestaande installatie is niet automatisch vrijgesteld.",
+  "waarde.hal": "hal",
   "arei.differentieel.algemeen.ontbreekt": "De installatie heeft geen algemeen differentieel.",
   "arei.differentieel.algemeen.te-ongevoelig":
     "Het algemeen differentieel heeft een gevoeligheid van {gevoeligheid} mA. Meer dan {max} mA is niet toegestaan.",

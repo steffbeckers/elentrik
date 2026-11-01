@@ -5,7 +5,7 @@ import { getal } from "@elentrik/symbols";
 export const RAND_MM = 0.25;
 /** De regelhoogte als factor van de tekstgrootte. */
 export const REGELHOOGTE = 1.3;
-/** De rijhoogte van de kringenlijst in mm. */
+/** De minimale rijhoogte van de kringenlijst in mm. */
 export const KRINGENLIJST_RIJ_MM = 6;
 /** De horizontale binnenmarge van een cel in de kringenlijst in mm. */
 export const CEL_MARGE_MM = 1;
@@ -52,11 +52,13 @@ export function stijl(breedte: number, hoogte: number, metWatermerk = false): st
     ".kader > img, .kader > svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }",
     ".kader > svg { color: #000; }",
     // Geen <table>: met border-collapse is de rijafstand in Chromium groter dan de opgegeven hoogte.
-    // Elke rij is exact KRINGENLIJST_RIJ_MM hoog, onderrand inbegrepen; de tabel geeft de boven- en linkerrand.
+    // Elke rij krijgt een gemeten hoogte, onderrand inbegrepen; de tabel geeft de boven- en linkerrand.
     `.kringen { position: absolute; box-sizing: border-box; border-top: ${rand}; border-left: ${rand}; }`,
-    `.kringen .rij, .kringen .kopregel { display: flex; height: ${getal(KRINGENLIJST_RIJ_MM)}mm; }`,
-    `.kringen .tabelcel { box-sizing: border-box; flex: none; height: ${getal(KRINGENLIJST_RIJ_MM)}mm; padding: 0 ${getal(CEL_MARGE_MM)}mm; ` +
-      `border-right: ${rand}; border-bottom: ${rand}; display: flex; align-items: center; overflow: hidden; }`,
+    `.kringen .rij, .kringen .kopregel { display: flex; min-height: ${getal(KRINGENLIJST_RIJ_MM)}mm; }`,
+    `.kringen .tabelcel { box-sizing: border-box; flex: none; height: 100%; padding: ${getal(CEL_MARGE_MM)}mm; ` +
+      `border-right: ${rand}; border-bottom: ${rand}; display: flex; align-items: flex-start; overflow: hidden; }`,
+    ".controlebeperking { position: absolute; font-size: 2.5mm; line-height: 1.3; font-weight: bold; }",
+    ".schaal { position: absolute; font-size: 3mm; line-height: 1.3; }",
     ".bijlage { position: absolute; }",
     `.bijlage .motivatie, .bijlage .door { margin-left: ${getal(INSPRINGING_MM)}mm; }`,
     `.bijlage .kop { margin-top: ${getal(KOP_MARGE_MM)}mm; }`,

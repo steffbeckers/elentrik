@@ -111,6 +111,10 @@ describe("beveiligingLabel", () => {
     expect(beveiligingLabel(automaat({ nominaal_A: 16, curve: "B", polen: 2 }))).toBe("B16 2P");
     expect(beveiligingLabel(automaat({ nominaal_A: 32, curve: "D", polen: 4 }))).toBe("D32 4P");
   });
+  test("automaat vermeldt het ingevulde kortsluitvermogen", () => {
+    expect(beveiligingLabel(automaat({ polen: 2, kortsluitvermogen_kA: 6 }))).toBe("B16 2P 6 kA");
+    expect(beveiligingLabel(automaat({ kortsluitvermogen_kA: 4.5 }))).toBe("B16 4,5 kA");
+  });
   test("differentieel: nominale stroom, gevoeligheid in A, klasse en polen", () => {
     expect(beveiligingLabel(differentieel({ nominaal_A: 40, gevoeligheid_mA: 30, klasse: "A", polen: 2 }))).toBe(
       "40/0,03A type A 2P",

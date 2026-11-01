@@ -1,6 +1,7 @@
 import type { Regelset } from "../../types";
 import { PARAMETERS_AREI_2020_V1 } from "./parameters";
 import { maakRegelAlgemeenDifferentieel } from "./regels/algemeen-differentieel";
+import { maakRegelAanvullendeDifferentieel } from "./regels/aanvullende-differentieel";
 import { maakRegelDoorsnedeBeveiliging } from "./regels/doorsnede-beveiliging";
 import { maakRegelLeidingOnvolledig } from "./regels/leiding-onvolledig";
 import { maakRegelMaxContactdozen } from "./regels/max-contactdozen";
@@ -19,6 +20,7 @@ export const AREI_2020: Regelset = {
   regels: [
     maakRegelAlgemeenDifferentieel(PARAMETERS_AREI_2020_V1),
     maakRegelNatteRuimteDifferentieel(PARAMETERS_AREI_2020_V1),
+    maakRegelAanvullendeDifferentieel(),
     maakRegelDoorsnedeBeveiliging(PARAMETERS_AREI_2020_V1),
     maakRegelMaxContactdozen(PARAMETERS_AREI_2020_V1),
     maakRegelMinDoorsnede(PARAMETERS_AREI_2020_V1),
