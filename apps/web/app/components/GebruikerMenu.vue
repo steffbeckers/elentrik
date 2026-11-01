@@ -15,6 +15,13 @@ const toast = useToast();
 const { taal, zetTaal } = useTaal();
 
 const bezig = ref(false);
+const nieuwOpen = ref(false);
+const { bezig: wisselt, organisatieItems, organisatieOptie } = useOrganisatieKeuzes();
+
+async function aangemaakt() {
+  nieuwOpen.value = false;
+  await navigateTo("/");
+}
 
 async function uitloggen() {
   if (bezig.value) return;
@@ -30,16 +37,20 @@ async function uitloggen() {
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [{ type: "label", label: sessie.gebruiker?.naam ?? "", description: sessie.gebruiker?.email ?? "" }],
+  // Bij twee organisaties blijft wisselen bereikbaar zonder een extra knop in de bovenbalk.
+  ...(sessie.organisaties.length === 2 ? [organisatieItems.value] : []),
   // Zonder organisatie hebben deze pagina's niets te tonen.
   ...(sessie.actieveOrganisatie
     ? [
         [
+          { type: "label" as const, label: sessie.actieveOrganisatie.naam, slot: "actieve-organisatie" as const },
           { label: t("menu.mijnOrganisatie"), icon: "i-lucide-users", to: "/organisatie", slot: "organisatie" as const },
           { label: t("menu.bedrijfsgegevens"), icon: "i-lucide-building-2", to: "/instellingen" },
           { label: t("menu.abonnement"), icon: "i-lucide-credit-card", to: "/abonnement" },
         ],
       ]
     : []),
+  [{ label: t("menu.nieuwBedrijf"), icon: "i-lucide-plus", slot: "nieuw" as const, onSelect: () => { nieuwOpen.value = true; } }],
   [
     {
       label: t("taal.label"),
@@ -59,13 +70,22 @@ const items = computed<DropdownMenuItem[][]>(() => [
       variant="ghost"
       icon="i-lucide-circle-user-round"
       class="min-w-0 max-w-48"
-      :loading="bezig"
+      :loading="bezig || wisselt"
       :aria-label="$t('menu.gebruiker')"
       :title="$t('menu.gebruiker')"
       data-testid="gebruiker-menu"
     >
-      <span class="hidden truncate" :class="compact ? 'xl:inline' : 'sm:inline'">{{ sessie.gebruiker.naam }}</span>
+      <span class="hidden truncate" :class="compact ? '' : 'sm:inline'">{{ sessie.gebruiker.naam }}</span>
     </UButton>
+    <template #actieve-organisatie-label>
+      <span data-testid="actieve-organisatie">{{ sessie.actieveOrganisatie?.naam }}</span>
+    </template>
+    <template #organisatie-optie-label="{ item }">
+      <span :data-testid="`organisatie-optie-${organisatieOptie(item).organisatieId}`">{{ organisatieOptie(item).label }}</span>
+    </template>
+    <template #nieuw-label>
+      <span data-testid="organisatie-nieuw">{{ $t('menu.nieuwBedrijf') }}</span>
+    </template>
     <template #organisatie-label>
       <span data-testid="mijn-organisatie">{{ $t("menu.mijnOrganisatie") }}</span>
     </template>
@@ -76,4 +96,9 @@ const items = computed<DropdownMenuItem[][]>(() => [
       <span data-testid="uitloggen">{{ $t("menu.uitloggen") }}</span>
     </template>
   </UDropdownMenu>
+  <UModal v-model:open="nieuwOpen" :title="$t('geenOrganisatie.nieuw.titel')">
+    <template #body>
+      <NieuwBedrijfFormulier @aangemaakt="aangemaakt" />
+    </template>
+  </UModal>
 </template>

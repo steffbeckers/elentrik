@@ -13,8 +13,8 @@ const GEEN_TERUGVAL: LabelTerugval = () => "";
 export const SYMBOOL_DELER = 60;
 
 /** Symboolgrootte in rasterpixels: de lange zijde van het raster / 60. Gedeeld door de editor en de pdf. */
-export function symboolGrootte(achtergrond: { breedte_px: number; hoogte_px: number }): number {
-  return Math.max(achtergrond.breedte_px, achtergrond.hoogte_px) / SYMBOOL_DELER;
+export function symboolGrootte(achtergrond: { breedte_px: number; hoogte_px: number }, factor = 1): number {
+  return Math.max(achtergrond.breedte_px, achtergrond.hoogte_px) / SYMBOOL_DELER * factor;
 }
 
 /**
@@ -46,6 +46,7 @@ export function situatieItems(
   const pagina = doc.situatie.paginas.find((p) => p.id === paginaId);
   if (!pagina) return [];
   const items: SituatieItem[] = [];
+  const basis = pagina.achtergrond ? symboolGrootte(pagina.achtergrond) : undefined;
   for (const plaatsing of pagina.plaatsingen) {
     const node = doc.nodes[plaatsing.nodeId];
     if (!node) continue;
@@ -56,6 +57,11 @@ export function situatieItems(
       y: plaatsing.y,
       rotatie: plaatsing.rotatie,
       label: nodeLabel(doc, analyse, plaatsing.nodeId, terugval),
+      ...(basis === undefined ? {} : {
+        symboolGrootte_px: basis * (pagina.symboolSchaal ?? 1),
+        labelGrootte_px: basis * 0.45 * (pagina.labelSchaal ?? 1),
+      }),
+      ...(plaatsing.labelOffset ? { labelOffset: plaatsing.labelOffset } : {}),
     });
   }
   return items;

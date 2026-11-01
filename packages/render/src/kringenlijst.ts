@@ -8,6 +8,8 @@ export type KringenlijstRij = {
   nodeId: string;
   kring: string;
   punt: string;
+  kringOmschrijving: string;
+  puntOmschrijving: string;
   type: string;
   ruimte: string;
   beveiliging: string;
@@ -20,7 +22,13 @@ const ZONDER_KRING = "—";
 
 function typeTekst(node: Node, teksten: Teksten): string {
   const basis = teksten.types[node.type];
-  return node.type === "toestel" ? `${basis} (${teksten.toestelsoorten[node.soort]})` : basis;
+  if (node.type === "toestel") return `${basis} (${teksten.toestelsoorten[node.soort]})`;
+  if (node.type === "schakelaar") return `${basis} (${teksten.schakelaarsoorten[node.soort]})`;
+  if (node.type === "contactdoos" || node.type === "lichtpunt") {
+    const variant = node.type === "lichtpunt" && node.soort ? ` (${teksten.lichtpuntsoorten[node.soort]})` : "";
+    return `${basis}${variant}${node.aantal > 1 ? ` ×${node.aantal}` : ""}`;
+  }
+  return basis;
 }
 
 function beveiligingTekst(doc: InstallatieDocument, id: NodeId | null | undefined): string {
@@ -47,9 +55,11 @@ function rij(
   return {
     nodeId,
     kring,
+    kringOmschrijving: beveiligingId ? doc.nodes[beveiligingId]?.label ?? "" : "",
+    puntOmschrijving: node.label ?? "",
     punt: analyse.puntLabels[nodeId] ?? "",
     type: typeTekst(node, teksten),
-    ruimte: node.ruimte ? teksten.ruimtes[node.ruimte] : "",
+    ruimte: node.ruimteNaam?.trim() || (node.ruimte ? teksten.ruimtes[node.ruimte] : ""),
     beveiliging: beveiligingTekst(doc, beveiligingId),
     differentieel:
       differentieel?.type === "differentieel"

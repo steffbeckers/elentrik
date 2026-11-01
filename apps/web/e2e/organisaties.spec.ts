@@ -1,3 +1,4 @@
+import { verwachtOrganisatie, openOrganisatieKeuze } from "./hulp/navigatie";
 // Gescheiden organisaties, wisselen tussen eigen organisaties en de laatste eigenaar. Gebruiker A
 // (met "Bedrijf Alfa") komt uit `storageState`, gebruiker B (met "Bedrijf Beta") wordt in
 // `beforeAll` aangemaakt; niemand logt per test in, zodat de rate limiter nooit in de weg zit.
@@ -64,7 +65,7 @@ test("een andere organisatie ziet de projecten niet, en een project van een ande
   try {
     // Gebruiker B heeft een eigen, lege lijst.
     await ga(paginaB, "/");
-    await expect(paginaB.getByTestId("organisatie-keuze")).toContainText("Bedrijf Beta");
+    await verwachtOrganisatie(paginaB, "Bedrijf Beta");
     await expect(paginaB.getByText("Nog geen projecten. Maak je eerste project aan.")).toBeVisible();
     await expect(paginaB.getByText(naamAlfa)).toHaveCount(0);
 
@@ -90,11 +91,11 @@ test("een gebruiker met twee organisaties wisselt via de organisatiekeuze, en de
     // Een tweede bedrijf aanmaken: het wordt meteen de actieve organisatie, met een lege lijst.
     await ga(page, "/");
     await expect(page.getByRole("row").filter({ hasText: naamAlfa })).toHaveCount(1);
-    await page.getByTestId("organisatie-keuze").click();
+    await page.getByTestId("gebruiker-menu").click();
     await page.getByTestId("organisatie-nieuw").click();
     await page.getByTestId("organisatie-nieuw-naam").fill(bedrijfTweede);
     await page.getByTestId("organisatie-nieuw-knop").click();
-    await expect(page.getByTestId("organisatie-keuze")).toContainText(bedrijfTweede);
+    await verwachtOrganisatie(page, bedrijfTweede);
     // Een tweede eigen bedrijf heeft geen gratis proef (alleen het eerste heeft er een). Dit
     // bestand test het wisselen, niet de abonnementen: dat bedrijf mag daarom schrijven.
     const tweedeBedrijfId = (await leesMij(page.request)).organisaties.find((o) => o.naam === bedrijfTweede)!.id;
@@ -111,17 +112,17 @@ test("een gebruiker met twee organisaties wisselt via de organisatiekeuze, en de
     await expect(page.getByText(naamAlfa)).toHaveCount(0);
 
     // Terug naar het eerste: andere lijst.
-    await page.getByTestId("organisatie-keuze").click();
+    await openOrganisatieKeuze(page);
     await page.getByTestId(`organisatie-optie-${alfaId}`).click();
-    await expect(page.getByTestId("organisatie-keuze")).toContainText("Bedrijf Alfa");
+    await verwachtOrganisatie(page, "Bedrijf Alfa");
     await expect(page.getByRole("row").filter({ hasText: naamAlfa })).toHaveCount(1);
     await expect(page.getByText(naamTweede)).toHaveCount(0);
 
     // En weer naar het tweede, nu via de keuze.
     const tweedeId = (await leesMij(page.request)).organisaties.find((o) => o.naam === bedrijfTweede)!.id;
-    await page.getByTestId("organisatie-keuze").click();
+    await openOrganisatieKeuze(page);
     await page.getByTestId(`organisatie-optie-${tweedeId}`).click();
-    await expect(page.getByTestId("organisatie-keuze")).toContainText(bedrijfTweede);
+    await verwachtOrganisatie(page, bedrijfTweede);
     await expect(page.getByRole("row").filter({ hasText: naamTweede })).toHaveCount(1);
     await expect(page.getByText(naamAlfa)).toHaveCount(0);
   } finally {

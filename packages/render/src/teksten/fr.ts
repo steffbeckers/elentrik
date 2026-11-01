@@ -20,6 +20,8 @@ export const FR: Teksten = {
     handtekeningKeurder: "Signature du contrôleur",
   },
   kolommen: {
+    kringOmschrijving: "Description du circuit",
+    puntOmschrijving: "Description du point",
     kring: "Circuit",
     punt: "Point",
     type: "Type",
@@ -55,7 +57,13 @@ export const FR: Teksten = {
     omvormer: "onduleur",
     andere: "autre",
   },
+  metadata: {"titel":"Informations du projet","verwijzing":"Voir données du projet","naam":"Nom","adres":"Adresse","straat":"Rue","nummer":"Numéro","bus":"Boîte","postcode":"Code postal","gemeente":"Commune","land":"Pays","telefoon":"Téléphone","email":"E-mail","ondernemingsnummer":"Numéro d’entreprise","keuringsorganisme":"Organisme de contrôle","paginatitel":"Titre de page"},
+  schaalAfdruk: "Échelle pour impression à 100 %",
+  controlebeperking: "Contrôles automatiques préliminaires et limités. Ne constitue pas une preuve de conformité au RGIE.",
+  schakelaarsoorten: {"enkel":"simple","dubbel":"bipolaire","wissel":"va-et-vient","kruis":"permutateur","dimmer":"variateur","drukknop":"bouton-poussoir"},
+  lichtpuntsoorten: {"standaard":"standard","led":"LED","tl":"fluorescent","spot":"spot","noodverlichting":"éclairage de secours"},
   ruimtes: {
+    hal: "Hall",
     badkamer: "Salle de bain",
     keuken: "Cuisine",
     wasplaats: "Buanderie",

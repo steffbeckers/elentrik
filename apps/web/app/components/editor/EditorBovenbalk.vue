@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.vue";
 import type { AutosaveStatus } from "~/composables/useAutosave";
-import { useEditorStore, type Tabblad } from "~/stores/editor";
+import { useEditorStore } from "~/stores/editor";
 
 /**
  * `afgemeld`: de sessie is verlopen (401 bij het opslaan); het werk staat lokaal in het concept.
@@ -43,8 +43,6 @@ const bevindingenTekst = computed(() =>
   }),
 );
 
-const TABBLADEN = ["eendraadschema", "situatieschema", "kringenlijst"] as const satisfies readonly Tabblad[];
-
 const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = {
   opgeslagen: { icoon: "i-lucide-cloud-check", klasse: "text-muted" },
   bezig: { icoon: "i-lucide-loader-circle", klasse: "text-muted" },
@@ -68,46 +66,34 @@ const weergave = computed(() =>
 </script>
 
 <template>
-  <header class="flex items-center gap-3 border-b border-default px-3 py-2">
-    <UButton
+  <header class="grid min-w-0 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-0 border-b border-default px-2 py-1 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto]">
+    <NuxtLink
       to="/"
-      icon="i-lucide-arrow-left"
-      color="neutral"
-      variant="ghost"
+      class="flex min-h-9 min-w-9 items-center justify-center gap-2 rounded px-1 font-semibold focus-visible:outline-2 focus-visible:outline-primary"
       :aria-label="$t('editor.bovenbalk.projecten')"
       :title="$t('editor.bovenbalk.projecten')"
-    />
+    >
+      <UIcon name="i-lucide-zap" class="size-5 shrink-0 text-primary" />
+      <span class="hidden sm:inline">{{ $t('app.naam') }}</span>
+    </NuxtLink>
     <UButton
       color="neutral"
       variant="ghost"
-      class="min-w-24 max-w-64 truncate font-semibold"
+      class="min-w-0 justify-start truncate font-semibold"
       :title="$t('editor.bovenbalk.projectgegevens')"
       data-testid="projectnaam"
       @click="projectgegevensOpen = true"
     >
       <span class="truncate">{{ store.naam }}</span>
+      <UIcon name="i-lucide-pencil" class="size-3.5 shrink-0 text-muted" />
     </UButton>
 
-    <nav class="flex items-center gap-1" role="tablist">
-      <UButton
-        v-for="tabblad in TABBLADEN"
-        :key="tabblad"
-        role="tab"
-        :aria-selected="store.tabblad === tabblad"
-        :data-testid="`tab-${tabblad}`"
-        :color="store.tabblad === tabblad ? 'primary' : 'neutral'"
-        :variant="store.tabblad === tabblad ? 'soft' : 'ghost'"
-        size="sm"
-        :label="$t(`editor.bovenbalk.tabbladen.${tabblad}`)"
-        @click="store.tabblad = tabblad"
-      />
-    </nav>
-
-    <div class="ml-auto flex items-center gap-2">
+    <div class="col-span-4 row-start-2 flex min-w-0 items-center gap-1 sm:col-span-1 sm:col-start-3 sm:row-start-1">
       <span
-        class="flex items-center gap-1 text-sm"
+        class="mr-auto flex min-w-0 items-center gap-1 text-sm"
         :class="weergave.klasse"
         role="status"
+        :title="$t(`editor.status.${weergave.sleutel}`)"
         data-testid="opslagstatus"
       >
         <UIcon :name="weergave.icoon" class="size-4" :class="status === 'bezig' ? 'animate-spin' : ''" />
@@ -119,7 +105,7 @@ const weergave = computed(() =>
           :label="$t('editor.status.conflict')"
           @click="emit('toonConflict')"
         />
-        <span v-else>{{ $t(`editor.status.${weergave.sleutel}`) }}</span>
+        <span v-else class="sr-only sm:not-sr-only">{{ $t(`editor.status.${weergave.sleutel}`) }}</span>
       </span>
       <UButton
         v-if="status === 'fout'"
@@ -169,15 +155,17 @@ const weergave = computed(() =>
         @click="store.opnieuw()"
       />
 
-      <UButton
-        icon="i-lucide-file-down"
-        size="sm"
-        :label="$t('editor.bovenbalk.exporteren')"
-        data-testid="exporteren"
-        @click="emit('exporteren')"
-      />
+    </div>
 
-      <USeparator orientation="vertical" class="h-6" />
+    <UButton
+      icon="i-lucide-file-down"
+      size="sm"
+      class="col-start-3 row-start-1 min-h-9 shrink-0 sm:col-start-4"
+      :label="$t('editor.bovenbalk.exporteren')"
+      data-testid="exporteren"
+      @click="emit('exporteren')"
+    />
+    <div class="col-start-4 row-start-1 flex items-center gap-1 sm:col-start-5">
       <OrganisatieKeuze compact />
       <GebruikerMenu compact />
     </div>

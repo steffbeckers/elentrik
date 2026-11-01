@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { REGELSETS } from "@elentrik/arei";
+import DossierChecklist from "~/components/editor/DossierChecklist.vue";
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useExportsApi } from "~/composables/useExportsApi";
 import { ConflictFout } from "~/composables/useProjectenApi";
 import { magExporteren, onopgelosteFouten, volgendVersieLabel } from "~/editor/export";
+import { dossierStatus } from "~/editor/dossierstatus";
 import { bekendeFoutcode, vertaalFout } from "~/fouten";
 import { TAALNAMEN } from "~/sessie/taal";
 import { useEditorStore } from "~/stores/editor";
@@ -19,6 +22,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   /** De server heeft een andere versie dan de editor toont (409): de pagina toont het conflictscherm. */
   conflict: [huidigeVersie: number];
+  navigeer: [doel: "gegevens" | "schema" | "situatie"];
 }>();
 
 const store = useEditorStore();
@@ -57,6 +61,8 @@ const eerdere = ref<ExportInfo[]>([]);
 const lijstFout = ref(false);
 
 const fouten = computed(() => onopgelosteFouten(store.bevindingen));
+const dossier = computed(() => dossierStatus(store.document, store.analyse));
+function gaNaar(doel: "gegevens" | "schema" | "situatie"): void { open.value = false; emit("navigeer", doel); }
 /** Bij onopgeloste fouten komt de bijlage verplicht mee; de server dwingt dat ook af. */
 const bijlageVerplicht = computed(() => fouten.value > 0);
 const geblokkeerd = computed(() => !magExporteren(props.status));
@@ -183,6 +189,9 @@ const datumFormaat = computed(
     :close="fase !== 'bezig'"
   >
     <template #body>
+      <p v-if="!REGELSETS[store.document?.regelset ?? '']?.gepubliceerd" class="mb-4 rounded border border-warning/40 p-3 text-sm" data-testid="export-voorlopig">
+        {{ $t('editor.bevindingen.voorlopig') }}
+      </p>
       <div v-if="fase === 'opslaan'" class="flex items-center gap-2 text-muted" data-testid="export-opslaan">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
         {{ $t("editor.export.opslaan") }}
@@ -230,6 +239,9 @@ const datumFormaat = computed(
         </div>
 
         <div v-else class="space-y-4">
+          <DossierChecklist @navigeer="gaNaar" />
+          <p v-if="!dossier.volledig" class="text-sm text-muted" data-testid="export-concept-uitleg">{{ $t('werkbaarheid.dossier.conceptUitleg') }}</p>
+          <USeparator />
           <p class="text-sm" data-testid="export-dossiertaal">
             {{ $t("editor.export.dossierTaal", { taal: dossierTaalNaam }) }}
           </p>
@@ -332,7 +344,7 @@ const datumFormaat = computed(
         />
         <UButton
           icon="i-lucide-file-down"
-          :label="$t('editor.export.start')"
+          :label="$t(dossier.volledig ? 'editor.export.start' : 'werkbaarheid.dossier.conceptExport')"
           :loading="fase === 'bezig'"
           :disabled="!kanStarten"
           data-testid="export-start"

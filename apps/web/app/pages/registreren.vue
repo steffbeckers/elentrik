@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormErrorEvent } from "@nuxt/ui";
 import { vertaalFout } from "~/fouten";
 import { isBedrijfsnaam, isEmail, isNaam, wachtwoordFout } from "~/sessie/invoer";
 import { TAAL_HEADER } from "../../shared/taal";
@@ -11,7 +12,34 @@ useHead({ title: () => `${t("registreren.titel")} · ${t("app.naam")}` });
 const formulier = reactive({ naam: "", email: "", wachtwoord: "", bedrijfsnaam: "" });
 const bezig = ref(false);
 const verstuurd = ref(false);
+const ontvanger = ref("");
+const opnieuwBezig = ref(false);
+const opnieuwVerstuurd = ref(false);
+async function stuurOpnieuw() {
+  if (opnieuwBezig.value || opnieuwVerstuurd.value || !ontvanger.value) return;
+  opnieuwBezig.value = true;
+  fout.value = null;
+  try {
+    const { error } = await useAuthClient().sendVerificationEmail({ email: ontvanger.value, callbackURL: "/" });
+    if (error) fout.value = vertaalFout(error, t);
+    else opnieuwVerstuurd.value = true;
+  } catch (e) {
+    fout.value = vertaalFout(e, t);
+  } finally {
+    opnieuwBezig.value = false;
+  }
+}
 const fout = ref<string | null>(null);
+
+async function focusEersteFout(event: FormErrorEvent) {
+  await nextTick();
+  const naam = event.errors[0]?.name;
+  if (naam && ["naam", "email", "wachtwoord", "bedrijfsnaam"].includes(naam)) {
+    // UForm clears its temporary loading/disabled state after emitting the error.
+    // Focus after that render, when the input can receive focus again.
+    requestAnimationFrame(() => document.querySelector<HTMLInputElement>(`[data-testid="registreren-${naam}"]`)?.focus());
+  }
+}
 
 function valideer(waarden: typeof formulier) {
   const fouten: { name: string; message: string }[] = [];
@@ -44,6 +72,9 @@ async function registreer() {
       fout.value = vertaalFout(error, t);
       return;
     }
+    opnieuwVerstuurd.value = false;
+    ontvanger.value = formulier.email.trim();
+    formulier.wachtwoord = "";
     verstuurd.value = true;
   } catch (e) {
     fout.value = vertaalFout(e, t);
@@ -55,17 +86,25 @@ async function registreer() {
 
 <template>
   <AuthKader :titel="$t('registreren.titel')">
-    <UAlert
-      v-if="verstuurd"
-      color="success"
-      variant="subtle"
-      icon="i-lucide-mail-check"
-      :title="$t('registreren.bevestig')"
-      data-testid="registreren-verstuurd"
-    />
+    <div v-if="verstuurd" class="space-y-4">
+      <UAlert
+        color="success"
+        variant="subtle"
+        icon="i-lucide-mail-check"
+        :title="$t('registreren.bevestig')"
+        :description="$t('werkbaarheidBeheer.mailOntvanger', { email: ontvanger })"
+        data-testid="registreren-verstuurd"
+      />
+      <p class="text-sm text-muted">{{ $t('werkbaarheidBeheer.mailHulp') }}</p>
+      <UAlert v-if="fout" color="error" variant="subtle" :title="fout" />
+      <p v-if="opnieuwVerstuurd" role="status" class="text-sm text-muted">{{ $t('inloggen.onbevestigd.verstuurd') }}</p>
+      <UButton block :loading="opnieuwBezig" :disabled="opnieuwBezig || opnieuwVerstuurd" :label="$t('werkbaarheidBeheer.mailOpnieuw')" @click="stuurOpnieuw" />
+      <p class="text-sm text-muted">{{ $t('werkbaarheidBeheer.emailWijzigenUitleg') }}</p>
+      <UButton color="neutral" variant="outline" block :label="$t('werkbaarheidBeheer.emailWijzigen')" @click="verstuurd = false" />
+    </div>
     <div v-else class="space-y-4">
       <UAlert v-if="fout" color="error" variant="subtle" icon="i-lucide-circle-alert" :title="fout" />
-      <UForm :state="formulier" :validate="valideer" class="space-y-4" @submit="registreer">
+      <UForm :state="formulier" :validate="valideer" class="space-y-4" @submit="registreer" @error="focusEersteFout">
         <UFormField name="naam" :label="$t('auth.naam')" required>
           <UInput v-model="formulier.naam" autocomplete="name" class="w-full" data-testid="registreren-naam" />
         </UFormField>
@@ -79,9 +118,8 @@ async function registreer() {
           />
         </UFormField>
         <UFormField name="wachtwoord" :label="$t('auth.wachtwoord')" :hint="$t('auth.wachtwoordHulp')" required>
-          <UInput
+          <WachtwoordVeld
             v-model="formulier.wachtwoord"
-            type="password"
             autocomplete="new-password"
             class="w-full"
             data-testid="registreren-wachtwoord"

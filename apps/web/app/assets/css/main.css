@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* Touch comfort for forms without inflating the drawing editor's toolbars. */
+@media (max-width: 640px) {
+  .comfortabele-formulieren :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, button, [role="combobox"]) { min-height: 44px; }
+  .comfortabele-formulieren :is(input, select, textarea) { font-size: 16px; }
+}
+
 /* Staging: de balk bovenaan neemt hoogte in. De pagina's met een vaste schermhoogte (de editor) en een
    minimumhoogte (de rest) krijgen die hoogte eraf, zodat er geen schuifbalk bijkomt. Alleen op staging. */
 html.omgeving-staging {

@@ -1,4 +1,4 @@
-import type { NodeType, Ruimte, Toestelsoort } from "@elentrik/model";
+import type { NodeType, NodeVan, Ruimte, Toestelsoort } from "@elentrik/model";
 
 /** Alle vaste teksten van de pdf. `nl.ts` is het Nederlands; `fr.ts` en `en.ts` hebben exact dezelfde structuur. De termen volgen `docs/vertalingen.md`. */
 export type Teksten = {
@@ -17,6 +17,8 @@ export type Teksten = {
   kolommen: {
     kring: string;
     punt: string;
+    kringOmschrijving: string;
+    puntOmschrijving: string;
     type: string;
     ruimte: string;
     beveiliging: string;
@@ -29,6 +31,11 @@ export type Teksten = {
   /** Kleine letters: de soort staat tussen haakjes achter "Toestel". */
   toestelsoorten: Record<Toestelsoort, string>;
   ruimtes: Record<Ruimte, string>;
+  schakelaarsoorten: Record<NodeVan<"schakelaar">["soort"], string>;
+  lichtpuntsoorten: Record<NonNullable<NodeVan<"lichtpunt">["soort"]>, string>;
+  controlebeperking: string;
+  schaalAfdruk: string;
+  metadata: { titel: string; verwijzing: string; naam: string; adres: string; straat: string; nummer: string; bus: string; postcode: string; gemeente: string; land: string; telefoon: string; email: string; ondernemingsnummer: string; keuringsorganisme: string; paginatitel: string };
   bijlage: {
     fouten: string;
     waarschuwingen: string;
@@ -68,6 +75,8 @@ export const NL: Teksten = {
   },
   kolommen: {
     kring: "Kring",
+    kringOmschrijving: "Omschrijving kring",
+    puntOmschrijving: "Omschrijving punt",
     punt: "Punt",
     type: "Type",
     ruimte: "Ruimte",
@@ -101,7 +110,13 @@ export const NL: Teksten = {
     omvormer: "omvormer",
     andere: "andere",
   },
+  metadata: {"titel":"Projectgegevens","verwijzing":"Zie projectgegevens","naam":"Naam","adres":"Adres","straat":"Straat","nummer":"Huisnummer","bus":"Bus","postcode":"Postcode","gemeente":"Gemeente","land":"Land","telefoon":"Telefoon","email":"E-mail","ondernemingsnummer":"Ondernemingsnummer","keuringsorganisme":"Keuringsorganisme","paginatitel":"Paginatitel"},
+  schaalAfdruk: "Schaal bij afdruk op 100%",
+  controlebeperking: "Voorlopige, beperkte automatische controles. Geen bewijs van AREI-conformiteit.",
+  schakelaarsoorten: {"enkel":"enkel","dubbel":"dubbel","wissel":"wissel","kruis":"kruis","dimmer":"dimmer","drukknop":"drukknop"},
+  lichtpuntsoorten: {"standaard":"standaard","led":"led","tl":"tl","spot":"spot","noodverlichting":"noodverlichting"},
   ruimtes: {
+    hal: "Hal",
     badkamer: "Badkamer",
     keuken: "Keuken",
     wasplaats: "Wasplaats",
