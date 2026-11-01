@@ -40,6 +40,7 @@ const EENHEDEN: Readonly<Record<string, string>> = {
   kortsluitvermogen_kA: "kA",
   doorsnede_mm2: "mm²",
   vermogen_W: "W",
+  lengte_m: "m",
 };
 
 /** Keuzes waarvan de waarde een technisch symbool is dat in elke taal hetzelfde blijft (type AC, curve B). */

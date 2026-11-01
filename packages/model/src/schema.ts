@@ -107,6 +107,8 @@ export const NodeSchema = z.discriminatedUnion("type", [
     // 0 = niet ingevuld
     doorsnede_mm2: z.number().min(0),
     aantalGeleiders: positiefGeheel,
+    /** Lengte van het tracé in meter; ontbrekend betekent nog niet opgemeten. */
+    lengte_m: z.number().min(0).optional(),
     plaatsing: z.enum(["inbouw", "opbouw", "buis", "grond"]).optional(),
   }),
   z.strictObject({

@@ -8,7 +8,7 @@ onMounted(() => { if (window.matchMedia("(max-width: 767px)").matches) paneel.va
 const inspecteurElement = ref<HTMLElement | null>(null);
 const bediening = ref<HTMLElement | null>(null);
 const keuzes = computed(() => [
-  ...(props.tabblad !== "kringenlijst" ? [{ id: "onderdelen" as const, icoon: "i-lucide-list-plus" }] : []),
+  ...(props.tabblad !== "kringenlijst" && props.tabblad !== "materiaallijst" ? [{ id: "onderdelen" as const, icoon: "i-lucide-list-plus" }] : []),
   { id: "eigenschappen" as const, icoon: "i-lucide-sliders-horizontal" },
   { id: "bevindingen" as const, icoon: "i-lucide-list-checks" },
   ...(props.tabblad === "situatieschema" && props.heeftPlan ? [{ id: "opmaak" as const, icoon: "i-lucide-scaling" }] : []),
@@ -21,7 +21,7 @@ async function sluit(): Promise<void> {
   bediening.value?.querySelector<HTMLElement>(`[data-testid="werkruimte-${vorig}"]`)?.focus();
 }
 watch(() => props.tabblad, () => {
-  if (paneel.value === "opmaak" || (paneel.value === "onderdelen" && props.tabblad === "kringenlijst")) paneel.value = null;
+  if (paneel.value === "opmaak" || (paneel.value === "onderdelen" && (props.tabblad === "kringenlijst" || props.tabblad === "materiaallijst"))) paneel.value = null;
 });
 watch(() => props.heeftPlan, heeftPlan => { if (!heeftPlan && paneel.value === "opmaak") paneel.value = null; });
 // Selectie opent geen paneel onverwacht en houdt opmaak beschikbaar voor het volgende label.
@@ -36,7 +36,7 @@ defineExpose({
     inspecteurElement.value?.focus({ preventScroll: true });
   },
 });
-const TABBLADEN = ["eendraadschema", "situatieschema", "kringenlijst"] as const satisfies readonly Tabblad[];
+const TABBLADEN = ["eendraadschema", "situatieschema", "kringenlijst", "materiaallijst"] as const satisfies readonly Tabblad[];
 
 function navigeerTab(event: KeyboardEvent, index: number): void {
   const doel = event.key === "ArrowRight" ? (index + 1) % TABBLADEN.length
@@ -54,7 +54,7 @@ function navigeerTab(event: KeyboardEvent, index: number): void {
 <template>
   <div class="flex min-h-0 min-w-0 flex-1 flex-col" data-testid="editor-werkruimte">
     <div class="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-default px-2 py-1">
-          <nav class="flex min-w-0 items-center gap-1 overflow-x-auto" role="tablist" :aria-label="$t('editor.werkruimte.weergaven')">
+          <nav class="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto" role="tablist" :aria-label="$t('editor.werkruimte.weergaven')">
       <UButton
         v-for="(tabblad, index) in TABBLADEN"
         :key="tabblad"

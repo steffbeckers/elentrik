@@ -79,7 +79,8 @@
       "tabbladen": {
         "eendraadschema": "Single-line diagram",
         "situatieschema": "Layout plan",
-        "kringenlijst": "Circuit list"
+        "kringenlijst": "Circuit list",
+        "materiaallijst": "Materials list"
       },
       "bevindingen": "{fouten} and {waarschuwingen}",
       "aantalFouten": "{n} error | {n} errors",
@@ -464,6 +465,22 @@
       "sluiten": "Close panel",
       "toetsenbordhulp": "Keyboard help"
     },
+    "materiaallijst": {
+      "titel": "Materials list",
+      "uitleg": "Materials required based on the components in this project, grouped by specification. Open the components to edit their properties.",
+      "lengteUitleg": "Enter the route length for each cable run in Properties. XVB counts cable metres; VOB counts route length × number of conductors. Excludes cutting waste and spare length; VOB is not split by colour.",
+      "ontbrekend": "Length is missing for {aantal} cable run(s). Totals in metres are incomplete.",
+      "leeg": "Add components to the single-line diagram to build the materials list.",
+      "materiaal": "Material and specification",
+      "hoeveelheid": "Quantity",
+      "bronnen": "View components ({aantal})",
+      "onvolledig": "Length missing",
+      "onbekend": "Not specified",
+      "ja": "Yes",
+      "nee": "No",
+      "stuks": "pc | pcs",
+      "m": "m"
+    },
     "aftakkingen": {
       "titel": "Branches",
       "hulp": "Choose a switch or light point and select the circuit cable. Add a branch, then extend it using the plus on the right.",
@@ -644,6 +661,9 @@
     },
     "ruimteNaam": {
       "label": "Name on plan (free text)"
+    },
+    "lengte_m": {
+      "label": "Route length"
     }
   },
   "ruimtes": {
