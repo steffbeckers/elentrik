@@ -34,3 +34,10 @@
 - Chromium: drawing walls/door/window, Ctrl+S text, save/reload/reopen, coordinate preservation after extending, cancellation and PDF image export pass. Existing PNG/PDF upload and touch-drag scenarios also pass (3 browser tests).
 - Browser regression: upstream fitted the view after the first new wall and moved subsequent drawing coordinates. Empty floors now start with the initial fit completed; existing plans still fit on opening. The browser test asserts the unchanged 100% zoom.
 - Independent code/visual review found no remaining blockers. Desktop and 390px mobile screens were inspected; generated room names are localized in NL/FR/EN.
+
+## PR integration
+- Integrated develop at 8dd888d, preserving its editor layout, page formatting and translations.
+- Extended coordinate conversion to preserve the newly introduced label offsets when the drawing resolution changes; regression test verified RED/GREEN.
+- Aligned the embedded editor with Nuxt on Vite 8.3.4 using Svelte plugin 7.3.1 to avoid Nuxt resolving Vite 7 configuration types after a clean dependency install.
+- Combined tree: 3,277 functional tests and 5 performance tests pass, along with workspace typecheck and production build.
+- Chromium on the combined tree: drawing/reopen/coordinate/PDF flow and touch pass; the existing upload flow passes after adapting its completion assertions to the dossier checklist introduced on develop.

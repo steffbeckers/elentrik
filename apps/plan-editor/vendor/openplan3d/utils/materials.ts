@@ -61,13 +61,13 @@ export function getMaterial(id: string): FloorMaterial {
   // Handle legacy material IDs
   const legacyMap: Record<string, string> = {
     'hardwood': 'light-oak',
-    'tile': 'ceramic-white', 
+    'tile': 'ceramic-white',
     'carpet': 'carpet-beige',
     'marble': 'marble-white',
     'light-wood': 'light-oak',
     'dark-wood': 'walnut',
   };
-  
+
   const materialId = legacyMap[id] || id;
   return floorMaterials.find(m => m.id === materialId)
     ?? floorMaterials.find(m => m.id === 'light-oak')!;
@@ -80,7 +80,7 @@ export function getWallColor(id: string): WallColor {
     'beige': 'cream',
     'sage': 'sage-green',
   };
-  
+
   const colorId = legacyMap[id] || id;
   return wallColors.find(c => c.id === colorId) ?? wallColors[0];
 }

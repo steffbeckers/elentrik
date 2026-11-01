@@ -61,7 +61,10 @@ function nieuweNodes(
   }
   if (onderdeel === "differentieel") return [STANDAARD.differentieel];
   if (onderdeel === "zekering") return [STANDAARD.zekering, STANDAARD.leiding];
-  return [NIEUWE_KRING_AUTOMAAT, STANDAARD.leiding];
+  const basis = [NIEUWE_KRING_AUTOMAAT, STANDAARD.leiding];
+  // De leiding is al deel van de nieuwe kring. Elk ander gekozen onderdeel
+  // hoort meteen mee in dezelfde operatie, inclusief zijn voorinstelling.
+  return onderdeel === "leiding" ? basis : [...basis, onderdeelInvoer(onderdeel, voorinstelling)];
 }
 
 /**

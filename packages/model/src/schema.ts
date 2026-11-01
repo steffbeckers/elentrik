@@ -36,6 +36,7 @@ export const AfwijkingSchema = z.strictObject({
 export const StroomtypeSchema = z.enum(["2x230V", "3x230V", "3N400V"]);
 
 export const RuimteSchema = z.enum([
+  "hal",
   "badkamer",
   "keuken",
   "wasplaats",
@@ -70,6 +71,8 @@ const basis = {
   kinderen: z.array(Id),
   label: z.string().optional(),
   ruimte: RuimteSchema.optional(),
+  /** Vrije naam; de ruimteclassificatie blijft afzonderlijk gelden voor controles. */
+  ruimteNaam: z.string().optional(),
 };
 
 const positiefGeheel = z.number().int().min(1);
@@ -156,6 +159,9 @@ export const SituatiePaginaSchema = z.strictObject({
   id: z.string(),
   titel: z.string(),
   tekening: PlanTekeningSchema.optional(),
+  /** Factor ten opzichte van het oorspronkelijke formaat; ontbrekend betekent 1. */
+  symboolSchaal: z.number().min(0.25).max(4).optional(),
+  labelSchaal: z.number().min(0.25).max(4).optional(),
   achtergrond: z
     .strictObject({
       origineelBestandId: z.string(),
@@ -172,6 +178,8 @@ export const SituatiePaginaSchema = z.strictObject({
       x: z.number(),
       y: z.number(),
       rotatie: z.number(),
+      /** Extra verschuiving ten opzichte van de standaard labelpositie, in rasterpixels. */
+      labelOffset: z.strictObject({ x: z.number(), y: z.number() }).optional(),
     }),
   ),
 });
@@ -193,6 +201,8 @@ export const InstallatieDocumentSchema = z.strictObject({
     versieLabel: z.string().optional(),
     /** De taal van het dossier (print en export). Afwezig betekent `nl`. */
     dossierTaal: TaalSchema.optional(),
+    /** Afwezig bij oudere dossiers: toepasselijkheid moet nog worden gecontroleerd. */
+    installatieContext: z.enum(["nieuw", "bestaand", "onbekend"]).optional(),
   }),
   voeding: z.strictObject({ stroomtype: StroomtypeSchema }),
   rootId: Id,

@@ -56,6 +56,40 @@ describe("tabblad", () => {
 });
 
 describe("pagina's", () => {
+  test("opmaak blijft behouden bij verplaatsen, draaien, undo, redo en opnieuw laden", () => {
+    const { editor, situatie } = opzet();
+    const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [punt] = punten(editor);
+    situatie.plaatsNode(punt!, 100, 200);
+    editor.selectie = [punt!];
+    situatie.zetPaginaOpmaak(paginaId, { symboolSchaal: 2, labelSchaal: 0.5 });
+    situatie.zetLabelOffset(paginaId, punt!, { x: -12, y: 34 });
+    situatie.schuifSelectie(10, 20);
+    situatie.draaiSelectie(1);
+    situatie.plaatsNode(punt!, 400, 500);
+    expect(plaatsingen(editor, paginaId)[0]).toMatchObject({ x: 400, y: 500, rotatie: 15, labelOffset: { x: -12, y: 34 } });
+    editor.ongedaanMaken();
+    expect(plaatsingen(editor, paginaId)[0]).toMatchObject({ x: 110, y: 220, labelOffset: { x: -12, y: 34 } });
+    editor.opnieuw();
+    const document = JSON.parse(JSON.stringify(doc(editor)));
+    editor.laad({ id: "p1", naam: "Woning", versie: 2, document });
+    expect(situatie.actievePagina).toMatchObject({ symboolSchaal: 2, labelSchaal: 0.5 });
+    expect(plaatsingen(editor, paginaId)[0]).toMatchObject({ x: 400, y: 500, labelOffset: { x: -12, y: 34 } });
+  });
+
+  test("opmaakwijzigingen zijn geblokkeerd in alleen-lezen", () => {
+    const { editor, situatie } = opzet();
+    const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [punt] = punten(editor);
+    situatie.plaatsNode(punt!, 100, 200);
+    const document = editor.document;
+    const stappen = editor.terug.length;
+    editor.zetAlleenLezen(true);
+    situatie.zetPaginaOpmaak(paginaId, { symboolSchaal: 2 });
+    situatie.zetLabelOffset(paginaId, punt!, { x: 12, y: 34 });
+    expect(editor.document).toBe(document);
+    expect(editor.terug).toHaveLength(stappen);
+  });
   test("voegPlanPaginaToe is één undo-stap en maakt de pagina actief", () => {
     const { editor, situatie } = opzet();
     const id = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);

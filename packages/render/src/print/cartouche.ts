@@ -3,8 +3,8 @@ import { papierMaat, type Papier } from "@elentrik/layout";
 import type { Adres, InstallatieDocument, Partij } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import { LOCALES, type Taal, type Teksten } from "../teksten/index";
-import { RAND_MM } from "./stijl";
-import { afkorten, breekRegels, tekstRegel, vloer } from "./tekst";
+import { RAND_MM, REGELHOOGTE } from "./stijl";
+import { breekRegels, tekstRegel, vloer } from "./tekst";
 
 /** De binnenmarge van een vak in mm. */
 const VAK_MARGE_MM = 1.5;
@@ -20,7 +20,8 @@ const LOGO_TUSSENRUIMTE_MM = 2;
  * De vakken van links naar rechts, als aandeel van de breedte van de cartouche: installateur,
  * klant, werf, paginatitel en de twee handtekeningen.
  */
-const AANDELEN = [0.25, 0.16, 0.16, 0.25, 0.09, 0.09];
+const AANDELEN = [0.25, 0.16, 0.16, 0.21, 0.11, 0.11];
+const DATUM_FORMATTEERDERS = new Map<Taal, Intl.DateTimeFormat>();
 
 export type CartoucheGegevens = {
   papier: Papier;
@@ -54,100 +55,67 @@ export function formatteerDatum(datum: string, taal: Taal): string {
   const moment = new Date(Date.UTC(jaar, maand - 1, dag));
   // Een onmogelijke datum (30 februari) schuift door in `Date`: dan is het geen kalenderdag.
   if (moment.getUTCMonth() !== maand - 1 || moment.getUTCDate() !== dag) return datum;
-  return new Intl.DateTimeFormat(LOCALES[taal], { day: "numeric", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(moment);
-}
-
-/** Het label van een handtekeningvak loopt over hoogstens twee regels: het vak is smal. */
-function handtekening(label: string, breedte: number): string {
-  const regels = breekRegels(label, vloer(breedte), TEKST_MM);
-  // Wat niet op twee regels past, wordt op de tweede regel afgekort met "…".
-  const getoond = regels.length > 2 ? [regels[0]!, afkorten(regels.slice(1).join(" "), vloer(breedte), TEKST_MM)] : regels;
-  return getoond.map((r) => tekstRegel(r, breedte, TEKST_MM, "label")).join("");
-}
-
-type Vak = { links: number; boven: number; breedte: number; hoogte: number };
-
-function vakHtml(soort: string, vak: Vak, inhoud: string): string {
-  return (
-    `<div class="vak ${soort}" style="left:${getal(vak.links)}mm;top:${getal(vak.boven)}mm;` +
-    `width:${getal(vak.breedte)}mm;height:${getal(vak.hoogte)}mm;padding:${getal(VAK_MARGE_MM)}mm">${inhoud}</div>`
-  );
-}
-
-/** De HTML van de cartouche voor één pagina; elke tekst wordt binnen zijn vak afgekort en geëscaped. */
-export function cartouche(g: CartoucheGegevens): string {
-  const { papier, teksten: t } = g;
-  const maat = papierMaat(papier.formaat);
-  const breedte = maat.breedte - 2 * papier.marge_mm;
-  const boven = maat.hoogte - papier.marge_mm - papier.cartoucheHoogte_mm;
-  const binnenHoogte = papier.cartoucheHoogte_mm - 2 * VAK_MARGE_MM - 2 * RAND_MM;
-
-  const vakOp = (i: number) => {
-    const aandeelLinks = AANDELEN.slice(0, i).reduce((som, a) => som + a, 0);
-    // Elk vak na het eerste schuift één randdikte naar links, zodat aangrenzende randen samenvallen.
-    const overlap = i === 0 ? 0 : RAND_MM;
-    const vak: Vak = {
-      links: papier.marge_mm + breedte * aandeelLinks - overlap,
-      boven,
-      breedte: breedte * (AANDELEN[i] ?? 0) + overlap,
-      hoogte: papier.cartoucheHoogte_mm,
-    };
-    return { vak, tekstBreedte: vak.breedte - 2 * VAK_MARGE_MM - 2 * RAND_MM };
-  };
-  const [installateur, klant, werf, titel, hand1, hand2] = [vakOp(0), vakOp(1), vakOp(2), vakOp(3), vakOp(4), vakOp(5)];
-  const regel = (tekst: string, b: number, klasse = "", grootte = TEKST_MM) => tekstRegel(tekst, b, grootte, klasse);
-
-  // Logo en installateur.
-  let logo = "";
-  let installateurBreedte = installateur.tekstBreedte;
-  let installateurInspringing = "";
-  if (g.logo !== undefined) {
-    logo =
-      `<img class="logo" src="${escapeXml(g.logo)}" alt="" style="left:${getal(VAK_MARGE_MM)}mm;top:${getal(VAK_MARGE_MM)}mm;` +
-      `width:${getal(LOGO_BREEDTE_MM)}mm;height:${getal(binnenHoogte)}mm">`;
-    installateurBreedte -= LOGO_BREEDTE_MM + LOGO_TUSSENRUIMTE_MM;
-    installateurInspringing = ` style="margin-left:${getal(LOGO_BREEDTE_MM + LOGO_TUSSENRUIMTE_MM)}mm"`;
+  let formatter = DATUM_FORMATTEERDERS.get(taal);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(LOCALES[taal], { day: "numeric", month: "2-digit", year: "numeric", timeZone: "UTC" });
+    DATUM_FORMATTEERDERS.set(taal, formatter);
   }
-  const [iAdres1, iAdres2] = adresRegels(g.installateur.adres);
-  const installateurHtml =
-    logo +
-    `<div class="kolom"${installateurInspringing}>` +
-    regel(t.cartouche.installateur, installateurBreedte, "label") +
-    regel(g.installateur.naam, installateurBreedte, "naam") +
-    regel(iAdres1, installateurBreedte) +
-    regel(iAdres2, installateurBreedte) +
-    regel(g.installateur.telefoon ?? "", installateurBreedte) +
-    regel(g.installateur.email ?? "", installateurBreedte) +
-    "</div>";
+  return formatter.format(moment);
+}
 
-  const [kAdres1, kAdres2] = adresRegels(g.meta.klant.adres);
-  const klantHtml =
-    regel(t.cartouche.klant, klant.tekstBreedte, "label") +
-    regel(g.meta.klant.naam, klant.tekstBreedte, "naam") +
-    regel(kAdres1, klant.tekstBreedte) +
-    regel(kAdres2, klant.tekstBreedte);
 
-  const [wAdres1, wAdres2] = adresRegels(g.meta.werfadres);
-  const werfHtml =
-    regel(t.cartouche.werf, werf.tekstBreedte, "label") +
-    regel(wAdres1, werf.tekstBreedte) +
-    regel(wAdres2, werf.tekstBreedte) +
-    regel(`${t.cartouche.ean}: ${g.meta.ean ?? ""}`.trim(), werf.tekstBreedte);
+type VakInhoud = { soort: string; breedte: number; html: string; hoogte: number };
 
-  const titelHtml =
-    regel(g.titel, titel.tekstBreedte, "titel", TITEL_MM) +
-    regel(`${t.cartouche.datum}: ${formatteerDatum(g.datum, g.taal)}`, titel.tekstBreedte) +
-    regel(`${t.cartouche.versie}: ${g.versieLabel}`, titel.tekstBreedte) +
-    regel(`${t.cartouche.pagina} ${g.nummer} / ${g.totaal}`, titel.tekstBreedte, "paginanummer");
+/** Wrap before measuring: exported fields retain every character, at readable size. */
+function vakken(g: CartoucheGegevens): VakInhoud[] {
+  const t = g.teksten;
+  const breedte = papierMaat(g.papier.formaat).breedte - 2 * g.papier.marge_mm;
+  type Veld = [string, string?, number?];
+  const maak = (i: number, soort: string, velden: Veld[], metLogo = false): VakInhoud => {
+    const vakBreedte = breedte * AANDELEN[i]! + (i === 0 ? 0 : RAND_MM);
+    const inspringing = metLogo ? LOGO_BREEDTE_MM + LOGO_TUSSENRUIMTE_MM : 0;
+    const tekstBreedte = vakBreedte - 2 * VAK_MARGE_MM - 2 * RAND_MM - inspringing;
+    let hoogte = 0;
+    const regels = velden.map(([tekst, klasse = "", grootte = TEKST_MM]) =>
+      breekRegels(tekst, vloer(tekstBreedte), grootte, 1.35).map(regel => {
+        hoogte += grootte * REGELHOOGTE;
+        return tekstRegel(regel, tekstBreedte, grootte, klasse);
+      }).join("")
+    ).join("");
+    return { soort, breedte: vakBreedte, hoogte, html: metLogo
+      ? '<div class="kolom" style="margin-left:' + getal(inspringing) + 'mm">' + regels + '</div>'
+      : regels };
+  };
+  const [i1, i2] = adresRegels(g.installateur.adres);
+  const [k1, k2] = adresRegels(g.meta.klant.adres);
+  const [w1, w2] = adresRegels(g.meta.werfadres);
+  return [
+    maak(0, "installateur", [[t.cartouche.installateur, "label"], [g.installateur.naam, "naam"], [i1], [i2], [g.installateur.telefoon ?? ""], [g.installateur.email ?? ""]], g.logo !== undefined),
+    maak(1, "klant", [[t.cartouche.klant, "label"], [g.meta.klant.naam, "naam"], [k1], [k2]]),
+    maak(2, "werf", [[t.cartouche.werf, "label"], [w1], [w2], [t.cartouche.ean + ": " + (g.meta.ean ?? "")]]),
+    maak(3, "titel", [[g.titel, "titel", TITEL_MM], [t.cartouche.datum + ": " + formatteerDatum(g.datum, g.taal)], [t.cartouche.versie + ": " + g.versieLabel], [t.cartouche.pagina + " " + g.nummer + " / " + g.totaal, "paginanummer"]]),
+    maak(4, "handtekening", [[t.cartouche.handtekeningInstallateur, "label"]]),
+    maak(5, "handtekening", [[t.cartouche.handtekeningKeurder, "label"]]),
+  ];
+}
 
-  return (
-    '<div class="cartouche">' +
-    vakHtml("installateur", installateur.vak, installateurHtml) +
-    vakHtml("klant", klant.vak, klantHtml) +
-    vakHtml("werf", werf.vak, werfHtml) +
-    vakHtml("titel", titel.vak, titelHtml) +
-    vakHtml("handtekening", hand1.vak, handtekening(t.cartouche.handtekeningInstallateur, hand1.tekstBreedte)) +
-    vakHtml("handtekening", hand2.vak, handtekening(t.cartouche.handtekeningKeurder, hand2.tekstBreedte)) +
-    "</div>"
-  );
+/** Reserve sufficient height for complete metadata before paginating the drawing/table. */
+export function cartoucheHoogte(g: CartoucheGegevens): number {
+  return Math.max(g.papier.cartoucheHoogte_mm, Math.ceil(Math.max(...vakken(g).map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM));
+}
+
+/** Complete escaped, multiline metadata; the same measurement is used by print pagination. */
+export function cartouche(g: CartoucheGegevens): string {
+  const inhoud = vakken(g);
+  const hoogte = Math.max(g.papier.cartoucheHoogte_mm, Math.ceil(Math.max(...inhoud.map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM));
+  const boven = papierMaat(g.papier.formaat).hoogte - g.papier.marge_mm - hoogte;
+  let links = g.papier.marge_mm;
+  return '<div class="cartouche">' + inhoud.map((vak, i) => {
+    const logo = i === 0 && g.logo !== undefined
+      ? '<img class="logo" src="' + escapeXml(g.logo) + '" alt="" style="left:' + getal(VAK_MARGE_MM) + 'mm;top:' + getal(VAK_MARGE_MM) + 'mm;width:' + getal(LOGO_BREEDTE_MM) + 'mm;height:' + getal(hoogte - 2 * VAK_MARGE_MM - 2 * RAND_MM) + 'mm">'
+      : '';
+    const html = '<div class="vak ' + vak.soort + '" style="left:' + getal(links) + 'mm;top:' + getal(boven) + 'mm;width:' + getal(vak.breedte) + 'mm;height:' + getal(hoogte) + 'mm;padding:' + getal(VAK_MARGE_MM) + 'mm">' + logo + vak.html + '</div>';
+    links += vak.breedte - RAND_MM;
+    return html;
+  }).join('') + '</div>';
 }

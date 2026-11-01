@@ -65,6 +65,7 @@ export type ProjectWijziging = {
   datum?: string;
   /** De taal van het dossier; `nl` op een document zonder taal verandert niets. */
   dossierTaal?: Taal;
+  installatieContext?: "nieuw" | "bestaand" | "onbekend";
 };
 
 const TekstSchema = z.string();
@@ -105,6 +106,8 @@ export function wijzigProject(
     wijziging.dossierTaal === undefined ? undefined : valideer(TaalSchema, wijziging.dossierTaal);
   const nieuweTaal =
     dossierTaal !== undefined && dossierTaal !== (doc.meta.dossierTaal ?? "nl") ? dossierTaal : undefined;
+  const installatieContext = wijziging.installatieContext === undefined ? undefined
+    : valideer(z.enum(["nieuw", "bestaand", "onbekend"]), wijziging.installatieContext);
 
   if (
     klantNaam === undefined &&
@@ -113,7 +116,8 @@ export function wijzigProject(
     werfadres === undefined &&
     ean === undefined &&
     datum === undefined &&
-    nieuweTaal === undefined
+    nieuweTaal === undefined &&
+    (installatieContext === undefined || installatieContext === doc.meta.installatieContext)
   ) {
     return { doc, patches: [], inversePatches: [] };
   }
@@ -127,5 +131,6 @@ export function wijzigProject(
     if (ean !== undefined) draft.meta.ean = ean;
     if (datum !== undefined) draft.meta.datum = datum;
     if (nieuweTaal !== undefined) draft.meta.dossierTaal = nieuweTaal;
+    if (installatieContext !== undefined) draft.meta.installatieContext = installatieContext;
   });
 }

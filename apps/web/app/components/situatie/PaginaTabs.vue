@@ -82,6 +82,12 @@ function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
     ],
     [
       {
+        label: t("editor.situatie.schaal.wissen"),
+        icon: "i-lucide-eraser",
+        disabled: editor.alleenLezen || !pagina.achtergrond?.schaal,
+        onSelect: () => voerUit(() => situatie.zetSchaal(pagina.id, undefined)),
+      },
+      {
         label: t("editor.situatie.paginas.naarLinks"),
         icon: "i-lucide-arrow-left",
         disabled: editor.alleenLezen || index === 0,
@@ -105,16 +111,11 @@ function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
     ],
   ];
 }
-
-function wisSchaal(): void {
-  const paginaId = situatie.actievePaginaId;
-  if (paginaId !== null) voerUit(() => situatie.zetSchaal(paginaId, undefined));
-}
 </script>
 
 <template>
-  <div class="flex items-center gap-2 border-b border-default px-2 py-1">
-    <div class="flex min-w-0 items-center gap-1 overflow-x-auto" role="tablist" :aria-label="$t('editor.situatie.paginas.titel')">
+  <div class="flex min-w-0 shrink-0 flex-wrap items-center gap-2 border-t border-default px-2 py-1" data-testid="plan-paginas">
+    <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="tablist" :aria-label="$t('editor.situatie.paginas.titel')">
       <div
         v-for="(pagina, index) in paginas"
         :key="pagina.id"
@@ -154,25 +155,18 @@ function wisSchaal(): void {
       class="shrink-0"
       :disabled="editor.alleenLezen"
       data-testid="pagina-toevoegen"
-      :label="$t('editor.situatie.paginas.toevoegen')"
+      :aria-label="$t('editor.situatie.paginas.toevoegen')"
+      :title="$t('editor.situatie.paginas.toevoegen')"
       @click="emit('toevoegen')"
     />
 
     <UButton v-if="situatie.actievePagina?.tekening" icon="i-lucide-pencil-ruler" size="sm" color="neutral" variant="outline" :disabled="editor.alleenLezen" :label="$t('editor.situatie.tekenen.edit')" data-testid="plan-tekenen-bewerken" @click="emit('tekenen', situatie.actievePagina.id)" />
 
-    <div v-if="schaal" class="ml-auto flex shrink-0 items-center gap-1 text-sm text-muted">
+    <div v-if="schaal" class="ml-auto hidden min-w-0 items-center gap-1 text-xs text-muted sm:flex">
       <span data-testid="schaal-tekst">{{
         $t("editor.situatie.schaal.tekst", { waarde: formatteerMmPerPx(schaal.mmPerPx, taal) })
       }}</span>
-      <UButton
-        color="neutral"
-        variant="link"
-        size="sm"
-        :disabled="editor.alleenLezen"
-        data-testid="schaal-wissen"
-        :label="$t('editor.situatie.schaal.wissen')"
-        @click="wisSchaal"
-      />
+
     </div>
 
     <PaginaHernoemenDialoog v-model:open="hernoemOpen" :pagina-id="hernoemPaginaId" />

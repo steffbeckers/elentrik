@@ -21,6 +21,20 @@
         "titel": "Hele tak verwijderen",
         "beschrijving": "Dit verwijdert {aantal} onderdelen. Je kunt het ongedaan maken.",
         "bevestigen": "Verwijderen"
+      },
+      "toetsenbord": {
+        "onderdeel": "Schemaonderdeel",
+        "kiesOnderdeel": "Kies een onderdeel",
+        "invoegpunt": "Toevoegen bij",
+        "rail-einde": "Nieuwe kring op",
+        "kring-einde": "Na",
+        "geenInvoegpunt": "Geen geldig invoegpunt",
+        "actie": "Toevoegactie",
+        "bestaandeKring": "Bestaande kring uitbreiden",
+        "nieuweKring": "Nieuwe kring",
+        "kringBestemming": "Kring {kring} · na {punt}",
+        "rechtstreeksOpBord": "Rechtstreeks op {bord}",
+        "voorKringen": "kringen {kringen}"
       }
     },
     "onderdelen": {
@@ -75,7 +89,8 @@
       "exporteren": "Exporteren"
     },
     "kringenlijst": {
-      "titel": "Kringenlijst"
+      "titel": "Kringenlijst",
+      "toetsenbord": "Punten per kring. Pijl omhoog en omlaag verplaatsen de focus; Enter selecteert het punt. Scroll horizontaal voor alle specificaties."
     },
     "status": {
       "opgeslagen": "Opgeslagen",
@@ -171,7 +186,7 @@
     },
     "bevindingen": {
       "titel": "Bevindingen",
-      "leeg": "Geen bevindingen.",
+      "leeg": "Geen bevindingen binnen de uitgevoerde controles.",
       "ernst": {
         "fout": "Fouten",
         "waarschuwing": "Waarschuwingen",
@@ -179,7 +194,19 @@
       },
       "afgeweken": "Afgeweken: {motivatie}",
       "motiveren": "Afwijking motiveren",
-      "verwijderen": "Afwijking verwijderen"
+      "verwijderen": "Afwijking verwijderen",
+      "voorlopig": "Voorlopige, beperkte automatische controles. Niet alle AREI-voorschriften zijn gecontroleerd. Geen bevindingen is geen bewijs van conformiteit; laat het dossier inhoudelijk nakijken.",
+      "context": "Installatiecontext",
+      "contextWijzigen": "Context wijzigen",
+      "kring": "Kring {kring}",
+      "installatie": "Installatie",
+      "betrokkenPunten": "Betrokken onderdelen",
+      "bekijkPunt": "Bekijk {punt}",
+      "bekijk": {
+        "beveiliging": "Bekijk beveiliging",
+        "kring": "Bekijk kring"
+      },
+      "afwijkingenPerPunt": "Afwijkingen per onderdeel"
     },
     "afwijking": {
       "titel": "Afwijking motiveren",
@@ -221,6 +248,13 @@
         "naamVerplicht": "Geef het project een naam.",
         "adresVerplicht": "Verplicht voor een adres.",
         "datumVerplicht": "Kies een datum."
+      },
+      "context": {
+        "label": "Installatiecontext",
+        "hulp": "Voor huishoudelijke installaties. Kies nieuw voor nieuwe of gewijzigde delen waarop de huidige voorschriften gelden. Bij bestaande delen moeten uitvoeringsdatum en overgangsbepalingen afzonderlijk worden nagekeken.",
+        "nieuw": "Nieuw / gewijzigd deel — huidige voorschriften",
+        "bestaand": "Bestaand deel — overgangsbepalingen nakijken",
+        "onbekend": "Nog te bepalen"
       }
     },
     "concept": {
@@ -285,7 +319,7 @@
         "bewaren": "Hernoemen"
       },
       "schaal": {
-        "tekst": "Schaal: 1 px = {waarde} mm",
+        "tekst": "Kalibratie: 1 planpixel = {waarde} mm",
         "wissen": "Schaal wissen",
         "titel": "Schaal instellen",
         "beschrijving": "De gemeten lijn is {px} pixels lang. Vul de echte afstand in.",
@@ -310,7 +344,15 @@
         "werkbalk": "Selectie op het plan",
         "draaiLinks": "Draai linksom (Shift+R)",
         "draaiRechts": "Draai rechtsom (R)",
-        "vanPlanHalen": "Van plan halen"
+        "vanPlanHalen": "Van plan halen",
+        "kiesPunt": "Punt op plan",
+        "kiesPuntLeeg": "Kies een punt",
+        "tekenvlak": "Situatieplan: toetsenbordbediening",
+        "toetsenbord": "Kies een punt. Pijlen verplaatsen; Shift verfijnt naar 1 px. R draait, Delete haalt van het plan. Tab verlaat het tekenvlak.",
+        "plaatsToetsenbord": "Pijlen verplaatsen het kruis; Shift verfijnt naar 1 px. Enter bevestigt, Escape annuleert.",
+        "cursorPositie": "Positie: x {x}, y {y} px",
+        "bevestigMeetpunt": "Meetpunt bevestigen",
+        "bevestigPlaats": "Hier plaatsen"
       },
       "toevoegen": {
         "titel": "Plan toevoegen",
@@ -362,6 +404,22 @@
         "thickness": "Muurdikte",
         "width": "Breedte",
         "hint": "Klik om muren te tekenen. Escape stopt de muur. Selecteer een muur om de afmetingen aan te passen."
+      },
+      "opmaak": {
+        "titel": "Planopmaak",
+        "symbolen": "Symboolgrootte",
+        "labels": "Labelgrootte",
+        "paginaHint": "Geldt voor deze pagina. 100% is het standaardformaat.",
+        "labelPositie": "Positie geselecteerd label",
+        "offsetX": "Horizontaal",
+        "offsetY": "Verticaal",
+        "offsetHint": "Extra verschuiving in planpixels: positief is rechts of omlaag.",
+        "herstelLabel": "Labelpositie herstellen",
+        "kiesLabel": "Selecteer één symbool om het label te verplaatsen.",
+        "bereik": "Van 25% tot 400%.",
+        "ongeldigPercentage": "Vul een getal van 25 tot en met 400 in. De opgeslagen grootte is niet gewijzigd.",
+        "ongeldigeOffset": "Vul een geldig getal in, bijvoorbeeld 0 of -15. De opgeslagen positie is niet gewijzigd.",
+        "herstelInvoer": "Opgeslagen waarden herstellen"
       }
     },
     "export": {
@@ -405,7 +463,7 @@
         "versie": "Versie",
         "datum": "Datum",
         "fouten": "Fouten",
-        "aantalFouten": "geen fouten | {n} fout | {n} fouten",
+        "aantalFouten": "0 elektrische fouten gemeld | 1 elektrische fout | {n} elektrische fouten",
         "downloaden": "Downloaden"
       }
     },
@@ -420,6 +478,18 @@
     "organisatieGewisseld": "Je werkt nu in {organisatie}.",
     "andereGebruiker": {
       "melding": "Je bent nu aangemeld als {naam}. Deze wijzigingen horen bij {oorspronkelijk} en blijven lokaal bewaard voor dat account."
+    },
+    "werkruimte": {
+      "panelen": "Werkpanelen",
+      "werk": "Tekening / lijst",
+      "onderdelen": "Onderdelen",
+      "eigenschappen": "Eigenschappen",
+      "bevindingen": "Bevindingen",
+      "opmaak": "Planopmaak",
+      "weergaven": "Dossieronderdelen",
+      "planHint": "Kies een punt op het plan of open Onderdelen om een punt te plaatsen.",
+      "sluiten": "Paneel sluiten",
+      "toetsenbordhulp": "Toetsenbordhulp"
     }
   },
   "bedrijf": {
@@ -510,7 +580,7 @@
       "label": "Label"
     },
     "ruimte": {
-      "label": "Ruimte"
+      "label": "Soort ruimte (controle)"
     },
     "gevoeligheid_mA": {
       "label": "Gevoeligheid"
@@ -591,6 +661,9 @@
         "omvormer": "Omvormer",
         "andere": "Andere"
       }
+    },
+    "ruimteNaam": {
+      "label": "Naam op het plan (vrij)"
     }
   },
   "ruimtes": {
@@ -604,7 +677,8 @@
     "zolder": "Zolder",
     "buiten": "Buiten",
     "technisch": "Technische ruimte",
-    "andere": "Andere"
+    "andere": "Andere",
+    "hal": "Hal"
   },
   "rollen": {
     "eigenaar": "Eigenaar",
@@ -635,7 +709,7 @@
     "of": "of",
     "inloglink": "Stuur me een inloglink",
     "inloglinkVerstuurd": "Als dit adres bekend is, ontvang je een link.",
-    "inloglinkUitleg": "Met een inloglink bevestig je je adres. Een wachtwoord dat je nog niet bevestigde, vervalt dan.",
+    "inloglinkUitleg": "Log in zonder wachtwoord via een link in je mailbox. Die bevestigt ook je e-mailadres. Een nog niet bevestigd wachtwoord vervalt dan.",
     "ongeldig": "Het e-mailadres of het wachtwoord klopt niet.",
     "onbevestigd": {
       "titel": "Je e-mailadres is nog niet bevestigd",
@@ -891,5 +965,68 @@
     "INVALID_EMAIL": "Vul een geldig e-mailadres in.",
     "ORGANIZATION_ALREADY_EXISTS": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw.",
     "ORGANIZATION_SLUG_ALREADY_TAKEN": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw."
+  },
+  "werkbaarheid": {
+    "tekenen": {
+      "toevoegen": "Toevoegen",
+      "kiesBestemming": "Kies waar je wilt toevoegen",
+      "sluitToevoegen": "Toevoegen sluiten",
+      "zoom": "Tekening vergroten en verplaatsen",
+      "inzoomen": "Inzoomen",
+      "uitzoomen": "Uitzoomen",
+      "focus": "Focus op selectie",
+      "hulp": "Scroll om te zoomen. Sleep op lege ruimte om te verplaatsen, of houd de spatiebalk ingedrukt. Kies een onderdeel om het te bewerken; de blauwe plusknoppen voegen toe op hun plaats.",
+      "zoekOnderdeel": "Zoek op kring, nummer of naam…",
+      "zoekBestemming": "Zoek een invoegpunt…"
+    },
+    "dossier": {
+      "titel": "Dossier afwerken",
+      "uitleg": "Volledigheid van het dossier, los van de elektrische controles.",
+      "volledig": "De gecontroleerde dossieronderdelen zijn ingevuld.",
+      "klant": "Klantnaam invullen",
+      "werfadres": "Werfadres aanvullen",
+      "context": "Nieuw of bestaand: installatiecontext kiezen",
+      "schema": "Eerste kring tekenen",
+      "plan": "Een grondplan toevoegen | {aantal} ontbrekende plannen aanvullen",
+      "plaatsen": "Nog 1 onderdeel op het plan plaatsen | Nog {aantal} onderdelen op het plan plaatsen",
+      "conceptUitleg": "Er ontbreken nog dossieronderdelen. Je kunt nu een concept exporteren en later verder afwerken.",
+      "conceptExport": "Concept-PDF maken"
+    },
+    "bevindingen": {
+      "controle": "Over deze voorlopige controle",
+      "punten": "{aantal} betrokken onderdelen",
+      "terug": "Alle bevindingen",
+      "sluiten": "Actieve bevinding sluiten",
+      "opgelost": "Deze bevinding is niet meer actief.",
+      "differentieel": "Controleer de differentieel vóór deze kring. Alleen de stroomsterkte van de automaat wijzigen verhelpt een ontbrekende differentieel niet.",
+      "volgende": "Volgende bevinding",
+      "geenElektrische": "Geen elektrische bevindingen gemeld. Controleer ook de volledigheid van het dossier."
+    }
+  },
+  "werkbaarheidBeheer": {
+    "navigatie": "Instellingen",
+    "wachtwoordTonen": "Wachtwoord tonen",
+    "wachtwoordVerbergen": "Wachtwoord verbergen",
+    "verlaten": "Je bedrijfsgegevens zijn nog niet opgeslagen. Wil je deze pagina verlaten en je wijzigingen verliezen?",
+    "logoDirect": "Het logo wordt meteen opgeslagen. Bewaar de andere bedrijfsgegevens met de knop onderaan.",
+    "bewaren": "Bedrijfsgegevens opslaan…",
+    "gewijzigd": "Niet-opgeslagen wijzigingen",
+    "geenWijzigingen": "Geen niet-opgeslagen wijzigingen",
+    "organisatieNaam": "Deze organisatienaam herken je in de app. De bedrijfsnaam op je PDF beheer je bij Bedrijfsgegevens.",
+    "rolTitel": "Rolwijziging bevestigen",
+    "rolVraag": "Wil je {naam} de rol {rol} geven?",
+    "eigenaarGevolg": "Een eigenaar beheert bedrijfsgegevens, leden, uitnodigingen en het abonnement, en kan projecten bewerken.",
+    "lidGevolg": "Een lid kan projecten bekijken en bewerken wanneer het abonnement dat toelaat, maar beheert geen bedrijfsgegevens, leden of abonnement.",
+    "eigenRolGevolg": "Je geeft je eigen beheertoegang op. Een andere eigenaar moet die later herstellen.",
+    "rolBevestigen": "Rol wijzigen",
+    "mailOntvanger": "Gebruikt e-mailadres: {email}",
+    "mailHulp": "Geen mail ontvangen? Controleer je spammap en of het adres klopt. De mail kan enkele minuten onderweg zijn. Heb je al een account, meld je dan aan.",
+    "mailOpnieuw": "Nieuwe bevestigingsmail sturen",
+    "emailWijzigenUitleg": "Adres verkeerd ingevuld? Registreer opnieuw met het juiste adres. Hiermee wijzig je geen bestaand account.",
+    "emailWijzigen": "E-mailadres corrigeren",
+    "huidigAbonnement": "Abonnementsgegevens",
+    "formule": "Formule",
+    "periodeTot": "Huidige periode tot",
+    "betaalportaal": "Abonnement beheren opent het betaalportaal. Daar vind je de bedragen en details van je abonnement."
   }
 }

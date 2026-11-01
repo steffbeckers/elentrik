@@ -3,7 +3,7 @@ import type { Arei2020Parameters } from "../parameters";
 
 const ID = "arei.differentieel.natte-ruimte";
 
-/** Regel 2: punten in natte ruimtes en bepaalde toestellen hangen achter een laaggevoelig differentieel. */
+/** Regel 2: punten in natte ruimtes en bepaalde toestellen hangen achter een aanvullend laaggevoelig differentieel. */
 export function maakRegelNatteRuimteDifferentieel(p: Arei2020Parameters): Regel {
   const natteRuimtes: readonly string[] = p.natteRuimtes;
   const laagGevoelig: readonly string[] = p.toestellenAchterLaagGevoelig;
@@ -27,7 +27,9 @@ export function maakRegelNatteRuimteDifferentieel(p: Arei2020Parameters): Regel 
 
         const beschermd = keten.differentielen.some((id) => {
           const diff = doc.nodes[id];
-          return diff?.type === "differentieel" && diff.gevoeligheid_mA <= max;
+          return id !== analyse.algemeenDifferentieelId
+            && diff?.type === "differentieel"
+            && diff.gevoeligheid_mA <= max;
         });
         if (beschermd) continue;
         bevindingen.push({

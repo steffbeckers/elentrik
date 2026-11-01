@@ -63,9 +63,8 @@ function kring(): {
 } {
   const { doc, bordId } = start();
   const r = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "contactdoos");
-  const [automaatId, leidingId] = r.ids as [NodeId, NodeId];
-  const p = voegOnderdeelToe(r.doc, { soort: "kring-einde", nodeId: leidingId }, "contactdoos");
-  return { doc: p.doc, bordId, automaatId, leidingId, puntId: p.ids[0]! };
+  const [automaatId, leidingId, puntId] = r.ids as [NodeId, NodeId, NodeId];
+  return { doc: r.doc, bordId, automaatId, leidingId, puntId };
 }
 
 describe("standaarden", () => {
@@ -140,11 +139,11 @@ describe("nieuwProjectDocument", () => {
 });
 
 describe("voegOnderdeelToe op een rail-einde", () => {
-  test("contactdoos: automaat 16 A B en leiding XVB 3G2,5, één undo-stap", () => {
+  test("contactdoos: automaat 16 A B, leiding XVB 3G2,5 en contactdoos, één undo-stap", () => {
     const { doc, bordId } = start();
     const r = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "contactdoos");
-    expect(r.ids).toHaveLength(2);
-    const [automaatId, leidingId] = r.ids as [NodeId, NodeId];
+    expect(r.ids).toHaveLength(3);
+    const [automaatId, leidingId, puntId] = r.ids as [NodeId, NodeId, NodeId];
     expect(haal(r.doc, automaatId)).toMatchObject({
       type: "automaat",
       nominaal_A: 16,
@@ -160,6 +159,8 @@ describe("voegOnderdeelToe op een rail-einde", () => {
       parentId: automaatId,
     });
     expect(haal(r.doc, bordId).kinderen).toEqual([automaatId]);
+    expect(haal(r.doc, leidingId).kinderen).toEqual([puntId]);
+    expect(haal(r.doc, puntId)).toMatchObject({ ...STANDAARD.contactdoos, parentId: leidingId, kinderen: [] });
     expect(valideerStructuur(r.doc)).toEqual([]);
     expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
   });
@@ -188,7 +189,9 @@ describe("voegOnderdeelToe op een rail-einde", () => {
   test("onderbord op een rail werkt als een nieuwe kring", () => {
     const { doc, bordId } = start();
     const r = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "onderbord");
-    expect(r.ids.map((id) => haal(r.doc, id).type)).toEqual(["automaat", "leiding"]);
+    expect(r.ids.map((id) => haal(r.doc, id).type)).toEqual(["automaat", "leiding", "verdeelbord"]);
+    expect(haal(r.doc, r.ids[2]!).parentId).toBe(r.ids[1]);
+    expect(valideerStructuur(r.doc)).toEqual([]);
   });
 
   test("op de rail van een differentieel", () => {
@@ -214,7 +217,7 @@ describe("voegOnderdeelToe op een rail-einde", () => {
 describe("voegOnderdeelToe op een kring-einde", () => {
   test("het punt komt bovenop een blad en krijgt de standaardwaarden", () => {
     const { doc, bordId } = start();
-    const eerste = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "contactdoos");
+    const eerste = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "leiding");
     const leidingId = eerste.ids[1]!;
     const r = voegOnderdeelToe(
       eerste.doc,
@@ -336,7 +339,7 @@ describe("voegOnderdeelToe op een kring-einde", () => {
 
   test("onderbord op een leiding: alleen een verdeelbord", () => {
     const { bordId, doc } = start();
-    const eerste = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "contactdoos");
+    const eerste = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, "leiding");
     const leidingId = eerste.ids[1]!;
     const r = voegOnderdeelToe(
       eerste.doc,
@@ -445,20 +448,23 @@ describe("SJABLONEN", () => {
     ]);
   });
 
-  test("kring stopcontacten: automaat 20 A, leiding 2,5 mm² en 6 contactdozen in een keten", () => {
+  test("kring stopcontacten: differentieel 30 mA, automaat 20 A, leiding 2,5 mm² en 6 contactdozen in een keten", () => {
     const boom = sjabloonVoor("kring-stopcontacten", "2x230V").boom;
     expect(typesVan(boom)).toEqual([
+      "differentieel",
       "automaat",
       "leiding",
       ...Array<string>(6).fill("contactdoos"),
     ]);
-    expect(boom).toMatchObject({ nominaal_A: 20, curve: "B", polen: 2 });
-    expect(boom.kinderen?.[0]).toMatchObject({ doorsnede_mm2: 2.5, aantalGeleiders: 3 });
+    expect(boom).toMatchObject({ type: "differentieel", gevoeligheid_mA: 30, nominaal_A: 40, polen: 2, klasse: "A" });
+    expect(boom.kinderen?.[0]).toMatchObject({ nominaal_A: 20, curve: "B", polen: 2 });
+    expect(boom.kinderen?.[0]?.kinderen?.[0]).toMatchObject({ doorsnede_mm2: 2.5, aantalGeleiders: 3 });
   });
 
-  test("kring verlichting: leiding, schakelaar, 4 lichtpunten", () => {
+  test("kring verlichting: differentieel 30 mA, automaat, leiding, schakelaar, 4 lichtpunten", () => {
     const boom = sjabloonVoor("kring-verlichting", "2x230V").boom;
     expect(typesVan(boom)).toEqual([
+      "differentieel",
       "automaat",
       "leiding",
       "schakelaar",
@@ -467,8 +473,9 @@ describe("SJABLONEN", () => {
       "lichtpunt",
       "lichtpunt",
     ]);
-    expect(boom).toMatchObject({ nominaal_A: 16, curve: "B" });
-    expect(boom.kinderen?.[0]).toMatchObject({ doorsnede_mm2: 1.5, aantalGeleiders: 3 });
+    expect(boom).toMatchObject({ type: "differentieel", gevoeligheid_mA: 30, nominaal_A: 40, polen: 2, klasse: "A" });
+    expect(boom.kinderen?.[0]).toMatchObject({ nominaal_A: 16, curve: "B" });
+    expect(boom.kinderen?.[0]?.kinderen?.[0]).toMatchObject({ doorsnede_mm2: 1.5, aantalGeleiders: 3 });
   });
 
   test("kookplaat: 2x230V en 3N400V", () => {

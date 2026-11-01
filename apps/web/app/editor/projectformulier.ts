@@ -20,6 +20,7 @@ export type ProjectFormulier = {
   datum: string;
   /** De taal van het dossier (PDF); een document zonder taal toont `nl`. */
   dossierTaal: Taal;
+  installatieContext?: "nieuw" | "bestaand" | "onbekend";
 };
 
 export type ProjectFormulierFout = {
@@ -39,6 +40,7 @@ export type ProjectgegevensWijziging = {
   ean: string;
   datum: string;
   dossierTaal: Taal;
+  installatieContext: "nieuw" | "bestaand" | "onbekend";
 };
 
 export function formulierUitProject(naam: string, doc: InstallatieDocument): ProjectFormulier {
@@ -51,6 +53,7 @@ export function formulierUitProject(naam: string, doc: InstallatieDocument): Pro
     ean: doc.meta.ean ?? "",
     datum: doc.meta.datum,
     dossierTaal: doc.meta.dossierTaal ?? "nl",
+    installatieContext: doc.meta.installatieContext ?? "onbekend",
   };
 }
 
@@ -84,5 +87,6 @@ export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijzig
     ean: f.ean.trim(),
     datum: f.datum.trim(),
     dossierTaal: f.dossierTaal,
+    installatieContext: f.installatieContext ?? "onbekend",
   };
 }

@@ -88,6 +88,7 @@ export function nieuwProjectDocument(opties: {
   dossierTaal?: Taal;
 }): InstallatieDocument {
   const basis = nieuwDocument(opties);
+  basis.meta.installatieContext = "onbekend";
   const tellerId = basis.nodes[basis.rootId]!.kinderen[0]!;
   const differentieel = voegToe(basis, tellerId, {
     type: "differentieel",
@@ -145,6 +146,7 @@ export const SJABLONEN: readonly Sjabloon[] = [
     id: "kring-stopcontacten",
     naam: "Kring stopcontacten",
     boom: keten(
+      STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 20, curve: "B", polen: 2 },
       leiding(2.5),
       contactdoos(),
@@ -159,6 +161,7 @@ export const SJABLONEN: readonly Sjabloon[] = [
     id: "kring-verlichting",
     naam: "Kring verlichting",
     boom: keten(
+      STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 16, curve: "B", polen: 2 },
       leiding(1.5),
       STANDAARD.schakelaar,

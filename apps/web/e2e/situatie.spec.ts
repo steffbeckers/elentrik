@@ -10,8 +10,6 @@ const naam = `Test Situatie ${Date.now()}`;
 const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const PLAN_PDF = fileURLToPath(new URL("./fixtures/plan-2p.pdf", import.meta.url));
 const ONBEKEND_ID = "00000000-0000-0000-0000-000000000000";
-const NIET_GEPLAATST_A1 = "Punt A1 is nog niet op een situatieplan geplaatst.";
-const NIET_GEPLAATST_A2 = "Punt A2 is nog niet op een situatieplan geplaatst.";
 
 type Plaatsing = { nodeId: string; x: number; y: number };
 type Pagina = {
@@ -21,6 +19,16 @@ type Pagina = {
   achtergrond?: { rasterBestandId: string; origineelBestandId: string };
 };
 type Project = { versie: number; document: { situatie: { paginas: Pagina[] } } };
+
+/** Ongeplaatste onderdelen staan in de dossierchecklist; het verdeelbord telt ook mee. */
+async function verwachtOngeplaatst(page: Page, aantal: number) {
+  await page.getByTestId("werkruimte-bevindingen").click();
+  const checklist = page.getByTestId("dossier-checklist");
+  const details = checklist.locator("..");
+  if (await details.getAttribute("open") === null) await details.locator("summary").click();
+  await expect(checklist.getByRole("button", { name: `Nog ${aantal} onderdelen op het plan plaatsen`, exact: true })).toBeVisible();
+  await page.getByTestId("werkruimte-onderdelen").click();
+}
 
 /** De tekstlabels in de SVG van het schema (puntlabels als "A1"). */
 function schemaTekst(page: Page, tekst: string) {
@@ -135,17 +143,17 @@ test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend pla
   });
 
   const projectId = await maakProjectMetContactdozen(page, `${naam} plan`);
-  const bevindingen = page.getByTestId("bevindingen-info");
 
   // 1. Het tabblad Situatieschema is leeg; een PNG als eerste plan geeft een pagina met een geladen afbeelding.
   await page.getByTestId("tab-situatieschema").click();
   await expect(page.getByTestId("plan-leeg")).toBeVisible();
   await expect(page.getByTestId("te-plaatsen-A1")).toBeVisible();
   await expect(page.getByTestId("te-plaatsen-A2")).toBeVisible();
+  const ongeplaatst = await page.locator('button[data-testid^="te-plaatsen-"]').count();
   await voegPlanToe(page, PLAN_PNG, { leeg: true });
   await expect(page.getByTestId("pagina-tab-0")).toContainText("plan");
   await expect.poll(() => planAfbeeldingGeladen(page)).toBe(1200);
-  await expect(bevindingen).toContainText(NIET_GEPLAATST_A1);
+  await verwachtOngeplaatst(page, ongeplaatst);
 
   // 2. A1 uit "Te plaatsen" naar het plan slepen: het label staat op het plan, de bevinding verdwijnt.
   const canvas = page.getByTestId("plan-canvas");
@@ -154,15 +162,14 @@ test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend pla
   await expect(planLabel(page, "A1")).toHaveCount(1);
   await expect(page.getByTestId("te-plaatsen-A1")).toHaveCount(0);
   await expect(page.getByTestId("te-plaatsen-A2")).toHaveCount(1);
-  await expect(bevindingen).not.toContainText(NIET_GEPLAATST_A1);
-  await expect(bevindingen).toContainText(NIET_GEPLAATST_A2);
+  await verwachtOngeplaatst(page, ongeplaatst - 1);
 
   // 3. Ctrl+Z haalt de plaatsing weg: A1 staat weer in "Te plaatsen". Ctrl+Y zet haar terug.
   // (De ongedaan-geschiedenis overleeft een herlading niet, dus dit gebeurt vóór het herladen.)
   await page.keyboard.press("Control+z");
   await expect(planLabel(page, "A1")).toHaveCount(0);
   await expect(page.getByTestId("te-plaatsen-A1")).toBeVisible();
-  await expect(bevindingen).toContainText(NIET_GEPLAATST_A1);
+  await verwachtOngeplaatst(page, ongeplaatst);
   await page.keyboard.press("Control+y");
   await expect(planLabel(page, "A1")).toHaveCount(1);
   await expect(page.getByTestId("te-plaatsen-A1")).toHaveCount(0);

@@ -21,6 +21,20 @@
         "titel": "Supprimer toute la branche",
         "beschrijving": "Cette action supprime {aantal} éléments. Vous pouvez l'annuler.",
         "bevestigen": "Supprimer"
+      },
+      "toetsenbord": {
+        "onderdeel": "Élément du schéma",
+        "kiesOnderdeel": "Choisissez un élément",
+        "invoegpunt": "Ajouter à",
+        "rail-einde": "Nouveau circuit sur",
+        "kring-einde": "Après",
+        "geenInvoegpunt": "Aucun point d’insertion disponible",
+        "actie": "Action d’ajout",
+        "bestaandeKring": "Prolonger un circuit existant",
+        "nieuweKring": "Nouveau circuit",
+        "kringBestemming": "Circuit {kring} · après {punt}",
+        "rechtstreeksOpBord": "Directement sur {bord}",
+        "voorKringen": "circuits {kringen}"
       }
     },
     "onderdelen": {
@@ -75,7 +89,8 @@
       "exporteren": "Exporter"
     },
     "kringenlijst": {
-      "titel": "Liste des circuits"
+      "titel": "Liste des circuits",
+      "toetsenbord": "Points par circuit. Les flèches haut et bas déplacent le focus ; Entrée sélectionne le point. Faites défiler horizontalement pour voir toutes les caractéristiques."
     },
     "status": {
       "opgeslagen": "Enregistré",
@@ -171,7 +186,7 @@
     },
     "bevindingen": {
       "titel": "Constats",
-      "leeg": "Aucun constat.",
+      "leeg": "Aucune constatation dans les contrôles effectués.",
       "ernst": {
         "fout": "Erreurs",
         "waarschuwing": "Avertissements",
@@ -179,7 +194,19 @@
       },
       "afgeweken": "Dérogation : {motivatie}",
       "motiveren": "Justifier une dérogation",
-      "verwijderen": "Supprimer la dérogation"
+      "verwijderen": "Supprimer la dérogation",
+      "voorlopig": "Contrôles automatiques provisoires et limités. Toutes les prescriptions du RGIE ne sont pas contrôlées. L’absence de constatations ne prouve pas la conformité ; faites vérifier le dossier.",
+      "context": "Contexte de l’installation",
+      "contextWijzigen": "Modifier le contexte",
+      "kring": "Circuit {kring}",
+      "installatie": "Installation",
+      "betrokkenPunten": "Éléments concernés",
+      "bekijkPunt": "Voir {punt}",
+      "bekijk": {
+        "beveiliging": "Voir la protection",
+        "kring": "Voir le circuit"
+      },
+      "afwijkingenPerPunt": "Dérogations par élément"
     },
     "afwijking": {
       "titel": "Justifier une dérogation",
@@ -221,6 +248,13 @@
         "naamVerplicht": "Donnez un nom au projet.",
         "adresVerplicht": "Obligatoire pour une adresse.",
         "datumVerplicht": "Choisissez une date."
+      },
+      "context": {
+        "label": "Contexte de l’installation",
+        "hulp": "Pour les installations domestiques. Choisissez nouveau pour les parties nouvelles ou modifiées soumises aux prescriptions actuelles. Pour les parties existantes, vérifiez séparément la date de réalisation et les dispositions transitoires.",
+        "nieuw": "Partie nouvelle / modifiée — prescriptions actuelles",
+        "bestaand": "Partie existante — vérifier les dispositions transitoires",
+        "onbekend": "À déterminer"
       }
     },
     "concept": {
@@ -285,7 +319,7 @@
         "bewaren": "Renommer"
       },
       "schaal": {
-        "tekst": "Échelle : 1 px = {waarde} mm",
+        "tekst": "Étalonnage : 1 pixel du plan = {waarde} mm",
         "wissen": "Effacer l'échelle",
         "titel": "Définir l'échelle",
         "beschrijving": "La ligne mesurée fait {px} pixels. Saisissez la distance réelle.",
@@ -310,7 +344,15 @@
         "werkbalk": "Sélection sur le plan",
         "draaiLinks": "Pivoter vers la gauche (Maj+R)",
         "draaiRechts": "Pivoter vers la droite (R)",
-        "vanPlanHalen": "Retirer du plan"
+        "vanPlanHalen": "Retirer du plan",
+        "kiesPunt": "Point sur le plan",
+        "kiesPuntLeeg": "Choisissez un point",
+        "tekenvlak": "Plan de position : commandes au clavier",
+        "toetsenbord": "Choisissez un point. Les flèches le déplacent ; Maj affine à 1 px. R fait pivoter, Suppr retire du plan. Tab quitte la zone de dessin.",
+        "plaatsToetsenbord": "Les flèches déplacent la croix ; Maj affine à 1 px. Entrée confirme, Échap annule.",
+        "cursorPositie": "Position : x {x}, y {y} px",
+        "bevestigMeetpunt": "Confirmer le point de mesure",
+        "bevestigPlaats": "Placer ici"
       },
       "toevoegen": {
         "titel": "Ajouter un plan",
@@ -362,6 +404,22 @@
         "thickness": "Épaisseur du mur",
         "width": "Largeur",
         "hint": "Cliquez pour dessiner les murs. Échap termine le mur. Sélectionnez un mur pour modifier ses dimensions."
+      },
+      "opmaak": {
+        "titel": "Mise en forme du plan",
+        "symbolen": "Taille des symboles",
+        "labels": "Taille des libellés",
+        "paginaHint": "S’applique à cette page. 100 % est la taille par défaut.",
+        "labelPositie": "Position du libellé sélectionné",
+        "offsetX": "Horizontal",
+        "offsetY": "Vertical",
+        "offsetHint": "Décalage en pixels du plan : positif vers la droite ou le bas.",
+        "herstelLabel": "Réinitialiser la position",
+        "kiesLabel": "Sélectionnez un symbole pour déplacer son libellé.",
+        "bereik": "De 25 % à 400 %.",
+        "ongeldigPercentage": "Saisissez un nombre de 25 à 400 inclus. La taille enregistrée n’a pas changé.",
+        "ongeldigeOffset": "Saisissez un nombre valide, par exemple 0 ou -15. La position enregistrée n’a pas changé.",
+        "herstelInvoer": "Rétablir les valeurs enregistrées"
       }
     },
     "export": {
@@ -405,7 +463,7 @@
         "versie": "Version",
         "datum": "Date",
         "fouten": "Erreurs",
-        "aantalFouten": "aucune erreur | {n} erreur | {n} erreurs",
+        "aantalFouten": "0 erreur électrique signalée | 1 erreur électrique | {n} erreurs électriques",
         "downloaden": "Télécharger"
       }
     },
@@ -420,6 +478,18 @@
     "organisatieGewisseld": "Vous travaillez maintenant dans {organisatie}.",
     "andereGebruiker": {
       "melding": "Vous êtes maintenant connecté en tant que {naam}. Ces modifications appartiennent à {oorspronkelijk} et restent conservées localement pour ce compte."
+    },
+    "werkruimte": {
+      "panelen": "Panneaux de travail",
+      "werk": "Dessin / liste",
+      "onderdelen": "Éléments",
+      "eigenschappen": "Propriétés",
+      "bevindingen": "Constats",
+      "opmaak": "Mise en page",
+      "weergaven": "Parties du dossier",
+      "planHint": "Sélectionnez un point sur le plan ou ouvrez Éléments pour placer un point.",
+      "sluiten": "Fermer le panneau",
+      "toetsenbordhulp": "Aide clavier"
     }
   },
   "bedrijf": {
@@ -510,7 +580,7 @@
       "label": "Libellé"
     },
     "ruimte": {
-      "label": "Pièce"
+      "label": "Type de local (contrôle)"
     },
     "gevoeligheid_mA": {
       "label": "Sensibilité"
@@ -591,6 +661,9 @@
         "omvormer": "Onduleur",
         "andere": "Autre"
       }
+    },
+    "ruimteNaam": {
+      "label": "Nom sur le plan (libre)"
     }
   },
   "ruimtes": {
@@ -604,7 +677,8 @@
     "zolder": "Grenier",
     "buiten": "Extérieur",
     "technisch": "Local technique",
-    "andere": "Autre"
+    "andere": "Autre",
+    "hal": "Hall"
   },
   "rollen": {
     "eigenaar": "Propriétaire",
@@ -635,7 +709,7 @@
     "of": "ou",
     "inloglink": "M'envoyer un lien de connexion",
     "inloglinkVerstuurd": "Si cette adresse est connue, vous recevrez un lien.",
-    "inloglinkUitleg": "Un lien de connexion confirme votre adresse. Un mot de passe que vous n'avez pas encore confirmé n'est alors plus valable.",
+    "inloglinkUitleg": "Connectez-vous sans mot de passe grâce à un lien reçu par e-mail. Il confirme aussi votre adresse. Un mot de passe non encore confirmé sera alors invalidé.",
     "ongeldig": "L'adresse e-mail ou le mot de passe est incorrect.",
     "onbevestigd": {
       "titel": "Votre adresse e-mail n'est pas encore confirmée",
@@ -891,5 +965,68 @@
     "INVALID_EMAIL": "Saisissez une adresse e-mail valide.",
     "ORGANIZATION_ALREADY_EXISTS": "Cette entreprise n'a pas pu être créée car elle existe déjà. Réessayez.",
     "ORGANIZATION_SLUG_ALREADY_TAKEN": "Cette entreprise n'a pas pu être créée car elle existe déjà. Réessayez."
+  },
+  "werkbaarheid": {
+    "tekenen": {
+      "toevoegen": "Ajouter",
+      "kiesBestemming": "Choisissez où ajouter",
+      "sluitToevoegen": "Fermer l’ajout",
+      "zoom": "Agrandir et déplacer le dessin",
+      "inzoomen": "Agrandir",
+      "uitzoomen": "Réduire",
+      "focus": "Centrer la sélection",
+      "hulp": "Faites défiler pour zoomer. Faites glisser une zone vide pour déplacer le dessin, ou maintenez la barre d’espace. Sélectionnez un élément pour le modifier ; les boutons plus bleus ajoutent à leur emplacement.",
+      "zoekOnderdeel": "Rechercher par circuit, numéro ou nom…",
+      "zoekBestemming": "Rechercher un point d’insertion…"
+    },
+    "dossier": {
+      "titel": "Compléter le dossier",
+      "uitleg": "Complétude du dossier, indépendamment des contrôles électriques.",
+      "volledig": "Les éléments du dossier vérifiés sont renseignés.",
+      "klant": "Renseigner le nom du client",
+      "werfadres": "Compléter l’adresse du chantier",
+      "context": "Choisir le contexte : installation neuve ou existante",
+      "schema": "Dessiner le premier circuit",
+      "plan": "Ajouter un plan | Ajouter les {aantal} plans manquants",
+      "plaatsen": "Encore 1 élément à placer sur le plan | Encore {aantal} éléments à placer sur le plan",
+      "conceptUitleg": "Des éléments du dossier manquent encore. Vous pouvez exporter un brouillon et le compléter plus tard.",
+      "conceptExport": "Créer un PDF brouillon"
+    },
+    "bevindingen": {
+      "controle": "À propos de ce contrôle provisoire",
+      "punten": "{aantal} éléments concernés",
+      "terug": "Toutes les constatations",
+      "sluiten": "Fermer la constatation active",
+      "opgelost": "Cette constatation n’est plus active.",
+      "differentieel": "Vérifiez le différentiel en amont de ce circuit. Modifier uniquement le calibre du disjoncteur ne remédie pas à un différentiel manquant.",
+      "volgende": "Constatation suivante",
+      "geenElektrische": "Aucune constatation électrique signalée. Vérifiez aussi la complétude du dossier."
+    }
+  },
+  "werkbaarheidBeheer": {
+    "navigatie": "Paramètres",
+    "wachtwoordTonen": "Afficher le mot de passe",
+    "wachtwoordVerbergen": "Masquer le mot de passe",
+    "verlaten": "Les coordonnées de votre entreprise ne sont pas enregistrées. Quitter cette page et perdre vos modifications ?",
+    "logoDirect": "Le logo est enregistré immédiatement. Enregistrez les autres coordonnées avec le bouton en bas.",
+    "bewaren": "Enregistrement des coordonnées…",
+    "gewijzigd": "Modifications non enregistrées",
+    "geenWijzigingen": "Aucune modification non enregistrée",
+    "organisatieNaam": "Ce nom identifie votre organisation dans l’application. Le nom de l’entreprise sur le PDF se modifie dans les coordonnées de l’entreprise.",
+    "rolTitel": "Confirmer le changement de rôle",
+    "rolVraag": "Attribuer le rôle {rol} à {naam} ?",
+    "eigenaarGevolg": "Un propriétaire gère les coordonnées de l’entreprise, les membres, les invitations et l’abonnement, et peut modifier les projets.",
+    "lidGevolg": "Un membre peut consulter et modifier les projets si l’abonnement le permet, mais ne gère ni les coordonnées de l’entreprise, ni les membres, ni l’abonnement.",
+    "eigenRolGevolg": "Vous renoncez à votre propre accès de gestion. Un autre propriétaire devra le rétablir.",
+    "rolBevestigen": "Modifier le rôle",
+    "mailOntvanger": "Adresse e-mail utilisée : {email}",
+    "mailHulp": "Aucun e-mail reçu ? Vérifiez vos courriers indésirables et l’adresse saisie. L’envoi peut prendre quelques minutes. Si vous avez déjà un compte, connectez-vous.",
+    "mailOpnieuw": "Envoyer un nouvel e-mail de confirmation",
+    "emailWijzigenUitleg": "Adresse incorrecte ? Inscrivez-vous à nouveau avec la bonne adresse. Cela ne modifie aucun compte existant.",
+    "emailWijzigen": "Corriger l’adresse e-mail",
+    "huidigAbonnement": "Détails de l’abonnement",
+    "formule": "Formule",
+    "periodeTot": "Période actuelle jusqu’au",
+    "betaalportaal": "Gérer l’abonnement ouvre le portail de paiement. Vous y trouverez les montants et les détails de votre abonnement."
   }
 }

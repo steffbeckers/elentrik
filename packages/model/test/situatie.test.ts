@@ -13,10 +13,62 @@ import {
   voegToe,
   zetAchtergrond,
   zetSchaal,
+  zetPaginaOpmaak,
+  zetLabelOffset,
+  parseDocument,
   type InstallatieDocument,
   type NodeId,
 } from "../src/index";
 import { kloon, vangFout } from "./hulp";
+
+describe("situatie-opmaak", () => {
+  test("dezelfde labeloffset bevestigen maakt geen extra undo-stap", () => {
+    const { doc, p1, doos } = opstelling();
+    const geplaatst = plaats(doc, p1, doos, { x: 10, y: 20, rotatie: 0 }).doc;
+    const standaard = zetLabelOffset(geplaatst, p1, doos, { x: 0, y: 0 });
+    expect(standaard.doc).toBe(geplaatst);
+    expect(standaard.patches).toEqual([]);
+    const gewijzigd = zetLabelOffset(geplaatst, p1, doos, { x: -12, y: 34 });
+    const nogmaals = zetLabelOffset(gewijzigd.doc, p1, doos, { x: -12, y: 34 });
+    expect(nogmaals.doc).toBe(gewijzigd.doc);
+    expect(nogmaals.patches).toEqual([]);
+    expect(nogmaals.inversePatches).toEqual([]);
+    expect(pasPatchesToe(nogmaals.doc, gewijzigd.inversePatches)).toEqual(geplaatst);
+  });
+
+  test("bewaart onafhankelijke paginaformaten en labeloffset bij opslaan en opnieuw laden", () => {
+    const { doc, p1, doos } = opstelling();
+    const geplaatst = plaats(doc, p1, doos, { x: 10, y: 20, rotatie: 0 }).doc;
+    const opgemaakt = zetPaginaOpmaak(geplaatst, p1, { symboolSchaal: 2, labelSchaal: 0.5 });
+    const verschoven = zetLabelOffset(opgemaakt.doc, p1, doos, { x: -12, y: 34 });
+    const geladen = parseDocument(JSON.parse(JSON.stringify(verschoven.doc)));
+    expect(geladen.situatie.paginas[0]).toMatchObject({ symboolSchaal: 2, labelSchaal: 0.5 });
+    expect(geladen.situatie.paginas[0]!.plaatsingen[0]!.labelOffset).toEqual({ x: -12, y: 34 });
+    expect(pasPatchesToe(verschoven.doc, verschoven.inversePatches)).toEqual(opgemaakt.doc);
+    expect(pasPatchesToe(opgemaakt.doc, opgemaakt.inversePatches)).toEqual(geplaatst);
+  });
+
+  test("behoudt labeloffset bij verplaatsen, draaien en wisselen van pagina", () => {
+    const { doc, p1, p2, doos } = opstelling();
+    const geplaatst = plaats(doc, p1, doos, { x: 10, y: 20, rotatie: 0 }).doc;
+    const opgemaakt = zetLabelOffset(geplaatst, p1, doos, { x: -12, y: 34 }).doc;
+    const verplaatst = plaats(opgemaakt, p2, doos, { x: 70, y: 80, rotatie: 90 }).doc;
+    expect(verplaatst.situatie.paginas[1]!.plaatsingen[0]).toMatchObject({
+      x: 70, y: 80, rotatie: 90, labelOffset: { x: -12, y: 34 },
+    });
+  });
+
+  test("weigert onbruikbare formaten en niet-eindige labeloffsets", () => {
+    const { doc, p1, doos } = opstelling();
+    for (const symboolSchaal of [0, -1, NaN, Infinity, 5]) {
+      expect(() => zetPaginaOpmaak(doc, p1, { symboolSchaal })).toThrow();
+    }
+    expect(() => zetPaginaOpmaak(doc, p1, { labelSchaal: 0 })).toThrow();
+    const geplaatst = plaats(doc, p1, doos, { x: 10, y: 20, rotatie: 0 }).doc;
+    expect(() => zetLabelOffset(geplaatst, p1, doos, { x: Infinity, y: 0 })).toThrow();
+    expect(() => zetLabelOffset(geplaatst, p1, "onbekend", { x: 0, y: 0 })).toThrow();
+  });
+});
 
 const ACHTERGROND = {
   origineelBestandId: "orig-1",

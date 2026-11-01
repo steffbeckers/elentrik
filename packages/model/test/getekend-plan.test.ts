@@ -16,10 +16,10 @@ test('bewaart een bewerkbaar plan met schaal en maakt de hele wijziging ongedaan
 test('behoudt wereldpositie en rotatie bij een ander kader en resolutie', () => {
   const p = model.voegPaginaToe(model.nieuwDocument(), 'Plan');
   const doc = kloon(model.zetGetekendPlan(p.doc, p.id, achtergrond, tekening).doc);
-  doc.situatie.paginas[0]!.plaatsingen.push({ nodeId: doc.rootId, x: 300, y: 500, rotatie: 90 });
+  doc.situatie.paginas[0]!.plaatsingen.push({ nodeId: doc.rootId, x: 300, y: 500, rotatie: 90, labelOffset: { x: 40, y: -20 } });
   const nieuw = { ...tekening, kader: { x_cm: -100, y_cm: -200, pxPerCm: 1 } };
   const r = model.zetGetekendPlan(doc, p.id, achtergrond, nieuw);
-  expect(r.doc.situatie.paginas[0]?.plaatsingen[0]).toMatchObject({ x: 200, y: 400, rotatie: 90 });
+  expect(r.doc.situatie.paginas[0]?.plaatsingen[0]).toMatchObject({ x: 200, y: 400, rotatie: 90, labelOffset: { x: 20, y: -10 } });
 });
 
 test('vervangen door een upload verwijdert de oude bewerkbare bron', () => {

@@ -3,12 +3,14 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, type Ref } from "vue";
 import {
   begrens,
+  focusWeergave,
   MAX_ZOOM,
   MIN_ZOOM,
   pan,
   passendeWeergave,
   pinch,
   wielFactor,
+  weergaveNaResize,
   zoomRond,
   type Afmeting,
   type Punt,
@@ -65,6 +67,16 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
     if (!w) return;
     weergave.value = w;
     heeftPassendeWeergave = true;
+  }
+
+  const zoomPercentage = computed(() => Math.round((passend()?.b ?? weergave.value.b) / weergave.value.b * 100));
+  function zoom(factor: number): void {
+    const p = passend();
+    if (p) weergave.value = binnenInhoud(zoomRond(weergave.value, p, { fx: 0.5, fy: 0.5 }, factor, grootte, zoomGrenzen(p)));
+  }
+  function focus(vak: Afmeting & { x: number; y: number }): void {
+    const p = passend();
+    if (p) weergave.value = binnenInhoud(focusWeergave(vak, grootte, p, zoomGrenzen(p).max));
   }
 
   /** Maakt passend als dat nog nooit lukte (de inhoud kan pas na het mounten bestaan). */
@@ -278,9 +290,8 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
     if (!heeftPassendeWeergave) {
       maakPassend();
     } else if (vorige.breedte > 0) {
-      // Zelfde schaal, ander venster: de breedte blijft, de hoogte volgt de beeldverhouding.
-      const w = weergave.value;
-      weergave.value = { ...w, h: w.b * (hoogte / breedte) };
+      const inhoud = opties.inhoud();
+      if (inhoud) weergave.value = weergaveNaResize(weergave.value, vorige, grootte, inhoud, opties.marge());
     }
   }
 
@@ -308,6 +319,9 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
     ruimteIngedrukt,
     sleept,
     maakPassend,
+    zoomPercentage,
+    zoom,
+    focus,
     passendAlsNodig,
     passendOpnieuw,
     zoomOpWiel,

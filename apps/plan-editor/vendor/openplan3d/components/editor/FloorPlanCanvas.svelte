@@ -1232,14 +1232,14 @@
           const fRight = fx + fw / 2;
           const fTop = fy - fd / 2;
           const fBottom = fy + fd / 2;
-          
+
           // Find which room the furniture is in
           const furnitureRoom = findRoomAt(selFurniture.position);
-          
+
           // Collect all dimension lines (wall + furniture distances)
           type DimLine = { label: string; from: Point; to: Point; color: string; dir: 'left' | 'right' | 'top' | 'bottom' };
           const allDimensions: DimLine[] = [];
-          
+
           // --- Wall distances ---
           if (furnitureRoom) {
             const poly = (roomPolygons.get(furnitureRoom.id) ?? []);
@@ -1257,13 +1257,13 @@
               { label: formatLength(rMaxY - fBottom, dimSettings.units), from: { x: fx, y: fBottom }, to: { x: fx, y: rMaxY }, color: '#f97316', dir: 'bottom' },
             );
           }
-          
+
           // --- Furniture-to-furniture distances ---
           // For each direction, find the nearest other furniture edge
           const otherFurniture = floor.furniture.filter(f => f.id !== selFurniture.id);
           // Track closest furniture per direction
           const closestFurn: Record<string, { dist: number; dim: DimLine }> = {};
-          
+
           for (const other of otherFurniture) {
             const oCat = getCatalogItem(other.catalogId);
             if (!oCat) continue;
@@ -1275,15 +1275,15 @@
             const oRight = ox + ow / 2;
             const oTop = oy - od / 2;
             const oBottom = oy + od / 2;
-            
+
             // Check vertical overlap (needed for left/right distances)
             const vOverlap = fBottom > oTop && fTop < oBottom;
             // Check horizontal overlap (needed for top/bottom distances)
             const hOverlap = fRight > oLeft && fLeft < oRight;
-            
+
             const midY = Math.max(fTop, oTop) / 2 + Math.min(fBottom, oBottom) / 2;
             const midX = Math.max(fLeft, oLeft) / 2 + Math.min(fRight, oRight) / 2;
-            
+
             // Left: other is to the left of selected
             if (vOverlap && oRight <= fLeft) {
               const gap = fLeft - oRight;
@@ -1313,7 +1313,7 @@
               }
             }
           }
-          
+
           // For each direction, use furniture-to-furniture if closer than wall, otherwise wall
           const finalDimensions: DimLine[] = [];
           const dirs: Array<'left' | 'right' | 'top' | 'bottom'> = ['left', 'right', 'top', 'bottom'];
@@ -1334,19 +1334,19 @@
               finalDimensions.push(wallDim);
             }
           }
-          
+
           // --- Draw all dimension lines ---
           const fontSize = Math.max(9, 10 * zoom);
           ctx.font = `${fontSize}px sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          
+
           for (const d of finalDimensions) {
             const fromS = worldToScreen(d.from.x, d.from.y);
             const toS = worldToScreen(d.to.x, d.to.y);
             const dist = Math.hypot(d.to.x - d.from.x, d.to.y - d.from.y);
             if (dist < 1) continue;
-            
+
             // Dashed line
             ctx.strokeStyle = d.color;
             ctx.lineWidth = 1;
@@ -1356,7 +1356,7 @@
             ctx.lineTo(toS.x, toS.y);
             ctx.stroke();
             ctx.setLineDash([]);
-            
+
             // Small end caps (perpendicular ticks)
             const dx = toS.x - fromS.x;
             const dy = toS.y - fromS.y;
@@ -1375,7 +1375,7 @@
                 ctx.stroke();
               }
             }
-            
+
             // Dimension pill at midpoint
             const mx = (fromS.x + toS.x) / 2;
             const my = (fromS.y + toS.y) / 2;
