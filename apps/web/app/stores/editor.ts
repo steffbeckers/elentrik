@@ -270,6 +270,19 @@ export const useEditorStore = defineStore("editor", () => {
     selectie.value = [r.ids[r.ids.length - 1]!];
   }
 
+  const kanAftakkingToevoegen = computed(() => {
+    const doc = document.value;
+    const id = selectie.value[0];
+    return !alleenLezen.value && !!doc && selectie.value.length === 1 && id !== undefined &&
+      magToevoegen(doc, { soort: "aftakking", nodeId: id }, onderdeel.value, voorinstelling.value);
+  });
+
+  /** Nieuwe horizontale reeks op de geselecteerde leiding; uitbreiden gebeurt via het rechteruiteinde. */
+  function voegAftakkingToeBijSelectie(): void {
+    if (!kanAftakkingToevoegen.value) return;
+    voegToe({ soort: "aftakking", nodeId: selectie.value[0]! });
+  }
+
   /** Op het geselecteerde bord of differentieel, anders op het eerste verdeelbord in pre-order. */
   function voegSjabloonToe(sjabloonId: string): void {
     if (alleenLezen.value) return;
@@ -322,7 +335,7 @@ export const useEditorStore = defineStore("editor", () => {
       if (!kind) return undefined;
       node = kind;
     }
-    const einde = zoek("kring-einde", node.id);
+    const einde = zoek("aftakking-einde", node.id) ?? zoek("kring-einde", node.id);
     if (einde) return einde;
     // De keten loopt dood op een bord (bv. de teller in een nieuw project): dan op de rail.
     if (node.type === "verdeelbord" || node.type === "differentieel") return zoek("rail-einde", node.id);
@@ -508,6 +521,8 @@ export const useEditorStore = defineStore("editor", () => {
     ongedaanMaken,
     opnieuw,
     voegToe,
+    kanAftakkingToevoegen,
+    voegAftakkingToeBijSelectie,
     voegSjabloonToe,
     wijzigVeld,
     voegToeBijSelectie,

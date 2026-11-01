@@ -463,6 +463,13 @@
       "planHint": "Sélectionnez un point sur le plan ou ouvrez Éléments pour placer un point.",
       "sluiten": "Fermer le panneau",
       "toetsenbordhulp": "Aide clavier"
+    },
+    "aftakkingen": {
+      "titel": "Dérivations",
+      "hulp": "Choisissez un interrupteur ou un point lumineux et sélectionnez la canalisation du circuit. Ajoutez une dérivation, puis complétez-la avec le plus à droite.",
+      "toevoegen": "Ajouter une dérivation",
+      "uitbreiden": "Ajouter {onderdeel} à la dérivation",
+      "bestemming": "Prolonger une dérivation"
     }
   },
   "bedrijf": {

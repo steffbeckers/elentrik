@@ -30,7 +30,7 @@ export type Veld = {
 type Boom = { [sleutel: string]: string | Boom };
 
 /** Sleutels die geen veld krijgen (structuur), en de sleutels uit `GEMEENSCHAPPELIJK`. */
-const STRUCTUUR = new Set(["id", "type", "parentId", "kinderen"]);
+const STRUCTUUR = new Set(["id", "type", "parentId", "kinderen", "aftakking"]);
 const GEMEENSCHAPPELIJKE_SLEUTELS = ["label", "ruimte", "ruimteNaam"] as const;
 
 /** Eenheden per sleutel: letterlijk, in elke taal dezelfde. */

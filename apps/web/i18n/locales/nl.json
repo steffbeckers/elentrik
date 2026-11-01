@@ -463,6 +463,13 @@
       "planHint": "Kies een punt op het plan of open Onderdelen om een punt te plaatsen.",
       "sluiten": "Paneel sluiten",
       "toetsenbordhulp": "Toetsenbordhulp"
+    },
+    "aftakkingen": {
+      "titel": "Aftakkingen",
+      "hulp": "Kies een schakelaar of lichtpunt en selecteer de kringleiding. Voeg een aftakking toe en bouw verder met de plus rechts.",
+      "toevoegen": "Aftakking toevoegen",
+      "uitbreiden": "{onderdeel} toevoegen aan aftakking",
+      "bestemming": "Aftakking uitbreiden"
     }
   },
   "bedrijf": {

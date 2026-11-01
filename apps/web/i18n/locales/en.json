@@ -463,6 +463,13 @@
       "planHint": "Select a point on the plan or open Components to place a point.",
       "sluiten": "Close panel",
       "toetsenbordhulp": "Keyboard help"
+    },
+    "aftakkingen": {
+      "titel": "Branches",
+      "hulp": "Choose a switch or light point and select the circuit cable. Add a branch, then extend it using the plus on the right.",
+      "toevoegen": "Add branch",
+      "uitbreiden": "Add {onderdeel} to branch",
+      "bestemming": "Extend a branch"
     }
   },
   "bedrijf": {
