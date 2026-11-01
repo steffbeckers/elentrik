@@ -6,11 +6,13 @@ import {
   voegPaginaToe,
   voegToe,
   zetAchtergrond,
+  zetPaginaOpmaak,
+  zetLabelOffset,
   type InstallatieDocument,
   type NodeId,
 } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { nodeLabel, situatieItems } from "../src/index";
+import { nodeLabel, situatieItems, situatieLaagSvg } from "../src/index";
 
 const ACHTERGROND = {
   origineelBestandId: "o1",
@@ -58,6 +60,20 @@ function puntIds(doc: InstallatieDocument, type: string): string[] {
 }
 
 describe("situatieItems", () => {
+  test("paginaformaten en offset bepalen gedeelde editor- en exportgeometrie onafhankelijk", () => {
+    const { doc: start, ids } = bouw();
+    const { doc: metP, paginaId } = metPagina(start);
+    let doc = plaats(metP, paginaId, ids["bord"]!, { x: 100, y: 200, rotatie: 90 }).doc;
+    const origineel = situatieLaagSvg(situatieItems(doc, analyseer(doc), paginaId), 50);
+    expect(origineel).toContain('<text x="30" y="7.5" font-size="22.5"');
+    doc = zetPaginaOpmaak(doc, paginaId, { symboolSchaal: 2, labelSchaal: 0.5 }).doc;
+    doc = zetLabelOffset(doc, paginaId, ids["bord"]!, { x: -12, y: 34 }).doc;
+    const svg = situatieLaagSvg(situatieItems(doc, analyseer(doc), paginaId), 50);
+    expect(svg).toContain('width="100" height="100"');
+    expect(svg).toContain('<text x="48" y="49" font-size="11.25"');
+    expect(svg).toContain('rotate(90)');
+    expect(svg).toContain('transform="translate(100 200)"');
+  });
   test("geeft een item per plaatsing met label, positie en symbool", () => {
     const { doc: start } = bouw();
     const { doc: metP, paginaId } = metPagina(start);

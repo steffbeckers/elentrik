@@ -8,6 +8,9 @@ export type SituatieItem = {
   y: number;
   rotatie: number;
   label: string;
+  symboolGrootte_px?: number;
+  labelGrootte_px?: number;
+  labelOffset?: { x: number; y: number };
 };
 
 /** Label-offset en tekstgrootte, als fractie van de symboolgrootte in pixels. */
@@ -23,6 +26,7 @@ function schaalGetal(n: number): string {
 }
 
 function itemSvg(item: SituatieItem, grootte_px: number): string {
+  grootte_px = item.symboolGrootte_px ?? grootte_px;
   const { breedte, hoogte } = item.symbool.maat;
   const lang = Math.max(breedte, hoogte);
   // Een symbool zonder afmetingen (lang <= 0) kan niet geschaald worden; geen NaN/Infinity in de uitvoer.
@@ -31,8 +35,8 @@ function itemSvg(item: SituatieItem, grootte_px: number): string {
     `<g transform="rotate(${getal(item.rotatie)}) scale(${schaalGetal(schaal)}) ` +
     `translate(${getal(-breedte / 2)} ${getal(-hoogte / 2)})">${item.symbool.svg}</g>`;
   const label =
-    `<text x="${getal(grootte_px * LABEL_X)}" y="${getal(grootte_px * LABEL_Y)}" ` +
-    `font-size="${getal(grootte_px * LABEL_GROOTTE)}" text-anchor="start" font-family="sans-serif" ` +
+    `<text x="${getal(grootte_px * LABEL_X + (item.labelOffset?.x ?? 0))}" y="${getal(grootte_px * LABEL_Y + (item.labelOffset?.y ?? 0))}" ` +
+    `font-size="${getal(item.labelGrootte_px ?? grootte_px * LABEL_GROOTTE)}" text-anchor="start" font-family="sans-serif" ` +
     `fill="currentColor">${escapeXml(item.label)}</text>`;
   // Onzichtbaar raakvlak: ook de lege ruimte binnen het symbool is aanwijsbaar. Het staat in de
   // groep, zodat `closest("[data-node-id]")` het vindt, en tekent niets (ook niet in een export).

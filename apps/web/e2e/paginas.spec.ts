@@ -1,3 +1,4 @@
+import { verwachtOrganisatie } from "./hulp/navigatie";
 // Rooktest van de inlog- en organisatiepagina's: de middleware, de publieke pagina's en de
 // bovenbalk. De volledige stromen (registreren, magic link, uitnodigen, wisselen) staan in de
 // specs van Task 8.
@@ -83,12 +84,9 @@ test("een inloglink geeft altijd dezelfde, neutrale melding", async ({ browser }
 
 test("de bovenbalk toont de organisatie en het menu van de gebruiker", async ({ page }) => {
   await ga(page, "/");
-  await expect(page.getByTestId("organisatie-keuze")).toContainText("Paginas Elektro");
-  const mij = (await (await page.request.get("/api/mij")).json()) as { actieveOrganisatieId: string };
-  await page.getByTestId("organisatie-keuze").click();
-  await expect(page.getByRole("menuitemcheckbox", { name: /Paginas Elektro/ })).toBeVisible();
-  await expect(page.getByTestId(`organisatie-optie-${mij.actieveOrganisatieId}`)).toHaveText("Paginas Elektro");
-  await page.keyboard.press("Escape");
+  await verwachtOrganisatie(page, "Paginas Elektro");
+  await expect(page.getByTestId("organisatie-keuze")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Elentrik" })).toHaveAttribute("href", "/");
 
   await page.getByTestId("gebruiker-menu").click();
   await expect(page.getByText(gebruiker().email)).toBeVisible();
@@ -125,7 +123,7 @@ test("een sessie die tijdens SSR verlengd wordt, krijgt ook in de browser een ni
     const cookies = (await antwoord!.headerValue("set-cookie")) ?? "";
     expect(cookies).toContain("session_token=");
     expect(await vervaltOp()).toBeGreaterThan(voor + 24 * 3600 * 1000);
-    await expect(page.getByTestId("organisatie-keuze")).toContainText("Paginas Elektro");
+    await verwachtOrganisatie(page, "Paginas Elektro");
   } finally {
     await sql.end();
   }

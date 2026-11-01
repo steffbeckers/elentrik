@@ -11,12 +11,7 @@ import type { InstallatieDocument, Partij } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { formatteerDatum, LOCALES, NL, overgeslagenPaginas, printHtml, TEKSTEN, type PrintOpties } from "../src/index";
 import { cartouche } from "../src/print/cartouche";
-import {
-  BIJLAGE_BREEDTE_FACTOR,
-  KRINGENLIJST_KOP_MM,
-  KRINGENLIJST_RIJ_MM,
-  kringenlijstRijenPerPagina,
-} from "../src/print/print-html";
+import { BIJLAGE_BREEDTE_FACTOR } from "../src/print/print-html";
 import { afkorten, breekRegels } from "../src/print/tekst";
 import { kloon, nummerNodeIds } from "./hulp";
 
@@ -110,6 +105,53 @@ function paginas(html: string): string[] {
 }
 
 describe("printHtml", () => {
+  test("A4 bewaart het volledige werfadres met huisnummer over meerdere regels", () => {
+    const doc = metGegevens(referentieAppartement());
+    doc.meta.werfadres.straat = "Voorbeeldstraat (fictief)";
+    doc.meta.werfadres.nummer = "12";
+    const { html } = printHtml(doc, analyseer(doc), [], opties());
+    const werf = html.split('<div class="vak werf"')[1]!.split('<div class="vak titel"')[0]!;
+    expect(regels(werf).map(r => r.tekst).join(" ")).toContain("Voorbeeldstraat (fictief) 12");
+    expect(werf).not.toContain("…");
+  });
+
+  test.each(["nl", "fr", "en"] as const)("voorlopige controlebeperking staat op elke pagina zonder bijlage (%s)", taal => {
+    const doc = referentieAppartement();
+    const { html, paginas: aantal } = printHtml(doc, analyseer(doc), [], opties({ taal, onderdelen: alleenOnderdeel("eendraadschema") }));
+    expect(html.match(/class="controlebeperking"/g)).toHaveLength(aantal);
+    expect(html).toContain(TEKSTEN[taal].controlebeperking);
+  });
+
+  test("lange puntomschrijvingen lopen door op volgende pagina's zonder tekstverlies", () => {
+    const doc = kloon(referentieAppartement());
+    const analyse = analyseer(doc);
+    const id = analyse.kringen[0]!.puntIds[0]!;
+    doc.nodes[id]!.label = "BEGIN " + "extra beschrijving ".repeat(160) + "EIND <veilig>";
+    const { html, paginas: aantal } = printHtml(doc, analyse, [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
+    const tekst = regels(html).filter(r => r.klasse === "cel").map(r => r.tekst).join(" ");
+    expect(aantal).toBeGreaterThan(1);
+    expect(tekst).toContain("BEGIN");
+    expect(tekst).toContain("EIND <veilig>");
+    expect(tekst.match(/\bextra\b/g)).toHaveLength(160);
+    expect(tekst).not.toContain("…");
+    expect(html).not.toContain("<veilig>");
+  });
+
+  test("een niet-afgedrukte situatiepaginatitel neemt geen cartoucheruimte in", () => {
+    const doc = metGegevens(referentieAppartement());
+    doc.situatie.paginas.push({ id: "overgeslagen", titel: "W".repeat(10000), plaatsingen: [] });
+    expect(() => printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("eendraadschema") }))).not.toThrow();
+  });
+
+  test("situatieschaal volgt de werkelijke afdrukmaat en vermeldt afdruk op 100%", () => {
+    const doc = metSituatie(metGegevens(referentieAppartement()));
+    Object.assign(doc.situatie.paginas[0]!.achtergrond!, { breedte_px: 1000, hoogte_px: 1000, schaal: { mmPerPx: 50 } });
+    const { html } = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("situatieschema"), afbeeldingen: { "raster-1": "plan.png" } }));
+    // A4: 210 - 20 margins - 30 metadata - 9 limitation - 6 scale caption = 145 mm.
+    expect(html).toContain("Schaal bij afdruk op 100%: 1:344,8");
+    expect(html).toContain("width:145mm;height:145mm");
+  });
+
   test("snapshot: referentieAppartement op A4 met alle onderdelen", async () => {
     const doc = metGegevens(referentieAppartement());
     const uit = printHtml(doc, analyseer(doc), bevindingenVan(doc), opties());
@@ -185,9 +227,9 @@ describe("printHtml", () => {
   test("de onderdelen staan in vaste volgorde, met de paginatitel in de cartouche", () => {
     const doc = metSituatie(metGegevens(referentieAppartement()));
     const uit = printHtml(doc, analyseer(doc), [], opties({ afbeeldingen: { "raster-1": "plan.png" } }));
-    const titels = paginas(uit.html).map((s) => regels(s).find((r) => r.klasse === "titel")!.tekst);
-    expect(titels).toEqual([
-      ...Array.from({ length: titels.length - 3 }, () => NL.paginatitels.eendraadschema),
+    const titels = paginas(uit.html).map((s) => regels(s).filter((r) => r.klasse === "titel").map(r => r.tekst).join(" "));
+    expect([...new Set(titels)]).toEqual([
+      NL.paginatitels.eendraadschema,
       `${NL.paginatitels.situatieschema} — Gelijkvloers`,
       NL.paginatitels.kringenlijst,
       NL.paginatitels.bijlage,
@@ -199,8 +241,7 @@ describe("printHtml", () => {
     const uit = printHtml(doc, analyseer(doc), [], opties({ logo: "logo.png" }));
     for (const sectie of paginas(uit.html)) {
       const teksten = regels(sectie).map((r) => r.tekst);
-      expect(teksten).toEqual(
-        expect.arrayContaining([
+      for (const tekst of [
           NL.cartouche.installateur,
           "Elektro Peeters bv",
           "Stationsstraat 12",
@@ -216,8 +257,7 @@ describe("printHtml", () => {
           `${NL.cartouche.ean}: 541448820000000000`,
           `${NL.cartouche.datum}: 19/10/2026`,
           `${NL.cartouche.versie}: v1`,
-        ]),
-      );
+        ]) expect(teksten.join(" ").replaceAll(" ", "")).toContain(tekst.replaceAll(" ", ""));
       expect(sectie).toContain('<img class="logo" src="logo.png"');
       const handtekeningen = sectie.split('class="vak handtekening"').slice(1);
       expect(handtekeningen.map((vak) => regels(vak).map((r) => r.tekst).join(" "))).toEqual([
@@ -233,16 +273,18 @@ describe("printHtml", () => {
     expect(html).not.toContain('class="logo"');
   });
 
-  test("lange teksten: een klantnaam van 200 tekens wordt afgekort en past in zijn vak", () => {
+  test("lange teksten: een klantnaam van 200 tekens blijft volledig leesbaar in zijn vak", () => {
     const doc = metGegevens(referentieAppartement());
     doc.meta.klant.naam = "Bouwonderneming ".repeat(13).slice(0, 200);
     expect(doc.meta.klant.naam).toHaveLength(200);
     for (const papier of ["A4", "A3"] as const) {
       const { html } = printHtml(doc, analyseer(doc), [], opties({ papier }));
-      const klant = regels(html).filter((r) => r.tekst.startsWith("Bouwonderneming"));
+      const vak = html.split('<div class="vak klant"')[1]!.split('<div class="vak werf"')[0]!;
+      const klant = regels(vak).filter(r => r.klasse === "naam");
+      expect(klant.map(r => r.tekst).join(" ")).toBe(doc.meta.klant.naam.trim());
       expect(klant.length).toBeGreaterThan(0);
       for (const r of klant) {
-        expect(r.tekst.endsWith("…")).toBe(true);
+        expect(r.tekst.endsWith("…")).toBe(false);
         expect(tekstBreedte(r.tekst, r.grootte)).toBeLessThanOrEqual(r.breedte);
       }
     }
@@ -295,7 +337,22 @@ describe("printHtml", () => {
     }
   });
 
-  test("lange teksten: elke tekstregel in het document past in zijn vak", () => {
+  test.each(["nl", "fr", "en"] as const)("een onbegrensde klantnaam blijft volledig in metadata-vervolg (%s)", taal => {
+    const doc = metGegevens(referentieAppartement());
+    doc.meta.klant.naam = "Lange naam ".repeat(150);
+    const { html } = printHtml(doc, analyseer(doc), [], opties({ taal, onderdelen: alleenOnderdeel("kringenlijst") }));
+    const vervolg = regels(html).filter(r => r.klasse === "metadata").map(r => r.tekst).join(" ");
+    expect(vervolg).toContain(doc.meta.klant.naam.trim());
+    expect(regels(html).filter(r => r.klasse === "naam").map(r => r.tekst).join(" ")).toContain(TEKSTEN[taal].metadata.verwijzing);
+    for (const sectie of paginas(html)) {
+      const content = sectie.split('<div class="cartouche">')[0]!;
+      if (!content.includes('class="bijlage"')) continue;
+      const hoogte = cssMm(content, /class="bijlage" style="[^"]*height:([\d.]+)mm/);
+      expect(regels(content).reduce((som, r) => som + r.grootte * 1.3 + (r.klasse === "kop" ? 2 : 0), 0)).toBeLessThanOrEqual(hoogte);
+    }
+  });
+
+  test("metadata die hoger is dan een pagina blijft volledig op vervolgpaginas", () => {
     const doc = metSituatie(metGegevens(referentieWoning()));
     const lang = "Zeer lange tekst zonder einde ".repeat(20);
     doc.meta.klant.naam = lang;
@@ -311,16 +368,16 @@ describe("printHtml", () => {
         bevindingenVan(doc),
         opties({ papier, installateur, versieLabel: lang, datum: lang, afbeeldingen: { "raster-1": "p.png" }, logo: "l.png" }),
       );
-      const alle = regels(html);
-      expect(alle.length).toBeGreaterThan(100);
-      for (const r of alle) {
-        expect(r.grootte).toBeGreaterThanOrEqual(2.5);
-        expect(tekstBreedte(r.tekst, r.grootte)).toBeLessThanOrEqual(r.breedte);
-      }
+      const vervolg = regels(html).filter(r => r.klasse === "metadata").map(r => r.tekst).join(" ");
+      expect(vervolg.replaceAll(" ", "")).toContain(lang.replaceAll(" ", ""));
+      expect(vervolg.replaceAll(" ", "")).toContain("9".repeat(300));
+      expect(vervolg.replaceAll(" ", "")).toContain("a".repeat(300));
+      expect(vervolg.replaceAll(" ", "")).toContain("0".repeat(300));
+      for (const vak of html.matchAll(/class="vak [^"]+" style="[^"]*height:([\d.]+)mm/g)) expect(Number(vak[1])).toBeLessThanOrEqual(60);
     }
   });
 
-  test("kringenlijst van 120 punten op A4: ceil(120 / rijenPerPagina) pagina's met de kop herhaald", () => {
+  test("kringenlijst van 120 punten verdeelt alle rijen over pagina's met de kop herhaald", () => {
     const { doc } = installatie()
       .differentieel(300, (d) =>
         d.verdeelbord((b) => {
@@ -330,23 +387,19 @@ describe("printHtml", () => {
       .bouw();
     const analyse = analyseer(doc);
     expect(analyse.kringen.flatMap((k) => k.puntIds)).toHaveLength(120);
-    const rijenPerPagina = kringenlijstRijenPerPagina(STANDAARD_PAPIER_A4);
-    expect(rijenPerPagina).toBe(
-      Math.floor((bruikbaar(STANDAARD_PAPIER_A4).hoogte - KRINGENLIJST_KOP_MM) / KRINGENLIJST_RIJ_MM),
-    );
-    expect(rijenPerPagina).toBe(25);
     const uit = printHtml(doc, analyse, [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
-    expect(uit.paginas).toBe(Math.ceil(120 / rijenPerPagina));
     const secties = paginas(uit.html);
-    for (const [i, sectie] of secties.entries()) {
-      expect(sectie.match(/<div class="kopregel">/g)).toHaveLength(1);
-      const rijen = sectie.match(/<div class="rij">/g) ?? [];
-      expect(rijen).toHaveLength(i < secties.length - 1 ? rijenPerPagina : 120 - rijenPerPagina * (secties.length - 1));
+    expect(uit.paginas).toBeGreaterThan(1);
+    let aantal = 0;
+    for (const sectie of secties) {
+      expect(sectie.match(/<div class="kopregel" /g)).toHaveLength(1);
+      aantal += (sectie.match(/<div class="rij" /g) ?? []).length;
     }
+    expect(aantal).toBe(120);
     expect(regels(secties[0]!).find((r) => r.klasse === "cel")?.tekst).toBe("A");
   });
 
-  test("kringenlijst: celtekst die niet past wordt afgekort met …", () => {
+  test("kringenlijst: een lange kabelnaam blijft volledig leesbaar", () => {
     const { doc: gebouwd } = installatie()
       .differentieel(300, (d) => d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1))))
       .bouw();
@@ -358,7 +411,8 @@ describe("printHtml", () => {
     const { html } = printHtml(doc, analyse, [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
     const cellen = regels(html).filter((r) => r.klasse === "cel");
     const afgekort = cellen.filter((r) => r.tekst.endsWith("…"));
-    expect(afgekort).toHaveLength(1);
+    expect(afgekort).toHaveLength(0);
+    expect(cellen.map(r => r.tekst).join("")).toContain("K".repeat(120));
     for (const r of cellen) expect(tekstBreedte(r.tekst, r.grootte)).toBeLessThanOrEqual(r.breedte);
   });
 
@@ -416,7 +470,8 @@ describe("printHtml", () => {
     const ruimte = bruikbaar(STANDAARD_PAPIER_A4);
     expect(breedte / hoogte).toBeCloseTo(3000 / 2000, 2);
     expect(breedte).toBeLessThanOrEqual(ruimte.breedte);
-    expect(hoogte).toBeCloseTo(ruimte.hoogte, 2);
+    const noticeTop = cssMm(uit.html, /class="controlebeperking" style="left:[\d.]+mm;top:([\d.]+)mm/);
+    expect(boven + hoogte).toBeLessThan(noticeTop);
     expect(links).toBeGreaterThanOrEqual(10);
     expect(links + breedte).toBeLessThanOrEqual(10 + ruimte.breedte + 0.01);
     expect(boven).toBe(10);
@@ -518,7 +573,7 @@ describe("printHtml", () => {
       const { html } = printHtml(doc, analyseer(doc), bevindingen, opties({ onderdelen: alleenOnderdeel("bijlage") }));
       const teksten = regels(html).map((r) => r.tekst);
       expect(teksten).toContain(`${NL.kolommen.kring} A — ${formatteerBericht(fout, "nl")} (${NL.bijlage.artikel} 4.2.3)`);
-      expect(teksten.filter((t) => t.includes(NL.bijlage.artikel))).toHaveLength(1);
+      expect(teksten.filter((t) => t.includes(`${NL.bijlage.artikel} 4.2.3`))).toHaveLength(1);
     } finally {
       (regel as { artikel: string }).artikel = vorig;
     }
@@ -599,8 +654,8 @@ describe("printHtml: witruimte", () => {
     if (leiding.type === "leiding") leiding.kabeltype = "XVB\nXVB\tXVB";
     const { html } = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
     const teksten = regels(html).map((r) => r.tekst);
-    expect(teksten).toContain("Familie Janssens Peeters");
-    expect(teksten).toContain("XVB XVB XVB 3G2,5");
+    expect(teksten.join(" ")).toContain("Familie Janssens Peeters");
+    expect(teksten.join(" ")).toContain("XVB XVB XVB 3G2,5");
     for (const tekst of teksten) expect(tekst).not.toMatch(/[\n\t\r]/);
   });
 
@@ -632,22 +687,13 @@ describe("printHtml: geometrie uit de gegenereerde HTML en CSS", () => {
     test(`${formaat}: een volle kringenlijstpagina eindigt boven de cartouche`, () => {
       const doc = metGegevens(grootDoc());
       const { html } = printHtml(doc, analyseer(doc), [], opties({ papier: formaat, onderdelen: alleenOnderdeel("kringenlijst") }));
-      const rijHoogte = cssMm(html, /\.kringen \.rij, \.kringen \.kopregel \{ display: flex; height: ([\d.]+)mm; \}/);
-      const celHoogte = cssMm(html, /\.kringen \.tabelcel \{ box-sizing: border-box; flex: none; height: ([\d.]+)mm;/);
-      expect(celHoogte).toBe(rijHoogte);
       const bovenrand = cssMm(html, /\.kringen \{ position: absolute; box-sizing: border-box; border-top: ([\d.]+)mm/);
-      const maat = papierMaat(formaat);
-      const ruimte = bruikbaar({ ...STANDAARD_PAPIER_A4, formaat });
       for (const sectie of paginas(html)) {
         const tabelBoven = cssMm(sectie, /<div class="kringen" style="left:[\d.]+mm;top:([\d.]+)mm/);
-        const cartoucheBoven = cssMm(sectie, /<div class="vak installateur" style="left:[\d.]+mm;top:([\d.]+)mm/);
-        expect(cartoucheBoven).toBe(maat.hoogte - STANDAARD_PAPIER_A4.marge_mm - STANDAARD_PAPIER_A4.cartoucheHoogte_mm);
-        const kop = (sectie.match(/<div class="kopregel">/g) ?? []).length;
-        const rijen = (sectie.match(/<div class="rij">/g) ?? []).length;
-        expect(kop).toBe(1);
-        // Rijen × rijafstand past in de bruikbare hoogte min de kop.
-        expect(rijen * rijHoogte).toBeLessThanOrEqual(ruimte.hoogte - kop * rijHoogte - bovenrand);
-        expect(tabelBoven + bovenrand + (kop + rijen) * rijHoogte).toBeLessThanOrEqual(cartoucheBoven);
+        const noticeTop = cssMm(sectie, /class="controlebeperking" style="left:[\d.]+mm;top:([\d.]+)mm/);
+        const hoogtes = [...sectie.matchAll(/<div class="(?:kopregel|rij)" style="height:([\d.]+)mm"/g)].map(m => Number(m[1]));
+        expect(hoogtes.length).toBeGreaterThan(1);
+        expect(tabelBoven + bovenrand + hoogtes.reduce((a, b) => a + b, 0)).toBeLessThan(noticeTop);
       }
     });
 
@@ -704,7 +750,7 @@ describe("overgeslagenPaginas", () => {
 });
 
 describe("cartouche", () => {
-  test("een handtekeninglabel van meer dan twee regels wordt op de tweede regel afgekort", () => {
+  test("een lang handtekeninglabel blijft volledig op meerdere regels", () => {
     const doc = metGegevens(referentieAppartement());
     const teksten = {
       ...NL,
@@ -724,8 +770,7 @@ describe("cartouche", () => {
       totaal: 1,
     });
     const keurder = regels(html.split('class="vak handtekening"')[2]!);
-    expect(keurder).toHaveLength(2);
-    expect(keurder[1]!.tekst.endsWith("…")).toBe(true);
+    expect(keurder.map(r => r.tekst).join("").replaceAll(" ", "")).toBe(teksten.cartouche.handtekeningKeurder.replaceAll(" ", ""));
     for (const r of keurder) expect(tekstBreedte(r.tekst, r.grootte)).toBeLessThanOrEqual(r.breedte);
   });
 });

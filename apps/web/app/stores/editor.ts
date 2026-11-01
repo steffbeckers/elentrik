@@ -446,6 +446,7 @@ export const useEditorStore = defineStore("editor", () => {
     datum?: string;
     /** De taal van het dossier (PDF); dezelfde taal opnieuw (of nl zonder taal) maakt geen stap. */
     dossierTaal?: Taal;
+    installatieContext?: "nieuw" | "bestaand" | "onbekend";
   }): void {
     if (alleenLezen.value) return;
     const doc = vereisDocument();
@@ -464,6 +465,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (gegevens.ean !== undefined && gegevens.ean !== (doc.meta.ean ?? "")) wijziging.ean = gegevens.ean;
     if (gegevens.datum !== undefined) wijziging.datum = gegevens.datum;
     if (gegevens.dossierTaal !== undefined) wijziging.dossierTaal = gegevens.dossierTaal;
+    if (gegevens.installatieContext !== undefined) wijziging.installatieContext = gegevens.installatieContext;
     // Eerst de operatie: gooit die, dan blijft ook de naam ongewijzigd.
     const r = wijzigProject(doc, wijziging);
     if (gegevens.naam !== undefined && gegevens.naam !== naam.value) {

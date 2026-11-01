@@ -1,5 +1,8 @@
 /** Franse berichtteksten per berichtSleutel; dezelfde sleutels en plaatshouders als `nl.ts`. De termen volgen `docs/vertalingen.md`. */
 export const FR: Readonly<Record<string, string>> = {
+  "arei.differentieel.aanvullend.ontbreekt": "Ce socle de prise de courant ordinaire ou point lumineux manque de protection différentielle complémentaire de maximum 30 mA pour une nouvelle installation domestique.",
+  "arei.differentieel.aanvullend.context": "Ce socle de prise de courant ordinaire ou point lumineux ne dispose pas de protection complémentaire de maximum 30 mA. Vérifiez le contexte et les dispositions transitoires ; une installation existante n’est pas automatiquement exemptée.",
+  "waarde.hal": "hall",
   "arei.differentieel.algemeen.ontbreekt": "L'installation ne comporte pas d'interrupteur différentiel général.",
   "arei.differentieel.algemeen.te-ongevoelig":
     "L'interrupteur différentiel général a une sensibilité de {gevoeligheid} mA. Une sensibilité supérieure à {max} mA n'est pas admise.",

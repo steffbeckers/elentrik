@@ -9,6 +9,8 @@ import {
   voegPaginaToe,
   zetAchtergrond,
   zetSchaal as zetSchaalInDoc,
+  zetPaginaOpmaak as zetPaginaOpmaakInDoc,
+  zetLabelOffset as zetLabelOffsetInDoc,
   type NodeId,
   type OperatieResultaat,
   type SituatiePagina,
@@ -79,6 +81,16 @@ export const useSituatieStore = defineStore("situatie", () => {
   function zetSchaal(paginaId: string, mmPerPx: number | undefined): void {
     if (editor.alleenLezen) return;
     editor.pasToe(zetSchaalInDoc(vereisDocument(), paginaId, mmPerPx));
+  }
+
+  function zetPaginaOpmaak(paginaId: string, opmaak: Pick<SituatiePagina, "symboolSchaal" | "labelSchaal">): void {
+    if (editor.alleenLezen) return;
+    editor.pasToe(zetPaginaOpmaakInDoc(vereisDocument(), paginaId, opmaak));
+  }
+
+  function zetLabelOffset(paginaId: string, nodeId: NodeId, offset: { x: number; y: number }): void {
+    if (editor.alleenLezen) return;
+    editor.pasToe(zetLabelOffsetInDoc(vereisDocument(), paginaId, nodeId, offset));
   }
 
   /** De pagina en plaatsing van een node, of `undefined` als hij nergens staat. */
@@ -177,6 +189,8 @@ export const useSituatieStore = defineStore("situatie", () => {
     verwijderPagina,
     verplaatsPagina,
     zetSchaal,
+    zetPaginaOpmaak,
+    zetLabelOffset,
     plaatsNode,
     haalVanPlan,
     haalSelectieVanPlan,

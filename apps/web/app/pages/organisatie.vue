@@ -106,6 +106,23 @@ async function bewaarNaam() {
 // --- Leden -----------------------------------------------------------------------------------
 
 const lidBezig = ref<string | null>(null);
+const rolWijziging = ref<{ lid: Lid; rol: Rol; organisatieId: string | null } | null>(null);
+const rolOpen = computed({
+  get: () => rolWijziging.value !== null,
+  set: (open) => { if (!open && !lidBezig.value) rolWijziging.value = null; },
+});
+watch(() => sessie.actieveOrganisatieId, () => { rolWijziging.value = null; });
+watch(isEigenaar, (waarde) => { if (!waarde) rolWijziging.value = null; });
+function vraagRolWijziging(lid: Lid, rol: string) {
+  if (!isEigenaar.value || lidBezig.value || rol === lid.rol || (rol !== "eigenaar" && rol !== "lid")) return;
+  rolWijziging.value = { lid, rol, organisatieId: sessie.actieveOrganisatieId };
+}
+async function bevestigRolWijziging() {
+  const wijziging = rolWijziging.value;
+  if (!wijziging || !isEigenaar.value || wijziging.organisatieId !== sessie.actieveOrganisatieId) return;
+  await wijzigRol(wijziging.lid, wijziging.rol);
+  rolWijziging.value = null;
+}
 
 async function wijzigRol(lid: Lid, rol: string) {
   if (lidBezig.value || rol === lid.rol || (rol !== "eigenaar" && rol !== "lid")) return;
@@ -231,7 +248,7 @@ async function verlaat() {
   <div class="min-h-dvh">
     <AppBovenbalk />
     <AbonnementBanner />
-    <UContainer class="max-w-3xl space-y-6 py-8">
+    <UContainer class="comfortabele-formulieren max-w-3xl space-y-6 py-8">
       <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div class="min-w-0">
           <h1 class="text-2xl font-semibold">{{ $t("organisatie.titel") }}</h1>
@@ -241,8 +258,9 @@ async function verlaat() {
             }}
           </p>
         </div>
-        <UButton to="/" icon="i-lucide-arrow-left" color="neutral" variant="outline" :label="$t('organisatie.terug')" />
       </div>
+
+      <p class="text-sm text-muted">{{ $t("werkbaarheidBeheer.organisatieNaam") }}</p>
 
       <UCard v-if="isEigenaar">
         <UForm :state="naamFormulier" :validate="valideerNaam" class="flex flex-wrap items-end gap-3" @submit="bewaarNaam">
@@ -294,13 +312,13 @@ async function verlaat() {
             </div>
             <template v-if="isEigenaar">
               <USelect
-                :model-value="lid.rol"
+                :model-value="rolWijziging?.lid.id === lid.id ? rolWijziging.rol : lid.rol"
                 :items="rolOpties"
                 :disabled="lidBezig !== null"
                 :aria-label="$t('organisatie.leden.rolVan', { naam: lid.naam })"
                 class="w-32"
                 data-testid="organisatie-lid-rol"
-                @update:model-value="(rol: string) => wijzigRol(lid, rol)"
+                @update:model-value="(rol: string) => vraagRolWijziging(lid, rol)"
               />
               <UButton
                 v-if="lid.gebruikerId !== sessie.gebruiker?.id"
@@ -417,6 +435,22 @@ async function verlaat() {
         />
       </div>
     </UContainer>
+
+    <UModal v-model:open="rolOpen" :dismissible="lidBezig === null" :title="$t('werkbaarheidBeheer.rolTitel')">
+      <template #body>
+        <div v-if="rolWijziging" class="space-y-3">
+          <p>{{ $t('werkbaarheidBeheer.rolVraag', { naam: rolWijziging.lid.naam, rol: $t(`rollen.${rolWijziging.rol}`) }) }}</p>
+          <p class="text-sm text-muted">{{ $t(rolWijziging.rol === 'eigenaar' ? 'werkbaarheidBeheer.eigenaarGevolg' : 'werkbaarheidBeheer.lidGevolg') }}</p>
+          <p v-if="rolWijziging.lid.gebruikerId === sessie.gebruiker?.id && rolWijziging.rol === 'lid'" class="font-medium text-warning">{{ $t('werkbaarheidBeheer.eigenRolGevolg') }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="outline" :disabled="lidBezig !== null" :label="$t('algemeen.annuleren')" @click="rolOpen = false" />
+          <UButton :loading="lidBezig !== null" :disabled="lidBezig !== null" :label="$t('werkbaarheidBeheer.rolBevestigen')" data-testid="organisatie-rol-bevestigen" @click="bevestigRolWijziging" />
+        </div>
+      </template>
+    </UModal>
 
     <UModal v-model:open="verwijderOpen" :title="$t('organisatie.leden.verwijderenTitel')">
       <template #body>

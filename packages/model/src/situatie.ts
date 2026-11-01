@@ -69,6 +69,7 @@ export function plaats(
   }
   // `+ 0` zet -0 om naar 0.
   const genormaliseerd = (((rotatie % 360) + 360) % 360) + 0;
+  const bestaand = doc.situatie.paginas.flatMap((p) => p.plaatsingen).find((p) => p.nodeId === nodeId);
 
   return resultaat(doc, (draft) => {
     for (const pagina of draft.situatie.paginas) {
@@ -78,7 +79,48 @@ export function plaats(
     }
     draft.situatie.paginas
       .find((p) => p.id === paginaId)!
-      .plaatsingen.push({ nodeId, x, y, rotatie: genormaliseerd });
+      .plaatsingen.push({ ...bestaand, nodeId, x, y, rotatie: genormaliseerd });
+  });
+}
+
+/** Onafhankelijke formaten per pagina, met dezelfde standaard voor bestaande documenten. */
+export function zetPaginaOpmaak(
+  doc: InstallatieDocument,
+  paginaId: string,
+  opmaak: Pick<SituatiePagina, "symboolSchaal" | "labelSchaal">,
+): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const geparsed = SituatiePaginaSchema.pick({ symboolSchaal: true, labelSchaal: true }).safeParse(opmaak);
+  if (!geparsed.success) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { issues: geparsed.error.issues });
+  }
+  return resultaat(doc, (draft) => {
+    Object.assign(draft.situatie.paginas.find((p) => p.id === paginaId)!, geparsed.data);
+  });
+}
+
+/** Wijzigt uitsluitend het label; het symbool behoudt zijn positie en rotatie. */
+export function zetLabelOffset(
+  doc: InstallatieDocument,
+  paginaId: string,
+  nodeId: NodeId,
+  offset: { x: number; y: number },
+): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const huidig = doc.situatie.paginas.find((p) => p.id === paginaId)!.plaatsingen.find((p) => p.nodeId === nodeId);
+  if (!huidig) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "de node staat niet op deze pagina", nodeId });
+  }
+  const geparsed = SituatiePaginaSchema.shape.plaatsingen.element.shape.labelOffset.unwrap().safeParse(offset);
+  if (!geparsed.success) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { issues: geparsed.error.issues });
+  }
+  if ((huidig.labelOffset?.x ?? 0) === geparsed.data.x && (huidig.labelOffset?.y ?? 0) === geparsed.data.y) {
+    return { doc, patches: [], inversePatches: [] };
+  }
+  return resultaat(doc, (draft) => {
+    const plaatsing = draft.situatie.paginas.find((p) => p.id === paginaId)!.plaatsingen.find((p) => p.nodeId === nodeId)!;
+    plaatsing.labelOffset = geparsed.data;
   });
 }
 

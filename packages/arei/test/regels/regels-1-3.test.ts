@@ -183,10 +183,30 @@ describe("regel 2: natte-ruimte-differentieel", () => {
     expect(draai(regel, doc)).toHaveLength(3);
   });
 
-  test("een differentieel van precies 30 mA volstaat", () => {
+  test.each(["badkamer", "wasplaats"] as const)("%s met alleen een algemeen differentieel van 30 mA mist aanvullende bescherming", (ruimte) => {
+    const { doc, ids } = installatie()
+      .differentieel(30, (d) =>
+        d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1, { ruimte }).als("punt"))),
+        { als: "algemeen" },
+      )
+      .bouw();
+    expect(analyseer(doc).algemeenDifferentieelId).toBe(ids["algemeen"]);
+    expect(draai(regel, doc)).toEqual([{
+      regelId: "arei.differentieel.natte-ruimte",
+      ernst: "fout",
+      nodeIds: [ids["punt"]],
+      berichtSleutel: "arei.differentieel.natte-ruimte.ontbreekt",
+      parameters: { reden: ruimte, max: 30 },
+      afgeweken: false,
+    }]);
+  });
+
+  test("een aanvullend differentieel van precies 30 mA volstaat, ook achter een algemeen differentieel van 30 mA", () => {
     const { doc } = installatie()
       .differentieel(30, (d) =>
-        d.verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1, { ruimte: "badkamer" }))),
+        d.verdeelbord((b) => b.differentieel(30, (b2) =>
+          b2.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1, { ruimte: "badkamer" })),
+        )),
       )
       .bouw();
     expect(draai(regel, doc)).toEqual([]);

@@ -35,6 +35,7 @@ const formulier = reactive<ProjectFormulier>({
   ean: "",
   datum: "",
   dossierTaal: "nl",
+  installatieContext: "onbekend",
 });
 
 watch(open, (nuOpen) => {
@@ -75,6 +76,10 @@ function bewaar(): void {
           </UFormField>
           <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
             <USelect v-model="formulier.stroomtype" :items="stroomtypes" class="w-full" />
+          </UFormField>
+          <UFormField name="installatieContext" :label="$t('editor.projectgegevens.context.label')" :help="$t('editor.projectgegevens.context.hulp')">
+            <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext"
+              :items="['onbekend', 'nieuw', 'bestaand'].map(value => ({ value, label: $t(`editor.projectgegevens.context.${value}`) }))" />
           </UFormField>
           <UFormField
             name="dossierTaal"

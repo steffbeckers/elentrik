@@ -40,9 +40,12 @@ function eersteVan(store: Store, type: Node["type"]): NodeId {
   return n.id;
 }
 
-/** Nieuwe kring op het bord; geeft de id van de leiding (de bovenste nieuwe node). */
+/** Lege kring op het bord; geeft de leiding en herstelt het onderdeel voor volgende toevoegingen. */
 function nieuweKring(store: Store): NodeId {
+  const onderdeel = store.onderdeel;
+  store.onderdeel = "leiding";
   store.voegToe({ soort: "rail-einde", nodeId: eersteVan(store, "verdeelbord") });
+  store.onderdeel = onderdeel;
   return store.selectie[0]!;
 }
 
@@ -187,9 +190,13 @@ describe("undo/redo", () => {
     const na = doc(store);
 
     expect(store.terug).toHaveLength(1);
-    expect(Object.keys(na.nodes)).toHaveLength(Object.keys(origineel.nodes).length + 2);
-    // De bovenste nieuwe node (de leiding) is geselecteerd.
-    expect(node(store, store.selectie[0]!).type).toBe("leiding");
+    expect(Object.keys(na.nodes)).toHaveLength(Object.keys(origineel.nodes).length + 3);
+    // Het gekozen onderdeel staat meteen boven de nieuwe leiding en is geselecteerd.
+    const contactdoos = node(store, store.selectie[0]!);
+    expect(contactdoos.type).toBe("contactdoos");
+    const leiding = node(store, contactdoos.parentId!);
+    expect(leiding.type).toBe("leiding");
+    expect(node(store, leiding.parentId!)).toMatchObject({ type: "automaat", parentId: bordId });
 
     store.ongedaanMaken();
     expect(store.document).toEqual(origineel);
