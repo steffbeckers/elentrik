@@ -1,4 +1,5 @@
 export { SCHEMA_VERSIE } from "./versie";
+export { materiaallijst, type MateriaalRij } from "./materialen";
 export { DocumentFout, type FoutCode } from "./fouten";
 export { nieuwId } from "./ids";
 export { MIGRATIES, migreer, pasMigratiesToe, type Migratie } from "./migraties";

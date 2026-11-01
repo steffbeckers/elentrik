@@ -34,6 +34,7 @@ Present in the codebase:
 
 - Project management, authentication, organisations, invitations, company settings, and Stripe subscription integration.
 - Single-line diagram editing, templates, symbol variants, layout plans, a derived circuit list, live findings, and motivated deviations.
+- A derived materials list groups component quantities by specification. Optional route lengths supply cable metres (XVB) or conductor metres (VOB); missing lengths remain visibly incomplete. Totals exclude cutting waste and spare length, with no VOB colour breakdown.
 - PDF dossier export with selectable sections and A4/A3 paper sizes.
 - Dutch (`nl-BE`, default), Belgian French (`fr-BE`), and British English (`en-GB`). New user-facing text must cover all three languages.
 - Shared model, analysis, symbols, layout, and rendering packages support consistent screen and export output.
