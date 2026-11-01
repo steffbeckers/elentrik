@@ -275,7 +275,7 @@
       },
       "leeg": {
         "titel": "Pas encore de plan",
-        "beschrijving": "Ajoutez un plan pour y placer les points.",
+        "beschrijving": "Dessinez un plan ou importez un plan existant, puis placez les symboles électriques.",
         "planToevoegen": "Ajouter un plan"
       },
       "hernoemen": {
@@ -335,6 +335,33 @@
           "mislukt": "Le plan n'a pas pu être envoyé. Veuillez réessayer.",
           "onleesbaar": "Ce fichier n'a pas pu être lu."
         }
+      },
+      "tekenen": {
+        "new": "Dessiner un plan",
+        "edit": "Modifier le plan",
+        "description": "Dessinez les murs, portes et fenêtres du plan de position.",
+        "noPlan": "Vous ne disposez pas de plan ?",
+        "name": "Nom du plan",
+        "use": "Utiliser ce plan",
+        "cancelHint": "Utilisez le plan pour enregistrer vos modifications. Annuler abandonne cette session de dessin.",
+        "loading": "Chargement de l’éditeur…",
+        "loadError": "Impossible de charger l’éditeur. Fermez cette fenêtre et réessayez.",
+        "exportError": "Le plan n’a pas pu être repris. Dessinez au moins un mur et réessayez.",
+        "changed": "Le projet a été modifié entre-temps. Fermez l’éditeur et rouvrez le plan pour modifier la dernière version.",
+        "tools": "Outils de dessin",
+        "select": "Sélectionner",
+        "wall": "Mur",
+        "door": "Porte",
+        "window": "Fenêtre",
+        "text": "Texte",
+        "measure": "Mesurer",
+        "undo": "Annuler",
+        "redo": "Rétablir",
+        "delete": "Supprimer",
+        "length": "Longueur",
+        "thickness": "Épaisseur du mur",
+        "width": "Largeur",
+        "hint": "Cliquez pour dessiner les murs. Échap termine le mur. Sélectionnez un mur pour modifier ses dimensions."
       }
     },
     "export": {

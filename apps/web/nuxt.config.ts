@@ -39,6 +39,7 @@ export default defineNuxtConfig({
     experimental: { tasks: true },
     scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"], "0 4 * * *": ["bestanden:opruimen"] },
     publicAssets: [
+      { dir: "../plan-editor/dist", baseURL: "/plan-editor", maxAge: 0 },
       pdfjsBron("wasm"),
       pdfjsBron("standard_fonts"),
       pdfjsBron("iccs"),

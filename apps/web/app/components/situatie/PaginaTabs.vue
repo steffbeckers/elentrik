@@ -10,6 +10,7 @@ import { useSituatieStore } from "~/stores/situatie";
 const emit = defineEmits<{
   /** "Pagina toevoegen": een nieuw plan kiezen. */
   toevoegen: [];
+  tekenen: [paginaId: string];
   /** "Schaal instellen" voor deze (nu actieve) pagina: twee punten meten op het plan. */
   schaalInstellen: [paginaId: string];
 }>();
@@ -62,6 +63,10 @@ function schaalInstellen(pagina: SituatiePagina): void {
 function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
   return [
     [
+      ...(pagina.tekening ? [{
+        label: t("editor.situatie.tekenen.edit"), icon: "i-lucide-pencil-ruler",
+        disabled: editor.alleenLezen, onSelect: () => emit("tekenen", pagina.id),
+      }] : []),
       {
         label: t("editor.situatie.paginas.hernoemen"),
         icon: "i-lucide-pencil",
@@ -152,6 +157,8 @@ function wisSchaal(): void {
       :label="$t('editor.situatie.paginas.toevoegen')"
       @click="emit('toevoegen')"
     />
+
+    <UButton v-if="situatie.actievePagina?.tekening" icon="i-lucide-pencil-ruler" size="sm" color="neutral" variant="outline" :disabled="editor.alleenLezen" :label="$t('editor.situatie.tekenen.edit')" data-testid="plan-tekenen-bewerken" @click="emit('tekenen', situatie.actievePagina.id)" />
 
     <div v-if="schaal" class="ml-auto flex shrink-0 items-center gap-1 text-sm text-muted">
       <span data-testid="schaal-tekst">{{

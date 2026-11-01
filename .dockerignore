@@ -18,3 +18,5 @@ out
 docs
 infra
 deploy
+
+apps/plan-editor/dist

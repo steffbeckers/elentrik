@@ -275,7 +275,7 @@
       },
       "leeg": {
         "titel": "Nog geen plan",
-        "beschrijving": "Voeg een plan toe om de punten op te plaatsen.",
+        "beschrijving": "Teken zelf een plattegrond of laad een bestaand plan op. Plaats daarna de elektrische symbolen.",
         "planToevoegen": "Plan toevoegen"
       },
       "hernoemen": {
@@ -335,6 +335,33 @@
           "mislukt": "Het plan kon niet worden opgeladen. Probeer het opnieuw.",
           "onleesbaar": "Dit bestand kon niet gelezen worden."
         }
+      },
+      "tekenen": {
+        "new": "Zelf plan tekenen",
+        "edit": "Plan bewerken",
+        "description": "Teken muren, deuren en ramen als basis voor het situatieschema.",
+        "noPlan": "Geen bouwplan beschikbaar?",
+        "name": "Naam van het plan",
+        "use": "Plan gebruiken",
+        "cancelHint": "Gebruik het plan om je wijzigingen te bewaren. Annuleren verwerpt deze tekensessie.",
+        "loading": "Tekenomgeving laden…",
+        "loadError": "De tekenomgeving kon niet laden. Sluit dit venster en probeer opnieuw.",
+        "exportError": "Het plan kon niet worden overgenomen. Teken minstens één muur en probeer opnieuw.",
+        "changed": "Het project is intussen gewijzigd. Sluit de tekenomgeving en open het plan opnieuw om de nieuwste versie te bewerken.",
+        "tools": "Tekengereedschap",
+        "select": "Selecteren",
+        "wall": "Muur",
+        "door": "Deur",
+        "window": "Raam",
+        "text": "Tekst",
+        "measure": "Meten",
+        "undo": "Ongedaan maken",
+        "redo": "Opnieuw",
+        "delete": "Verwijderen",
+        "length": "Lengte",
+        "thickness": "Muurdikte",
+        "width": "Breedte",
+        "hint": "Klik om muren te tekenen. Escape stopt de muur. Selecteer een muur om de afmetingen aan te passen."
       }
     },
     "export": {

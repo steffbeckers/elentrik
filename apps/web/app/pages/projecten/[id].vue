@@ -12,6 +12,7 @@ import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
 import SymbolenVenster from "~/components/editor/SymbolenVenster.vue";
 import KringenlijstTabel from "~/components/kringenlijst/KringenlijstTabel.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
+import PlanTekenenDialoog from "~/components/situatie/PlanTekenenDialoog.vue";
 import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
 import PlanToevoegenDialoog from "~/components/situatie/PlanToevoegenDialoog.vue";
 import SchaalDialoog from "~/components/situatie/SchaalDialoog.vue";
@@ -383,6 +384,13 @@ const meetSchaal = computed(() => meetPaginaId.value !== null && meetPaginaId.va
 const schaalOpen = ref(false);
 const schaalAfstandPx = ref(0);
 const planDialoogOpen = ref(false);
+const tekenDialoogOpen = ref(false);
+const tekenPaginaId = ref<string | undefined>();
+function tekenPlan(paginaId?: string) {
+  stopPlaatsenEnMeten();
+  tekenPaginaId.value = paginaId;
+  tekenDialoogOpen.value = true;
+}
 const vervangPaginaId = ref<string | undefined>(undefined);
 
 const heeftPaginas = computed(() => (store.document?.situatie.paginas.length ?? 0) > 0);
@@ -528,7 +536,7 @@ onBeforeUnmount(() => {
         <template v-else>
           <TePlaatsenPaneel v-model:gekozen="teplaatsen" class="overflow-y-auto border-r border-default" />
           <div v-if="heeftPaginas" class="flex min-h-0 flex-col">
-            <PaginaTabs @toevoegen="planToevoegen" @schaal-instellen="schaalInstellen" />
+            <PaginaTabs @toevoegen="planToevoegen" @tekenen="tekenPlan" @schaal-instellen="schaalInstellen" />
             <div
               v-if="hint"
               class="flex items-center gap-2 border-b border-default bg-primary/5 px-3 py-1 text-sm"
@@ -561,9 +569,11 @@ onBeforeUnmount(() => {
               <UIcon name="i-lucide-map" class="size-10 text-muted" />
               <p class="font-medium">{{ $t("editor.situatie.leeg.titel") }}</p>
               <p class="text-sm text-muted">{{ $t("editor.situatie.leeg.beschrijving") }}</p>
+              <UButton icon="i-lucide-pencil-ruler" :disabled="store.alleenLezen" data-testid="plan-tekenen-leeg" :label="$t('editor.situatie.tekenen.new')" @click="tekenPlan()" />
               <UButton
                 icon="i-lucide-image-up"
                 :disabled="store.alleenLezen"
+                variant="outline"
                 data-testid="plan-toevoegen-leeg"
                 :label="$t('editor.situatie.leeg.planToevoegen')"
                 @click="planToevoegen"
@@ -606,8 +616,10 @@ onBeforeUnmount(() => {
       {{ $t("editor.pagina.laden") }}
     </div>
 
+    <PlanTekenenDialoog v-model:open="tekenDialoogOpen" :pagina-id="tekenPaginaId" @klaar="planKlaar" @verwijderd="autosave.meldVerwijderd" />
     <PlanToevoegenDialoog
       v-model:open="planDialoogOpen"
+      @tekenen="tekenPlan()"
       :vervang-pagina-id="vervangPaginaId"
       @klaar="planKlaar"
       @verwijderd="autosave.meldVerwijderd"

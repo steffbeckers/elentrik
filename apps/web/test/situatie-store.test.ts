@@ -347,3 +347,24 @@ describe("alleen-lezen", () => {
     expect(plaatsingen(editor, a)).toEqual([{ nodeId: punt, x: 5, y: 6, rotatie: 0 }]);
   });
 });
+
+test('getekend plan toevoegen en bewerken is undoable; alleen-lezen houdt bron en raster intact', () => {
+  const { editor, situatie } = opzet();
+  const bron = { formaat: 'openplan3d-v1' as const, project: '{"floors":[]}', kader: { x_cm: 0, y_cm: 0, pxPerCm: 2 } };
+  const id = situatie.bewaarTekening('Zelf getekend', ACHTERGROND, bron);
+  expect(situatie.actievePaginaId).toBe(id);
+  expect(editor.terug).toHaveLength(1);
+  editor.ongedaanMaken();
+  expect(doc(editor).situatie.paginas).toHaveLength(0);
+  editor.opnieuw();
+  expect(situatie.actievePagina?.tekening).toEqual(bron);
+  const nieuw = { ...bron, kader: { ...bron.kader, x_cm: -100 } };
+  situatie.bewaarTekening('Zelf getekend', ACHTERGROND, nieuw, id);
+  editor.ongedaanMaken();
+  expect(situatie.actievePagina?.tekening).toEqual(bron);
+  editor.zetAlleenLezen(true);
+  situatie.bewaarTekening('Anders', ACHTERGROND, nieuw, id);
+  expect(situatie.bewaarTekening('Nieuw', ACHTERGROND, nieuw)).toBe('');
+  expect(situatie.actievePagina?.tekening).toEqual(bron);
+  expect(doc(editor).situatie.paginas).toHaveLength(1);
+});

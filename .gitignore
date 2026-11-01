@@ -10,3 +10,5 @@ apps/web/test-results
 apps/web/playwright-report
 apps/web/.data/
 apps/web/.nuxt-e2e
+
+apps/plan-editor/dist/

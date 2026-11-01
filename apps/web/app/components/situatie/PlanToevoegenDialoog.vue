@@ -18,6 +18,7 @@ const props = defineProps<{
 const open = defineModel<boolean>("open", { default: false });
 const emit = defineEmits<{
   klaar: [paginaId: string];
+  tekenen: [];
   /** Het project bleek elders verwijderd (404 bij het uploaden): de editor toont zijn verwijderd-melding. */
   verwijderd: [];
 }>();
@@ -234,6 +235,10 @@ function annuleer() {
     <template #body>
       <div class="space-y-4">
         <AlleenLezenMelding />
+        <div v-if="!vervangPaginaId && !bestand" class="flex items-center justify-between gap-3 border-b border-default pb-4">
+          <p class="text-sm text-muted">{{ $t('editor.situatie.tekenen.noPlan') }}</p>
+          <UButton icon="i-lucide-pencil-ruler" color="neutral" variant="outline" :disabled="editor.alleenLezen" :label="$t('editor.situatie.tekenen.new')" @click="open = false; emit('tekenen')" />
+        </div>
         <input
           ref="invoer"
           type="file"

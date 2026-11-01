@@ -134,9 +134,28 @@ export const NodeSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+/** Versioned source alongside the exported raster; coordinates are in centimetres. */
+export const PlanTekeningSchema = z.strictObject({
+  formaat: z.literal("openplan3d-v1"),
+  project: z.string().max(1_000_000).refine((tekst) => {
+    try {
+      const data = JSON.parse(tekst);
+      return data !== null && !Array.isArray(data) && Array.isArray(data.floors);
+    } catch { return false; }
+  }, "Ongeldig OpenPlan3D-project"),
+  kader: z.strictObject({
+    x_cm: z.number().finite(),
+    y_cm: z.number().finite(),
+    pxPerCm: z.number().finite().positive().max(10),
+  }),
+});
+
+export type PlanTekening = z.infer<typeof PlanTekeningSchema>;
+
 export const SituatiePaginaSchema = z.strictObject({
   id: z.string(),
   titel: z.string(),
+  tekening: PlanTekeningSchema.optional(),
   achtergrond: z
     .strictObject({
       origineelBestandId: z.string(),

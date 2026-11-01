@@ -25,6 +25,7 @@ export {
   verwijderPlaatsing,
   voegPaginaToe,
   zetAchtergrond,
+  zetGetekendPlan,
   zetSchaal,
 } from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
@@ -61,6 +62,8 @@ export {
   PolenSchema,
   RuimteSchema,
   SituatiePaginaSchema,
+  PlanTekeningSchema,
+  type PlanTekening,
   StroomtypeSchema,
   TaalSchema,
   ToestelsoortSchema,
