@@ -3,6 +3,8 @@ import { nieuwId } from "./ids";
 import { resultaat, vereis, type OperatieResultaat } from "./operaties";
 import {
   SituatiePaginaSchema,
+  PlanTekeningSchema,
+  type PlanTekening,
   type InstallatieDocument,
   type NodeId,
   type SituatiePagina,
@@ -45,7 +47,38 @@ export function zetAchtergrond(
   }
   const nieuw = geparsed.data;
   return resultaat(doc, (draft) => {
-    draft.situatie.paginas.find((p) => p.id === paginaId)!.achtergrond = nieuw;
+    const pagina = draft.situatie.paginas.find((p) => p.id === paginaId)!;
+    pagina.achtergrond = nieuw;
+    delete pagina.tekening;
+  });
+}
+
+/** Commit source, raster and world-coordinate mapping together, as one undoable operation. */
+export function zetGetekendPlan(
+  doc: InstallatieDocument,
+  paginaId: string,
+  achtergrond: NonNullable<SituatiePagina["achtergrond"]>,
+  tekening: PlanTekening,
+): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const bron = PlanTekeningSchema.safeParse(tekening);
+  const beeld = AchtergrondSchema.safeParse(achtergrond);
+  if (!bron.success || !beeld.success) throw new DocumentFout("ONGELDIG_SCHEMA");
+  if (!(beeld.data.breedte_px > 0 && beeld.data.hoogte_px > 0)) throw new DocumentFout("ONGELDIG_SCHEMA");
+  return resultaat(doc, (draft) => {
+    const pagina = draft.situatie.paginas.find((p) => p.id === paginaId)!;
+    const oud = pagina.tekening?.kader;
+    const nieuw = bron.data.kader;
+    if (oud) for (const plaatsing of pagina.plaatsingen) {
+      plaatsing.x = (plaatsing.x / oud.pxPerCm + oud.x_cm - nieuw.x_cm) * nieuw.pxPerCm;
+      plaatsing.y = (plaatsing.y / oud.pxPerCm + oud.y_cm - nieuw.y_cm) * nieuw.pxPerCm;
+      if (plaatsing.labelOffset) {
+        plaatsing.labelOffset.x *= nieuw.pxPerCm / oud.pxPerCm;
+        plaatsing.labelOffset.y *= nieuw.pxPerCm / oud.pxPerCm;
+      }
+    }
+    pagina.tekening = bron.data;
+    pagina.achtergrond = { ...beeld.data, schaal: { mmPerPx: 10 / nieuw.pxPerCm } };
   });
 }
 

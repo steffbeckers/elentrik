@@ -1,0 +1,7 @@
+# Elentrik plan editor
+
+Same-origin 2D OpenPlan3D integration. Build with `pnpm --filter @elentrik/plan-editor build` (also run by web dev/build). Nitro serves `dist` at `/plan-editor`. No third-party service receives project data. Each modal instance owns one iframe, one floor and a random session token. The parent validates origin, source, session, bounded project JSON and PNG before uploading through the authenticated file API.
+
+`vendor/openplan3d` contains the transitive imports of `src/lib/components/editor/FloorPlanCanvas.svelte` from [laanlabs/openPlan3D](https://github.com/laanlabs/openPlan3D), commit `98f9cb467e4045c6abc5d9880ada1f03dff50c68`, under its included MIT LICENSE. There are no 3D models or externally hosted assets. Local adaptations: NL/FR canvas messages; no upstream save/3D shortcuts; no tracing-image drop; no external texture loading; stable camera while drawing the first wall; localized generated room names. The build also ships `OpenPlan3D-LICENSE.txt`. The toolbar and export adapter are Elentrik code. Keep the license and this revision when updating; review upstream changes and repeat browser drawing/reopen tests.
+
+A save exports a PNG at up to 2400 pixels on its longest side and stores the editable project plus centimetre origin and px/cm. Bounds expand to include the previous raster. The model converts electrical symbol positions using the previous and next frames, preserving world coordinates. Applying a drawing is one undoable parent operation; cancelling discards local edits.

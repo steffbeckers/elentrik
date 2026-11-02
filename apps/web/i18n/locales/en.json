@@ -310,7 +310,7 @@
       },
       "leeg": {
         "titel": "No plan yet",
-        "beschrijving": "Add a plan to place the points on.",
+        "beschrijving": "Draw a floor plan or upload an existing plan, then place the electrical symbols.",
         "planToevoegen": "Add plan"
       },
       "hernoemen": {
@@ -378,6 +378,33 @@
           "mislukt": "The plan could not be uploaded. Please try again.",
           "onleesbaar": "This file could not be read."
         }
+      },
+      "tekenen": {
+        "new": "Draw a plan",
+        "edit": "Edit plan",
+        "description": "Draw walls, doors and windows for the layout plan.",
+        "noPlan": "No building plan available?",
+        "name": "Plan name",
+        "use": "Use plan",
+        "cancelHint": "Use the plan to save your changes. Cancel discards this drawing session.",
+        "loading": "Loading drawing tools…",
+        "loadError": "The editor could not load. Close this window and try again.",
+        "exportError": "The plan could not be applied. Draw at least one wall and try again.",
+        "changed": "The project has changed. Close the editor and reopen the plan to edit the latest version.",
+        "tools": "Drawing tools",
+        "select": "Select",
+        "wall": "Wall",
+        "door": "Door",
+        "window": "Window",
+        "text": "Text",
+        "measure": "Measure",
+        "undo": "Undo",
+        "redo": "Redo",
+        "delete": "Delete",
+        "length": "Length",
+        "thickness": "Wall thickness",
+        "width": "Width",
+        "hint": "Click to draw walls. Escape ends the wall. Select a wall to adjust its dimensions."
       },
       "opmaak": {
         "titel": "Plan appearance",
