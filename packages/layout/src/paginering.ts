@@ -85,7 +85,7 @@ export function pagineer(strook: Strook, papier: Papier): SchemaOpmaak {
   const linkerrand = strook.kolomGrenzen[0] ?? STROOK_MARGE_MM;
   const binnen = (x: number): boolean => x > linkerrand + EPSILON && x < strook.breedte - EPSILON;
   const kringKandidaten = [...strook.kringGrenzen.filter(binnen), strook.breedte];
-  const kolomKandidaten = [...strook.kolomGrenzen.filter(binnen), strook.breedte];
+  const kolomKandidaten = [...strook.kolomGrenzen.filter(binnen), ...(strook.aftakkingGrenzen ?? []).filter(binnen), strook.breedte].sort((a, b) => a - b);
   const verste = (kandidaten: readonly number[], xVan: number, grens: number): number | undefined => {
     let beste: number | undefined;
     for (const kandidaat of kandidaten) {

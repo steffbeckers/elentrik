@@ -5,6 +5,24 @@ import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie } from "../app/
 
 const tekst = (key: string, waarden: Record<string, string | number>) => `${key}:${Object.values(waarden).join("/")}`;
 
+test("aftakkingen hebben een kringbestemming en selectie volgt de eigen aftakking", () => {
+  const start = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
+  const bord = Object.values(start.nodes).find(n => n.type === "verdeelbord")!;
+  const kring = voegOnderdeelToe(start, { soort: "rail-einde", nodeId: bord.id }, "leiding");
+  const eerste = voegOnderdeelToe(kring.doc, { soort: "aftakking", nodeId: kring.ids[1]! }, "schakelaar");
+  const tweede = voegOnderdeelToe(eerste.doc, { soort: "aftakking", nodeId: kring.ids[1]! }, "lichtpunt");
+  const einde = voegOnderdeelToe(tweede.doc, { soort: "aftakking-einde", nodeId: eerste.ids[0]! }, "lichtpunt");
+  const analyse = analyseer(einde.doc);
+  const keuzes = schemaInvoegKeuzes(einde.doc, analyse, [
+    { soort: "rail-einde", nodeId: bord.id },
+    { soort: "aftakking-einde", nodeId: tweede.ids[0]! },
+    { soort: "aftakking-einde", nodeId: einde.ids[0]! },
+  ], type => type, tekst);
+  expect(keuzes.map(k => k.label)).toEqual(["kringBestemming:A/A1", "kringBestemming:A/A2", "rechtstreeksOpBord:verdeelbord 1"]);
+  expect(invoegpuntBijSelectie(analyse, keuzes, eerste.ids[0]!)).toEqual(keuzes[0]);
+  expect(invoegpuntBijSelectie(analyse, keuzes, tweede.ids[0]!)).toEqual(keuzes[1]);
+});
+
 test("invoegen volgt de geselecteerde kring en valt niet terug op een andere kring", () => {
   let doc = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
   const bord = Object.values(doc.nodes).find(n => n.type === "verdeelbord")!;

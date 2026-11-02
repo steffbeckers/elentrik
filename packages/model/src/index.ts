@@ -1,4 +1,5 @@
 export { SCHEMA_VERSIE } from "./versie";
+export { isAftakkingNode, magAftakkingKind } from "./aftakkingen";
 export { materiaallijst, type MateriaalRij } from "./materialen";
 export { DocumentFout, type FoutCode } from "./fouten";
 export { nieuwId } from "./ids";

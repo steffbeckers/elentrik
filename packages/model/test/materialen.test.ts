@@ -21,6 +21,21 @@ function installatie(invoer: (NodeInvoer | Record<string, unknown>)[]): Installa
 }
 
 describe("materiaallijst", () => {
+  test("groepeert identieke schakelaars en lampen samen ongeacht de aftakkingsindeling", () => {
+    const doc = installatie([
+      model.STANDAARD.schakelaar,
+      { ...model.STANDAARD.schakelaar, aftakking: true },
+      { type: "lichtpunt", aantal: 2 },
+      { type: "lichtpunt", aantal: 3, aftakking: true },
+    ]);
+    const rijen = model.materiaallijst(doc).filter((r) => r.type === "schakelaar" || r.type === "lichtpunt");
+    expect(rijen.map((r) => [r.type, r.hoeveelheid, r.nodeIds.length])).toEqual([
+      ["schakelaar", 2, 2],
+      ["lichtpunt", 5, 2],
+    ]);
+    expect(rijen.every((r) => !("aftakking" in r.eigenschappen))).toBe(true);
+  });
+
   test("telt aantallen en groepeert uitvoeringen onafhankelijk van label of ruimte", () => {
     const doc = installatie([
       { ...model.STANDAARD.contactdoos, aantal: 3, label: "A", ruimte: "keuken", ruimteNaam: "Keuken" },

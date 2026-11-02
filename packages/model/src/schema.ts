@@ -122,12 +122,14 @@ export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({
     ...basis,
     type: z.literal("lichtpunt"),
+    aftakking: z.literal(true).optional(),
     aantal: positiefGeheel,
     soort: z.enum(["standaard", "led", "tl", "spot", "noodverlichting"]).optional(),
   }),
   z.strictObject({
     ...basis,
     type: z.literal("schakelaar"),
+    aftakking: z.literal(true).optional(),
     soort: z.enum(["enkel", "dubbel", "wissel", "kruis", "dimmer", "drukknop"]),
     waterdicht: z.boolean(),
   }),

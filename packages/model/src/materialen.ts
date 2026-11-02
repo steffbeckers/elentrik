@@ -11,7 +11,7 @@ export type MateriaalRij = {
 };
 
 const GEEN_MATERIAALEIGENSCHAP = new Set([
-  "id", "type", "parentId", "kinderen", "label", "ruimte", "ruimteNaam", "naam", "aantal", "lengte_m", "plaatsing",
+  "id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam", "naam", "aantal", "lengte_m", "plaatsing",
 ]);
 
 /** Afgeleid van de onderdelen, nooit van plaatsingen of afnemers: elke leiding telt één keer. */

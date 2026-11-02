@@ -2,6 +2,7 @@ import { analyseer, type Analyse } from "@elentrik/arei";
 import type { InstallatieDocument, Node, NodeId } from "@elentrik/model";
 import { KOLOM_BREEDTE_MM, tekenSymbool, type Symbool } from "@elentrik/symbols";
 import { heeftKringEinde, heeftRailEinde } from "./aanknopingen";
+import { lijnAftakkingBlokkenUit, maakAftakkingBlokken } from "./aftakkingen";
 import { beveiligingLabel, leidingLabel, tekstBreedte } from "./labels";
 import {
   KRING_EINDE_AFSTAND_MM,
@@ -46,7 +47,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   const kinderenVan = (id: NodeId): NodeId[] => kinderenVanNode.get(id)!;
 
   const ouderVan = new Map<NodeId, NodeId>();
-  const preOrder: NodeId[] = [];
+  let preOrder: NodeId[] = [];
   const bezocht = new Set<NodeId>();
   const stapel: { id: NodeId; ouder: NodeId | null }[] = [{ id: doc.rootId, ouder: null }];
   while (stapel.length > 0) {
@@ -62,6 +63,10 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     const kinderen = doc.nodes[id]!.kinderen;
     for (let i = kinderen.length - 1; i >= 0; i--) stapel.push({ id: kinderen[i]!, ouder: id });
   }
+
+  const { blokken, leden } = maakAftakkingBlokken(doc, preOrder, kinderenVanNode);
+  preOrder = preOrder.filter((id) => !leden.has(id));
+  for (const id of preOrder) kinderenVanNode.set(id, kinderenVan(id).filter((kind) => !leden.has(kind)));
 
   // Omgekeerde pre-order: elk kind komt voor zijn ouder.
   const bladen = new Map<NodeId, number>();
@@ -82,6 +87,8 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
       kolom += bladen.get(kind)!;
     }
   }
+
+  lijnAftakkingBlokkenUit(blokken, kolomVan);
 
   const kringLabelVan = new Map<NodeId, string>();
   for (const kring of analyse.kringen) kringLabelVan.set(kring.beveiligingId, kring.label);
@@ -111,6 +118,14 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
       naarLinks = Math.max(naarLinks, -van);
       naarRechts = Math.max(naarRechts, tot);
     }
+    const blok = blokken.get(id);
+    if (blok) {
+      naarRechts = Math.max(naarRechts, blok.breedte);
+      for (const rij of blok.rijen) {
+        const label = analyse.puntLabels[rij.ids[0]!];
+        if (label) naarLinks = Math.max(naarLinks, tekstBreedte(label, 2.5) + 2);
+      }
+    }
     links[kolom] = Math.max(links[kolom]!, naarLinks + KOLOM_TUSSENRUIMTE_MM);
     rechts[kolom] = Math.max(rechts[kolom]!, naarRechts);
   }
@@ -134,6 +149,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   const dVan = new Map<NodeId, number>([[doc.rootId, STROOK_MARGE_MM]]);
   const afstanden: SchemaElement[] = [];
   const afstandAanknopingen: { soort: Aanknoping["soort"]; nodeId: NodeId; x: number; d: number }[] = [];
+  const aftakkingGrenzen: number[] = [];
   let verste = STROOK_MARGE_MM;
 
   // Afstand vanaf de voeding van een aansluitpunt van een symbool op afstand `d`. `maat` meet de y van
@@ -152,13 +168,38 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     verste = Math.max(verste, d + hoogte);
     for (const tekst of tekstenVanNode.get(id)!) afstanden.push({ ...tekst, x: x + tekst.x, y: d + tekst.y });
 
+    const blok = blokken.get(id);
+    if (blok) {
+      const dBegin = afstandVan(d, symbool, "uit");
+      afstanden.push({ soort: "lijn", x1: x, y1: dBegin, x2: x, y2: dBegin + blok.rijen.at(-1)!.midden, rol: "verbinding" });
+      for (const grens of blok.knipGrenzen) aftakkingGrenzen.push(x + grens);
+      for (const rij of blok.rijen) {
+        const midden = dBegin + rij.midden;
+        let vorigeX = x;
+        for (let i = 0; i < rij.ids.length; i++) {
+          const nodeId = rij.ids[i]!;
+          const s = rij.symbolen[i]!;
+          const sx = x + blok.xVanSymbool[i]!;
+          afstanden.push({ soort: "lijn", x1: vorigeX, y1: midden, x2: sx + s.maat.in.x, y2: midden, rol: "verbinding" });
+          afstanden.push({ soort: "symbool", nodeId, x: sx, y: midden - s.maat.hoogte / 2, symbool: s });
+          kolomVan.set(nodeId, kolomVan.get(id)!);
+          vorigeX = sx + s.maat.uit.x;
+        }
+        const laatste = rij.symbolen.at(-1)!;
+        afstandAanknopingen.push({ soort: "aftakking-einde", nodeId: rij.ids.at(-1)!, x: x + blok.xVanSymbool[rij.ids.length - 1]! + laatste.maat.breedte + KRING_EINDE_AFSTAND_MM, d: midden });
+        const label = analyse.puntLabels[rij.ids[0]!];
+        if (label) afstanden.push({ soort: "tekst", x: x - 2, y: midden + 0.9, tekst: label, grootte: 2.5, anker: "end", rol: "punt" });
+      }
+      verste = Math.max(verste, dBegin + blok.hoogte);
+    }
+
     const kinderen = kinderenVan(id);
     const ouderId = ouderVan.get(id);
     const metRailEinde = heeftRailEinde(node, ouderId === undefined ? undefined : doc.nodes[ouderId]);
     if (kinderen.length === 0) {
       // De bovenkant van het vak is het enige dat boven de node nog vrij is.
       if (metRailEinde) afstandAanknopingen.push({ soort: "rail-einde", nodeId: id, x: x + KOLOM_BREEDTE_MM / 2, d: d + hoogte });
-      if (heeftKringEinde(node, 0)) {
+      if (!blok && heeftKringEinde(node, 0)) {
         const dEinde = d + hoogte + KRING_EINDE_AFSTAND_MM;
         verste = Math.max(verste, dEinde);
         afstandAanknopingen.push({ soort: "kring-einde", nodeId: id, x, d: dEinde });
@@ -166,7 +207,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
       continue;
     }
     const dUit = afstandVan(d, symbool, "uit");
-    const dRail = dUit + VERTICALE_AFSTAND_MM;
+    const dRail = dUit + (blok?.hoogte ?? 0) + VERTICALE_AFSTAND_MM;
     const dKind = kinderen.length > 1 ? dRail + RAIL_AFSTAND_MM : dRail;
     for (const kind of kinderen) dVan.set(kind, dKind);
     const dIn = (kind: NodeId): number => afstandVan(dKind, symbolen.get(kind)!, "in");
@@ -230,6 +271,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     kolomVan: alsRecord(kolomVan),
     kringGrenzen: [...grenzen].sort((a, b) => a - b),
     kolomGrenzen,
+    ...(aftakkingGrenzen.length ? { aftakkingGrenzen: aftakkingGrenzen.sort((a, b) => a - b) } : {}),
     vakken,
     aanknopingen: afstandAanknopingen.map(({ soort, nodeId, x, d }): Aanknoping => ({ soort, nodeId, x, y: hoogteStrook - d })),
   };

@@ -480,6 +480,13 @@
       "nee": "Non",
       "stuks": "pièce | pièces",
       "m": "m"
+    },
+    "aftakkingen": {
+      "titel": "Dérivations",
+      "hulp": "Choisissez un interrupteur ou un point lumineux et sélectionnez la canalisation du circuit. Ajoutez une dérivation, puis complétez-la avec le plus à droite.",
+      "toevoegen": "Ajouter une dérivation",
+      "uitbreiden": "Ajouter {onderdeel} à la dérivation",
+      "bestemming": "Prolonger une dérivation"
     }
   },
   "bedrijf": {
