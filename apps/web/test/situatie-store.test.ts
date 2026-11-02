@@ -56,6 +56,40 @@ describe("tabblad", () => {
 });
 
 describe("pagina's", () => {
+  test("opmaak blijft behouden bij verplaatsen, draaien, undo, redo en opnieuw laden", () => {
+    const { editor, situatie } = opzet();
+    const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [punt] = punten(editor);
+    situatie.plaatsNode(punt!, 100, 200);
+    editor.selectie = [punt!];
+    situatie.zetPaginaOpmaak(paginaId, { symboolSchaal: 2, labelSchaal: 0.5 });
+    situatie.zetLabelOffset(paginaId, punt!, { x: -12, y: 34 });
+    situatie.schuifSelectie(10, 20);
+    situatie.draaiSelectie(1);
+    situatie.plaatsNode(punt!, 400, 500);
+    expect(plaatsingen(editor, paginaId)[0]).toMatchObject({ x: 400, y: 500, rotatie: 15, labelOffset: { x: -12, y: 34 } });
+    editor.ongedaanMaken();
+    expect(plaatsingen(editor, paginaId)[0]).toMatchObject({ x: 110, y: 220, labelOffset: { x: -12, y: 34 } });
+    editor.opnieuw();
+    const document = JSON.parse(JSON.stringify(doc(editor)));
+    editor.laad({ id: "p1", naam: "Woning", versie: 2, document });
+    expect(situatie.actievePagina).toMatchObject({ symboolSchaal: 2, labelSchaal: 0.5 });
+    expect(plaatsingen(editor, paginaId)[0]).toMatchObject({ x: 400, y: 500, labelOffset: { x: -12, y: 34 } });
+  });
+
+  test("opmaakwijzigingen zijn geblokkeerd in alleen-lezen", () => {
+    const { editor, situatie } = opzet();
+    const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
+    const [punt] = punten(editor);
+    situatie.plaatsNode(punt!, 100, 200);
+    const document = editor.document;
+    const stappen = editor.terug.length;
+    editor.zetAlleenLezen(true);
+    situatie.zetPaginaOpmaak(paginaId, { symboolSchaal: 2 });
+    situatie.zetLabelOffset(paginaId, punt!, { x: 12, y: 34 });
+    expect(editor.document).toBe(document);
+    expect(editor.terug).toHaveLength(stappen);
+  });
   test("voegPlanPaginaToe is één undo-stap en maakt de pagina actief", () => {
     const { editor, situatie } = opzet();
     const id = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
@@ -346,4 +380,25 @@ describe("alleen-lezen", () => {
     situatie.plaatsNode(punt!, 5, 6);
     expect(plaatsingen(editor, a)).toEqual([{ nodeId: punt, x: 5, y: 6, rotatie: 0 }]);
   });
+});
+
+test('getekend plan toevoegen en bewerken is undoable; alleen-lezen houdt bron en raster intact', () => {
+  const { editor, situatie } = opzet();
+  const bron = { formaat: 'openplan3d-v1' as const, project: '{"floors":[]}', kader: { x_cm: 0, y_cm: 0, pxPerCm: 2 } };
+  const id = situatie.bewaarTekening('Zelf getekend', ACHTERGROND, bron);
+  expect(situatie.actievePaginaId).toBe(id);
+  expect(editor.terug).toHaveLength(1);
+  editor.ongedaanMaken();
+  expect(doc(editor).situatie.paginas).toHaveLength(0);
+  editor.opnieuw();
+  expect(situatie.actievePagina?.tekening).toEqual(bron);
+  const nieuw = { ...bron, kader: { ...bron.kader, x_cm: -100 } };
+  situatie.bewaarTekening('Zelf getekend', ACHTERGROND, nieuw, id);
+  editor.ongedaanMaken();
+  expect(situatie.actievePagina?.tekening).toEqual(bron);
+  editor.zetAlleenLezen(true);
+  situatie.bewaarTekening('Anders', ACHTERGROND, nieuw, id);
+  expect(situatie.bewaarTekening('Nieuw', ACHTERGROND, nieuw)).toBe('');
+  expect(situatie.actievePagina?.tekening).toEqual(bron);
+  expect(doc(editor).situatie.paginas).toHaveLength(1);
 });

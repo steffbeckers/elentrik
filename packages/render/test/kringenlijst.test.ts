@@ -2,6 +2,7 @@ import { analyseer } from "@elentrik/arei";
 import { installatie, referentieAppartement } from "@elentrik/arei/testing";
 import { beveiligingLabel } from "@elentrik/layout";
 import { describe, expect, test } from "vitest";
+import { kloon } from "./hulp";
 import { kringenlijst, NL } from "../src/index";
 
 describe("kringenlijst", () => {
@@ -66,6 +67,26 @@ describe("kringenlijst", () => {
       .bouw();
     const rijen = kringenlijst(doc, analyseer(doc), NL);
     expect(rijen[0]!.type).toBe("Toestel (wasmachine)");
+  });
+
+  test("punt- en kringomschrijvingen, aantallen en vrije ruimtenamen blijven zichtbaar", () => {
+    const doc = kloon(referentieAppartement());
+    const analyse = analyseer(doc);
+    const kring = analyse.kringen[0]!;
+    const punt = doc.nodes[kring.puntIds[0]!]!;
+    Object.assign(punt, { label: "TV-hoek", aantal: 3, ruimte: "leefruimte", ruimteNaam: "Salon west" });
+    doc.nodes[kring.beveiligingId]!.label = "Stopcontacten leefruimte";
+    expect(kringenlijst(doc, analyse, NL)[0]).toMatchObject({
+      puntOmschrijving: "TV-hoek", kringOmschrijving: "Stopcontacten leefruimte", type: "Contactdoos ×3", ruimte: "Salon west",
+    });
+  });
+
+  test("schakelaarvariant wordt vertaald in het type", () => {
+    const doc = kloon(referentieAppartement());
+    const analyse = analyseer(doc);
+    const id = analyse.kringen[0]!.puntIds[0]!;
+    doc.nodes[id] = { id, parentId: doc.nodes[id]!.parentId, kinderen: [], type: "schakelaar", soort: "wissel", waterdicht: false };
+    expect(kringenlijst(doc, analyseer(doc), NL)[0]!.type).toBe("Schakelaar (wissel)");
   });
 
   test("een document zonder kringen geeft een lege lijst", () => {

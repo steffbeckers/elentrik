@@ -73,7 +73,7 @@ const KNOP_INVOER = new Set(["button", "checkbox", "radio", "submit"]);
 export function doelSoort(doel: DoelElement): DoelSoort {
   if (doel.isContentEditable) return "invoer";
   const tag = doel.tagName.toUpperCase();
-  if (tag === "BUTTON") return "knop";
+  if (tag === "BUTTON" || tag === "SUMMARY") return "knop";
   if (tag === "INPUT") return KNOP_INVOER.has((doel.type ?? "").toLowerCase()) ? "knop" : "invoer";
   return tag === "TEXTAREA" || tag === "SELECT" ? "invoer" : "overig";
 }

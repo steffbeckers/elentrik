@@ -2,18 +2,16 @@
 // pagina is een <section> met een vaste maat in mm, met een cartouche onderaan.
 import { formatteerBericht, REGELSETS, type Analyse, type Bevinding, type Ernst } from "@elentrik/arei";
 import { bruikbaar, opmaak, papierMaat, STANDAARD_PAPIER_A4, type Papier } from "@elentrik/layout";
-import type { InstallatieDocument, NodeId, NodeType, Partij, SituatiePagina } from "@elentrik/model";
+import type { Adres, InstallatieDocument, NodeId, NodeType, Partij, SituatiePagina } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import { kringenlijst, type KringenlijstRij } from "../kringenlijst";
 import { schemaPaginaSvg } from "../schema-svg";
 import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
-import { TEKSTEN, type Taal, type Teksten } from "../teksten/index";
-import { cartouche, formatteerDatum } from "./cartouche";
+import { LOCALES, TEKSTEN, type Taal, type Teksten } from "../teksten/index";
+import { cartouche, cartoucheHoogte, formatteerDatum } from "./cartouche";
 import { CEL_MARGE_MM, INSPRINGING_MM, KOP_MARGE_MM, KRINGENLIJST_RIJ_MM, RAND_MM, REGELHOOGTE, stijl } from "./stijl";
 import { breekRegels, tekstRegel, vloer } from "./tekst";
-
-export { KRINGENLIJST_RIJ_MM } from "./stijl";
 
 export type PrintOpties = {
   papier: "A4" | "A3";
@@ -37,8 +35,6 @@ export type PrintResultaat = {
   overgeslagen: string[];
 };
 
-/** De hoogte van de kop van de kringenlijst in mm: één rij. */
-export const KRINGENLIJST_KOP_MM = KRINGENLIJST_RIJ_MM;
 /** Tekstgrootte in de kringenlijst en de bijlage, en van een kop in de bijlage, in mm. */
 const TABEL_TEKST_MM = 3;
 const BIJLAGE_TEKST_MM = 3;
@@ -55,12 +51,14 @@ const BIJLAGE_SPELING_MM = 1;
 /** De kolommen van de kringenlijst met hun aandeel van de bruikbare breedte. */
 const KOLOMMEN: readonly { sleutel: keyof Teksten["kolommen"] & keyof KringenlijstRij; aandeel: number }[] = [
   { sleutel: "kring", aandeel: 0.07 },
-  { sleutel: "punt", aandeel: 0.07 },
-  { sleutel: "type", aandeel: 0.2 },
-  { sleutel: "ruimte", aandeel: 0.14 },
-  { sleutel: "beveiliging", aandeel: 0.16 },
-  { sleutel: "differentieel", aandeel: 0.16 },
-  { sleutel: "leiding", aandeel: 0.2 },
+  { sleutel: "kringOmschrijving", aandeel: 0.13 },
+  { sleutel: "punt", aandeel: 0.06 },
+  { sleutel: "puntOmschrijving", aandeel: 0.13 },
+  { sleutel: "type", aandeel: 0.14 },
+  { sleutel: "ruimte", aandeel: 0.10 },
+  { sleutel: "beveiliging", aandeel: 0.12 },
+  { sleutel: "differentieel", aandeel: 0.13 },
+  { sleutel: "leiding", aandeel: 0.12 },
 ];
 
 const ERNSTEN: readonly Ernst[] = ["fout", "waarschuwing", "info"];
@@ -98,57 +96,88 @@ function eendraadschemaPaginas(c: Context): Pagina[] {
 function situatieInhoud(c: Context, pagina: SituatiePagina, bestand: string): string {
   const achtergrond = pagina.achtergrond!;
   const { breedte_px, hoogte_px } = achtergrond;
-  const schaal = Math.min(c.ruimte.breedte / breedte_px, c.ruimte.hoogte / hoogte_px);
+  const mmPerPx = achtergrond.schaal?.mmPerPx;
+  const gekalibreerd = mmPerPx !== undefined && Number.isFinite(mmPerPx) && mmPerPx > 0;
+  const bijschriftHoogte = gekalibreerd ? 6 : 0;
+  const planHoogte = c.ruimte.hoogte - bijschriftHoogte;
+  const schaal = Math.min(c.ruimte.breedte / breedte_px, planHoogte / hoogte_px);
   const breedte = breedte_px * schaal;
   const hoogte = hoogte_px * schaal;
   const links = c.papier.marge_mm + (c.ruimte.breedte - breedte) / 2;
-  const boven = c.papier.marge_mm + (c.ruimte.hoogte - hoogte) / 2;
+  const boven = c.papier.marge_mm + bijschriftHoogte + (planHoogte - hoogte) / 2;
+  const bijschrift = gekalibreerd
+    ? `<div class="schaal" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)}">${escapeXml(c.teksten.schaalAfdruk)}: 1:${new Intl.NumberFormat(LOCALES[c.taal], { maximumFractionDigits: 1 }).format(mmPerPx / schaal)}</div>`
+    : "";
   const laag = situatieLaagSvg(situatieItems(c.doc, c.analyse, pagina.id, c.terugval), symboolGrootte(achtergrond));
   return (
-    `<div class="kader" style="left:${mm(links)};top:${mm(boven)};width:${mm(breedte)};height:${mm(hoogte)}">` +
+    bijschrift + `<div class="kader" style="left:${mm(links)};top:${mm(boven)};width:${mm(breedte)};height:${mm(hoogte)}">` +
     `<img class="plan" src="${escapeXml(bestand)}" alt="">` +
     `<svg class="laag" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${getal(breedte_px)} ${getal(hoogte_px)}" ` +
     `preserveAspectRatio="none">${laag}</svg></div>`
   );
 }
 
-/**
- * Rijen per kringenlijstpagina: wat onder de kop past in de bruikbare hoogte. De tabel heeft een
- * bovenrand van `RAND_MM`; elke rij (ook de kop) is exact `KRINGENLIJST_RIJ_MM` hoog, rand inbegrepen.
- */
-export function kringenlijstRijenPerPagina(papier: Papier): number {
-  const perPagina = Math.floor((bruikbaar(papier).hoogte - KRINGENLIJST_KOP_MM - RAND_MM) / KRINGENLIJST_RIJ_MM);
-  if (perPagina <= 0) throw new RangeError(`Geen ruimte voor kringenlijstrijen op ${papier.formaat}`);
-  return perPagina;
-}
-
 function kringenlijstPaginas(c: Context): Pagina[] {
-  const rijen = kringenlijst(c.doc, c.analyse, c.teksten);
-  const perPagina = kringenlijstRijenPerPagina(c.papier);
-  // De tabel is even breed als de bruikbare ruimte, linkerrand inbegrepen: de laatste kolom geeft die op.
   const breedtes = KOLOMMEN.map((k, i) => c.ruimte.breedte * k.aandeel - (i === KOLOMMEN.length - 1 ? RAND_MM : 0));
-  const celBreedte = (breedte: number) => breedte - 2 * CEL_MARGE_MM - RAND_MM;
-  const cel = (tekst: string, breedte: number, klasse: string) =>
-    `<div class="tabelcel" style="width:${mm(breedte)}">${tekstRegel(tekst, celBreedte(breedte), TABEL_TEKST_MM, klasse)}</div>`;
-  const rij = (klasse: string, teksten: readonly string[], tekstKlasse: string) =>
-    `<div class="${klasse}">${teksten.map((tekst, i) => cel(tekst, breedtes[i] ?? 0, tekstKlasse)).join("")}</div>`;
-  const kop = rij("kopregel", KOLOMMEN.map((k) => c.teksten.kolommen[k.sleutel]), "kolomkop");
-  const tabel = (body: string) =>
-    `<div class="kringen" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};width:${mm(c.ruimte.breedte)}">` +
-    `${kop}${body}</div>`;
-
-  if (rijen.length === 0) {
-    const leeg = `<div class="rij leeg">${cel(c.teksten.geenKringen, c.ruimte.breedte - RAND_MM, "leeg")}</div>`;
-    return [{ titel: c.teksten.paginatitels.kringenlijst, inhoud: tabel(leeg) }];
-  }
+  const binnen = (i: number) => breedtes[i]! - 2 * CEL_MARGE_MM - RAND_MM;
+  // Veel punten delen type, kabel en beveiliging. Meet en escape die cellen één keer per export.
+  const regelCache = new Map<string, string[]>();
+  const celCache = new Map<string, string>();
+  const regels = (teksten: readonly string[]) => teksten.map((tekst, i) => {
+    const sleutel = `${i}:${tekst}`;
+    let resultaat = regelCache.get(sleutel);
+    if (!resultaat) {
+      resultaat = breekRegels(tekst, vloer(binnen(i)), TABEL_TEKST_MM, 1.35);
+      regelCache.set(sleutel, resultaat);
+    }
+    return resultaat;
+  });
+  const regelhoogte = TABEL_TEKST_MM * REGELHOOGTE;
+  const hoogte = (aantal: number) => Math.max(KRINGENLIJST_RIJ_MM, aantal * regelhoogte + 2 * CEL_MARGE_MM + RAND_MM);
+  const rij = (klasse: string, cellen: string[][], tekstKlasse: string) => {
+    const h = hoogte(Math.max(1, ...cellen.map(cel => cel.length)));
+    const html = '<div class="' + klasse + '" style="height:' + mm(h) + '">' + cellen.map((cel, i) => {
+      const sleutel = `${i}:${tekstKlasse}:${cel.join("\n")}`;
+      let resultaat = celCache.get(sleutel);
+      if (!resultaat) {
+        resultaat = '<div class="tabelcel" style="width:' + mm(breedtes[i]!) + '"><div>' + cel.map(regel => tekstRegel(regel, binnen(i), TABEL_TEKST_MM, tekstKlasse)).join('') + '</div></div>';
+        celCache.set(sleutel, resultaat);
+      }
+      return resultaat;
+    }).join('') + '</div>';
+    return { html, hoogte: h };
+  };
+  const kop = rij("kopregel", regels(KOLOMMEN.map(k => c.teksten.kolommen[k.sleutel])), "kolomkop");
+  const capaciteit = c.ruimte.hoogte - kop.hoogte - RAND_MM - 1;
+  const maxRegels = Math.floor((capaciteit - 2 * CEL_MARGE_MM - RAND_MM) / regelhoogte);
+  if (maxRegels < 1) throw new RangeError("Geen ruimte voor kringenlijstrijen");
   const paginas: Pagina[] = [];
-  for (let start = 0; start < rijen.length; start += perPagina) {
-    const body = rijen
-      .slice(start, start + perPagina)
-      .map((r) => rij("rij", KOLOMMEN.map((k) => r[k.sleutel]), "cel"))
-      .join("");
-    paginas.push({ titel: c.teksten.paginatitels.kringenlijst, inhoud: tabel(body) });
+  let body = "";
+  let gebruikt = 0;
+  const sluit = () => {
+    paginas.push({ titel: c.teksten.paginatitels.kringenlijst, inhoud:
+      '<div class="kringen" style="left:' + mm(c.papier.marge_mm) + ';top:' + mm(c.papier.marge_mm) + ';width:' + mm(c.ruimte.breedte) + '">' + kop.html + body + '</div>' });
+    body = "";
+    gebruikt = 0;
+  };
+  const voegToe = (blok: { html: string; hoogte: number }) => {
+    if (body && gebruikt + blok.hoogte > capaciteit) sluit();
+    body += blok.html;
+    gebruikt += blok.hoogte;
+  };
+  const rijen = kringenlijst(c.doc, c.analyse, c.teksten);
+  for (const r of rijen) {
+    const cellen = regels(KOLOMMEN.map(k => r[k.sleutel]));
+    const aantal = Math.max(1, ...cellen.map(cel => cel.length));
+    // A single description may exceed a page. Split it without losing text and repeat its IDs.
+    for (let start = 0; start < aantal; start += maxRegels) {
+      const deel = cellen.map((cel, i) => start > 0 && (KOLOMMEN[i]!.sleutel === "kring" || KOLOMMEN[i]!.sleutel === "punt")
+        ? cel : cel.slice(start, start + maxRegels));
+      voegToe(rij("rij", deel, "cel"));
+    }
   }
+  if (!rijen.length) voegToe({ html: '<div class="rij leeg" style="height:6mm">' + tekstRegel(c.teksten.geenKringen, c.ruimte.breedte - 2 * CEL_MARGE_MM, TABEL_TEKST_MM, "leeg") + "</div>", hoogte: 6 });
+  if (body) sluit();
   return paginas;
 }
 
@@ -228,8 +257,7 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
 }
 
 /** Verdeelt de blokken over pagina's; een kop blijft bij zijn eerste regel. */
-function bijlagePaginas(c: Context, bevindingen: readonly Bevinding[], overgeslagen: readonly string[]): Pagina[] {
-  const blokken = bijlageBlokken(c, bevindingen, overgeslagen);
+function tekstPaginas(c: Context, blokken: readonly Blok[], titel: string): Pagina[] {
   const capaciteit = c.ruimte.hoogte - BIJLAGE_SPELING_MM;
   const groepen: Blok[][] = [[]];
   let gevuld = 0;
@@ -245,11 +273,55 @@ function bijlagePaginas(c: Context, bevindingen: readonly Bevinding[], overgesla
     }
   });
   return groepen.map((groep) => ({
-    titel: c.teksten.paginatitels.bijlage,
+    titel,
     inhoud:
       `<div class="bijlage" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};` +
       `width:${mm(c.ruimte.breedte)};height:${mm(c.ruimte.hoogte)}">${groep.map((b) => b.html).join("")}</div>`,
   }));
+}
+
+function bijlagePaginas(c: Context, bevindingen: readonly Bevinding[], overgeslagen: readonly string[]): Pagina[] {
+  return tekstPaginas(c, bijlageBlokken(c, bevindingen, overgeslagen), c.teksten.paginatitels.bijlage);
+}
+
+/** Volledige projectgegevens als het herhaalde cartouche anders te hoog zou worden. */
+function metadataPaginas(c: Context, opties: PrintOpties, titels: readonly string[]): Pagina[] {
+  const t = c.teksten;
+  const blokken: Blok[] = [];
+  const kop = (tekst: string) => blokken.push({
+    html: tekstRegel(tekst, c.ruimte.breedte, BIJLAGE_KOP_TEKST_MM, "kop"),
+    hoogte: KOP_MARGE_MM + BIJLAGE_KOP_TEKST_MM * REGELHOOGTE,
+    kop: true,
+  });
+  const veld = (label: string, waarde: string | undefined) => {
+    if (!waarde) return;
+    for (const regel of breekRegels(`${label}: ${waarde}`, vloer(c.ruimte.breedte), BIJLAGE_TEKST_MM, BIJLAGE_BREEDTE_FACTOR)) {
+      blokken.push({ html: tekstRegel(regel, c.ruimte.breedte, BIJLAGE_TEKST_MM, "metadata"), hoogte: BIJLAGE_TEKST_MM * REGELHOOGTE, kop: false });
+    }
+  };
+  const adres = (a: Adres | undefined) => {
+    if (!a) return;
+    for (const sleutel of ["straat", "nummer", "bus", "postcode", "gemeente", "land"] as const) veld(t.metadata[sleutel], a[sleutel]);
+  };
+  const partij = (titel: string, p: Partij) => {
+    kop(titel);
+    veld(t.metadata.naam, p.naam);
+    adres(p.adres);
+    veld(t.metadata.ondernemingsnummer, p.ondernemingsnummer);
+    veld(t.metadata.telefoon, p.telefoon);
+    veld(t.metadata.email, p.email);
+  };
+  kop(t.metadata.titel);
+  partij(t.cartouche.klant, c.doc.meta.klant);
+  partij(t.cartouche.installateur, opties.installateur);
+  if (c.doc.meta.keuringsorganisme) partij(t.metadata.keuringsorganisme, c.doc.meta.keuringsorganisme);
+  kop(t.cartouche.werf);
+  adres(c.doc.meta.werfadres);
+  veld(t.cartouche.ean, c.doc.meta.ean);
+  veld(t.cartouche.datum, formatteerDatum(opties.datum, c.taal));
+  veld(t.cartouche.versie, opties.versieLabel);
+  for (const titel of new Set(titels)) veld(t.metadata.paginatitel, titel);
+  return tekstPaginas(c, blokken, t.metadata.titel);
 }
 
 /** De bestandsnaam van het plan van een situatiepagina, of `undefined` zonder achtergrond of bestand. */
@@ -284,6 +356,42 @@ export function printHtml(
   }
   const teksten = TEKSTEN[opties.taal];
   const papier: Papier = { ...STANDAARD_PAPIER_A4, formaat: opties.papier };
+  const beperking = !REGELSETS[doc.regelset]?.gepubliceerd;
+  const cartoucheBasis = {
+    papier, teksten, taal: opties.taal, meta: doc.meta, installateur: opties.installateur,
+    logo: opties.logo, datum: opties.datum, versieLabel: opties.versieLabel, nummer: 9999, totaal: 9999,
+  };
+  const titels = [teksten.paginatitels.bijlage];
+  if (onderdelen.eendraadschema) titels.push(teksten.paginatitels.eendraadschema);
+  if (onderdelen.kringenlijst) titels.push(teksten.paginatitels.kringenlijst);
+  if (onderdelen.situatieschema) {
+    titels.push(...doc.situatie.paginas.filter(p => bestandVan(p, opties.afbeeldingen) !== undefined)
+      .map(p => `${teksten.paginatitels.situatieschema} — ${p.titel}`));
+  }
+  const volledigeHoogte = Math.max(...titels.map(titel => cartoucheHoogte({ ...cartoucheBasis, titel })));
+  // Onbegrensde geldige invoer mag nooit alle tekenruimte innemen. De volledige gegevens
+  // gaan dan naar vervolgpagina's, ook wanneer de gebruiker de bevindingenbijlage niet kiest.
+  const metadataVervolg = volledigeHoogte > 60;
+  const verwijzing = teksten.metadata.verwijzing;
+  const cartoucheGegevens = metadataVervolg ? {
+    ...cartoucheBasis,
+    meta: {
+      ...doc.meta,
+      klant: { naam: verwijzing },
+      werfadres: { straat: verwijzing, nummer: "", postcode: "", gemeente: "", land: "" },
+      ean: verwijzing,
+    },
+    installateur: { naam: verwijzing },
+    datum: verwijzing,
+    versieLabel: verwijzing,
+  } : cartoucheBasis;
+  const cartoucheTitel = (titel: string) => metadataVervolg && titel.startsWith(`${teksten.paginatitels.situatieschema} — `)
+    ? teksten.paginatitels.situatieschema : titel;
+  const metadataHoogte = metadataVervolg
+    ? Math.max(...[...titels.map(cartoucheTitel), teksten.metadata.titel].map(titel => cartoucheHoogte({ ...cartoucheGegevens, titel })))
+    : volledigeHoogte;
+  const beperkingHoogte = beperking ? 9 : 0;
+  papier.cartoucheHoogte_mm = metadataHoogte + beperkingHoogte;
   const c: Context = {
     doc,
     analyse,
@@ -310,24 +418,19 @@ export function printHtml(
   }
   if (onderdelen.kringenlijst) paginas.push(...kringenlijstPaginas(c));
   if (onderdelen.bijlage || paginas.length === 0) paginas.push(...bijlagePaginas(c, bevindingen, overgeslagen));
+  if (metadataVervolg) paginas.push(...metadataPaginas(c, opties, titels));
 
   const totaal = paginas.length;
   const watermerk = opties.watermerk ? watermerkHtml(opties.watermerk) : "";
   const secties = paginas.map(
     (pagina, i) =>
       `<section class="pagina">${pagina.inhoud}${cartouche({
-        papier,
-        teksten,
-        taal: opties.taal,
-        meta: doc.meta,
-        installateur: opties.installateur,
-        logo: opties.logo,
-        titel: pagina.titel,
-        datum: opties.datum,
-        versieLabel: opties.versieLabel,
+        ...cartoucheGegevens,
+        papier: { ...papier, cartoucheHoogte_mm: metadataHoogte },
+        titel: cartoucheTitel(pagina.titel),
         nummer: i + 1,
         totaal,
-      })}${watermerk}</section>`,
+      })}${beperking ? `<div class="controlebeperking" style="left:${mm(papier.marge_mm)};top:${mm(papierMaat(papier.formaat).hoogte - papier.marge_mm - metadataHoogte - beperkingHoogte + 1)};width:${mm(c.ruimte.breedte)}">${escapeXml(teksten.controlebeperking)}</div>` : ""}${watermerk}</section>`,
   );
   const maat = papierMaat(papier.formaat);
   const titel = [doc.meta.klant.naam, opties.versieLabel].filter((d) => d.trim() !== "").join(" — ");

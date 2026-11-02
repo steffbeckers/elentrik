@@ -1,18 +1,25 @@
 <script setup lang="ts">
 import type { NodeId } from "@elentrik/model";
+import type { Bevinding } from "@elentrik/arei";
+import ActieveBevinding from "~/components/editor/ActieveBevinding.vue";
+import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.vue";
 import AbonnementBanner from "~/components/AbonnementBanner.vue";
 import BevindingenPaneel from "~/components/editor/BevindingenPaneel.vue";
 import ConceptDialoog from "~/components/editor/ConceptDialoog.vue";
 import ConflictDialoog from "~/components/editor/ConflictDialoog.vue";
 import EditorBovenbalk from "~/components/editor/EditorBovenbalk.vue";
+import EditorWerkruimte from "~/components/editor/EditorWerkruimte.vue";
 import EigenschappenPaneel from "~/components/editor/EigenschappenPaneel.vue";
 import ExportDialoog from "~/components/editor/ExportDialoog.vue";
 import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
 import SymbolenVenster from "~/components/editor/SymbolenVenster.vue";
 import KringenlijstTabel from "~/components/kringenlijst/KringenlijstTabel.vue";
+import MateriaallijstTabel from "~/components/materiaallijst/MateriaallijstTabel.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
+import PlanTekenenDialoog from "~/components/situatie/PlanTekenenDialoog.vue";
 import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
+import PlanOpmaak from "~/components/situatie/PlanOpmaak.vue";
 import PlanToevoegenDialoog from "~/components/situatie/PlanToevoegenDialoog.vue";
 import SchaalDialoog from "~/components/situatie/SchaalDialoog.vue";
 import TePlaatsenPaneel from "~/components/situatie/TePlaatsenPaneel.vue";
@@ -283,9 +290,18 @@ async function opnieuwProberen(): Promise<void> {
   );
 }
 
-function toonBevindingen(): void {
-  window.document.getElementById("bevindingen")?.scrollIntoView({ behavior: "smooth", block: "start" });
+const werkruimte = ref<InstanceType<typeof EditorWerkruimte> | null>(null);
+const actieveBevinding = ref<Bevinding | null>(null);
+watch(() => store.selectie.join(","), () => { actieveBevinding.value = null; }, { flush: "sync" });
+const dossierGegevensOpen = ref(false);
+function herstelBevinding(b: Bevinding): void { actieveBevinding.value = b; void werkruimte.value?.toonEigenschappen(); }
+async function navigeerDossier(doel: "gegevens" | "schema" | "situatie"): Promise<void> {
+  if (doel === "gegevens") { dossierGegevensOpen.value = true; return; }
+  store.tabblad = doel === "schema" ? "eendraadschema" : "situatieschema";
+  await nextTick();
+  werkruimte.value?.toonOnderdelen();
 }
+function toonBevindingen(): void { werkruimte.value?.toonBevindingen(); }
 
 function bijVerlaten(event: BeforeUnloadEvent): void {
   if (waarschuwBijVerlaten(autosave.status.value)) event.preventDefault();
@@ -377,12 +393,20 @@ const exportOpen = ref(false);
 
 /** Het punt dat met een klik op het plan geplaatst wordt (gekozen in "Te plaatsen"), of null. */
 const teplaatsen = ref<NodeId | null>(null);
+watch(teplaatsen, (id) => { if (id !== null) werkruimte.value?.toonWerk(); });
 /** De pagina waarop twee klikken een afstand meten (schaalmodus), of null. */
 const meetPaginaId = ref<string | null>(null);
 const meetSchaal = computed(() => meetPaginaId.value !== null && meetPaginaId.value === situatie.actievePaginaId);
 const schaalOpen = ref(false);
 const schaalAfstandPx = ref(0);
 const planDialoogOpen = ref(false);
+const tekenDialoogOpen = ref(false);
+const tekenPaginaId = ref<string | undefined>();
+function tekenPlan(paginaId?: string) {
+  stopPlaatsenEnMeten();
+  tekenPaginaId.value = paginaId;
+  tekenDialoogOpen.value = true;
+}
 const vervangPaginaId = ref<string | undefined>(undefined);
 
 const heeftPaginas = computed(() => (store.document?.situatie.paginas.length ?? 0) > 0);
@@ -519,25 +543,27 @@ onBeforeUnmount(() => {
         </template>
       </UAlert>
       <AbonnementBanner />
-      <div class="grid min-h-0 flex-1 grid-cols-[14rem_minmax(0,1fr)_20rem]">
-        <template v-if="store.tabblad === 'eendraadschema'">
-          <OnderdelenPaneel class="overflow-y-auto border-r border-default" />
-          <SchemaCanvas />
+      <EditorWerkruimte ref="werkruimte" :tabblad="store.tabblad" :selectie="store.selectie" :heeft-plan="!!situatie.actievePagina?.achtergrond">
+        <template #gereedschap>
+          <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" />
+          <TePlaatsenPaneel v-else v-model:gekozen="teplaatsen" />
         </template>
-        <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="col-span-2 border-r border-default" />
+        <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />
+        <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="min-h-0 flex-1" />
+        <MateriaallijstTabel v-else-if="store.tabblad === 'materiaallijst'" class="min-h-0 flex-1" />
         <template v-else>
-          <TePlaatsenPaneel v-model:gekozen="teplaatsen" class="overflow-y-auto border-r border-default" />
-          <div v-if="heeftPaginas" class="flex min-h-0 flex-col">
-            <PaginaTabs @toevoegen="planToevoegen" @schaal-instellen="schaalInstellen" />
+          <div v-if="heeftPaginas" class="relative flex min-h-0 min-w-0 flex-1 flex-col">
+
             <div
               v-if="hint"
-              class="flex items-center gap-2 border-b border-default bg-primary/5 px-3 py-1 text-sm"
+              class="flex min-h-9 shrink-0 items-center gap-2 border-b border-default bg-primary/5 px-3 py-1 text-sm"
               role="status"
               data-testid="plan-hint"
             >
-              <UIcon :name="meetSchaal ? 'i-lucide-ruler' : 'i-lucide-map-pin'" class="size-4 text-primary" />
-              <span>{{ hint }}</span>
+              <UIcon :name="meetSchaal ? 'i-lucide-ruler' : 'i-lucide-map-pin'" class="size-4 shrink-0" />
+              <span class="max-h-full min-w-0 flex-1 overflow-auto">{{ hint }}</span>
               <UButton
+                v-if="hint"
                 color="neutral"
                 variant="link"
                 size="sm"
@@ -555,15 +581,18 @@ onBeforeUnmount(() => {
               @schaal-gemeten="schaalGemeten"
               @vervang-plan="vervangPlan"
             />
+            <PaginaTabs @toevoegen="planToevoegen" @tekenen="tekenPlan" @schaal-instellen="schaalInstellen" />
           </div>
-          <div v-else class="flex items-center justify-center p-6" data-testid="plan-leeg">
+          <div v-else class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-6" data-testid="plan-leeg">
             <div class="flex max-w-sm flex-col items-center gap-3 text-center">
               <UIcon name="i-lucide-map" class="size-10 text-muted" />
               <p class="font-medium">{{ $t("editor.situatie.leeg.titel") }}</p>
               <p class="text-sm text-muted">{{ $t("editor.situatie.leeg.beschrijving") }}</p>
+              <UButton icon="i-lucide-pencil-ruler" :disabled="store.alleenLezen" data-testid="plan-tekenen-leeg" :label="$t('editor.situatie.tekenen.new')" @click="tekenPlan()" />
               <UButton
                 icon="i-lucide-image-up"
                 :disabled="store.alleenLezen"
+                variant="outline"
                 data-testid="plan-toevoegen-leeg"
                 :label="$t('editor.situatie.leeg.planToevoegen')"
                 @click="planToevoegen"
@@ -571,12 +600,13 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </template>
-        <div class="overflow-y-auto border-l border-default">
+        <template #eigenschappen>
+          <ActieveBevinding v-if="actieveBevinding" :bevinding="actieveBevinding" @terug="toonBevindingen" @volgende="herstelBevinding" @sluiten="actieveBevinding = null" />
           <EigenschappenPaneel />
-          <USeparator />
-          <BevindingenPaneel id="bevindingen" />
-        </div>
-      </div>
+        </template>
+        <template #bevindingen><BevindingenPaneel id="bevindingen" @selecteer="herstelBevinding" @navigeer="navigeerDossier" /></template>
+        <template #opmaak><PlanOpmaak /></template>
+      </EditorWerkruimte>
     </template>
 
     <UContainer v-else-if="laadstatus === 'nietGevonden'" class="py-8">
@@ -606,8 +636,10 @@ onBeforeUnmount(() => {
       {{ $t("editor.pagina.laden") }}
     </div>
 
+    <PlanTekenenDialoog v-model:open="tekenDialoogOpen" :pagina-id="tekenPaginaId" @klaar="planKlaar" @verwijderd="autosave.meldVerwijderd" />
     <PlanToevoegenDialoog
       v-model:open="planDialoogOpen"
+      @tekenen="tekenPlan()"
       :vervang-pagina-id="vervangPaginaId"
       @klaar="planKlaar"
       @verwijderd="autosave.meldVerwijderd"
@@ -628,7 +660,9 @@ onBeforeUnmount(() => {
       :status="autosave.status.value"
       :nu-opslaan="autosave.nuOpslaan"
       @conflict="autosave.meldConflict"
+      @navigeer="navigeerDossier"
     />
+    <ProjectgegevensDialoog v-model:open="dossierGegevensOpen" />
     <ConflictDialoog
       v-model:open="conflictOpen"
       :bezig="conflictBezig"

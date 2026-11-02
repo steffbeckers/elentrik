@@ -14,13 +14,26 @@ const { taal } = useTaal();
 const teksten = computed<Teksten>(() => TEKSTEN[taal.value]);
 
 type Kolom = keyof KringenlijstRij & keyof Teksten["kolommen"];
-const KOLOMMEN = ["kring", "punt", "type", "ruimte", "beveiliging", "differentieel", "leiding"] as const satisfies readonly Kolom[];
+const KOLOMMEN = ["kring", "kringOmschrijving", "punt", "puntOmschrijving", "type", "ruimte", "beveiliging", "differentieel", "leiding"] as const satisfies readonly Kolom[];
+const BREEDTES: Record<Kolom, string> = {
+  kring: "3rem", kringOmschrijving: "10rem", punt: "3rem", puntOmschrijving: "10rem",
+  type: "10rem", ruimte: "8rem", beveiliging: "9rem", differentieel: "11rem", leiding: "8rem",
+};
+const TECHNISCH = new Set<Kolom>(["kring", "punt", "beveiliging", "differentieel", "leiding"]);
 
 const rijen = computed<KringenlijstRij[]>(() =>
   store.document && store.analyse ? kringenlijst(store.document, store.analyse, teksten.value) : [],
 );
 
 const container = ref<HTMLElement | null>(null);
+
+function eersteInKring(index: number): boolean {
+  return index === 0 || rijen.value[index - 1]?.kring !== rijen.value[index]?.kring;
+}
+function herhaaldeOmschrijving(index: number, kolom: Kolom): boolean {
+  return kolom === "kringOmschrijving" && !eersteInKring(index)
+    && rijen.value[index - 1]?.kringOmschrijving === rijen.value[index]?.kringOmschrijving;
+}
 
 function geselecteerd(rij: KringenlijstRij): boolean {
   return store.selectie.includes(rij.nodeId);
@@ -78,14 +91,18 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
 <template>
   <section
     ref="container"
-    class="min-h-0 scroll-pt-10 overflow-auto"
+    class="min-h-0 min-w-0 max-w-full scroll-pt-12 overflow-auto overscroll-contain"
     :aria-label="$t('editor.kringenlijst.titel')"
     data-testid="kringenlijst"
   >
     <p v-if="rijen.length === 0" class="p-6 text-center text-sm text-muted" data-testid="kringenlijst-leeg">
       {{ teksten.geenKringen }}
     </p>
-    <table v-else role="grid" class="w-full border-separate border-spacing-0 text-left text-sm">
+    <table v-else role="grid" class="w-full min-w-[72rem] table-fixed border-separate border-spacing-0 text-left text-sm">
+      <caption class="sr-only">{{ $t('editor.kringenlijst.toetsenbord') }}</caption>
+      <colgroup>
+        <col v-for="kolom in KOLOMMEN" :key="kolom" :style="{ width: BREEDTES[kolom] }">
+      </colgroup>
       <thead>
         <tr>
           <th
@@ -107,14 +124,20 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
           :aria-selected="geselecteerd(rij)"
           :data-rij-node="rij.nodeId"
           :data-testid="`kringenlijst-rij-${rij.punt}`"
-          class="cursor-pointer outline-none hover:bg-elevated focus-visible:ring-2 focus-visible:ring-primary"
+          class="cursor-pointer outline-none hover:bg-elevated focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
           :class="geselecteerd(rij) ? 'bg-primary/10' : ''"
           @click="kies(rij)"
           @focus="bijFocus(index)"
           @keydown="bijToets($event, rij, index)"
         >
-          <td v-for="kolom in KOLOMMEN" :key="kolom" role="gridcell" class="border-b border-default px-3 py-1.5">
-            {{ rij[kolom] }}
+          <td v-for="kolom in KOLOMMEN" :key="kolom" role="gridcell" class="border-b border-default px-3 py-2 align-top"
+            :class="[
+              TECHNISCH.has(kolom) ? 'whitespace-nowrap tabular-nums' : '[overflow-wrap:anywhere]',
+              eersteInKring(index) && index > 0 ? 'border-t-2 pt-4' : '',
+              kolom === 'kring' || kolom === 'punt' ? 'font-medium' : '',
+            ]"
+          >
+            <span :class="herhaaldeOmschrijving(index, kolom) ? 'sr-only' : ''">{{ rij[kolom] }}</span>
           </td>
         </tr>
       </tbody>

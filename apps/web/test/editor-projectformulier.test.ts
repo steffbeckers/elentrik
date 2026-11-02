@@ -101,6 +101,7 @@ describe("gegevensUitFormulier", () => {
       ean: "54",
       datum: "2026-10-18",
       dossierTaal: "nl",
+      installatieContext: "onbekend",
     });
   });
 

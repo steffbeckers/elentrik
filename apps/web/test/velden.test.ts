@@ -23,7 +23,7 @@ function bladeren(boom: Boom | string): string[] {
 }
 
 /** Sleutels die geen eigen veld krijgen: structuur, of in `GEMEENSCHAPPELIJK`. */
-const ZONDER_EIGEN_VELD = new Set(["id", "type", "parentId", "kinderen", "label", "ruimte"]);
+const ZONDER_EIGEN_VELD = new Set(["id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam"]);
 
 /** Minimale vorm van een Zod-schema, zodat de test los staat van de introspectie in velden.ts. */
 type Schema = { def: { type: string; innerType?: Schema; options?: Schema[] }; options?: unknown[]; values?: Set<unknown> };
@@ -58,6 +58,10 @@ const varianten = NodeSchema.options.map((variant) => ({
 }));
 
 describe("VELDEN", () => {
+  test("aftakkingslidmaatschap is structuur en verschijnt niet als wijzigbaar veld", () => {
+    expect(VELDEN.schakelaar.some((v) => v.sleutel === "aftakking")).toBe(false);
+    expect(VELDEN.lichtpunt.some((v) => v.sleutel === "aftakking")).toBe(false);
+  });
   test("heeft precies de nodetypes van NodeSchema", () => {
     expect(Object.keys(VELDEN).toSorted()).toEqual(varianten.map((v) => v.type).toSorted());
   });
@@ -135,13 +139,17 @@ describe("VELDEN", () => {
 });
 
 describe("GEMEENSCHAPPELIJK", () => {
-  test("label en ruimte, beide optioneel", () => {
-    expect(GEMEENSCHAPPELIJK.map((v) => v.sleutel)).toEqual(["label", "ruimte"]);
+  test("label, ruimte en ruimtenaam, alle optioneel", () => {
+    expect(GEMEENSCHAPPELIJK.map((v) => v.sleutel)).toEqual(["label", "ruimte", "ruimteNaam"]);
     expect(GEMEENSCHAPPELIJK[0]).toMatchObject({ soort: "tekst", optioneel: true, labelSleutel: "velden.label.label" });
+    expect(GEMEENSCHAPPELIJK[2]).toMatchObject({ soort: "tekst", optioneel: true, labelSleutel: "velden.ruimteNaam.label" });
+    expect(tekst("velden.ruimteNaam.label")).toBeTruthy();
     const ruimte = GEMEENSCHAPPELIJK[1]!;
     expect(ruimte).toMatchObject({ soort: "keuze", optioneel: true, labelSleutel: "velden.ruimte.label" });
     expect(ruimte.opties?.map((o) => o.waarde)).toEqual(RuimteSchema.options);
     expect(ruimte.opties?.map((o) => o.labelSleutel)).toEqual(RuimteSchema.options.map((r) => `ruimtes.${r}`));
     expect(tekst("ruimtes.badkamer")).toBe("Badkamer");
+    expect(ruimte.opties?.find((o) => o.waarde === "hal")).toMatchObject({ labelSleutel: "ruimtes.hal" });
+    expect(tekst("ruimtes.hal")).toBe("Hal");
   });
 });

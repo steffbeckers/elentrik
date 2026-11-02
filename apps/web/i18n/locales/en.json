@@ -21,6 +21,20 @@
         "titel": "Delete whole branch",
         "beschrijving": "This deletes {aantal} components. You can undo it.",
         "bevestigen": "Delete"
+      },
+      "toetsenbord": {
+        "onderdeel": "Diagram component",
+        "kiesOnderdeel": "Choose a component",
+        "invoegpunt": "Insert at",
+        "rail-einde": "New circuit on",
+        "kring-einde": "After",
+        "geenInvoegpunt": "No valid insertion point",
+        "actie": "Add action",
+        "bestaandeKring": "Extend existing circuit",
+        "nieuweKring": "New circuit",
+        "kringBestemming": "Circuit {kring} · after {punt}",
+        "rechtstreeksOpBord": "Directly on {bord}",
+        "voorKringen": "circuits {kringen}"
       }
     },
     "onderdelen": {
@@ -65,7 +79,8 @@
       "tabbladen": {
         "eendraadschema": "Single-line diagram",
         "situatieschema": "Layout plan",
-        "kringenlijst": "Circuit list"
+        "kringenlijst": "Circuit list",
+        "materiaallijst": "Materials list"
       },
       "bevindingen": "{fouten} and {waarschuwingen}",
       "aantalFouten": "{n} error | {n} errors",
@@ -75,7 +90,8 @@
       "exporteren": "Export"
     },
     "kringenlijst": {
-      "titel": "Circuit list"
+      "titel": "Circuit list",
+      "toetsenbord": "Points grouped by circuit. Up and down arrows move focus; Enter selects the point. Scroll horizontally to see all specifications."
     },
     "status": {
       "opgeslagen": "Saved",
@@ -171,7 +187,7 @@
     },
     "bevindingen": {
       "titel": "Findings",
-      "leeg": "No findings.",
+      "leeg": "No findings within the checks performed.",
       "ernst": {
         "fout": "Errors",
         "waarschuwing": "Warnings",
@@ -179,7 +195,19 @@
       },
       "afgeweken": "Deviation: {motivatie}",
       "motiveren": "Justify a deviation",
-      "verwijderen": "Remove deviation"
+      "verwijderen": "Remove deviation",
+      "voorlopig": "Preliminary, limited automated checks. Not all AREI/RGIE requirements are checked. No findings is not proof of compliance; have the dossier reviewed.",
+      "context": "Installation context",
+      "contextWijzigen": "Change context",
+      "kring": "Circuit {kring}",
+      "installatie": "Installation",
+      "betrokkenPunten": "Affected components",
+      "bekijkPunt": "View {punt}",
+      "bekijk": {
+        "beveiliging": "View protection",
+        "kring": "View circuit"
+      },
+      "afwijkingenPerPunt": "Deviations by component"
     },
     "afwijking": {
       "titel": "Justify a deviation",
@@ -221,6 +249,13 @@
         "naamVerplicht": "Give the project a name.",
         "adresVerplicht": "Required for an address.",
         "datumVerplicht": "Choose a date."
+      },
+      "context": {
+        "label": "Installation context",
+        "hulp": "For domestic installations. Choose new for new or altered parts subject to current requirements. For existing parts, check the installation date and transitional provisions separately.",
+        "nieuw": "New / altered part — current requirements",
+        "bestaand": "Existing part — check transitional provisions",
+        "onbekend": "To be determined"
       }
     },
     "concept": {
@@ -275,7 +310,7 @@
       },
       "leeg": {
         "titel": "No plan yet",
-        "beschrijving": "Add a plan to place the points on.",
+        "beschrijving": "Draw a floor plan or upload an existing plan, then place the electrical symbols.",
         "planToevoegen": "Add plan"
       },
       "hernoemen": {
@@ -285,7 +320,7 @@
         "bewaren": "Rename"
       },
       "schaal": {
-        "tekst": "Scale: 1 px = {waarde} mm",
+        "tekst": "Calibration: 1 plan pixel = {waarde} mm",
         "wissen": "Clear scale",
         "titel": "Set scale",
         "beschrijving": "The measured line is {px} pixels long. Enter the real distance.",
@@ -310,7 +345,15 @@
         "werkbalk": "Selection on the plan",
         "draaiLinks": "Rotate anticlockwise (Shift+R)",
         "draaiRechts": "Rotate clockwise (R)",
-        "vanPlanHalen": "Remove from plan"
+        "vanPlanHalen": "Remove from plan",
+        "kiesPunt": "Point on plan",
+        "kiesPuntLeeg": "Choose a point",
+        "tekenvlak": "Layout plan: keyboard controls",
+        "toetsenbord": "Choose a point. Arrows move it; Shift adjusts by 1 px. R rotates, Delete removes it from the plan. Tab leaves the drawing area.",
+        "plaatsToetsenbord": "Arrows move the crosshair; Shift adjusts by 1 px. Enter confirms, Escape cancels.",
+        "cursorPositie": "Position: x {x}, y {y} px",
+        "bevestigMeetpunt": "Confirm measurement point",
+        "bevestigPlaats": "Place here"
       },
       "toevoegen": {
         "titel": "Add plan",
@@ -335,6 +378,49 @@
           "mislukt": "The plan could not be uploaded. Please try again.",
           "onleesbaar": "This file could not be read."
         }
+      },
+      "tekenen": {
+        "new": "Draw a plan",
+        "edit": "Edit plan",
+        "description": "Draw walls, doors and windows for the layout plan.",
+        "noPlan": "No building plan available?",
+        "name": "Plan name",
+        "use": "Use plan",
+        "cancelHint": "Use the plan to save your changes. Cancel discards this drawing session.",
+        "loading": "Loading drawing tools…",
+        "loadError": "The editor could not load. Close this window and try again.",
+        "exportError": "The plan could not be applied. Draw at least one wall and try again.",
+        "changed": "The project has changed. Close the editor and reopen the plan to edit the latest version.",
+        "tools": "Drawing tools",
+        "select": "Select",
+        "wall": "Wall",
+        "door": "Door",
+        "window": "Window",
+        "text": "Text",
+        "measure": "Measure",
+        "undo": "Undo",
+        "redo": "Redo",
+        "delete": "Delete",
+        "length": "Length",
+        "thickness": "Wall thickness",
+        "width": "Width",
+        "hint": "Click to draw walls. Escape ends the wall. Select a wall to adjust its dimensions."
+      },
+      "opmaak": {
+        "titel": "Plan appearance",
+        "symbolen": "Symbol size",
+        "labels": "Label size",
+        "paginaHint": "Applies to this page. 100% is the default size.",
+        "labelPositie": "Selected label position",
+        "offsetX": "Horizontal",
+        "offsetY": "Vertical",
+        "offsetHint": "Offset in plan pixels: positive moves right or down.",
+        "herstelLabel": "Reset label position",
+        "kiesLabel": "Select one symbol to move its label.",
+        "bereik": "From 25% to 400%.",
+        "ongeldigPercentage": "Enter a number from 25 to 400 inclusive. The saved size has not changed.",
+        "ongeldigeOffset": "Enter a valid number, such as 0 or -15. The saved position has not changed.",
+        "herstelInvoer": "Restore saved values"
       }
     },
     "export": {
@@ -378,7 +464,7 @@
         "versie": "Version",
         "datum": "Date",
         "fouten": "Errors",
-        "aantalFouten": "no errors | {n} error | {n} errors",
+        "aantalFouten": "0 electrical errors reported | 1 electrical error | {n} electrical errors",
         "downloaden": "Download"
       }
     },
@@ -393,6 +479,41 @@
     "organisatieGewisseld": "You are now working in {organisatie}.",
     "andereGebruiker": {
       "melding": "You are now signed in as {naam}. These changes belong to {oorspronkelijk} and are still kept locally for that account."
+    },
+    "werkruimte": {
+      "panelen": "Workspace panels",
+      "werk": "Drawing / list",
+      "onderdelen": "Components",
+      "eigenschappen": "Properties",
+      "bevindingen": "Findings",
+      "opmaak": "Plan formatting",
+      "weergaven": "Dossier sections",
+      "planHint": "Select a point on the plan or open Components to place a point.",
+      "sluiten": "Close panel",
+      "toetsenbordhulp": "Keyboard help"
+    },
+    "materiaallijst": {
+      "titel": "Materials list",
+      "uitleg": "Materials required based on the components in this project, grouped by specification. Open the components to edit their properties.",
+      "lengteUitleg": "Enter the route length for each cable run in Properties. XVB counts cable metres; VOB counts route length × number of conductors. Excludes cutting waste and spare length; VOB is not split by colour.",
+      "ontbrekend": "Length is missing for {aantal} cable run(s). Totals in metres are incomplete.",
+      "leeg": "Add components to the single-line diagram to build the materials list.",
+      "materiaal": "Material and specification",
+      "hoeveelheid": "Quantity",
+      "bronnen": "View components ({aantal})",
+      "onvolledig": "Length missing",
+      "onbekend": "Not specified",
+      "ja": "Yes",
+      "nee": "No",
+      "stuks": "pc | pcs",
+      "m": "m"
+    },
+    "aftakkingen": {
+      "titel": "Branches",
+      "hulp": "Choose a switch or light point and select the circuit cable. Add a branch, then extend it using the plus on the right.",
+      "toevoegen": "Add branch",
+      "uitbreiden": "Add {onderdeel} to branch",
+      "bestemming": "Extend a branch"
     }
   },
   "bedrijf": {
@@ -483,7 +604,7 @@
       "label": "Label"
     },
     "ruimte": {
-      "label": "Room"
+      "label": "Room type (checks)"
     },
     "gevoeligheid_mA": {
       "label": "Sensitivity"
@@ -564,6 +685,12 @@
         "omvormer": "Inverter",
         "andere": "Other"
       }
+    },
+    "ruimteNaam": {
+      "label": "Name on plan (free text)"
+    },
+    "lengte_m": {
+      "label": "Route length"
     }
   },
   "ruimtes": {
@@ -577,7 +704,8 @@
     "zolder": "Attic",
     "buiten": "Outdoors",
     "technisch": "Technical room",
-    "andere": "Other"
+    "andere": "Other",
+    "hal": "Hall"
   },
   "rollen": {
     "eigenaar": "Owner",
@@ -608,7 +736,7 @@
     "of": "or",
     "inloglink": "Send me a sign-in link",
     "inloglinkVerstuurd": "If this address is known, you will receive a link.",
-    "inloglinkUitleg": "A sign-in link confirms your address. A password you have not confirmed yet then stops working.",
+    "inloglinkUitleg": "Sign in without a password using a link sent to your inbox. It also confirms your email address. Any password that has not yet been confirmed will be invalidated.",
     "ongeldig": "The email address or password is incorrect.",
     "onbevestigd": {
       "titel": "Your email address has not been confirmed yet",
@@ -864,5 +992,68 @@
     "INVALID_EMAIL": "Enter a valid email address.",
     "ORGANIZATION_ALREADY_EXISTS": "This company could not be created because it already exists. Try again.",
     "ORGANIZATION_SLUG_ALREADY_TAKEN": "This company could not be created because it already exists. Try again."
+  },
+  "werkbaarheid": {
+    "tekenen": {
+      "toevoegen": "Add",
+      "kiesBestemming": "Choose where to add",
+      "sluitToevoegen": "Close adding",
+      "zoom": "Zoom and move the drawing",
+      "inzoomen": "Zoom in",
+      "uitzoomen": "Zoom out",
+      "focus": "Focus on selection",
+      "hulp": "Scroll to zoom. Drag empty space to pan, or hold the space bar. Select a component to edit it; blue plus buttons add at their location.",
+      "zoekOnderdeel": "Search by circuit, number or name…",
+      "zoekBestemming": "Search for an insertion point…"
+    },
+    "dossier": {
+      "titel": "Complete the dossier",
+      "uitleg": "Dossier completeness, separate from electrical checks.",
+      "volledig": "The checked dossier information is filled in.",
+      "klant": "Enter the customer name",
+      "werfadres": "Complete the site address",
+      "context": "Choose the context: new or existing installation",
+      "schema": "Draw the first circuit",
+      "plan": "Add a floor plan | Add {aantal} missing plans",
+      "plaatsen": "1 component still needs placing on the plan | {aantal} components still need placing on the plan",
+      "conceptUitleg": "Some dossier information is missing. You can export a draft now and finish it later.",
+      "conceptExport": "Create draft PDF"
+    },
+    "bevindingen": {
+      "controle": "About this provisional check",
+      "punten": "{aantal} affected components",
+      "terug": "All findings",
+      "sluiten": "Close active finding",
+      "opgelost": "This finding is no longer active.",
+      "differentieel": "Check the RCD upstream of this circuit. Changing only the circuit breaker rating does not resolve a missing RCD.",
+      "volgende": "Next finding",
+      "geenElektrische": "No electrical findings reported. Also check dossier completeness."
+    }
+  },
+  "werkbaarheidBeheer": {
+    "navigatie": "Settings",
+    "wachtwoordTonen": "Show password",
+    "wachtwoordVerbergen": "Hide password",
+    "verlaten": "Your company details have not been saved. Leave this page and lose your changes?",
+    "logoDirect": "The logo is saved immediately. Save the other company details using the button below.",
+    "bewaren": "Saving company details…",
+    "gewijzigd": "Unsaved changes",
+    "geenWijzigingen": "No unsaved changes",
+    "organisatieNaam": "This name identifies your organisation in the app. Manage the company name shown on PDFs under Company details.",
+    "rolTitel": "Confirm role change",
+    "rolVraag": "Give {naam} the {rol} role?",
+    "eigenaarGevolg": "An owner manages company details, members, invitations and the subscription, and can edit projects.",
+    "lidGevolg": "A member can view and edit projects when the subscription allows it, but cannot manage company details, members or the subscription.",
+    "eigenRolGevolg": "You are giving up your own management access. Another owner will need to restore it.",
+    "rolBevestigen": "Change role",
+    "mailOntvanger": "Email address used: {email}",
+    "mailHulp": "No email yet? Check your spam folder and the address you entered. Delivery can take a few minutes. If you already have an account, sign in.",
+    "mailOpnieuw": "Send a new verification email",
+    "emailWijzigenUitleg": "Entered the wrong address? Register again with the correct address. This does not change an existing account.",
+    "emailWijzigen": "Correct email address",
+    "huidigAbonnement": "Subscription details",
+    "formule": "Plan",
+    "periodeTot": "Current period ends",
+    "betaalportaal": "Manage subscription opens the payment portal, where you can find your subscription amounts and details."
   }
 }

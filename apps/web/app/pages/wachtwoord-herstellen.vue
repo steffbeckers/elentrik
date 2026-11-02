@@ -76,9 +76,8 @@ async function herstel() {
           :hint="$t('auth.wachtwoordHulp')"
           required
         >
-          <UInput
+          <WachtwoordVeld
             v-model="formulier.wachtwoord"
-            type="password"
             autocomplete="new-password"
             class="w-full"
             data-testid="wachtwoord-herstellen-wachtwoord"
