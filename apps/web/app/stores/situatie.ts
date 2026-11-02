@@ -8,6 +8,8 @@ import {
   verwijderPlaatsing,
   voegPaginaToe,
   zetAchtergrond,
+  zetGetekendPlan,
+  type PlanTekening,
   zetSchaal as zetSchaalInDoc,
   zetPaginaOpmaak as zetPaginaOpmaakInDoc,
   zetLabelOffset as zetLabelOffsetInDoc,
@@ -61,6 +63,20 @@ export const useSituatieStore = defineStore("situatie", () => {
   function vervangAchtergrond(paginaId: string, achtergrond: Achtergrond): void {
     if (editor.alleenLezen) return;
     editor.pasToe(zetAchtergrond(vereisDocument(), paginaId, achtergrond));
+  }
+
+  function bewaarTekening(titel: string, achtergrond: Achtergrond, tekening: PlanTekening, paginaId?: string): string {
+    if (editor.alleenLezen) return "";
+    const doc = vereisDocument();
+    if (paginaId) {
+      editor.pasToe(zetGetekendPlan(doc, paginaId, achtergrond, tekening));
+    } else {
+      const toegevoegd = voegPaginaToe(doc, titel);
+      paginaId = toegevoegd.id;
+      editor.pasToe(samengevoegd(doc, [toegevoegd, zetGetekendPlan(toegevoegd.doc, paginaId, achtergrond, tekening)]));
+    }
+    gekozenPaginaId.value = paginaId;
+    return paginaId;
   }
 
   function hernoem(paginaId: string, titel: string): void {
@@ -185,6 +201,7 @@ export const useSituatieStore = defineStore("situatie", () => {
     actievePagina,
     voegPlanPaginaToe,
     vervangAchtergrond,
+    bewaarTekening,
     hernoem,
     verwijderPagina,
     verplaatsPagina,

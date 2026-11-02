@@ -79,7 +79,8 @@
       "tabbladen": {
         "eendraadschema": "Single-line diagram",
         "situatieschema": "Layout plan",
-        "kringenlijst": "Circuit list"
+        "kringenlijst": "Circuit list",
+        "materiaallijst": "Materials list"
       },
       "bevindingen": "{fouten} and {waarschuwingen}",
       "aantalFouten": "{n} error | {n} errors",
@@ -309,7 +310,7 @@
       },
       "leeg": {
         "titel": "No plan yet",
-        "beschrijving": "Add a plan to place the points on.",
+        "beschrijving": "Draw a floor plan or upload an existing plan, then place the electrical symbols.",
         "planToevoegen": "Add plan"
       },
       "hernoemen": {
@@ -377,6 +378,33 @@
           "mislukt": "The plan could not be uploaded. Please try again.",
           "onleesbaar": "This file could not be read."
         }
+      },
+      "tekenen": {
+        "new": "Draw a plan",
+        "edit": "Edit plan",
+        "description": "Draw walls, doors and windows for the layout plan.",
+        "noPlan": "No building plan available?",
+        "name": "Plan name",
+        "use": "Use plan",
+        "cancelHint": "Use the plan to save your changes. Cancel discards this drawing session.",
+        "loading": "Loading drawing tools…",
+        "loadError": "The editor could not load. Close this window and try again.",
+        "exportError": "The plan could not be applied. Draw at least one wall and try again.",
+        "changed": "The project has changed. Close the editor and reopen the plan to edit the latest version.",
+        "tools": "Drawing tools",
+        "select": "Select",
+        "wall": "Wall",
+        "door": "Door",
+        "window": "Window",
+        "text": "Text",
+        "measure": "Measure",
+        "undo": "Undo",
+        "redo": "Redo",
+        "delete": "Delete",
+        "length": "Length",
+        "thickness": "Wall thickness",
+        "width": "Width",
+        "hint": "Click to draw walls. Escape ends the wall. Select a wall to adjust its dimensions."
       },
       "opmaak": {
         "titel": "Plan appearance",
@@ -463,6 +491,29 @@
       "planHint": "Select a point on the plan or open Components to place a point.",
       "sluiten": "Close panel",
       "toetsenbordhulp": "Keyboard help"
+    },
+    "materiaallijst": {
+      "titel": "Materials list",
+      "uitleg": "Materials required based on the components in this project, grouped by specification. Open the components to edit their properties.",
+      "lengteUitleg": "Enter the route length for each cable run in Properties. XVB counts cable metres; VOB counts route length × number of conductors. Excludes cutting waste and spare length; VOB is not split by colour.",
+      "ontbrekend": "Length is missing for {aantal} cable run(s). Totals in metres are incomplete.",
+      "leeg": "Add components to the single-line diagram to build the materials list.",
+      "materiaal": "Material and specification",
+      "hoeveelheid": "Quantity",
+      "bronnen": "View components ({aantal})",
+      "onvolledig": "Length missing",
+      "onbekend": "Not specified",
+      "ja": "Yes",
+      "nee": "No",
+      "stuks": "pc | pcs",
+      "m": "m"
+    },
+    "aftakkingen": {
+      "titel": "Branches",
+      "hulp": "Choose a switch or light point and select the circuit cable. Add a branch, then extend it using the plus on the right.",
+      "toevoegen": "Add branch",
+      "uitbreiden": "Add {onderdeel} to branch",
+      "bestemming": "Extend a branch"
     }
   },
   "bedrijf": {
@@ -637,6 +688,9 @@
     },
     "ruimteNaam": {
       "label": "Name on plan (free text)"
+    },
+    "lengte_m": {
+      "label": "Route length"
     }
   },
   "ruimtes": {

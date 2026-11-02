@@ -79,7 +79,8 @@
       "tabbladen": {
         "eendraadschema": "Schéma unifilaire",
         "situatieschema": "Plan de position",
-        "kringenlijst": "Liste des circuits"
+        "kringenlijst": "Liste des circuits",
+        "materiaallijst": "Liste du matériel"
       },
       "bevindingen": "{fouten} et {waarschuwingen}",
       "aantalFouten": "{n} erreur | {n} erreurs",
@@ -309,7 +310,7 @@
       },
       "leeg": {
         "titel": "Pas encore de plan",
-        "beschrijving": "Ajoutez un plan pour y placer les points.",
+        "beschrijving": "Dessinez un plan ou importez un plan existant, puis placez les symboles électriques.",
         "planToevoegen": "Ajouter un plan"
       },
       "hernoemen": {
@@ -377,6 +378,33 @@
           "mislukt": "Le plan n'a pas pu être envoyé. Veuillez réessayer.",
           "onleesbaar": "Ce fichier n'a pas pu être lu."
         }
+      },
+      "tekenen": {
+        "new": "Dessiner un plan",
+        "edit": "Modifier le plan",
+        "description": "Dessinez les murs, portes et fenêtres du plan de position.",
+        "noPlan": "Vous ne disposez pas de plan ?",
+        "name": "Nom du plan",
+        "use": "Utiliser ce plan",
+        "cancelHint": "Utilisez le plan pour enregistrer vos modifications. Annuler abandonne cette session de dessin.",
+        "loading": "Chargement de l’éditeur…",
+        "loadError": "Impossible de charger l’éditeur. Fermez cette fenêtre et réessayez.",
+        "exportError": "Le plan n’a pas pu être repris. Dessinez au moins un mur et réessayez.",
+        "changed": "Le projet a été modifié entre-temps. Fermez l’éditeur et rouvrez le plan pour modifier la dernière version.",
+        "tools": "Outils de dessin",
+        "select": "Sélectionner",
+        "wall": "Mur",
+        "door": "Porte",
+        "window": "Fenêtre",
+        "text": "Texte",
+        "measure": "Mesurer",
+        "undo": "Annuler",
+        "redo": "Rétablir",
+        "delete": "Supprimer",
+        "length": "Longueur",
+        "thickness": "Épaisseur du mur",
+        "width": "Largeur",
+        "hint": "Cliquez pour dessiner les murs. Échap termine le mur. Sélectionnez un mur pour modifier ses dimensions."
       },
       "opmaak": {
         "titel": "Mise en forme du plan",
@@ -463,6 +491,29 @@
       "planHint": "Sélectionnez un point sur le plan ou ouvrez Éléments pour placer un point.",
       "sluiten": "Fermer le panneau",
       "toetsenbordhulp": "Aide clavier"
+    },
+    "materiaallijst": {
+      "titel": "Liste du matériel",
+      "uitleg": "Matériel nécessaire selon les éléments de ce projet, regroupé par caractéristiques. Ouvrez les éléments pour modifier leurs propriétés.",
+      "lengteUitleg": "Saisissez la longueur du parcours de chaque canalisation dans Propriétés. XVB : mètres de câble ; VOB : longueur du parcours × nombre de conducteurs. Sans chutes ni réserve ; le VOB n’est pas réparti par couleur.",
+      "ontbrekend": "La longueur manque pour {aantal} canalisation(s). Les totaux en mètres sont incomplets.",
+      "leeg": "Ajoutez des éléments au schéma unifilaire pour constituer la liste du matériel.",
+      "materiaal": "Matériel et caractéristiques",
+      "hoeveelheid": "Quantité",
+      "bronnen": "Voir les éléments ({aantal})",
+      "onvolledig": "Longueur manquante",
+      "onbekend": "Non renseigné",
+      "ja": "Oui",
+      "nee": "Non",
+      "stuks": "pièce | pièces",
+      "m": "m"
+    },
+    "aftakkingen": {
+      "titel": "Dérivations",
+      "hulp": "Choisissez un interrupteur ou un point lumineux et sélectionnez la canalisation du circuit. Ajoutez une dérivation, puis complétez-la avec le plus à droite.",
+      "toevoegen": "Ajouter une dérivation",
+      "uitbreiden": "Ajouter {onderdeel} à la dérivation",
+      "bestemming": "Prolonger une dérivation"
     }
   },
   "bedrijf": {
@@ -637,6 +688,9 @@
     },
     "ruimteNaam": {
       "label": "Nom sur le plan (libre)"
+    },
+    "lengte_m": {
+      "label": "Longueur du parcours"
     }
   },
   "ruimtes": {

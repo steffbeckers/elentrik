@@ -23,8 +23,8 @@ A browser-based alternative to desktop drawing software, combining automatic sin
 ## Operating Context
 
 - Projects belong to an organisation, with owner and member roles.
-- The core workflow is: create a project, enter installation and customer details, build the electrical structure, place its points on an imported floor plan, review findings, and export a PDF dossier.
-- Single-line diagram placement follows the electrical structure and automatic layout. The layout plan supports placing symbols on an imported PDF or image.
+- The core workflow is: create a project, enter installation and customer details, build the electrical structure, place its points on an imported or drawn floor plan, review findings, and export a PDF dossier.
+- Single-line diagram placement follows the electrical structure and automatic layout. The layout plan supports placing symbols on an imported PDF/image or an editable floor plan drawn with the embedded OpenPlan3D 2D editor.
 - Editing includes keyboard shortcuts, undo/redo, automatic saving, local draft recovery, and explicit conflict handling. Local recovery does not imply full offline support or real-time collaboration.
 - Interface language and dossier language are separate choices. Customer-entered text is not translated automatically.
 
@@ -34,6 +34,7 @@ Present in the codebase:
 
 - Project management, authentication, organisations, invitations, company settings, and Stripe subscription integration.
 - Single-line diagram editing, templates, symbol variants, layout plans, a derived circuit list, live findings, and motivated deviations.
+- A derived materials list groups component quantities by specification. Optional route lengths supply cable metres (XVB) or conductor metres (VOB); missing lengths remain visibly incomplete. Totals exclude cutting waste and spare length, with no VOB colour breakdown.
 - PDF dossier export with selectable sections and A4/A3 paper sizes.
 - Dutch (`nl-BE`, default), Belgian French (`fr-BE`), and British English (`en-GB`). New user-facing text must cover all three languages.
 - Shared model, analysis, symbols, layout, and rendering packages support consistent screen and export output.
@@ -43,7 +44,7 @@ Boundaries to preserve:
 - The current AREI rule set is explicitly unpublished, with unreviewed rules and provisional parameters. Live findings must not be represented as certification, a complete regulatory assessment, or guaranteed inspection approval. Expert validation remains outstanding.
 - Symbols must follow the AREI reference specified in the approved symbol design. Broader symbol coverage and user-supplied custom symbols are later scope, not existing promises.
 - Original code, symbols, translations, and copy are required. Do not reuse material from competing software.
-- Full offline operation, real-time collaboration, native mobile apps, DWG import, floor-plan construction tools, competitor project import, priced materials lists, and external trade integrations are outside the recorded MVP scope.
+- Full offline operation, real-time collaboration, native mobile apps, DWG import, full architectural/3D modelling, competitor project import, priced materials lists, and external trade integrations are outside the recorded MVP scope.
 - Billing depends on configuration; the code uses Stripe. The original MVP's Mollie proposal is superseded. Do not infer current commercial prices from the old plan.
 
 ## Brand Commitments

@@ -107,6 +107,8 @@ export const NodeSchema = z.discriminatedUnion("type", [
     // 0 = niet ingevuld
     doorsnede_mm2: z.number().min(0),
     aantalGeleiders: positiefGeheel,
+    /** Lengte van het tracé in meter; ontbrekend betekent nog niet opgemeten. */
+    lengte_m: z.number().min(0).optional(),
     plaatsing: z.enum(["inbouw", "opbouw", "buis", "grond"]).optional(),
   }),
   z.strictObject({
@@ -120,12 +122,14 @@ export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({
     ...basis,
     type: z.literal("lichtpunt"),
+    aftakking: z.literal(true).optional(),
     aantal: positiefGeheel,
     soort: z.enum(["standaard", "led", "tl", "spot", "noodverlichting"]).optional(),
   }),
   z.strictObject({
     ...basis,
     type: z.literal("schakelaar"),
+    aftakking: z.literal(true).optional(),
     soort: z.enum(["enkel", "dubbel", "wissel", "kruis", "dimmer", "drukknop"]),
     waterdicht: z.boolean(),
   }),
@@ -137,9 +141,28 @@ export const NodeSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+/** Versioned source alongside the exported raster; coordinates are in centimetres. */
+export const PlanTekeningSchema = z.strictObject({
+  formaat: z.literal("openplan3d-v1"),
+  project: z.string().max(1_000_000).refine((tekst) => {
+    try {
+      const data = JSON.parse(tekst);
+      return data !== null && !Array.isArray(data) && Array.isArray(data.floors);
+    } catch { return false; }
+  }, "Ongeldig OpenPlan3D-project"),
+  kader: z.strictObject({
+    x_cm: z.number().finite(),
+    y_cm: z.number().finite(),
+    pxPerCm: z.number().finite().positive().max(10),
+  }),
+});
+
+export type PlanTekening = z.infer<typeof PlanTekeningSchema>;
+
 export const SituatiePaginaSchema = z.strictObject({
   id: z.string(),
   titel: z.string(),
+  tekening: PlanTekeningSchema.optional(),
   /** Factor ten opzichte van het oorspronkelijke formaat; ontbrekend betekent 1. */
   symboolSchaal: z.number().min(0.25).max(4).optional(),
   labelSchaal: z.number().min(0.25).max(4).optional(),

@@ -139,6 +139,27 @@ function voegSjabloonToe(id: string): void {
       </UButton>
     </section>
 
+    <section aria-labelledby="aftakkingen-titel">
+      <h2 id="aftakkingen-titel" class="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
+        {{ $t("editor.aftakkingen.titel") }}
+      </h2>
+      <p id="aftakkingen-hulp" class="mb-3 px-2 text-xs text-muted">
+        {{ $t("editor.aftakkingen.hulp") }}
+      </p>
+      <UButton
+        block
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-git-branch-plus"
+        class="justify-start"
+        :label="$t('editor.aftakkingen.toevoegen')"
+        :disabled="!store.kanAftakkingToevoegen"
+        aria-describedby="aftakkingen-hulp"
+        data-testid="aftakking-toevoegen"
+        @click="voerUit(() => store.voegAftakkingToeBijSelectie())"
+      />
+    </section>
+
     <section>
       <h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
         {{ $t("editor.onderdelenPaneel.sjablonen") }}
