@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DocumentFout, magToevoegen } from "@elentrik/model";
+import { DocumentFout, magToevoegen, type Aanknoping } from "@elentrik/model";
 import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import CanvasBediening from "~/components/editor/CanvasBediening.vue";
 import { doelSoort, moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
@@ -237,7 +237,7 @@ const zoekBestemmingInvoer = computed(() => ({
 const toevoegenOpen = ref(false);
 watch(() => store.onderdeel, () => { if (!store.alleenLezen) toevoegenOpen.value = true; });
 const invoegKeuze = ref("");
-const invoegSoort = ref<"kring-einde" | "rail-einde">("kring-einde");
+const invoegSoort = ref<Aanknoping["soort"]>("kring-einde");
 const alleInvoegpunten = computed(() => store.document && store.analyse
   ? schemaInvoegKeuzes(store.document, store.analyse, plusknoppen.value,
     type => t(`editor.types.${type}`),
@@ -336,6 +336,7 @@ watchPostEffect(() => {
         <USelect v-model="invoegSoort" data-testid="schema-invoegsoort" :aria-label="$t('editor.canvas.toetsenbord.actie')"
           :items="[
             { value: 'kring-einde', label: $t('editor.canvas.toetsenbord.bestaandeKring'), disabled: !alleInvoegpunten.some(p => p.soort === 'kring-einde') },
+            { value: 'aftakking-einde', label: $t('editor.aftakkingen.bestemming'), disabled: !alleInvoegpunten.some(p => p.soort === 'aftakking-einde') },
             { value: 'rail-einde', label: $t('editor.canvas.toetsenbord.nieuweKring'), disabled: !alleInvoegpunten.some(p => p.soort === 'rail-einde') },
           ]"
           class="min-h-9 min-w-0" @update:model-value="veranderInvoegSoort" />
@@ -399,7 +400,7 @@ watchPostEffect(() => {
           :data-testid="`plus-${a.soort}-${a.nodeId}`"
           role="button"
           tabindex="0"
-          :aria-label="`${$t('editor.canvas.voegToe', { onderdeel: $t(`editor.onderdelen.${store.onderdeel}`) })} · ${structuur.find(n => n.id === a.nodeId)?.label ?? ''}`"
+          :aria-label="`${$t(a.soort === 'aftakking-einde' ? 'editor.aftakkingen.uitbreiden' : 'editor.canvas.voegToe', { onderdeel: $t(`editor.onderdelen.${store.onderdeel}`) })} · ${structuur.find(n => n.id === a.nodeId)?.label ?? ''}`"
           class="schema-plus pointer-events-auto cursor-pointer"
           :transform="`translate(${a.x} ${a.y})`"
           @click.stop="store.voegToe(a)"

@@ -15,6 +15,7 @@ import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
 import SymbolenVenster from "~/components/editor/SymbolenVenster.vue";
 import KringenlijstTabel from "~/components/kringenlijst/KringenlijstTabel.vue";
+import MateriaallijstTabel from "~/components/materiaallijst/MateriaallijstTabel.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
 import PlanTekenenDialoog from "~/components/situatie/PlanTekenenDialoog.vue";
 import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
@@ -549,6 +550,7 @@ onBeforeUnmount(() => {
         </template>
         <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />
         <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="min-h-0 flex-1" />
+        <MateriaallijstTabel v-else-if="store.tabblad === 'materiaallijst'" class="min-h-0 flex-1" />
         <template v-else>
           <div v-if="heeftPaginas" class="relative flex min-h-0 min-w-0 flex-1 flex-col">
 

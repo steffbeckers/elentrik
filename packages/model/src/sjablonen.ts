@@ -10,6 +10,7 @@ import {
 } from "./operaties";
 import { NodeSchema, type InstallatieDocument, type Node, type NodeId } from "./schema";
 import { TOEGELATEN_KINDEREN } from "./structuur";
+import { magAftakkingKind } from "./aftakkingen";
 
 /** Een node van een sjabloon; `kinderen` zijn de geneste sjabloonnodes (geen id's). */
 export type SjabloonNode = NodeInvoer & { kinderen?: SjabloonNode[] };
@@ -45,6 +46,7 @@ export function pasSjabloonToe(
 
   const rootId = nieuwId();
   const nieuweNodes: Node[] = [];
+  const nodesPerId = new Map<NodeId, Node>([[ouder.id, ouder]]);
   // Iteratief (geen recursie): een diep sjabloon mag de stack niet laten overlopen.
   const stapel: Werk[] = [{ invoer: sjabloon.boom, id: rootId, parentId, ouderType: ouder.type }];
 
@@ -77,7 +79,12 @@ export function pasSjabloonToe(
     if (!geparsed.success) {
       throw new DocumentFout("ONGELDIG_SCHEMA", { issues: geparsed.error.issues });
     }
-    nieuweNodes.push(geparsed.data);
+    const node = geparsed.data;
+    const parent = nodesPerId.get(nodeOuderId)!;
+    const aantalAndere = nodeOuderId === ouder.id ? ouder.kinderen.length : parent.kinderen.length - 1;
+    if (!magAftakkingKind(parent, node, aantalAndere)) throw ongeldig("ongeldige aftakking");
+    nieuweNodes.push(node);
+    nodesPerId.set(id, node);
     for (const kind of kinderen) {
       stapel.push({ ...kind, parentId: id, ouderType: geparsed.data.type });
     }

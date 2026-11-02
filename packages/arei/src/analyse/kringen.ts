@@ -1,6 +1,7 @@
 import {
   BEVEILIGING_TYPES,
   PUNT_TYPES,
+  isAftakkingNode,
   type InstallatieDocument,
   type Node,
   type NodeId,
@@ -56,6 +57,7 @@ function alsArray(cel: DiffCel | null): readonly NodeId[] {
 
 type Kader = {
   id: NodeId;
+  aftakkingLabel?: string;
   /** Dichtstbijzijnde verdeelbord erboven en de reeks waarin zijn kringen tellen. */
   bord: { id: NodeId; reeks: Reeks } | null;
   /** Dichtstbijzijnde kringbeveiliging (de node zelf of een voorouder). */
@@ -107,6 +109,7 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
     if (bezocht.has(id) || !Object.hasOwn(doc.nodes, id)) continue;
     bezocht.add(id);
     const node = doc.nodes[id]!;
+    let aftakkingLabel = isAftakkingNode(node) ? frame.aftakkingLabel : undefined;
 
     let bord = bordBoven;
     let kring = kringBoven;
@@ -157,7 +160,8 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
       ketens[id] = { leidingId, beveiligingId, differentielen: alsArray(differentielen) };
       if (kring) {
         kring.kring.puntIds.push(id);
-        puntLabels[id] = `${kring.kring.label}${kring.volgendPunt++}`;
+        puntLabels[id] = aftakkingLabel ?? `${kring.kring.label}${kring.volgendPunt++}`;
+        if (isAftakkingNode(node)) aftakkingLabel = puntLabels[id];
         if (node.ruimte !== undefined && !kring.ruimtes.has(node.ruimte)) {
           kring.ruimtes.add(node.ruimte);
           kring.kring.ruimtes.push(node.ruimte);
@@ -173,7 +177,7 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
     }
 
     for (let i = node.kinderen.length - 1; i >= 0; i--) {
-      stapel.push({ id: node.kinderen[i]!, bord, kring, leidingId, beveiligingId, differentielen });
+      stapel.push({ id: node.kinderen[i]!, bord, kring, leidingId, beveiligingId, differentielen, aftakkingLabel });
     }
   }
 

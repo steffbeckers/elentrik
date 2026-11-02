@@ -79,7 +79,8 @@
       "tabbladen": {
         "eendraadschema": "Eendraadschema",
         "situatieschema": "Situatieschema",
-        "kringenlijst": "Kringenlijst"
+        "kringenlijst": "Kringenlijst",
+        "materiaallijst": "Materiaallijst"
       },
       "bevindingen": "{fouten} en {waarschuwingen}",
       "aantalFouten": "{n} fout | {n} fouten",
@@ -490,6 +491,29 @@
       "planHint": "Kies een punt op het plan of open Onderdelen om een punt te plaatsen.",
       "sluiten": "Paneel sluiten",
       "toetsenbordhulp": "Toetsenbordhulp"
+    },
+    "materiaallijst": {
+      "titel": "Materiaallijst",
+      "uitleg": "Benodigde materialen op basis van de onderdelen in dit project, gegroepeerd per uitvoering. Open de onderdelen om hun eigenschappen aan te passen.",
+      "lengteUitleg": "Vul bij elke leiding de tracélengte in via Eigenschappen. XVB telt als kabelmeter; VOB als tracélengte × aantal geleiders. Zonder snijverlies of reserve; VOB is niet uitgesplitst per kleur.",
+      "ontbrekend": "Bij {aantal} leiding(en) ontbreekt de lengte. De metertotalen zijn onvolledig.",
+      "leeg": "Voeg onderdelen toe aan het eendraadschema om de materiaallijst op te bouwen.",
+      "materiaal": "Materiaal en uitvoering",
+      "hoeveelheid": "Hoeveelheid",
+      "bronnen": "Onderdelen bekijken ({aantal})",
+      "onvolledig": "Lengte ontbreekt",
+      "onbekend": "Niet ingevuld",
+      "ja": "Ja",
+      "nee": "Nee",
+      "stuks": "stuk | stuks",
+      "m": "m"
+    },
+    "aftakkingen": {
+      "titel": "Aftakkingen",
+      "hulp": "Kies een schakelaar of lichtpunt en selecteer de kringleiding. Voeg een aftakking toe en bouw verder met de plus rechts.",
+      "toevoegen": "Aftakking toevoegen",
+      "uitbreiden": "{onderdeel} toevoegen aan aftakking",
+      "bestemming": "Aftakking uitbreiden"
     }
   },
   "bedrijf": {
@@ -664,6 +688,9 @@
     },
     "ruimteNaam": {
       "label": "Naam op het plan (vrij)"
+    },
+    "lengte_m": {
+      "label": "Tracélengte"
     }
   },
   "ruimtes": {

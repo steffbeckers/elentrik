@@ -1,4 +1,5 @@
 import type { InstallatieDocument, Node, NodeId, NodeType } from "./schema";
+import { magAftakkingKind } from "./aftakkingen";
 
 export const PUNT_TYPES = ["contactdoos", "lichtpunt", "schakelaar", "toestel"] as const;
 export const BEVEILIGING_TYPES = ["automaat", "zekering"] as const;
@@ -155,7 +156,7 @@ export function valideerStructuur(doc: InstallatieDocument): StructuurProbleem[]
         continue;
       }
       if (kind.parentId !== ouder.id) meld("OUDER_INCONSISTENT", kindId);
-      if (!TOEGELATEN_KINDEREN[ouder.type].includes(kind.type)) {
+      if (!TOEGELATEN_KINDEREN[ouder.type].includes(kind.type) || !magAftakkingKind(ouder, kind, ouder.kinderen.length - 1)) {
         meld("NIET_TOEGELATEN_KIND", kindId);
       }
     }

@@ -23,7 +23,7 @@ function bladeren(boom: Boom | string): string[] {
 }
 
 /** Sleutels die geen eigen veld krijgen: structuur, of in `GEMEENSCHAPPELIJK`. */
-const ZONDER_EIGEN_VELD = new Set(["id", "type", "parentId", "kinderen", "label", "ruimte", "ruimteNaam"]);
+const ZONDER_EIGEN_VELD = new Set(["id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam"]);
 
 /** Minimale vorm van een Zod-schema, zodat de test los staat van de introspectie in velden.ts. */
 type Schema = { def: { type: string; innerType?: Schema; options?: Schema[] }; options?: unknown[]; values?: Set<unknown> };
@@ -58,6 +58,10 @@ const varianten = NodeSchema.options.map((variant) => ({
 }));
 
 describe("VELDEN", () => {
+  test("aftakkingslidmaatschap is structuur en verschijnt niet als wijzigbaar veld", () => {
+    expect(VELDEN.schakelaar.some((v) => v.sleutel === "aftakking")).toBe(false);
+    expect(VELDEN.lichtpunt.some((v) => v.sleutel === "aftakking")).toBe(false);
+  });
   test("heeft precies de nodetypes van NodeSchema", () => {
     expect(Object.keys(VELDEN).toSorted()).toEqual(varianten.map((v) => v.type).toSorted());
   });

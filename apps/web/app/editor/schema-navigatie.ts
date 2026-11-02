@@ -5,6 +5,9 @@ import type { Aanknoping, InstallatieDocument, NodeType } from "@elentrik/model"
 export function invoegpuntBijSelectie<T extends Aanknoping>(analyse: Analyse, punten: readonly T[], id: string): T | undefined {
   const exact = punten.find(p => p.nodeId === id);
   if (exact) return exact;
+  const punt = analyse.puntLabels[id];
+  const aftakking = punt && punten.find(p => p.soort === "aftakking-einde" && analyse.puntLabels[p.nodeId] === punt);
+  if (aftakking) return aftakking;
   const kring = analyse.kringVanNode[id] ?? analyse.kringen.find(k => k.beveiligingId === id)?.id;
   return kring ? punten.find(p => p.soort === "kring-einde" && analyse.kringVanNode[p.nodeId] === kring) : undefined;
 }
@@ -70,7 +73,7 @@ export function schemaInvoegKeuzes(
       : typeNaam("aansluiting");
     const kring = analyse.kringen.find(k => k.id === analyse.kringVanNode[node.id]);
     let label: string;
-    if (a.soort === "kring-einde") {
+    if (a.soort === "kring-einde" || a.soort === "aftakking-einde") {
       const punt = analyse.puntLabels[node.id] || typeNaam(node.type);
       label = tekst("kringBestemming", { kring: kring?.label ?? "—", punt });
       if (node.label) label += ` · ${node.label}`;
@@ -85,9 +88,10 @@ export function schemaInvoegKeuzes(
     }
     return { ...a, sleutel: `${a.soort}:${a.nodeId}`, label, bordId, bord };
   }).sort((a, b) => {
-    if (a.soort !== b.soort) return a.soort === "kring-einde" ? -1 : 1;
+    const volgorde = { "kring-einde": 0, "aftakking-einde": 1, "aftakking": 2, "rail-einde": 3 };
+    if (a.soort !== b.soort) return volgorde[a.soort] - volgorde[b.soort];
     if (a.bordId !== b.bordId) return natuurlijk.compare(a.bord, b.bord) || bordIds.indexOf(a.bordId) - bordIds.indexOf(b.bordId);
-    if (a.soort === "kring-einde") {
+    if (a.soort === "kring-einde" || a.soort === "aftakking-einde") {
       // De analyse telt A…Z, AA…; lexicografisch sorteren zou AA vóór B zetten.
       const verschil = (kringIndex.get(analyse.kringVanNode[a.nodeId]!) ?? Infinity) - (kringIndex.get(analyse.kringVanNode[b.nodeId]!) ?? Infinity);
       if (verschil) return verschil;

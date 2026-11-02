@@ -63,6 +63,52 @@ beforeEach(() => {
   setActivePinia(createPinia());
 });
 
+describe("vrije aftakkingen", () => {
+  test("voegt twee wisselschakelaars en een lamp toe met één label en afzonderlijke undo-stappen", () => {
+    const store = laadNieuw();
+    const leiding = nieuweKring(store);
+    expect(store.kanAftakkingToevoegen).toBe(false);
+    store.kiesVariant("schakelaar", { soort: "wissel" });
+    expect(store.kanAftakkingToevoegen).toBe(true);
+    store.voegAftakkingToeBijSelectie();
+    const eerste = store.selectie[0]!;
+    store.voegToeBijSelectie();
+    const tweede = store.selectie[0]!;
+    expect(node(store, tweede)).toMatchObject({ type: "schakelaar", soort: "wissel", aftakking: true });
+    store.kiesVariant("lichtpunt", { aantal: 2 });
+    store.voegToeBijSelectie();
+    const lamp = store.selectie[0]!;
+    expect(node(store, lamp)).toMatchObject({ aantal: 2, aftakking: true });
+    expect([eerste, tweede, lamp].map((id) => store.analyse!.puntLabels[id])).toEqual(["A1", "A1", "A1"]);
+    store.ongedaanMaken();
+    expect(doc(store).nodes[lamp]).toBeUndefined();
+    store.opnieuw();
+    expect(doc(store).nodes[lamp]).toBeDefined();
+    store.selectie = [leiding];
+    store.voegAftakkingToeBijSelectie();
+    expect(store.analyse!.puntLabels[store.selectie[0]!]).toBe("A2");
+    expect(node(store, leiding).kinderen).toHaveLength(2);
+  });
+
+  test("ongeldige selecties en alleen-lezen voegen niets toe", () => {
+    const store = laadNieuw();
+    const leiding = nieuweKring(store);
+    store.kiesVariant("schakelaar", {});
+    const voor = store.document;
+    for (const ids of [[], [leiding, eersteVan(store, "verdeelbord")], [eersteVan(store, "verdeelbord")]]) {
+      store.selectie = ids;
+      expect(store.kanAftakkingToevoegen).toBe(false);
+      store.voegAftakkingToeBijSelectie();
+      expect(store.document).toBe(voor);
+    }
+    store.selectie = [leiding];
+    store.zetAlleenLezen(true);
+    expect(store.kanAftakkingToevoegen).toBe(false);
+    store.voegAftakkingToeBijSelectie();
+    expect(store.document).toBe(voor);
+  });
+});
+
 describe("laad", () => {
   test("zet document, project en lege geschiedenis", () => {
     const store = laadNieuw();
