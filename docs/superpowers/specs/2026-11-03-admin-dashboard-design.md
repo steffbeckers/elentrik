@@ -12,6 +12,7 @@ Sources:
 - The user confirmed in this conversation that overview and insights should be accompanied by updates to user names, company details, and projects when needed, and welcomed audit history.
 - The user subsequently asked whether a company can be excluded from payments. The design now proposes an audited company-level free-access control using the existing exemption flag; existing Stripe charges require separate cancellation.
 - The user also requested extending a company's trial end date. This is included as an audited support action on the local Elentrik trial.
+- The user confirmed that Stripe subscriptions will be managed directly in Stripe and requested a direct link to the subscription from the admin dashboard.
 - The user chose a written design without a browser mockup.
 - `PRODUCT.md` supplies product, language, and scope constraints. The code references below describe this checkout, not production deployment.
 
@@ -93,7 +94,9 @@ Trial extension uses the same superuser checks, stale-edit protection, mutation 
 
 This extends Elentrik's local trial, not the billing dates of an existing Stripe subscription or previously opened Checkout session. When either is present, show that distinction and require acknowledgement before saving, with a Stripe link for any billing-date adjustment. A newly created Checkout session uses the updated local trial end under the existing Checkout rules. The local extension does not defer an existing charge, refund payments, or clear payment arrears.
 
-Other subscription information is observational in this release, with external Stripe Dashboard links for records that have a Stripe ID and a known test/live environment. Do not construct a misleading link if that environment is unavailable. Plan, payment, and cancellation changes are outside the selected correction scope.
+Manage Stripe subscriptions directly in Stripe, as requested by the user. In the company's subscription section, provide a prominent **Open subscription in Stripe** link targeting the stored `stripeAbonnementId`, opening the subscription detail in a new tab in the correct Stripe environment. This is an operator Dashboard link, not a customer billing-portal session. Also offer **Open customer in Stripe** when `stripeKlantId` exists, including when no subscription exists yet. When no subscription ID exists, show that state without a dead subscription link.
+
+Build links server-side from validated stored IDs and a known Stripe test/live environment; expose no API secrets. Do not construct a misleading link if that environment is unavailable or the app uses a local fake Stripe. Keep the existing recorded subscription details visible. Plan, payment, cancellation, and Stripe billing-date changes are handled in Stripe; this dashboard manages local free-access exemptions and local trial extensions.
 
 ### Projects
 
@@ -171,6 +174,7 @@ Relevant existing seams:
 8. Focused database/API tests cover permission and transactional boundaries; editor tests cover routing/capabilities and conflict/recovery cases; browser checks cover the admin workflow and a representative normal customer workflow. Type checks, translation checks, and relevant existing suites pass. Inspect the dashboard at desktop and narrow widths in the existing theme.
 9. A superuser can enable and remove company free access with an audited reason. Exempt companies can use the app after their trial ends and cannot start new Checkout sessions; removing exemption restores the current underlying access decision. Existing Stripe subscriptions and open Checkout sessions remain accurately visible with the required acknowledgement, and the control does not claim to stop their charges. Ordinary company owners cannot set exemption through any endpoint.
 10. A superuser can extend an active or expired local trial with a reason and before/after audit evidence. Reject past or non-extending dates and stale submissions. Verify the exact end boundary, daylight-saving conversion, effective access precedence, unchanged user trial eligibility, and unchanged existing Stripe billing dates. Ordinary users cannot extend trials through any endpoint.
+11. The company's Stripe subscription link opens the exact stored subscription in the correct environment, with a customer-record link where available. Missing IDs, unknown environments, and local fake Stripe configurations produce no misleading links. Links contain no secrets and do not create a customer portal session or mutate billing.
 
 ## Builder discretion
 
