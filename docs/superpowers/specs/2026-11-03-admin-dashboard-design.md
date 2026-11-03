@@ -10,6 +10,7 @@ Sources:
 
 - [SB-5](https://linear.app/steffbeckers/issue/SB-5/admin-dashboard), created 2026-11-03; description read on 2026-11-03. It calls for a restricted `/admin` area and identifies future bug reports as a later extension.
 - The user confirmed in this conversation that overview and insights should be accompanied by updates to user names, company details, and projects when needed, and welcomed audit history.
+- The user subsequently asked whether a company can be excluded from payments. The design now proposes an audited company-level free-access control using the existing exemption flag; existing Stripe charges require separate cancellation.
 - The user chose a written design without a browser mockup.
 - `PRODUCT.md` supplies product, language, and scope constraints. The code references below describe this checkout, not production deployment.
 
@@ -79,7 +80,13 @@ Detail includes:
 
 Allow changing the organisation display name and textual installer/company details. Preserve the current logo. Existing dossier snapshots and completed exports remain historical; subsequent operations use the corrected details according to existing application behaviour.
 
-Subscription information is observational in this release, with external Stripe Dashboard links for records that have a Stripe ID and a known test/live environment. Do not construct a misleading link if that environment is unavailable. Trial, exemption, plan, payment, and cancellation changes are outside the selected correction scope.
+Provide a superuser-only **Free access — no subscription required** control backed by the existing `organization.vrijgesteld` flag. Enabling or disabling it requires a reason and explicit save, uses stale-edit protection, and records the before/after flag in the same transaction as the change. Exemption continues until explicitly removed. Removing it immediately reapplies the existing trial/subscription rules; it neither starts a new trial nor creates a subscription or charge. Storage quotas remain unchanged. The setting can be maintained when billing is disabled, with an explanation that payment restrictions are currently disabled globally.
+
+Free access changes Elentrik access, not Stripe billing. If the company has a potentially chargeable existing subscription (including a trial or cancellation scheduled for period end), show a prominent explanation and require acknowledgement before granting free access: Stripe charges are not stopped by this setting. Keep existing subscription details visible and provide a Stripe Dashboard link for cancellation. No automatic cancellation, refund, or invoice waiver occurs. The UI must distinguish **free access enabled** from **Stripe subscription still present**.
+
+While exempt, customer-facing subscription UI explains free access and offers no new purchase action; the Checkout API must also reject new checkout creation for an exempt company. On enabling exemption, a previously issued Stripe Checkout URL may remain usable until expired in Stripe: include this case in the warning when an open Checkout session is recorded, and direct the operator to Stripe to expire it. Do not claim exemption cancels prior payment authorisations. Preserve access to the existing customer billing portal to manage an existing subscription.
+
+Other subscription information is observational in this release, with external Stripe Dashboard links for records that have a Stripe ID and a known test/live environment. Do not construct a misleading link if that environment is unavailable. Trial-date, plan, payment, and cancellation changes are outside the selected correction scope.
 
 ### Projects
 
@@ -155,7 +162,8 @@ Relevant existing seams:
 6. Every successful support save/upload has audit evidence; failed transactions have no committed change entry. History remains available after renaming entities, and lists do not expose large or sensitive payloads.
 7. Normal customer editing, uploads, recovery, exports, and organisation switching continue to work after extracting the shared editor.
 8. Focused database/API tests cover permission and transactional boundaries; editor tests cover routing/capabilities and conflict/recovery cases; browser checks cover the admin workflow and a representative normal customer workflow. Type checks, translation checks, and relevant existing suites pass. Inspect the dashboard at desktop and narrow widths in the existing theme.
+9. A superuser can enable and remove company free access with an audited reason. Exempt companies can use the app after their trial ends and cannot start new Checkout sessions; removing exemption restores the current underlying access decision. Existing Stripe subscriptions and open Checkout sessions remain accurately visible with the required acknowledgement, and the control does not claim to stop their charges. Ordinary company owners cannot set exemption through any endpoint.
 
 ## Builder discretion
 
-The builder may choose component decomposition, concrete table/index names, query strategy, pagination implementation, diff presentation, and validation limits consistent with existing conventions. These choices must preserve the behaviours above. Broader account management, billing mutations, bug-report intake, audit retention policy, and automatic rollback require a later scope decision.
+The builder may choose component decomposition, concrete table/index names, query strategy, pagination implementation, diff presentation, and validation limits consistent with existing conventions. These choices must preserve the behaviours above. Broader account management, Stripe billing mutations, bug-report intake, audit retention policy, and automatic rollback require a later scope decision.
