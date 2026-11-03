@@ -181,7 +181,7 @@ export function waarschuwBijVerlaten(status: AutosaveStatus): boolean {
  * Automatisch opslaan: een wijziging bewaart meteen een concept in IndexedDB en na `vertragingMs`
  * zonder nieuwe wijziging het project op de server (`PUT` met `If-Match`).
  *
- * Bekende beperking: gaat het antwoord verloren nadat de server het document wel bewaarde, dan
+ * Bekende beperking in klantmodus: gaat het antwoord verloren nadat de server het document wel bewaarde, dan
  * stuurt de nieuwe poging de oude versie mee en volgt een 409 op onze eigen wijziging. De gebruiker
  * kiest dan in het conflictscherm; er gaat niets verloren.
  */
@@ -209,6 +209,9 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   let lopend: Promise<void> | undefined;
   /** De waarde van `gewijzigdSindsOpslaan` die al naar de server is. */
   let bewaardeTeller = store.gewijzigdSindsOpslaan;
+  // Alleen support heeft serverontvangsten voor idempotente retries. Bevestig een
+  // onzekere momentopname voordat latere wijzigingen haar versie mogen gebruiken.
+  let onzekereBewaring: { id: string; generatie: number; teller: number; versie: number; invoer: BewaarInvoer } | undefined;
   let gestopt = false;
   /** Of de laatste conceptschrijfactie lukte. */
   let conceptGelukt = true;
@@ -351,15 +354,22 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     const id = store.projectId;
     const document = store.document;
     if (id === null || document === null) return;
-    const teller = store.gewijzigdSindsOpslaan;
     const generatie = store.laadGeneratie;
+    const poging = opties.modus === 'admin' && onzekereBewaring?.id === id && onzekereBewaring.generatie === generatie
+      ? onzekereBewaring
+      : { id, generatie, teller: store.gewijzigdSindsOpslaan, versie: store.versie,
+          invoer: opties.modus === 'admin'
+            ? JSON.parse(JSON.stringify({ naam: store.naam, document })) as BewaarInvoer
+            : { naam: store.naam, document } };
+    const { teller } = poging;
 
     wisTimer();
     // Na een mislukte poging blijft `lokaal` of `onbewaard` staan tot een bewaar slaagt.
     if (status.value !== "lokaal" && status.value !== "onbewaard") status.value = "bezig";
     await startLopend(async () => {
       try {
-        const resultaat = await bewaar(id, store.versie, { naam: store.naam, document });
+        const resultaat = await bewaar(id, poging.versie, poging.invoer);
+        if (onzekereBewaring === poging) onzekereBewaring = undefined;
         // Intussen opnieuw geladen (een ander project, of hetzelfde in een nieuwe pagina):
         // die staat is niet meer van ons.
         if (store.laadGeneratie !== generatie) return;
@@ -383,6 +393,9 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       } catch (e) {
         if (store.laadGeneratie !== generatie) return;
         const httpCode = httpStatus(e);
+        if (opties.modus === 'admin') {
+          onzekereBewaring = !(e instanceof ConflictFout) && (httpCode === undefined || httpCode >= 500 || TIJDELIJK.has(httpCode)) ? poging : undefined;
+        }
         if (e instanceof ConflictFout) {
           conflict.value = { huidigeVersie: e.huidigeVersie, lokaleWijzigingen: true };
           status.value = "conflict";
@@ -429,6 +442,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     if (teller === 0) {
       // `store.laad` zet de teller terug: een vers project, niets om te bewaren.
       bewaardeTeller = 0;
+      onzekereBewaring = undefined;
       conceptGelukt = true;
       wisTimer();
       conflict.value = null;
@@ -466,7 +480,11 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     if (gewacht && (status.value === "lokaal" || status.value === "onbewaard" || status.value === "fout")) return;
     if (conflict.value || verwijderd.value || !onbewaard()) return;
     fout.value = null;
-    await probeer();
+    do {
+      await probeer();
+      // Een bevestigde retry kan oudere inhoud betreffen. Afronden mag pas na
+      // de actuele inhoud; bij een nieuwe fout blijft die inhoud lokaal staan.
+    } while (opties.modus === 'admin' && status.value === 'bezig' && onbewaard() && automatisch());
   }
 
   async function laadServerversie(): Promise<void> {

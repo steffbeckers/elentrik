@@ -3,6 +3,7 @@ import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from './hulp/inlo
 import { metE2eDatabase } from './hulp/database';
 import { ga } from './hulp/hydratatie';
 import { E2E_URL } from './omgeving';
+import { adminBeelden } from './hulp/admin-beelden';
 
 const { spoor, gebruiker } = gebruikTestgebruiker(test, { voorvoegsel: 'admin-doel', naam: 'Beheer Doelgebruiker', bedrijf: 'Beheer Doelbedrijf' });
 
@@ -33,6 +34,12 @@ test('superuser zonder bedrijf zoekt, corrigeert, beheert toegang en leest audit
     page.setDefaultTimeout(10_000);
     await ga(page, '/admin');
     await expect(page.getByRole('heading', { name: 'Overzicht', exact: true })).toBeVisible();
+    await expect(page.getByText('Gegevens laden…', { exact: true })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Naar de inhoud' }).focus();
+    await expect(page.getByRole('link', { name: 'Naar de inhoud' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Beheer', exact: true })).toBeFocused();
+    await adminBeelden(page, 'overzicht');
     expect((await (await context.request.get('/api/mij')).json()).organisaties).toEqual([]);
     await page.getByRole('textbox', { name: 'Zoeken', exact: true }).fill(gebruiker().email);
     await page.getByRole('link', { name: /Beheer Doelgebruiker/ }).click();
@@ -46,6 +53,12 @@ test('superuser zonder bedrijf zoekt, corrigeert, beheert toegang en leest audit
     await expect(page.getByText('Naam nagekeken met de klant', { exact: true })).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Beheer Doelgebruiker', exact: true })).toBeVisible();
     await ga(page, `/admin/organisaties/${doel.actieveOrganisatieId}`);
+    await expect(page.getByRole('heading', { name: 'Beheer Doelbedrijf', exact: true })).toBeVisible();
+    await adminBeelden(page, 'bedrijf');
+    await page.getByRole('button', { name: 'Overschakelen naar donkere modus' }).click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    await adminBeelden(page, 'bedrijf-donker');
+    await page.getByRole('button', { name: 'Overschakelen naar lichte modus' }).click();
     await page.getByRole('button', { name: 'Gratis toegang toekennen' }).click();
     await page.getByRole('textbox', { name: 'Reden voor de correctie' }).fill('Partnerbedrijf krijgt gratis toegang');
     await page.getByRole('button', { name: 'Wijziging bewaren' }).click();

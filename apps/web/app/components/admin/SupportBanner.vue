@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AdminProjectApi } from '~/composables/useAdminProjectApi';
 import { vertaalFout } from '~/fouten';
-const props = defineProps<{ support: AdminProjectApi; bedrijf: string; terug: string; accountGeldig: boolean; wachtOpOpslaan: () => Promise<boolean> }>();
+const props = defineProps<{ support: AdminProjectApi; bedrijf: string; terug: string; accountGeldig: boolean; downloadBeschikbaar: boolean; wachtOpOpslaan: () => Promise<boolean> }>();
 const emit = defineEmits<{ gestart: []; download: [] }>();
 const { t } = useI18n(); const { datum } = useAdminDatums();
 const reden = ref(''); const fout = shallowRef<unknown>(null);
@@ -20,7 +20,7 @@ async function afronden() {
     <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
       <div class="mr-auto"><p class="font-semibold">{{ t('admin.support.titel') }} · {{ bedrijf }}</p><p class="text-sm text-muted">{{ t(support.schrijven.value ? 'admin.support.actief' : 'admin.support.alleenLezen') }}</p></div>
       <UButton :to="terug" color="neutral" variant="ghost">{{ t('admin.support.terug') }}</UButton>
-      <UButton color="neutral" variant="outline" @click="emit('download')">{{ t('admin.support.download') }}</UButton>
+      <UButton color="neutral" variant="outline" :disabled="!downloadBeschikbaar" @click="downloadBeschikbaar && emit('download')">{{ t('admin.support.download') }}</UButton>
       <UButton v-if="support.correctie.value" :loading="support.afsluiten.value" :disabled="!accountGeldig" @click="afronden">{{ t('admin.support.afronden') }}</UButton>
     </div>
     <p v-if="support.correctie.value" class="mt-2 break-words text-sm">{{ support.correctie.value.reden }} · {{ t('admin.support.verloopt', { datum: datum(support.correctie.value.verloopt) }) }}</p>

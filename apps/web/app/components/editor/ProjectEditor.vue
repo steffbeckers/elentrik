@@ -499,8 +499,9 @@ async function wachtOpOpslaan() {
   await autosave.nuOpslaan();
   return autosave.status.value === 'opgeslagen';
 }
+const lokaalDocumentBeschikbaar = computed(() => laadstatus.value === 'klaar' && store.projectId === id && !!store.document);
 function downloadLokaal() {
-  if (!store.document) return;
+  if (!lokaalDocumentBeschikbaar.value) return;
   const blob = new Blob([JSON.stringify({ naam: store.naam, versie: store.versie, document: store.document }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob); const link = document.createElement('a');
   link.href = url; link.download = `project-${id}-lokaal.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -527,7 +528,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex h-dvh flex-col">
-    <SupportBanner v-if="support" :support="support" :bedrijf="context.bedrijfNaam ?? ''" :terug="context.terug" :account-geldig="accountGeldig && laadstatus === 'klaar'" :wacht-op-opslaan="wachtOpOpslaan" @gestart="supportGestart" @download="downloadLokaal" />
+    <SupportBanner v-if="support" :support="support" :bedrijf="context.bedrijfNaam ?? ''" :terug="context.terug" :account-geldig="accountGeldig && laadstatus === 'klaar'" :download-beschikbaar="lokaalDocumentBeschikbaar" :wacht-op-opslaan="wachtOpOpslaan" @gestart="supportGestart" @download="downloadLokaal" />
     <template v-if="laadstatus === 'klaar' && store.document">
       <EditorBovenbalk
         :status="autosave.status.value"

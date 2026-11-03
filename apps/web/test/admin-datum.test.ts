@@ -10,3 +10,8 @@ test("follow-ups use the Brussels calendar day", () => {
   expect(brusselseDatum(new Date("2027-03-28T22:00:00Z"))).toBe("2027-03-29");
   expect(brusselseDatum(new Date("2027-10-31T22:59:59Z"))).toBe("2027-10-31");
 });
+
+test("historical dates use their actual Brussels offset before extension validation", () => {
+  expect(proefEindeVoorDatum("1800-01-01").toISOString()).toBe("1800-01-01T23:42:30.000Z");
+  expect(proefEindeVoorDatum("1900-01-01").toISOString()).toBe("1900-01-02T00:00:00.000Z");
+});

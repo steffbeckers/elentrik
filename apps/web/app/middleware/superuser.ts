@@ -10,7 +10,7 @@ export default defineNuxtRouteMiddleware(async () => {
     });
   } catch (fout) {
     const status = foutStatus(fout);
-    return abortNavigation(createError({ statusCode: status === 401 || status === 403 ? status : 503,
-      statusMessage: $i18n.t(status === 401 || status === 403 ? "fouten.NIET_TOEGELATEN" : "admin.onbereikbaar"), fatal: true }));
+    return abortNavigation(createError({ statusMessage: $i18n.t(status === 401 || status === 403 ? "fouten.NIET_TOEGELATEN" : "admin.onbereikbaar"),
+      statusCode: status === 401 || status === 403 ? status : 503, fatal: true }));
   }
 });

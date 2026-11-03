@@ -19,7 +19,7 @@ const proefReden = computed(() => ['uit', 'vrijgesteld', 'actief'].includes(prop
     <div class="flex flex-wrap items-center gap-3"><UBadge :color="bedrijf.toegang.schrijven ? 'success' : 'warning'" variant="subtle">{{ t(bedrijf.toegang.schrijven ? 'admin.schrijven' : 'admin.alleenLezen') }}</UBadge><p class="font-medium">{{ t(`admin.redenen.${bedrijf.toegang.reden}`) }}</p></div>
     <p class="text-sm text-muted">{{ t('admin.beoordeeldOp', { datum: datum(bedrijf.toegang.beoordeeldOp) }) }} · {{ t('admin.rechtenUitleg') }}</p>
     <dl class="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-      <div><dt class="text-muted">{{ t('admin.proefEinde') }}</dt><dd class="mt-1">{{ datum(bedrijf.toegang.proefEinde) }} · Europe/Brussels</dd></div>
+      <div><dt class="text-muted">{{ t('admin.proefEinde') }}</dt><dd class="mt-1">{{ datum(bedrijf.toegang.proefEinde) }} · {{ t('admin.tijdzone') }}</dd></div>
       <div><dt class="text-muted">{{ t('admin.gratieEinde') }}</dt><dd class="mt-1">{{ bedrijf.toegang.achterstalligTot ? datum(bedrijf.toegang.achterstalligTot) : t('admin.onbekendOfNietVanToepassing') }}</dd></div>
       <div><dt class="text-muted">{{ t('admin.vrijstelling') }}</dt><dd class="mt-1">{{ t(bedrijf.toegang.vrijgesteld ? 'admin.ingeschakeld' : 'admin.uitgeschakeld') }}</dd></div>
     </dl>

@@ -1,5 +1,6 @@
 {
   "admin": {
+    "tijdzone": "Europe/Brussels",
     "titel": "Administration",
     "onbereikbaar": "L’administration est temporairement indisponible. Réessayez.",
     "overzicht": "Vue d’ensemble",

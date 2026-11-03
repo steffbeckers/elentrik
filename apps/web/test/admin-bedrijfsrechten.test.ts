@@ -33,7 +33,7 @@ test("trial is extended only into the future without resetting trial-used or Str
   const id = await maakTestOrganisatie(db);
   await db.insert(user).values({ id: "trial-user", name: "Eigenaar", email: "trial@test.be", proefGebruikt: true });
   await db.update(organization).set({ proefEinde: new Date("2026-11-10") }).where(eq(organization.id, id));
-  for (const einddatum of ["2026-11-02", "2026-11-09", "2026-02-30"]) await expect(verlengProef(db, actor, id, { ...await basis(id), gegevens: { einddatum, stripeBevestigd: false } }, nu)).rejects.toMatchObject({ statusCode: 400 });
+  for (const einddatum of ["2026-11-02", "2026-11-09", "2026-02-30", "1800-01-01", "1900-01-01"]) await expect(verlengProef(db, actor, id, { ...await basis(id), gegevens: { einddatum, stripeBevestigd: false } }, nu)).rejects.toMatchObject({ statusCode: 400 });
   await verlengProef(db, actor, id, { ...await basis(id), gegevens: { einddatum: "2026-12-01", stripeBevestigd: false } }, nu);
   expect((await haalAdminOrganisatie(db, id)).toegang.proefEinde).toBe("2026-12-01T23:00:00.000Z");
   expect((await db.select().from(user).where(eq(user.id, "trial-user")))[0]!.proefGebruikt).toBe(true);

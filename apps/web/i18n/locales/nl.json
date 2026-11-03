@@ -1,5 +1,6 @@
 {
   "admin": {
+    "tijdzone": "Europe/Brussels",
     "titel": "Beheer",
     "onbereikbaar": "Beheer is tijdelijk niet bereikbaar. Probeer opnieuw.",
     "overzicht": "Overzicht",

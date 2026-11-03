@@ -5,7 +5,7 @@ import { verwachtOrganisatie } from "./hulp/navigatie";
 import { expect, test, type Browser } from "@playwright/test";
 import postgres from "postgres";
 import { eisE2eDatabase } from "./omgeving";
-import { ga } from "./hulp/hydratatie";
+import { ga, wachtOpHydratatie } from "./hulp/hydratatie";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
 const { gebruiker, spoor } = gebruikTestgebruiker(test, { voorvoegsel: "paginas", bedrijf: "Paginas Elektro" });
@@ -123,6 +123,7 @@ test("een sessie die tijdens SSR verlengd wordt, krijgt ook in de browser een ni
     const cookies = (await antwoord!.headerValue("set-cookie")) ?? "";
     expect(cookies).toContain("session_token=");
     expect(await vervaltOp()).toBeGreaterThan(voor + 24 * 3600 * 1000);
+    await wachtOpHydratatie(page);
     await verwachtOrganisatie(page, "Paginas Elektro");
   } finally {
     await sql.end();

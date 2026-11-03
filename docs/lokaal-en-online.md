@@ -24,6 +24,8 @@ bedrijfsgegevens. Dat gebeurt één keer.
 
 ## Online gaan
 
+Het superuserdashboard staat op `/admin`. Toegang verlenen, correcties uitvoeren, lokale gratis toegang en proefperiodes beheren en auditopslag onderhouden staan in [Systeembeheer](admin-beheer.md).
+
 **Online zetten op de NAS achter de Cloudflare Tunnel staat stap voor stap in
 [`docs/online.md`](online.md)** (Cloudflare, Microsoft 365, de NAS, Stripe, back-ups, updaten en
 problemen oplossen). Hieronder staan de achtergronden die voor elke online opstelling gelden. Het
