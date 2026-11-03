@@ -88,6 +88,7 @@ export async function bewaarBestand(
   db: Db,
   opslag: BestandOpslag,
   invoer: { organisatieId: string; projectId: string; soort: BewaarSoort; data: Uint8Array },
+  metRij?: (tx: Db, info: BestandInfo) => Promise<void>,
 ): Promise<BestandInfo> {
   const { organisatieId, projectId, soort, data } = invoer;
   if (data.length > MAX_UPLOAD_BYTES) throw new BestandFout("TE_GROOT");
@@ -114,7 +115,7 @@ export async function bewaarBestand(
     );
   if (!project) throw new BestandFout("NIET_GEVONDEN");
 
-  return schrijfBestandMetRij(db, opslag, { projectId, soort, map: projectId, type, data });
+  return schrijfBestandMetRij(db, opslag, { projectId, soort, map: projectId, type, data }, metRij);
 }
 
 export async function haalBestand(

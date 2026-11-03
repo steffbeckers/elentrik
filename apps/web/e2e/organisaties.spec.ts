@@ -139,6 +139,7 @@ test("de laatste eigenaar kan zichzelf niet degraderen, en de pagina zegt waarom
 
   await rij.getByTestId("organisatie-lid-rol").click();
   await page.getByRole("option", { name: "Lid" }).click();
+  await page.getByRole("dialog", { name: "Rolwijziging bevestigen" }).getByRole("button", { name: "Rol wijzigen", exact: true }).click();
   // Exact: de toast staat ook nog in een verborgen aria-live-gebied voor schermlezers.
   await expect(page.getByText("Er moet minstens één eigenaar blijven.", { exact: true })).toBeVisible();
 

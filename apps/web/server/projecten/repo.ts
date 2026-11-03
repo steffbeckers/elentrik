@@ -13,7 +13,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
 import type { Project, ProjectSamenvatting } from "../../shared/projecten";
-import type { Db } from "../db";
+import type { Db, Tx } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { controleerOpslagruimte } from "../bestanden/opslagruimte";
 import { bestanden, projecten } from "../db/schema";
@@ -141,12 +141,13 @@ export async function bewaarProject(
   id: string,
   versie: number,
   invoer: { naam?: string; document: unknown },
+  metWijziging?: (tx: Tx, voor: { naam: string; versie: number; document: InstallatieDocument }, na: { naam: string; versie: number; document: InstallatieDocument }) => Promise<void>,
 ): Promise<{ versie: number }> {
   const document = valideerDocument(invoer.document);
 
   return db.transaction(async (tx) => {
     const [huidig] = await tx
-      .select({ versie: projecten.versie, document: projecten.document })
+      .select({ naam: projecten.naam, versie: projecten.versie, document: projecten.document })
       .from(projecten)
       .where(vanOrganisatie(organisatieId, id))
       .for("update");
@@ -166,6 +167,9 @@ export async function bewaarProject(
       })
       .where(and(vanOrganisatie(organisatieId, id), eq(projecten.versie, versie)))
       .returning({ versie: projecten.versie });
+    if (metWijziging) await metWijziging(tx,
+      { naam: huidig.naam, versie: huidig.versie, document: huidig.document as InstallatieDocument },
+      { naam: invoer.naam ?? huidig.naam, versie: bijgewerkt!.versie, document });
     return bijgewerkt!;
   });
 }

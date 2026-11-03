@@ -135,13 +135,15 @@ export async function mij(event: H3Event): Promise<Mij> {
     actief = await kiesActieveOrganisatie(sessie.sessieId, sessie.gebruiker.id);
   }
   const [eigen] = await db
-    .select({ proefGebruikt: user.proefGebruikt, taal: user.taal })
+    .select({ proefGebruikt: user.proefGebruikt, taal: user.taal, superuser: user.superuser, bevestigd: user.emailVerified, naam: user.name })
     .from(user).where(eq(user.id, sessie.gebruiker.id));
   const { config } = gebruikAbonnementen();
   const toegang = await Promise.all(rijen.map((r) => toegangVoor(db, r.id, config)));
   return {
     gebruiker: {
       ...sessie.gebruiker,
+      naam: eigen?.naam ?? sessie.gebruiker.naam,
+      superuser: eigen?.superuser === true && eigen.bevestigd,
       proefGebruikt: eigen?.proefGebruikt ?? false,
       taal: isTaal(eigen?.taal) ? eigen.taal : "nl",
     },

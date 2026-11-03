@@ -623,6 +623,14 @@ const TABEL: Record<string, Rij> = {
   },
 };
 
+// Elk admin-endpoint weigert alle gewone actors, vóór body/target parsing.
+for (const route of ROUTES.filter((r) => r.pad.startsWith("/api/admin/"))) {
+  TABEL[route.sleutel] = {
+    verzoek: async () => ({ methode: route.methode.toUpperCase(), pad: route.pad.replace(/:\w+/g, "onbekend") }),
+    andereOrganisatie: 403, zonderOrganisatie: 403, lid: 403, eigenaar: 403,
+  };
+}
+
 describe("routetabel", () => {
   test("elke route heeft een rij in de tabel, en elke rij een route", () => {
     expect(ROUTES.map((r) => r.sleutel).sort()).toEqual(Object.keys(TABEL).sort());

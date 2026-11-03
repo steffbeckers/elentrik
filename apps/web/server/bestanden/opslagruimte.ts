@@ -1,11 +1,12 @@
 // De opslaglimiet per bedrijf (plan 12, punt 2): hoeveel bytes een organisatie aan bestanden mag
 // bewaren. Het telt de bestanden van de levende projecten (plannen en exports) plus de logo's van
-// het bedrijf; de prullenbak telt niet mee. De controle gebeurt vóór er iets geschreven wordt.
+// het bedrijf; uit de prullenbak tellen ook de bestanden die auditrevisies bewaren. De controle gebeurt vóór het schrijven.
 // Twee gelijktijdige uploads kunnen de limiet kort overschrijden; dat is aanvaard, er is geen lock.
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { isAuditBestand } from "../admin/revisies";
 import { createError } from "h3";
 import type { Db } from "../db";
 import { bestanden, projecten } from "../db/schema";
@@ -43,7 +44,7 @@ export async function gebruikteOpslag(db: Db, organisatieId: string): Promise<nu
     .select({ totaal: sql<string | number | bigint>`coalesce(sum(${bestanden.grootte}), 0)` })
     .from(projecten)
     .innerJoin(bestanden, eq(bestanden.projectId, projecten.id))
-    .where(and(eq(projecten.organisatieId, organisatieId), isNull(projecten.verwijderd)));
+    .where(and(eq(projecten.organisatieId, organisatieId), or(isNull(projecten.verwijderd), isAuditBestand(bestanden.id))));
   const [logos] = await db
     .select({ totaal: sql<string | number | bigint>`coalesce(sum(${bestanden.grootte}), 0)` })
     .from(bestanden)

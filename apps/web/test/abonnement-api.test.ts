@@ -476,6 +476,17 @@ describe("checkout", () => {
 // --- Portaal ---------------------------------------------------------------------------------
 
 describe("portaal", () => {
+  test("vrijstelling blokkeert nieuwe Checkout maar laat bestaand klantenportaal bruikbaar", async () => {
+    await db.insert(abonnementen).values({ organisatieId: eigenaarA.organisatieId, stripeKlantId: "cus_a", status: "active", stripeAbonnementId: "sub_a" });
+    await db.update(organization).set({ vrijgesteld: true }).where(eq(organization.id, eigenaarA.organisatieId));
+    try {
+      expect((await checkout(eigenaarA.cookie, "maand")).status).toBe(409);
+      expect(aanroepen("maakCheckout")).toEqual([]);
+      expect((await portaal(eigenaarA.cookie)).status).toBe(200);
+    } finally {
+      await db.update(organization).set({ vrijgesteld: false }).where(eq(organization.id, eigenaarA.organisatieId));
+    }
+  });
   test("zonder klant: 409 GEEN_KLANT", async () => {
     const antwoord = await portaal(eigenaarA.cookie);
     expect(antwoord.status).toBe(409);

@@ -83,17 +83,18 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   await expect(railPlus).toHaveCount(1);
   await expect(kringPlus).toHaveCount(0);
 
-  // 2. De + van de rail voegt een kring toe: automaat, leiding en een + op het kring-einde.
+  // 2. De railknop voegt een kring met het gekozen onderdeel toe: automaat, leiding en A1.
   await pasTeMaken(page);
   await railPlus.click();
   await expect(schemaTekst(page, "B16 2P")).toHaveCount(1);
   await expect(schemaTekst(page, "XVB 3G2,5")).toHaveCount(1);
   await expect(kringPlus).toHaveCount(1);
 
-  // 3. C kiest de contactdoos; drie klikken op de + van het kring-einde geven A1, A2 en A3.
+  // 3. A1 bestaat al; twee extra contactdozen geven A2 en A3.
   await page.keyboard.press("c");
   await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
-  for (let i = 1; i <= 3; i++) {
+  await expect(schemaTekst(page, "A1")).toHaveCount(1);
+  for (let i = 2; i <= 3; i++) {
     await pasTeMaken(page);
     await kringPlus.click();
     await expect(schemaTekst(page, `A${i}`)).toHaveCount(1);
@@ -115,6 +116,7 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   // 6. Tekst van de leiding wordt platte tekst, nooit HTML. Het algemene label bereikt de SVG niet;
   // het kabeltype wel (via `v-html`), dus daar is de escaping van `render` de enige bescherming.
   const leidingId = await selecteerBij(page, "XVB 3G2,5");
+  await page.getByTestId("werkruimte-eigenschappen").click();
   const labelVeld = page.getByTestId("veld-label");
   await labelVeld.fill(xssLabel);
   await labelVeld.blur();

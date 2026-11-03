@@ -238,7 +238,7 @@ describe("GET /api/mij", () => {
 
     const mij = await json(stuur("GET", "/api/mij", eigenaar.cookie));
     expect(mij).toEqual({
-      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, proefGebruikt: true, taal: "nl" },
+      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, superuser: false, proefGebruikt: true, taal: "nl" },
       organisaties: expect.arrayContaining([
         { id: org, naam: "Bedrijf", rol: "eigenaar", toegang: UIT },
         { id: tweede, naam: "Ander bedrijf", rol: "lid", toegang: UIT },

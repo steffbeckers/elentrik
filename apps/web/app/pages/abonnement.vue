@@ -114,6 +114,9 @@ const beheer = () => voerUit("beheer", () => beheerAbonnement({ api, ...doorstur
       </p>
       <div v-else class="space-y-6">
         <p v-if="statusTekst" class="text-lg" data-testid="abonnement-status">{{ statusTekst }}</p>
+        <p v-if="overzicht.reden === 'vrijgesteld' && overzicht.status" class="text-muted">
+          {{ $t("abonnement.vrijstellingStripe") }}
+        </p>
 
         <UAlert
           v-if="weergave.melding === 'lid'"

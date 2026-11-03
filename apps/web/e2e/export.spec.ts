@@ -40,7 +40,7 @@ test("exporteren bewaart eerst, downloadt de PDF en werkt de lijst bij", async (
   await dialoog.getByTestId("export-start").click();
   expect((await download).suggestedFilename()).toMatch(/\.pdf$/);
 
-  await expect(dialoog.getByTestId("export-rij-V1")).toContainText("geen fouten");
+  await expect(dialoog.getByTestId("export-rij-V1")).toContainText("0 elektrische fouten gemeld");
   await expect(dialoog.getByTestId("export-versie")).toHaveValue("V2");
   await expect(dialoog.getByTestId("export-rij-V1").getByRole("link", { name: "Downloaden" })).toHaveAttribute(
     "href",
@@ -53,6 +53,7 @@ test("onopgeloste fouten: bijlage verplicht en eerst een bevestiging", async ({ 
   await openMetKring(page, id);
   // Een zevende contactdoos die er vijf telt: elf op één kring is een fout.
   await page.getByTestId("schema-canvas").locator('[data-testid^="plus-kring-einde-"]').click();
+  await page.getByTestId("werkruimte-eigenschappen").click();
   const aantal = page.getByTestId("veld-aantal");
   await aantal.fill("5");
   await aantal.blur();
@@ -77,7 +78,7 @@ test("onopgeloste fouten: bijlage verplicht en eerst een bevestiging", async ({ 
   const download = page.waitForEvent("download");
   await dialoog.getByRole("button", { name: "Toch exporteren" }).click();
   await download;
-  await expect(dialoog.getByTestId("export-rij-V1")).toContainText("1 fout");
+  await expect(dialoog.getByTestId("export-rij-V1")).toContainText("1 elektrische fout");
 });
 
 test("exporteren kan niet als opslaan mislukt", async ({ page, request }) => {
@@ -195,10 +196,11 @@ test.describe("echte pdf-export", () => {
 
     // 1. Bedrijfsgegevens en een logo.
     await page.goto("/instellingen");
-    await expect(page.getByTestId("bedrijf-bewaar")).toBeEnabled({ timeout: 20_000 });
+    await expect(page.getByTestId("bedrijf-naam")).toBeEnabled({ timeout: 20_000 });
     await page.getByTestId("bedrijf-naam").fill("Elektro E2E");
+    await expect(page.getByTestId("bedrijf-bewaar")).toBeEnabled();
     await page.getByTestId("bedrijf-bewaar").click();
-    await expect(page.getByText("Bedrijfsgegevens bewaard.", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("bedrijf-opslagstatus")).toHaveText("Bedrijfsgegevens bewaard.");
     await page.getByTestId("bedrijf-logo").setInputFiles(PLAN_PNG);
     await expect(page.getByText("Logo opgeladen.", { exact: true })).toBeVisible();
 
@@ -266,7 +268,7 @@ test.describe("echte pdf-export", () => {
     // De cartouche toont de bedrijfsnaam en het werfadres.
     expect(pdf.paginaTeksten[0]).toContain("Elektro E2E");
     expect(pdf.paginaTeksten[0]).toContain("Dorpsstraat 3");
-    await expect(dialoog.getByTestId("export-rij-V1")).toContainText("geen fouten");
+    await expect(dialoog.getByTestId("export-rij-V1")).toContainText("0 elektrische fouten gemeld");
     await expect(dialoog.getByTestId("export-versie")).toHaveValue("V2");
 
     // 5. Nog eens exporteren: V2 staat bovenaan.
