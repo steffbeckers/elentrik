@@ -10,6 +10,7 @@ import { levendAdminProject, vereisCorrectie } from "./correcties";
 import { parseAdmin } from "./invoer";
 import { voerAdminMutatieUit } from "./mutaties";
 import type { AdminActor } from "./toegang";
+import { vergrendelAuditBestanden } from "./revisies";
 
 export const BewaarAdminProjectSchema = BewaarProjectSchema.extend({ correctieId: z.uuid(), mutatieId: z.uuid() }).strict();
 export async function haalAdminDocument(db: Db, id: string) {
@@ -25,12 +26,14 @@ export async function bewaarAdminProject(db: Db, actor: AdminActor, projectId: s
     const correctie = await vereisCorrectie(tx, actor, i.correctieId, projectId);
     const doel = { type: "project" as const, id: projectId, projectId, organisatieId: correctie.organisatieId };
     const actie = "project.bewaard";
-    return voerAdminMutatieUit(tx, actor, { mutatieId: i.mutatieId, actie, doel, payload: { ...i, versie } }, async (werk) =>
-      metProjectFouten(() => bewaarProject(werk, correctie.organisatieId, projectId, versie, i, async (auditTx, voor, na) => {
+    return voerAdminMutatieUit(tx, actor, { mutatieId: i.mutatieId, actie, doel, payload: { ...i, versie } }, async (werk) => {
+      await vergrendelAuditBestanden(werk);
+      return metProjectFouten(() => bewaarProject(werk, correctie.organisatieId, projectId, versie, i, async (auditTx, voor, na) => {
         const revisieId = randomUUID();
         const auditId = await schrijfAdminAudit(auditTx, actor, { doel, actie, reden: correctie.reden, correctieId: correctie.id,
           voor: { naam: voor.naam, versie: voor.versie, revisieId }, na: { naam: na.naam, versie: na.versie, revisieId } });
         await auditTx.insert(adminRevisies).values({ id: revisieId, projectId, organisatieId: correctie.organisatieId, correctieId: correctie.id, auditId, voor, na });
-      })));
+      }));
+    });
   });
 }
