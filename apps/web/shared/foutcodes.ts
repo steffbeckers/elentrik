@@ -25,6 +25,9 @@ export const SERVER_FOUTCODES = [
   "NIET_TOEGELATEN",
   "ADMIN_GEWIJZIGD",
   "ADMIN_MUTATIE_CONFLICT",
+  "ADMIN_STRIPE_BEVESTIGING",
+  "ADMIN_PROEF_VERLENGEN",
+  "BEDRIJF_VRIJGESTELD",
   "VERZOEK_VAN_ANDERE_SITE",
   // Niet gevonden: ELK object (project, bestand, export, lid, uitnodiging...) dat niet bestaat of
   // van een andere organisatie is, geeft deze ene code en dezelfde statusMessage (server/fouten.ts).

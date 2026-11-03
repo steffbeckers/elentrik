@@ -864,6 +864,7 @@
     }
   },
   "abonnement": {
+    "vrijstellingStripe": "L’accès gratuit ne modifie pas votre abonnement Stripe existant. Vous pouvez le gérer ci-dessous.",
     "titel": "Abonnement",
     "laden": {
       "bezig": "Chargement…",
@@ -943,6 +944,9 @@
     "wisselenMislukt": "La langue n'a pas pu être changée. Réessayez."
   },
   "fouten": {
+    "ADMIN_STRIPE_BEVESTIGING": "Confirmez que les abonnements Stripe et les paiements en cours restent inchangés. Gérez-les séparément dans Stripe.",
+    "ADMIN_PROEF_VERLENGEN": "Choisissez une date de fin postérieure à la période d’essai actuelle et à aujourd’hui.",
+    "BEDRIJF_VRIJGESTELD": "Cette entreprise bénéficie d’un accès gratuit et ne peut pas souscrire un nouvel abonnement.",
     "onbekend": "Une erreur s'est produite. Veuillez réessayer.",
     "NIET_AANGEMELD": "Vous n'êtes plus connecté. Reconnectez-vous.",
     "ANDERE_GEBRUIKER": "Vous êtes entre-temps connecté avec un autre compte. Rechargez la page.",

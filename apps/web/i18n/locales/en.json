@@ -864,6 +864,7 @@
     }
   },
   "abonnement": {
+    "vrijstellingStripe": "Free access does not change your existing Stripe subscription. You can manage it below.",
     "titel": "Subscription",
     "laden": {
       "bezig": "Loading…",
@@ -943,6 +944,9 @@
     "wisselenMislukt": "The language could not be changed. Please try again."
   },
   "fouten": {
+    "ADMIN_STRIPE_BEVESTIGING": "Confirm that existing Stripe subscriptions and pending payments continue unchanged. Manage them separately in Stripe.",
+    "ADMIN_PROEF_VERLENGEN": "Choose an end date later than the current trial and today.",
+    "BEDRIJF_VRIJGESTELD": "This company has free access and cannot start a new subscription.",
     "onbekend": "Something went wrong. Please try again.",
     "NIET_AANGEMELD": "You are no longer signed in. Sign in again.",
     "ANDERE_GEBRUIKER": "You are now signed in as someone else. Reload the page.",

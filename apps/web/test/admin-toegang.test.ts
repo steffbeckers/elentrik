@@ -44,4 +44,15 @@ describe("superuser access", () => {
     expect(bestemming({ path: "/administrator", fullPath: "/administrator" }, sessie)).toBe("/geen-organisatie");
     expect(bestemming({ path: "/", fullPath: "/" }, sessie)).toBe("/geen-organisatie");
   });
+  test("correcting one's own name is reflected in the existing session view", async () => {
+    const actor = await h.gebruiker("oude-naam");
+    await h.db.update(user).set({ superuser: true }).where(eq(user.id, actor.id));
+    const detail = await (await h.stuur(`/api/admin/gebruikers/${actor.id}`, actor.cookie)).json();
+    const response = await h.stuur(`/api/admin/gebruikers/${actor.id}`, actor.cookie, {
+      method: "PUT", headers: { "content-type": "application/json", "x-elentrik-gebruiker": actor.id },
+      body: JSON.stringify({ mutatieId: crypto.randomUUID(), reden: "Eigen naam corrigeren", verwacht: detail.verwacht, gegevens: { naam: "Nieuwe naam" } }),
+    });
+    expect(response.status).toBe(200);
+    expect((await (await h.stuur("/api/mij", actor.cookie)).json()).gebruiker.naam).toBe("Nieuwe naam");
+  });
 });

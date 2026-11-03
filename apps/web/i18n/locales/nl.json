@@ -864,6 +864,7 @@
     }
   },
   "abonnement": {
+    "vrijstellingStripe": "Gratis toegang wijzigt je bestaande Stripe-abonnement niet. Je kunt het hieronder beheren.",
     "titel": "Abonnement",
     "laden": {
       "bezig": "Laden…",
@@ -943,6 +944,9 @@
     "wisselenMislukt": "De taal kon niet gewisseld worden. Probeer het opnieuw."
   },
   "fouten": {
+    "ADMIN_STRIPE_BEVESTIGING": "Bevestig dat bestaande Stripe-abonnementen en open betalingen blijven doorlopen. Beheer ze apart in Stripe.",
+    "ADMIN_PROEF_VERLENGEN": "Kies een einddatum die later ligt dan de huidige proefperiode en vandaag.",
+    "BEDRIJF_VRIJGESTELD": "Dit bedrijf heeft gratis toegang en kan geen nieuw abonnement afsluiten.",
     "onbekend": "Er ging iets mis. Probeer het opnieuw.",
     "NIET_AANGEMELD": "Je bent niet meer aangemeld. Log opnieuw in.",
     "ANDERE_GEBRUIKER": "Je bent intussen als iemand anders aangemeld. Laad de pagina opnieuw.",
