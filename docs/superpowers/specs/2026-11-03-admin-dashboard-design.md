@@ -13,6 +13,7 @@ Sources:
 - The user subsequently asked whether a company can be excluded from payments. The design now proposes an audited company-level free-access control using the existing exemption flag; existing Stripe charges require separate cancellation.
 - The user also requested extending a company's trial end date. This is included as an audited support action on the local Elentrik trial.
 - The user confirmed that Stripe subscriptions will be managed directly in Stripe and requested a direct link to the subscription from the admin dashboard.
+- The user accepted the recommended additions: global search, an explanation of effective company access, and internal support notes. Other suggested additions remain outside this scope.
 - The user chose a written design without a browser mockup.
 - `PRODUCT.md` supplies product, language, and scope constraints. The code references below describe this checkout, not production deployment.
 
@@ -62,6 +63,14 @@ Design decisions:
 
 All lists use server-side search, filters, stable ordering with an ID tie-breaker, and bounded pagination (default 25, maximum 100 rows). Search/filter state lives in the URL. Detail screens connect related records so support can move from user to company to project without repeating searches.
 
+### Global search
+
+Provide one search field in the admin shell, available on every admin page, covering user name/email/ID, company name/ID, and project name/customer name/ID. Group results into Users, Companies, and Projects, each with identifying context: email for users, company ID for ambiguous company names, and owning company for projects. An exact ID or email match ranks ahead of name matches; use stable ordering for ties.
+
+Design decisions: query the server after a short debounce with at least two characters, allow up to 200 characters, and show at most five results per group with a link to the corresponding full filtered list. Empty input shows no records. Match text case-insensitively and treat SQL wildcard characters as literal search text; use parameterised queries. Do not scan project documents, audit payloads, or support-note contents. Search defaults to non-deleted projects; an exact ID can also return a retained deleted project, clearly marked and linked to its non-editable detail.
+
+The endpoint requires current superuser permission before searching any record. Keep queries bounded and add appropriate indexes based on the chosen query strategy. Make the results keyboard accessible and provide loading, no-match, and request-failure states. Discard stale responses when the query changes and clear results on sign-out/account change. Searching or opening a result never changes the active customer organisation.
+
 ### Users
 
 List name, email, creation date, and company count. Search name and email. Detail shows verification state and company memberships, with links to those companies.
@@ -98,6 +107,14 @@ Manage Stripe subscriptions directly in Stripe, as requested by the user. In the
 
 Build links server-side from validated stored IDs and a known Stripe test/live environment; expose no API secrets. Do not construct a misleading link if that environment is unavailable or the app uses a local fake Stripe. Keep the existing recorded subscription details visible. Plan, payment, cancellation, and Stripe billing-date changes are handled in Stripe; this dashboard manages local free-access exemptions and local trial extensions.
 
+### Explanation of company access
+
+On company detail, show **Why does this company have access?** or **Why is this company read-only?** with a plain-language explanation generated from the same effective-access decision used by customer APIs. State the evaluation time and relevant dates: local trial end, payment-grace end when known, and recorded subscription state/synchronisation time. Surface exemption and globally disabled billing explicitly. An unknown grace start is shown as unknown, not given an invented deadline.
+
+Show the deciding rule first, with the other relevant facts below it. For example: "This company is read-only because its trial ended on 4 November" with **Extend trial** and **Grant free access**, or "Free access is enabled" while still showing that a Stripe subscription exists. Link to Stripe for subscription issues and to the existing audited local controls for access changes. A rule may grant access despite another adverse fact; the explanation must preserve the current precedence rather than choosing the most alarming status.
+
+Distinguish company-level entitlement from an individual user's membership/role and from storage limits: company access alone does not prove a particular user can perform every action. Existing member details supply that context. If access data cannot be loaded, show an error and retry rather than inferring an access decision. Refresh this explanation after a local trial/exemption change. This feature explains stored state; it does not itself synchronise or mutate Stripe.
+
 ### Projects
 
 List project name, customer name, company, version, creation time, and last modification time. Search project/customer/company name and filter by company. Default to non-deleted projects; a deleted-record filter shows metadata and audit history without enabling edits.
@@ -105,6 +122,16 @@ List project name, customer name, company, version, creation time, and last modi
 Detail shows the company, project/customer information, version, existing export metadata, and audit history. Provide **Open project** for an initial read-only view and **Correct project** to start support editing.
 
 Corrections include project name, customer/installation data, electrical structure, diagram properties, and layout-plan contents through the existing editor. This is full document correction, not merely renaming. Existing validation and provisional AREI wording continue to apply.
+
+### Internal support notes
+
+Add a **Support notes** section to company and project details. Every note belongs to an explicit company and optionally one of its projects. Company detail includes company notes and project notes clearly labelled with their project; project detail shows that project's notes and a link to the company's notes. Notes are visible only to current superusers, never in customer APIs, project documents, exported dossiers, or customer emails.
+
+Design decisions: notes are plain text, 1–5,000 characters after trimming, with author, creation time, last-edit time, and an optional follow-up date. Render text safely without HTML or automatic embeds. All superusers may create, edit, and archive notes; show edited/archived state and preserve prior text in audit history. Archive hides a note from the default view but keeps it available through an archived filter; no hard-delete action is offered. Lists are paginated, newest first, with a stable ID tie-breaker.
+
+Create/edit/archive uses the existing admin authentication, CSRF, expected-user, stale-edit, retry, and atomic audit guarantees. Creating a note needs only its content; the audit entry records the note as the support explanation rather than requiring a duplicate reason. Editing or archiving requires a short change reason. Record the real actor for each action even when another administrator wrote the original note. Reject a project/company mismatch server-side and retain audit identity if the target is later deleted.
+
+An optional follow-up date is a calendar date in `Europe/Brussels`. Add an overview attention list for unarchived notes with a follow-up date due today or earlier, linking to their company/project and showing the note excerpt. Removing/changing the date or archiving the note clears that pending follow-up and is audited. This is an in-app reminder list, with no scheduled emails or external notifications.
 
 ## 4. Support project editor
 
@@ -142,7 +169,7 @@ Each entry records server time, actor ID and a display-name snapshot, target typ
 
 Mode: Operate. Extend the established Nuxt UI interface, including its blue primary colour, slate neutrals, existing typography, Lucide icons, translated forms, tables, and light/dark behaviour. No product-wide redesign or new UI framework.
 
-Use a dedicated admin shell with navigation for Overview, Users, Companies, Projects, and Audit history. On narrow screens, use compact navigation and preserve accessible search/filter controls. Keep the active company selector out of the admin shell because admin targets are explicit; retain the user menu and a clear return to the customer app.
+Use a dedicated admin shell with navigation for Overview, Users, Companies, Projects, and Audit history, plus persistent global search. On narrow screens, use compact navigation and preserve accessible search/filter controls. Keep the active company selector out of the admin shell because admin targets are explicit; retain the user menu and a clear return to the customer app.
 
 The overview begins with a heading and reference time, a compact row of linked counts, and attention lists with direct routes to affected companies. Searchable lists carry the primary work; details use a clear identity heading followed by record information, related records, and history. Editing begins from a named action and shows a focused form with reason, save, cancel, and pending/error feedback.
 
@@ -154,7 +181,7 @@ Build within the existing Nuxt/Vue, Better Auth, Drizzle/PostgreSQL, and shared 
 
 Relevant existing seams:
 
-- `server/db/schema.ts`: users, organisations, memberships, project versions, files, snapshots, and subscription data; new migrations add superuser status, correction sessions, and audit/revision storage.
+- `server/db/schema.ts`: users, organisations, memberships, project versions, files, snapshots, and subscription data; new migrations add superuser status, correction sessions, internal support notes, and audit/revision storage.
 - `server/utils/toegang.ts`, `server/api/mij.get.ts`, `server/organisaties/leden.ts`, `shared/mij.ts`, `app/sessie/bestemming.ts`: session checks, current-user presentation, and organisation-free admin entry.
 - `server/abonnementen/repo.ts`, `toegang.ts`, and `beheer.ts`: effective access and recorded subscription data; preserve their semantics in overview grouping.
 - `server/utils/bedrijf.ts` and `server/bedrijf/repo.ts`: validated company text updates and logo preservation.
@@ -175,6 +202,9 @@ Relevant existing seams:
 9. A superuser can enable and remove company free access with an audited reason. Exempt companies can use the app after their trial ends and cannot start new Checkout sessions; removing exemption restores the current underlying access decision. Existing Stripe subscriptions and open Checkout sessions remain accurately visible with the required acknowledgement, and the control does not claim to stop their charges. Ordinary company owners cannot set exemption through any endpoint.
 10. A superuser can extend an active or expired local trial with a reason and before/after audit evidence. Reject past or non-extending dates and stale submissions. Verify the exact end boundary, daylight-saving conversion, effective access precedence, unchanged user trial eligibility, and unchanged existing Stripe billing dates. Ordinary users cannot extend trials through any endpoint.
 11. The company's Stripe subscription link opens the exact stored subscription in the correct environment, with a customer-record link where available. Missing IDs, unknown environments, and local fake Stripe configurations produce no misleading links. Links contain no secrets and do not create a customer portal session or mutate billing.
+12. Global search finds users by name/email/ID and companies/projects by the supported fields, separates ambiguous results with context, honours pagination/limits, and prevents stale responses from replacing newer results. A retained deleted project found by exact ID is visibly deleted and non-editable. Ordinary users cannot obtain search results directly through the API.
+13. The company access explanation matches the customer API's effective decision for disabled billing, exemption, active/Stripe-trial subscriptions, payment grace, local trials, and read-only outcomes, including overlapping conditions and time boundaries. It identifies unknown dates and failed reads honestly and refreshes after local access changes.
+14. Superusers can add, edit, archive, and inspect internal company/project notes with author/date information and audit history. Conflicting edits, retry duplication, forged target relationships, and non-superuser access are rejected. Notes never appear in customer responses or exports. Follow-up dates enter/leave the overview attention list correctly at Brussels calendar-day boundaries.
 
 ## Builder discretion
 
