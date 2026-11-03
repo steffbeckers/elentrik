@@ -563,6 +563,12 @@
     "titel": "Projects",
     "nieuw": "New project",
     "leeg": "No projects yet. Create your first project.",
+    "zoeken": {
+      "label": "Search projects",
+      "placeholder": "Search by project name or customer…",
+      "wissen": "Clear search",
+      "geenResultaten": "No projects found. Try a different search."
+    },
     "laden": {
       "fout": {
         "titel": "Could not load projects",
