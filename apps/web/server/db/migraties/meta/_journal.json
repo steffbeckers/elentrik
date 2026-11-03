@@ -92,6 +92,13 @@
       "when": 1793735952349,
       "tag": "0012_admin_notities",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793736117877,
+      "tag": "0013_admin_correcties",
+      "breakpoints": true
     }
   ]
 }

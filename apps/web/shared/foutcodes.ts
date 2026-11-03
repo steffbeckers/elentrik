@@ -27,6 +27,7 @@ export const SERVER_FOUTCODES = [
   "ADMIN_MUTATIE_CONFLICT",
   "ADMIN_STRIPE_BEVESTIGING",
   "ADMIN_PROEF_VERLENGEN",
+  "ADMIN_CORRECTIE_ONGELDIG",
   "BEDRIJF_VRIJGESTELD",
   "VERZOEK_VAN_ANDERE_SITE",
   // Niet gevonden: ELK object (project, bestand, export, lid, uitnodiging...) dat niet bestaat of

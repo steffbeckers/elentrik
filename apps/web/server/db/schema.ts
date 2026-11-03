@@ -1,5 +1,6 @@
 import type { Partij } from "@elentrik/model";
 import type { AdminAuditDoel } from "../../shared/admin/audit";
+import type { AdminProjectRevisie } from "../../shared/admin/projecten";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -300,6 +301,29 @@ export const doorgestuurdeFacturen = pgTable("doorgestuurde_facturen", {
 });
 
 // Historische actor/target-id's hebben bewust geen cascade: bewijs overleeft verwijdering.
+export const adminCorrecties = pgTable("admin_correcties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").notNull(),
+  organisatieId: text("organisatie_id").notNull(),
+  actorId: text("actor_id").notNull(),
+  sessieId: text("sessie_id").notNull(),
+  reden: text("reden").notNull(),
+  gestart: timestamp("gestart", { withTimezone: true }).notNull().defaultNow(),
+  verloopt: timestamp("verloopt", { withTimezone: true }).notNull(),
+  beeindigd: timestamp("beeindigd", { withTimezone: true }),
+}, (t) => [index("admin_correcties_project_idx").on(t.projectId, t.gestart)]);
+
+export const adminRevisies = pgTable("admin_revisies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").notNull(),
+  organisatieId: text("organisatie_id").notNull(),
+  correctieId: uuid("correctie_id").notNull(),
+  auditId: uuid("audit_id").notNull(),
+  voor: jsonb("voor").$type<AdminProjectRevisie>().notNull(),
+  na: jsonb("na").$type<AdminProjectRevisie>().notNull(),
+  tijd: timestamp("tijd", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("admin_revisies_project_idx").on(t.projectId, t.tijd), uniqueIndex("admin_revisies_audit_idx").on(t.auditId)]);
+
 export const adminNotities = pgTable("admin_notities", {
   id: uuid("id").primaryKey().defaultRandom(),
   organisatieId: text("organisatie_id").notNull(),

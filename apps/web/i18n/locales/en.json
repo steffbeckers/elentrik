@@ -944,6 +944,7 @@
     "wisselenMislukt": "The language could not be changed. Please try again."
   },
   "fouten": {
+    "ADMIN_CORRECTIE_ONGELDIG": "This support correction has expired, ended or belongs to another sign-in. Your local work is retained. Start a new correction to continue saving.",
     "ADMIN_STRIPE_BEVESTIGING": "Confirm that existing Stripe subscriptions and pending payments continue unchanged. Manage them separately in Stripe.",
     "ADMIN_PROEF_VERLENGEN": "Choose an end date later than the current trial and today.",
     "BEDRIJF_VRIJGESTELD": "This company has free access and cannot start a new subscription.",

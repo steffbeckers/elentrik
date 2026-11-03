@@ -944,6 +944,7 @@
     "wisselenMislukt": "De taal kon niet gewisseld worden. Probeer het opnieuw."
   },
   "fouten": {
+    "ADMIN_CORRECTIE_ONGELDIG": "Deze supportcorrectie is verlopen, afgerond of hoort bij een andere aanmelding. Je lokale werk blijft bewaard. Start een nieuwe correctie om verder te bewaren.",
     "ADMIN_STRIPE_BEVESTIGING": "Bevestig dat bestaande Stripe-abonnementen en open betalingen blijven doorlopen. Beheer ze apart in Stripe.",
     "ADMIN_PROEF_VERLENGEN": "Kies een einddatum die later ligt dan de huidige proefperiode en vandaag.",
     "BEDRIJF_VRIJGESTELD": "Dit bedrijf heeft gratis toegang en kan geen nieuw abonnement afsluiten.",
