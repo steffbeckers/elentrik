@@ -170,6 +170,18 @@
       "actie": "Actiecode",
       "vanaf": "Vanaf (UTC-tijdstip)",
       "tot": "Tot (UTC-tijdstip)"
+    },
+    "support": {
+      "titel": "Supportcorrectie",
+      "actief": "Wijzigingen worden met jouw reden en account vastgelegd.",
+      "alleenLezen": "Alleen-lezen. Start een correctie met reden om te wijzigen.",
+      "terug": "Terug naar projectbeheer",
+      "download": "Lokaal document downloaden (JSON)",
+      "afronden": "Correctie afronden",
+      "verloopt": "Verloopt op {datum}",
+      "gestopt": "Deze correctie is gestopt of verlopen. Niet-opgeslagen werk blijft in dit venster en, indien mogelijk, in het lokale concept.",
+      "start": "Correctie starten",
+      "fout": "Bewaar of herstel eerst de resterende wijzigingen. Je invoer blijft behouden."
     }
   },
   "app": {

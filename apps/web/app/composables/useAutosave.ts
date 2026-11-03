@@ -72,13 +72,14 @@ export type AutosaveOpties = {
    * Dupliceert op de server. `bestandIds`: de planbestanden van het lokale document; het antwoord
    * geeft voor de gekopieerde bestanden oud -> nieuw (`bestandIds`).
    */
-  dupliceer: (id: string, bestandIds?: string[]) => Promise<{ id: string; bestandIds?: Record<string, string> }>;
+  dupliceer?: (id: string, bestandIds?: string[]) => Promise<{ id: string; bestandIds?: Record<string, string> }>;
   /**
    * Maakt op de server een nieuw project uit het lokale document (het project is verwijderd). De server
    * kopieert de planbestanden van de organisatie mee en geeft oud -> nieuw terug (`bestandIds`), samen met
    * het document-id en de versie van het nieuwe project.
    */
-  maakNieuw: (invoer: { naam: string; document: InstallatieDocument }) => Promise<NieuwProjectUitDocument>;
+  maakNieuw?: (invoer: { naam: string; document: InstallatieDocument }) => Promise<NieuwProjectUitDocument>;
+  modus?: 'klant' | 'admin';
   /** Navigeert naar een ander project (de kopie of het nieuwe project). */
   naarProject: (id: string) => void | Promise<void>;
   /** Wachttijd na de laatste wijziging. */
@@ -194,7 +195,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const { gebruikerId } = opties;
   // Nooit een concept zonder eigenaar: zonder gebruiker geen autosave.
   if (!gebruikerId) throw new Error("De autosave heeft een ingelogde gebruiker nodig (gebruikerId).");
-  const plekVan = (projectId: string): ConceptPlek => ({ gebruikerId, projectId, instantieId });
+  const plekVan = (projectId: string): ConceptPlek => ({ gebruikerId, projectId, instantieId, ...(opties.modus ? { modus: opties.modus } : {}) });
 
   const status = ref<AutosaveStatus>("opgeslagen");
   const conflict = ref<Conflict | null>(null);
@@ -495,6 +496,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
    * staan dan op hun nieuwe id's uit het duplicaat.
    */
   async function bewaarAlsKopie(): Promise<void> {
+    if (!dupliceer) return;
     while (lopend) await lopend;
     const id = store.projectId;
     if (id === null || store.document === null) return;
@@ -538,6 +540,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
    * Pas daarna gaat het concept van het verwijderde project weg en volgt de navigatie.
    */
   async function bewaarAlsNieuwProject(): Promise<void> {
+    if (!maakNieuw) return;
     while (lopend) await lopend;
     const id = store.projectId;
     if (id === null || store.document === null) return;

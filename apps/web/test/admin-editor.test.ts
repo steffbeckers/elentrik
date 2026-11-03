@@ -1,0 +1,42 @@
+import 'fake-indexeddb/auto';
+import { beforeEach, expect, test, vi } from 'vitest';
+import { clear, get, keys, set } from 'idb-keyval';
+import { createPinia, setActivePinia } from 'pinia';
+import { nieuwProjectDocument } from '@elentrik/model';
+import { bewaarConcept, nieuwsteConcept } from '../app/composables/concepten';
+import { useAutosave } from '../app/composables/useAutosave';
+import { useEditorStore } from '../app/stores/editor';
+import { createSSRApp, h, provide } from 'vue';
+import { renderToString } from 'vue/server-renderer';
+import { editorContextKey, type EditorContext } from '../app/editor/context';
+import { useBestandenApi } from '../app/composables/useBestandenApi';
+import { maakAdminProjectApi } from '../app/composables/useAdminProjectApi';
+beforeEach(async () => { await clear(); setActivePinia(createPinia()); });
+const document = () => nieuwProjectDocument({ klantNaam: 'Klant', stroomtype: '2x230V', datum: '2026-11-03' });
+test('support drafts never claim legacy/customer work, including the same actor and project', async () => {
+  const base = { document: document(), versie: 1, naam: 'Klant', tijd: 1 };
+  await set('concept:p1', base);
+  expect(await nieuwsteConcept('p1', 'u1', 'admin')).toBeNull();
+  expect(await get('concept:p1')).toEqual(base);
+  await bewaarConcept({ gebruikerId: 'u1', projectId: 'p1', instantieId: 'w1', modus: 'admin' }, { ...base, naam: 'Support', tijd: 2 });
+  expect((await nieuwsteConcept('p1', 'u1'))?.concept.naam).toBe('Klant');
+  expect((await nieuwsteConcept('p1', 'u1', 'admin'))?.concept.naam).toBe('Support');
+  expect(await keys()).toContain('concept:u:u1:p1:oud');
+});
+test('unsupported recovery commands do nothing; refused support save retains draft in its own mode', async () => {
+  const store = useEditorStore(); store.laad({ id: 'p1', naam: 'Project', versie: 1, document: document() });
+  const bewaar = vi.fn().mockRejectedValue({ status: 403 }); const haal = vi.fn(); const naarProject = vi.fn();
+  const auto = useAutosave({ store, bewaar, haal, naarProject, gebruikerId: 'u1', modus: 'admin', vertragingMs: 100_000 });
+  await auto.bewaarAlsKopie(); await auto.bewaarAlsNieuwProject();
+  expect(haal).not.toHaveBeenCalled(); expect(bewaar).not.toHaveBeenCalled(); expect(naarProject).not.toHaveBeenCalled();
+  store.wijzigProjectgegevens({ naam: 'Lokale correctie' }); await auto.wachtOpConcept(); await auto.nuOpslaan();
+  expect(auto.status.value).toBe('fout'); expect((await nieuwsteConcept('p1', 'u1', 'admin'))?.concept.naam).toBe('Lokale correctie');
+  expect(await nieuwsteConcept('p1', 'u1')).toBeNull(); auto.stop();
+});
+test('nested plan components inherit admin file URLs and uploads through the typed context', async () => {
+  const support = maakAdminProjectApi(vi.fn(), 'u1', 'p1');
+  const context = { bestanden: support.bestanden } as EditorContext;
+  const Child = { setup() { const bestanden = useBestandenApi(); expect(bestanden).toBe(support.bestanden); return () => h('img', { src: bestanden.url('b1') }); } };
+  const app = createSSRApp({ setup() { provide(editorContextKey, context); return () => h(Child); } });
+  expect(await renderToString(app)).toContain('/api/admin/bestanden/b1?gebruiker=u1');
+});

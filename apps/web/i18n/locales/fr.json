@@ -170,6 +170,18 @@
       "actie": "Code d’action",
       "vanaf": "Depuis (instant UTC)",
       "tot": "Jusqu’à (instant UTC)"
+    },
+    "support": {
+      "titel": "Correction de support",
+      "actief": "Les modifications sont enregistrées avec votre motif et votre compte.",
+      "alleenLezen": "Lecture seule. Démarrez une correction avec un motif pour modifier.",
+      "terug": "Retour à la gestion du projet",
+      "download": "Télécharger le document local (JSON)",
+      "afronden": "Terminer la correction",
+      "verloopt": "Expire le {datum}",
+      "gestopt": "Cette correction est terminée ou expirée. Le travail non enregistré reste dans cette fenêtre et, si possible, dans le brouillon local.",
+      "start": "Démarrer la correction",
+      "fout": "Enregistrez ou récupérez les modifications restantes. Votre saisie est conservée."
     }
   },
   "app": {

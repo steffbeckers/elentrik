@@ -2,6 +2,8 @@
 // (ruling E1). `useBestandenApi` is de Nuxt-ingang; `maakBestandenApi` krijgt de
 // fetch-functie van buitenaf en is zo zonder Nuxt te testen.
 import type { BestandInfo } from "../../shared/bestandsinhoud";
+import { getCurrentInstance, inject } from "vue";
+import { editorContextKey } from "../editor/context";
 
 export type { BestandInfo };
 
@@ -39,5 +41,7 @@ export function maakBestandenApi(haal: BestandenFetch) {
 export type BestandenApi = ReturnType<typeof maakBestandenApi>;
 
 export function useBestandenApi(): BestandenApi {
+  const context = getCurrentInstance() ? inject(editorContextKey, null) : null;
+  if (context) return context.bestanden;
   return maakBestandenApi($fetch as unknown as BestandenFetch);
 }

@@ -170,6 +170,18 @@
       "actie": "Action code",
       "vanaf": "From (UTC timestamp)",
       "tot": "Until (UTC timestamp)"
+    },
+    "support": {
+      "titel": "Support correction",
+      "actief": "Changes are recorded with your reason and account.",
+      "alleenLezen": "Read-only. Start a correction with a reason to edit.",
+      "terug": "Back to project administration",
+      "download": "Download local document (JSON)",
+      "afronden": "Finish correction",
+      "verloopt": "Expires on {datum}",
+      "gestopt": "This correction has ended or expired. Unsaved work remains in this window and, where possible, in the local draft.",
+      "start": "Start correction",
+      "fout": "Save or recover the remaining changes first. Your input is preserved."
     }
   },
   "app": {
