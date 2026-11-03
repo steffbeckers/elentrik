@@ -6,6 +6,7 @@ import { abonnementen, organization, projecten, user } from "../db/schema";
 import { lijstAdminAudit } from "./audit";
 import { lijstAdminOrganisaties, lijstAdminProjecten } from "./records";
 import { toegangGroepSql } from "./toegangsweergave";
+import { lijstOpvolging } from "./notities";
 
 export async function adminOverzicht(db: Db, config: AbonnementConfig, nu: Date): Promise<AdminOverzicht> {
   const sinds = new Date(nu.getTime() - 30 * 86400000);
@@ -31,5 +32,6 @@ export async function adminOverzicht(db: Db, config: AbonnementConfig, nu: Date)
   return { beoordeeldOp: nu.toISOString(), billing: config.ingeschakeld,
     aantallen: { gebruikers: personen!.n, organisaties: bedrijven!.n, projecten: werk!.n,
       nieuweGebruikers: nieuw!.n, nieuweOrganisaties: nieuweBedrijven!.n, gewijzigdeProjecten: gewijzigd!.n },
-    toegang, aandacht: { proefEindigt, betaling, alleenLezen }, recenteProjecten: recenteProjecten.items, recenteCorrecties: recenteCorrecties.items };
+    toegang, aandacht: { proefEindigt, betaling, alleenLezen }, recenteProjecten: recenteProjecten.items, recenteCorrecties: recenteCorrecties.items,
+    opvolging: await lijstOpvolging(db, nu, { perPagina: 5 }) };
 }

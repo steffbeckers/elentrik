@@ -300,6 +300,23 @@ export const doorgestuurdeFacturen = pgTable("doorgestuurde_facturen", {
 });
 
 // Historische actor/target-id's hebben bewust geen cascade: bewijs overleeft verwijdering.
+export const adminNotities = pgTable("admin_notities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organisatieId: text("organisatie_id").notNull(),
+  projectId: uuid("project_id"),
+  tekst: text("tekst").notNull(),
+  opvolgdatum: text("opvolgdatum"),
+  auteurId: text("auteur_id").notNull(),
+  auteurNaam: text("auteur_naam").notNull(),
+  aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
+  gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
+  gearchiveerd: timestamp("gearchiveerd", { withTimezone: true }),
+}, (t) => [
+  index("admin_notities_organisatie_idx").on(t.organisatieId, t.aangemaakt, t.id),
+  index("admin_notities_project_idx").on(t.projectId, t.aangemaakt, t.id),
+  index("admin_notities_opvolging_idx").on(t.gearchiveerd, t.opvolgdatum),
+]);
+
 export const adminMutaties = pgTable("admin_mutaties", {
   id: uuid("id").primaryKey().defaultRandom(),
   actorId: text("actor_id").notNull(),
