@@ -4,7 +4,7 @@ import type { Mij } from "../shared/mij";
 import { useSessieStore, type SessieApi } from "../app/stores/sessie";
 
 const MIJ: Mij = {
-  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", proefGebruikt: true, taal: "nl" as const },
+  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", superuser: false, proefGebruikt: true, taal: "nl" as const },
   organisaties: [
     { id: "o1", naam: "Peeters Elektro", rol: "eigenaar", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
     { id: "o2", naam: "Janssens BV", rol: "lid", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
@@ -115,12 +115,12 @@ describe("sessieInfo", () => {
     expect(store.sessieInfo).toBeNull();
     store.gebruikApi(maakApi().api);
     await store.laad();
-    expect(store.sessieInfo).toEqual({ actieveOrganisatieId: "o1" });
+    expect(store.sessieInfo).toEqual({ actieveOrganisatieId: "o1", superuser: false });
 
     const zonder = maakApi({ mij: vi.fn(async () => ({ ...MIJ, organisaties: [], actieveOrganisatieId: null })) });
     store.gebruikApi(zonder.api);
     await store.laad();
-    expect(store.sessieInfo).toEqual({ actieveOrganisatieId: null });
+    expect(store.sessieInfo).toEqual({ actieveOrganisatieId: null, superuser: false });
 
     const uit = maakApi({ mij: vi.fn(async () => Promise.reject(nietIngelogd())) });
     store.gebruikApi(uit.api);

@@ -26,7 +26,7 @@ export type { Rol };
 export type Gebruiker = { id: string; naam: string; email: string };
 
 /** De gebruiker zoals /api/mij hem geeft: ook of zijn gratis proefperiode al gebruikt is, en zijn taal. */
-export type SessieGebruiker = Gebruiker & { proefGebruikt?: boolean; taal?: Taal };
+export type SessieGebruiker = Gebruiker & { proefGebruikt?: boolean; taal?: Taal; superuser?: boolean };
 
 export type Organisatie = MijOrganisatie;
 
@@ -75,7 +75,7 @@ export const useSessieStore = defineStore("sessie", () => {
   const toonGeenProefHint = computed(() => abonnementenIngeschakeld.value && proefGebruikt.value);
   /** Wat `bestemming` van de sessie nodig heeft: null is niet ingelogd. */
   const sessieInfo = computed<SessieInfo>(() =>
-    gebruiker.value ? { actieveOrganisatieId: actieveOrganisatieId.value } : null,
+    gebruiker.value ? { actieveOrganisatieId: actieveOrganisatieId.value, superuser: gebruiker.value.superuser === true } : null,
   );
 
   function gebruikApi(nieuw: SessieApi): void {

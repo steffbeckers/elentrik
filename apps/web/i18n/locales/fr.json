@@ -1,4 +1,5 @@
 {
+  "admin": {"onbereikbaar":"Administration temporairement indisponible. Veuillez réessayer.","titel":"Administration"},
   "app": {
     "naam": "Elentrik"
   },

@@ -71,6 +71,13 @@
       "when": 1793345972119,
       "tag": "0009_bestanden-project-index",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793734901932,
+      "tag": "0010_superusers",
+      "breakpoints": true
     }
   ]
 }

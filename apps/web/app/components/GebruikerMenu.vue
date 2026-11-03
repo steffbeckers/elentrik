@@ -37,6 +37,7 @@ async function uitloggen() {
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [{ type: "label", label: sessie.gebruiker?.naam ?? "", description: sessie.gebruiker?.email ?? "" }],
+  ...(sessie.gebruiker?.superuser ? [[{ label: t("admin.titel"), icon: "i-lucide-shield-check", to: "/admin" }]] : []),
   // Bij twee organisaties blijft wisselen bereikbaar zonder een extra knop in de bovenbalk.
   ...(sessie.organisaties.length === 2 ? [organisatieItems.value] : []),
   // Zonder organisatie hebben deze pagina's niets te tonen.

@@ -105,6 +105,8 @@ export const exports = pgTable("exports", {
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
+  /** Systeembeheer, alleen door een operator te zetten; geen Better Auth-invoerveld. */
+  superuser: boolean("superuser").notNull().default(false),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),

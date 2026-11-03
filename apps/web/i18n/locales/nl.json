@@ -1,4 +1,5 @@
 {
+  "admin": {"onbereikbaar":"Beheer is tijdelijk niet bereikbaar. Probeer opnieuw.","titel":"Beheer"},
   "app": {
     "naam": "Elentrik"
   },
