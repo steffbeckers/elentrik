@@ -78,6 +78,13 @@
       "when": 1793734901932,
       "tag": "0010_superusers",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793735192938,
+      "tag": "0011_admin_audit",
+      "breakpoints": true
     }
   ]
 }

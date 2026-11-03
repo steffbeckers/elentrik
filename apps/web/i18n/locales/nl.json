@@ -949,6 +949,8 @@
     "ANDERE_ORGANISATIE": "Je actieve organisatie werd intussen gewijzigd. Kijk je wijziging na en probeer opnieuw.",
     "ALLEEN_EIGENAAR": "Alleen een eigenaar mag dit.",
     "NIET_TOEGELATEN": "Dit is niet toegelaten.",
+    "ADMIN_GEWIJZIGD": "Deze gegevens zijn intussen gewijzigd. Herlaad ze en controleer je wijziging.",
+    "ADMIN_MUTATIE_CONFLICT": "Deze bewaaractie hoort bij andere gegevens. Herlaad de gegevens voordat je opnieuw bewaart.",
     "VERZOEK_VAN_ANDERE_SITE": "Dit verzoek kwam niet van Elentrik en werd geweigerd. Laad de pagina opnieuw.",
     "NIET_GEVONDEN": "Dit bestaat niet (meer), of je hebt er geen toegang toe.",
     "ONGELDIGE_INVOER": "Sommige gegevens zijn niet geldig. Kijk ze na en probeer opnieuw.",

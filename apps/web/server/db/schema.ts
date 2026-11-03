@@ -1,4 +1,5 @@
 import type { Partij } from "@elentrik/model";
+import type { AdminAuditDoel } from "../../shared/admin/audit";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -297,3 +298,38 @@ export const doorgestuurdeFacturen = pgTable("doorgestuurde_facturen", {
   nummer: text("nummer"),
   verstuurd: timestamp("verstuurd", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Historische actor/target-id's hebben bewust geen cascade: bewijs overleeft verwijdering.
+export const adminMutaties = pgTable("admin_mutaties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: text("actor_id").notNull(),
+  mutatieId: uuid("mutatie_id").notNull(),
+  actie: text("actie").notNull(),
+  doelId: text("doel_id").notNull(),
+  vingerafdruk: text("vingerafdruk").notNull(),
+  antwoord: jsonb("antwoord").$type<unknown>().notNull(),
+  tijd: timestamp("tijd", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("admin_mutaties_actor_mutatie_idx").on(t.actorId, t.mutatieId)]);
+
+export const adminAudit = pgTable("admin_audit", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: text("actor_id").notNull(),
+  actorNaam: text("actor_naam").notNull(),
+  doelType: text("doel_type").$type<AdminAuditDoel["type"]>().notNull(),
+  doelId: text("doel_id").notNull(),
+  organisatieId: text("organisatie_id"),
+  projectId: uuid("project_id"),
+  actie: text("actie").notNull(),
+  reden: text("reden").notNull(),
+  voor: jsonb("voor").$type<unknown>(),
+  na: jsonb("na").$type<unknown>(),
+  correctieId: uuid("correctie_id"),
+  tijd: timestamp("tijd", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("admin_audit_tijd_idx").on(t.tijd, t.id),
+  index("admin_audit_actor_idx").on(t.actorId, t.tijd, t.id),
+  index("admin_audit_doel_idx").on(t.doelId, t.tijd, t.id),
+  index("admin_audit_organisatie_idx").on(t.organisatieId, t.tijd, t.id),
+  index("admin_audit_project_idx").on(t.projectId, t.tijd, t.id),
+  index("admin_audit_correctie_idx").on(t.correctieId, t.tijd, t.id),
+]);

@@ -949,6 +949,8 @@
     "ANDERE_ORGANISATIE": "Your active organisation has changed in the meantime. Check your change and try again.",
     "ALLEEN_EIGENAAR": "Only an owner can do this.",
     "NIET_TOEGELATEN": "This is not allowed.",
+    "ADMIN_GEWIJZIGD": "These details have changed. Reload them and check your changes.",
+    "ADMIN_MUTATIE_CONFLICT": "This save belongs to different details. Reload the details before saving again.",
     "VERZOEK_VAN_ANDERE_SITE": "This request did not come from Elentrik and was refused. Reload the page.",
     "NIET_GEVONDEN": "This does not exist (any more), or you do not have access to it.",
     "ONGELDIGE_INVOER": "Some details are not valid. Check them and try again.",

@@ -949,6 +949,8 @@
     "ANDERE_ORGANISATIE": "Votre organisation active a été modifiée entre-temps. Vérifiez votre modification et réessayez.",
     "ALLEEN_EIGENAAR": "Seul un propriétaire peut effectuer cette action.",
     "NIET_TOEGELATEN": "Cette action n'est pas autorisée.",
+    "ADMIN_GEWIJZIGD": "Ces données ont été modifiées entre-temps. Rechargez-les et vérifiez votre modification.",
+    "ADMIN_MUTATIE_CONFLICT": "Cet enregistrement correspond à d’autres données. Rechargez les données avant de réessayer.",
     "VERZOEK_VAN_ANDERE_SITE": "Cette demande ne provenait pas d'Elentrik et a été refusée. Rechargez la page.",
     "NIET_GEVONDEN": "Cet élément n'existe pas (ou plus), ou vous n'y avez pas accès.",
     "ONGELDIGE_INVOER": "Certaines données ne sont pas valides. Vérifiez-les et réessayez.",
