@@ -5,6 +5,7 @@ import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
+import { filterProjecten } from "~/utils/projectenZoeken";
 
 const { t } = useI18n();
 const api = useProjectenApi();
@@ -26,6 +27,14 @@ const { data: projecten, status, error, refresh } = useAsyncData("projecten", ()
 
 // Verlopen sessie of niet meer lid van de actieve organisatie (spec 5b.5).
 watch(error, useSessieHerstel());
+
+const zoek = ref("");
+const zoekveld = useTemplateRef("zoekveld");
+const gefilterdeProjecten = computed(() => filterProjecten(projecten.value, zoek.value));
+
+watch(() => sessie.actieveOrganisatieId, () => {
+  zoek.value = "";
+});
 
 const gemount = ref(false);
 const laadt = computed(() => gemount.value && status.value === "pending");
@@ -107,6 +116,29 @@ async function bevestigVerwijderen() {
         </div>
       </div>
 
+      <UInput
+        ref="zoekveld"
+        v-model="zoek"
+        type="search"
+        icon="i-lucide-search"
+        :placeholder="$t('projecten.zoeken.placeholder')"
+        :aria-label="$t('projecten.zoeken.label')"
+        class="mb-4 w-full sm:max-w-md"
+        :ui="{ base: '[&::-webkit-search-cancel-button]:appearance-none', trailing: 'pe-1' }"
+      >
+        <template v-if="zoek" #trailing>
+          <UButton
+            icon="i-lucide-x"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :aria-label="$t('projecten.zoeken.wissen')"
+            :title="$t('projecten.zoeken.wissen')"
+            @click="zoek = ''; zoekveld?.inputRef?.focus()"
+          />
+        </template>
+      </UInput>
+
       <UAlert
         v-if="error"
         color="error"
@@ -118,10 +150,10 @@ async function bevestigVerwijderen() {
       />
       <UTable
         v-else
-        :data="projecten"
+        :data="gefilterdeProjecten"
         :columns="kolommen"
         :loading="laadt"
-        :empty="$t('projecten.leeg')"
+        :empty="zoek.trim() && projecten.length ? $t('projecten.zoeken.geenResultaten') : $t('projecten.leeg')"
       >
         <template #naam-cell="{ row }">
           <ULink :to="`/projecten/${row.original.id}`" class="font-medium text-primary underline-offset-4 hover:underline">

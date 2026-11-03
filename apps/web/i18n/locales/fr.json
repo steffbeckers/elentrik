@@ -563,6 +563,12 @@
     "titel": "Projets",
     "nieuw": "Nouveau projet",
     "leeg": "Pas encore de projet. Créez votre premier projet.",
+    "zoeken": {
+      "label": "Rechercher des projets",
+      "placeholder": "Rechercher par nom de projet ou client…",
+      "wissen": "Effacer la recherche",
+      "geenResultaten": "Aucun projet trouvé. Modifiez votre recherche."
+    },
     "laden": {
       "fout": {
         "titel": "Échec du chargement des projets",

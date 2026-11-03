@@ -563,6 +563,12 @@
     "titel": "Projecten",
     "nieuw": "Nieuw project",
     "leeg": "Nog geen projecten. Maak je eerste project aan.",
+    "zoeken": {
+      "label": "Projecten zoeken",
+      "placeholder": "Zoek op projectnaam of klant…",
+      "wissen": "Zoekopdracht wissen",
+      "geenResultaten": "Geen projecten gevonden. Pas je zoekopdracht aan."
+    },
     "laden": {
       "fout": {
         "titel": "Projecten laden mislukt",
