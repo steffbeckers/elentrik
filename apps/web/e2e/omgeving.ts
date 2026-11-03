@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const E2E_DATABASE_NAAM = "elentrik_e2e";
-export const E2E_DATABASE_URL = `postgres://elentrik:elentrik@127.0.0.1:5432/${E2E_DATABASE_NAAM}`;
+export const E2E_DATABASE_URL = `postgres://elentrik:elentrik@127.0.0.1:55432/${E2E_DATABASE_NAAM}`;
 /** De map apps/web, los van de werkmap van het proces dat dit laadt. */
 export const WEB_DIR = fileURLToPath(new URL("..", import.meta.url));
 export const E2E_BESTANDEN_DIR = resolve(WEB_DIR, ".data/e2e-bestanden");
@@ -14,7 +14,8 @@ export const E2E_BUILD_DIR = ".nuxt-e2e";
 export const E2E_POORT = 3100;
 export const E2E_URL = `http://127.0.0.1:${E2E_POORT}`;
 export const E2E_AUTH_SECRET = "e2e-geheim-alleen-voor-tests-niet-voor-gebruik-elders";
-export const MAILPIT_URL = "http://127.0.0.1:8025";
+export const MAILPIT_URL = "http://127.0.0.1:8026";
+export const E2E_SMTP_POORT = "1026";
 
 // De nep-Stripe (hulp/nep-stripe.ts) en de vaste testwaarden waarmee de e2e-server draait. Het zijn
 // geen echte sleutels: de server wijst met `STRIPE_API_BASIS` naar de nep-Stripe, en dat mag
@@ -28,7 +29,7 @@ export const E2E_STRIPE_PRIJS_JAAR = "price_e2e_jaar";
 
 /**
  * Veiligheidsnet: stopt tenzij de URL wijst naar de lokale Postgres (127.0.0.1 of localhost,
- * poort 5432) en naar de database `elentrik_e2e`.
+ * poort 55432) en naar de database `elentrik_e2e`.
  */
 export function eisE2eDatabase(url: string | undefined = process.env.DATABASE_URL): string {
   let geldig = false;
@@ -38,7 +39,7 @@ export function eisE2eDatabase(url: string | undefined = process.env.DATABASE_UR
       geldig =
         (u.protocol === "postgres:" || u.protocol === "postgresql:") &&
         (u.hostname === "127.0.0.1" || u.hostname === "localhost") &&
-        u.port === "5432" &&
+        u.port === "55432" &&
         u.pathname === `/${E2E_DATABASE_NAAM}`;
     } catch {
       geldig = false;
@@ -46,7 +47,7 @@ export function eisE2eDatabase(url: string | undefined = process.env.DATABASE_UR
   }
   if (!url || !geldig) {
     throw new Error(
-      `Geweigerd: DATABASE_URL moet wijzen naar 127.0.0.1:5432/${E2E_DATABASE_NAAM} (e2e-tests raken nooit de echte database).`,
+      `Geweigerd: DATABASE_URL moet wijzen naar 127.0.0.1:55432/${E2E_DATABASE_NAAM} (e2e-tests raken nooit de echte database).`,
     );
   }
   return url;

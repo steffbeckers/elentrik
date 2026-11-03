@@ -3,7 +3,7 @@ import type { AdminPagina } from "./basis";
 import type { AdminAbonnement, AdminToegangsverklaring, AdminToegangGroep } from "./toegang";
 import type { AdminAuditItem } from "./audit";
 import type { AdminNotitie } from "./notities";
-export type AdminGebruiker = { id: string; naam: string; email: string; aangemaakt: string; bedrijven: number };
+export type AdminGebruiker = { id: string; naam: string; email: string; aangemaakt: string; bedrijven: number; rol?: 'eigenaar' | 'lid' };
 export type AdminOrganisatie = {
   id: string; naam: string; aangemaakt: string; leden: number; projecten: number;
   eigenaren: Array<{ id: string; naam: string; email: string }>;

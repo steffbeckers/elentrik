@@ -38,10 +38,11 @@ export async function lijstAdminGebruikers(db: Db, invoer: Record<string, unknow
     q.organisatieId ? exists(db.select({ id: member.id }).from(member).where(and(eq(member.userId, user.id), eq(member.organizationId, q.organisatieId)))) : undefined,
     q.zoek ? or(ilike(user.name, zoekPatroon(q.zoek)), ilike(user.email, zoekPatroon(q.zoek)), eq(user.id, q.zoek)) : undefined);
   const [total] = await db.select({ n: count() }).from(user).where(filter);
-  const rows = await db.select(gebruikerKolommen).from(user).where(filter)
+  const rol = q.organisatieId ? sql<'eigenaar' | 'lid' | null>`(select case when elentrik_is_eigenaar(m.role) then 'eigenaar' else 'lid' end from member m where m.user_id = ${user.id} and m.organization_id = ${q.organisatieId} limit 1)` : sql<null>`null`;
+  const rows = await db.select({ ...gebruikerKolommen, rol }).from(user).where(filter)
     .orderBy(rang(user.id, q.zoek), rang(user.email, q.zoek), asc(user.name), asc(user.id))
     .limit(q.perPagina).offset((q.pagina - 1) * q.perPagina);
-  return { items: rows.map((r) => ({ ...r, aangemaakt: r.aangemaakt.toISOString(), bedrijven: Number(r.bedrijven) })),
+  return { items: rows.map(({ rol, ...r }) => ({ ...r, ...(rol ? { rol } : {}), aangemaakt: r.aangemaakt.toISOString(), bedrijven: Number(r.bedrijven) })),
     totaal: total!.n, pagina: q.pagina, perPagina: q.perPagina };
 }
 

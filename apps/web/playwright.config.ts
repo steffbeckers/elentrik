@@ -5,6 +5,7 @@ import {
   E2E_BUILD_DIR,
   E2E_DATABASE_URL,
   E2E_POORT,
+  E2E_SMTP_POORT,
   E2E_STRIPE_PRIJS_JAAR,
   E2E_STRIPE_PRIJS_MAAND,
   E2E_STRIPE_SLEUTEL,
@@ -49,7 +50,7 @@ export default defineConfig({
       BETTER_AUTH_URL: E2E_URL,
       BETTER_AUTH_SECRET: E2E_AUTH_SECRET,
       SMTP_HOST: "127.0.0.1",
-      SMTP_PORT: "1025",
+      SMTP_PORT: E2E_SMTP_POORT,
       SMTP_VAN: "Elentrik <noreply@elentrik.local>",
       // Leeg, zodat een SMTP-login uit .env de lokale Mailpit niet in de weg zit.
       SMTP_GEBRUIKER: "",
