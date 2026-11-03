@@ -167,13 +167,45 @@ Dependencies: 1 → 2 → 3; 4 and 5 build on 2/3; 6 builds on 2/3; 7 builds on 
 **Interfaces:** No new product APIs. Deliver migration/runbook instructions and a verified feature covering all 14 acceptance items from the design.
 
 - [x] Check every acceptance item against its owning tasks/tests. Document superuser bootstrap/revocation, local trial/free-access semantics, Stripe subscription links, support-session expiry, audit retention/storage implications, and note visibility. Identify unverified environment-dependent checks explicitly.
-- [ ] Run `pnpm test`, `pnpm typecheck`, and `pnpm --filter @elentrik/web build`. Run the complete web Playwright suite against its configured isolated database/mail/PDF services. If infrastructure is absent, provision only the documented local test services; do not target another environment or quietly omit the failed check.
+- [x] Run `pnpm test`, `pnpm typecheck`, and `pnpm --filter @elentrik/web build`. Run the complete web Playwright suite against its configured isolated database/mail/PDF services. If infrastructure is absent, provision only the documented local test services; do not target another environment or quietly omit the failed check.
 - [x] Inspect admin overview/details/editor at desktop and narrow widths, keyboard navigation, and theme behaviour. Run the Impeccable mechanical detector once over changed UI, then its required independent finish review using screenshots and the approved direction; fix material findings within the bounded workflow. Use the required code review workflow for the whole branch, particularly access, idempotency, editor extraction, and cleanup.
-- [ ] Re-run only checks affected by fixes, verify `git diff --check`, and record commands/results. Commit remaining feature changes with `feat(SB-5): finish admin dashboard verification and documentation` or a specific fix message as appropriate.
-- [ ] Follow finishing-a-development-branch for integration, preserving the repository's documented feature → `develop` → `staging` → `main` branch flow. If a PR is created, use Orca Linear's completion flow once: attach the PR, post the concise completion comment, and move SB-5 to its review state without regressing a completed/cancelled issue. Do not mark completion while required work remains.
+- [x] Re-run only checks affected by fixes, verify `git diff --check`, and record commands/results. Commit remaining feature changes with `feat(SB-5): finish admin dashboard verification and documentation` or a specific fix message as appropriate.
+- [x] Follow finishing-a-development-branch for integration, preserving the repository's documented feature → `develop` → `staging` → `main` branch flow. If a PR is created, use Orca Linear's completion flow once: attach the PR, post the concise completion comment, and move SB-5 to its review state without regressing a completed/cancelled issue. Do not mark completion while required work remains.
 
 ## Plan self-review
 
 Spec coverage: access/entry → Task 1; mutation/audit guarantees → Task 2; overview/lists/search/Stripe/explanations → Task 3; record corrections/free access/trial → Task 4; notes/follow-ups → Task 5; project sessions/saves/uploads → Task 6; retained files/history → Task 7; dashboard UI/translations → Task 8; complete project correction workflow → Task 9; operation/verification → Task 10. Review Focus cases are assigned to the relevant test steps. No proposed later feature (impersonation, customer timeline, project restoration, external bug intake, Stripe billing mutation) is added.
 
 Execution method: native execution, explicitly approved by the user. One implementer keeps the API, schema and editor interfaces consistent; an independent whole-branch review follows the implementation.
+
+
+## Verification and review record — 2026-11-03
+
+- Final `pnpm test`: 170 functional files, 3,445 tests passed; five performance files/tests passed. No thresholds relaxed.
+- `pnpm typecheck`: all packages passed after the review fixes. `pnpm --filter @elentrik/web build` passed on final implementation f6e8044 (1m 51s).
+- Complete Playwright run: 73 cases exercised; 62 initially passed and 11 stale expectations failed. Baseline source verified the existing behaviour before correcting selectors. The affected 29-case run passed 28 including the new recovery case; its remaining circuit-table inspector expectation was corrected. The final 21-case editor/export/recovery/table run passed entirely. Together all 74 current browser cases have passing evidence. No test infrastructure targets production.
+- Desktop 1440x1000 and mobile 390x844: ten captures inspected, keyboard entry and document overflow checked, light/dark company views checked. Mechanical detector ran once with no findings. Independent visual review requested compact mobile counts; the reviewer scored that fix resolved with disposition `ship` (fix-specific verdict). Incumbent DESIGN.md/design.json extracted and rechecked after final state changes.
+- Independent whole-branch code review: uncertain autosave retries could conflict with an administrator's own earlier save. Fixed using immutable support snapshots and acknowledged counters; RED-to-GREEN integrated tests cover continued/in-flight edits, repeated lost responses, real third-party conflicts, rejected requests, reloads, and completion flushes.
+- Wrong-project local recovery download was regraded Important: a previous document could be labelled as the newly requested project during loading. Browser RED-to-GREEN proves download stays disabled for a delayed/failed new document while refused-save recovery remains available for the loaded project.
+- Integration target remains `develop`; no merge, push, production migration, account promotion, or deployment was performed. The user chooses the integration action at handoff.
+
+### Rulings made during implementation
+
+- page-middleware unavailable-state E2E coverage moves to Task 8, when admin pages exist; API remains covered now — costs delayed browser evidence only.
+- serialize existing company settings/logo writers with the same organisation row lock as admin corrections — otherwise the precondition token cannot prevent a customer edit being overwritten — small extra transaction on these two existing write paths. No-op audit verification completed in actual domain edits (Task 2 helper intentionally does not emit audit itself).
+- supplement the initial revision reference scan with a shared advisory lock and final reference check before destructive cleanup — a scan alone races an autosave committed during cleanup — support saves briefly serialize with each destructive cleanup transaction; no lock held for the full storage scan.
+- use admin/projecten/[id]/index.vue for the project detail URL — this makes the support editor a sibling route instead of nesting it inside a detail page with duplicate requests — URL and approved flow stay identical. Add contextual membership role to user summaries when filtered by company, to fulfill the specified member-role display.
+- isolate Playwright Postgres on fixed localhost port 55432 and Mailpit on 8026/1026 — the previous inbox cleanup affected development mail and Windows reserves 5432 — costs two dedicated local test services; database guard still rejects other destinations.
+- route existing nested plan components through the typed context inside useBestandenApi, and mount the existing export dialog only for customer capabilities — avoids fake unsupported export implementations and duplicated context plumbing — all nested plan reads/uploads covered by unit injection and browser upload checks.
+- update stale customer E2E expectations to existing product behaviour (rail creation already adds A1; property inspector opens explicitly; dirty-only company save; current electrical-error labels and status selectors) — unchanged production sources and existing unit tests confirm these behaviours — tests now cover the current flow rather than the previous UI.
+- update remaining stale company E2E selectors to the existing account-menu navigation, dirty-only save state and inline saved status — git show 9c2aefc confirms these predate SB-5; full browser RED demonstrates stale expectations — test-only changes, no customer behaviour change.
+- align kringenlijst E2E with its nine pre-existing columns and wait for hydration after the raw SSR-cookie response before opening the account menu — baseline source proves the columns, browser trace shows the click before hydration; preserve the cookie assertion itself — test-only maintenance, no runtime changes.
+- include pre-existing role-change confirmation and explicit property/findings-panel opening in remaining organisation/language E2E tests — browser traces stop at the existing confirmation/hidden inspector, baseline code confirms controls — tests now exercise current intended flows; runtime unchanged.
+- production substring-search latency and long-term revision growth remain unmeasured — bounded queries and tested retention are shipped without production capacity promises — larger deployments may need measured indexing/storage policy.
+- visual polish is assessed by the separate Impeccable reviewer — code review covers functional invariants; supplied captures cover stated desktop/mobile/theme scope — unpictured states are not independently visually certified.
+
+### Deferred minor
+
+- With billing globally disabled, skipped payment-attention groups still display zero rather than being omitted. Local access and Stripe behaviour are unaffected.
+
+Temporary verification logs remain in the ignored task workspace: automatic approval review rejected their cleanup with `blocked by policy`. No source files or feature commits were affected.
