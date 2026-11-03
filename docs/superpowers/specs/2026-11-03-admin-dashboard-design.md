@@ -11,6 +11,7 @@ Sources:
 - [SB-5](https://linear.app/steffbeckers/issue/SB-5/admin-dashboard), created 2026-11-03; description read on 2026-11-03. It calls for a restricted `/admin` area and identifies future bug reports as a later extension.
 - The user confirmed in this conversation that overview and insights should be accompanied by updates to user names, company details, and projects when needed, and welcomed audit history.
 - The user subsequently asked whether a company can be excluded from payments. The design now proposes an audited company-level free-access control using the existing exemption flag; existing Stripe charges require separate cancellation.
+- The user also requested extending a company's trial end date. This is included as an audited support action on the local Elentrik trial.
 - The user chose a written design without a browser mockup.
 - `PRODUCT.md` supplies product, language, and scope constraints. The code references below describe this checkout, not production deployment.
 
@@ -86,7 +87,13 @@ Free access changes Elentrik access, not Stripe billing. If the company has a po
 
 While exempt, customer-facing subscription UI explains free access and offers no new purchase action; the Checkout API must also reject new checkout creation for an exempt company. On enabling exemption, a previously issued Stripe Checkout URL may remain usable until expired in Stripe: include this case in the warning when an open Checkout session is recorded, and direct the operator to Stripe to expire it. Do not claim exemption cancels prior payment authorisations. Preserve access to the existing customer billing portal to manage an existing subscription.
 
-Other subscription information is observational in this release, with external Stripe Dashboard links for records that have a Stripe ID and a known test/live environment. Do not construct a misleading link if that environment is unavailable. Trial-date, plan, payment, and cancellation changes are outside the selected correction scope.
+Provide a superuser-only **Extend trial** action backed by `organization.proefEinde`. Show the current end and a selectable new end date, require a reason, and preview the resulting access before explicit save. The new end must be later than both the current end and the server's current time. An expired trial can therefore be extended to restore access. This action only extends; shortening or immediately ending a trial is outside this release's scope. Design decision: a selected calendar date grants access through the end of that day in `Europe/Brussels`, storing the following local midnight as an exclusive UTC timestamp; label this timezone and test daylight-saving boundaries.
+
+Trial extension uses the same superuser checks, stale-edit protection, mutation retry protection, and atomic audit recording as other company corrections. Record the previous and new timestamp. Keep `user.proefGebruikt` unchanged so the support exception does not reset eligibility for trials on other companies. Recompute company access and overview attention lists after the change. Exemption, active subscriptions, and payment-grace precedence remain governed by the existing access rules; show the effective result rather than promising that every extension changes access.
+
+This extends Elentrik's local trial, not the billing dates of an existing Stripe subscription or previously opened Checkout session. When either is present, show that distinction and require acknowledgement before saving, with a Stripe link for any billing-date adjustment. A newly created Checkout session uses the updated local trial end under the existing Checkout rules. The local extension does not defer an existing charge, refund payments, or clear payment arrears.
+
+Other subscription information is observational in this release, with external Stripe Dashboard links for records that have a Stripe ID and a known test/live environment. Do not construct a misleading link if that environment is unavailable. Plan, payment, and cancellation changes are outside the selected correction scope.
 
 ### Projects
 
@@ -163,6 +170,7 @@ Relevant existing seams:
 7. Normal customer editing, uploads, recovery, exports, and organisation switching continue to work after extracting the shared editor.
 8. Focused database/API tests cover permission and transactional boundaries; editor tests cover routing/capabilities and conflict/recovery cases; browser checks cover the admin workflow and a representative normal customer workflow. Type checks, translation checks, and relevant existing suites pass. Inspect the dashboard at desktop and narrow widths in the existing theme.
 9. A superuser can enable and remove company free access with an audited reason. Exempt companies can use the app after their trial ends and cannot start new Checkout sessions; removing exemption restores the current underlying access decision. Existing Stripe subscriptions and open Checkout sessions remain accurately visible with the required acknowledgement, and the control does not claim to stop their charges. Ordinary company owners cannot set exemption through any endpoint.
+10. A superuser can extend an active or expired local trial with a reason and before/after audit evidence. Reject past or non-extending dates and stale submissions. Verify the exact end boundary, daylight-saving conversion, effective access precedence, unchanged user trial eligibility, and unchanged existing Stripe billing dates. Ordinary users cannot extend trials through any endpoint.
 
 ## Builder discretion
 
