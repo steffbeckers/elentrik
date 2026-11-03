@@ -1,6 +1,6 @@
 # SB-5: Elentrik administration and support
 
-Status: proposed design, awaiting approval. No implementation is described as shipped.
+Status: approved by the user ("Design is ok"). Implementation pending; no implementation is described as shipped.
 
 ## Intent and agreed scope
 
