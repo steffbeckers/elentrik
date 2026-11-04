@@ -1101,6 +1101,8 @@
     }
   },
   "menu": {
+    "donkereModus": "Dark mode",
+    "lichteModus": "Light mode",
     "nieuwBedrijf": "Create a new company",
     "gebruiker": "User menu",
     "mijnOrganisatie": "My organisation",

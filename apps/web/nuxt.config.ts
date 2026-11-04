@@ -20,9 +20,9 @@ export default defineNuxtConfig({
   // De e2e-server (Playwright) bouwt in een eigen map, naast de ontwikkelserver.
   buildDir: process.env.ELENTRIK_BUILD_DIR || ".nuxt",
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
-  // Dit dynamische menu-icoon meteen meesturen: de taalkiezer mag niet afhankelijk zijn
+  // Deze dynamische menu-iconen meteen meesturen: de taal- en themakiezer mogen niet afhankelijk zijn
   // van een aparte icoonaanvraag wanneer het gebruikersmenu wordt geopend.
-  icon: { clientBundle: { icons: ["lucide:languages"] } },
+  icon: { clientBundle: { icons: ["lucide:languages", "lucide:sun", "lucide:moon"] } },
   css: ["~/assets/css/main.css"],
   runtimeConfig: {
     // Alleen op de server: de basis-URL waarmee de auth-client tijdens SSR Better Auth aanspreekt.
