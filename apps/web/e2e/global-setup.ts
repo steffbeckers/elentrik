@@ -47,8 +47,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   await rm(map, { recursive: true, force: true });
   await mkdir(map, { recursive: true });
 
-  // 6. Alle berichten in Mailpit verwijderen. Let op: dit leegt de gedeelde Mailpit-inbox, dus
-  // ook mail van de ontwikkelserver op poort 3000.
+  // 6. Alleen de aparte e2e-Mailpit-inbox leegmaken (8026, niet de ontwikkelinbox op 8025).
   const antwoord = await fetch(`${MAILPIT_URL}/api/v1/messages`, { method: "DELETE" });
   if (!antwoord.ok) {
     throw new Error(`Mailpit leegmaken mislukt (${antwoord.status}); draait ze? Start met pnpm db:up.`);

@@ -7,7 +7,7 @@ import { taalKeuzes } from "~/sessie/taal";
 import { useSessieStore } from "~/stores/sessie";
 
 /** Compact (de editor): de naam pas vanaf een breed scherm, anders alleen het icoon. */
-defineProps<{ compact?: boolean }>();
+const props = defineProps<{ compact?: boolean; beheer?: boolean }>();
 
 const { t } = useI18n();
 const sessie = useSessieStore();
@@ -37,10 +37,11 @@ async function uitloggen() {
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [{ type: "label", label: sessie.gebruiker?.naam ?? "", description: sessie.gebruiker?.email ?? "" }],
+  ...(sessie.gebruiker?.superuser ? [[{ label: t("admin.titel"), icon: "i-lucide-shield-check", to: "/admin" }]] : []),
   // Bij twee organisaties blijft wisselen bereikbaar zonder een extra knop in de bovenbalk.
-  ...(sessie.organisaties.length === 2 ? [organisatieItems.value] : []),
+  ...(!props.beheer && sessie.organisaties.length === 2 ? [organisatieItems.value] : []),
   // Zonder organisatie hebben deze pagina's niets te tonen.
-  ...(sessie.actieveOrganisatie
+  ...(!props.beheer && sessie.actieveOrganisatie
     ? [
         [
           { type: "label" as const, label: sessie.actieveOrganisatie.naam, slot: "actieve-organisatie" as const },
@@ -50,7 +51,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
         ],
       ]
     : []),
-  [{ label: t("menu.nieuwBedrijf"), icon: "i-lucide-plus", slot: "nieuw" as const, onSelect: () => { nieuwOpen.value = true; } }],
+  ...(!props.beheer ? [[{ label: t("menu.nieuwBedrijf"), icon: "i-lucide-plus", slot: "nieuw" as const, onSelect: () => { nieuwOpen.value = true; } }]] : []),
   [
     {
       label: t("taal.label"),

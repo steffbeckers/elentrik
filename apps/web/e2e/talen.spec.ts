@@ -184,11 +184,13 @@ test("een bevinding in de editor staat in de taal van de interface", async ({ pa
   await page.getByRole("button", { name: vertaling("fr", "editor.sjablonen.kring-stopcontacten") }).click();
   // Een zevende contactdoos die er vijf telt: elf op één kring is een fout.
   await page.getByTestId("schema-canvas").locator('[data-testid^="plus-kring-einde-"]').click();
+  await page.getByTestId("werkruimte-eigenschappen").click();
   const aantal = page.getByTestId("veld-aantal");
   await aantal.fill("5");
   await aantal.blur();
 
   const sleutel = "arei.kring.max-contactdozen.overschreden";
+  await page.getByTestId("werkruimte-bevindingen").click();
   const fouten = page.getByTestId("bevindingen-fout");
   await expect(fouten).toContainText(sjabloonRegex(BERICHTEN.fr[sleutel]!));
   // Niet het Nederlands van dezelfde bevinding.

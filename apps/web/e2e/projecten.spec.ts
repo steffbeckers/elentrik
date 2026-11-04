@@ -9,6 +9,37 @@ const naam = `Test Janssens ${Date.now()}`;
 const kopieNaam = `${naam} (kopie)`;
 const klantnaam = "<img src=x onerror=alert(1)>";
 
+test("zoek op project of klant en herstel de lijst door de zoekopdracht te wissen", async ({ page }) => {
+  await page.route("**/api/projecten", (route) => route.fulfill({
+    json: [
+      { id: "zoek-1", naam: "Woning Gent", klantnaam: "Janssens", gewijzigd: "2026-11-03T12:00:00Z" },
+      { id: "zoek-2", naam: "Atelier", klantnaam: "De Smet", gewijzigd: "2026-11-02T12:00:00Z" },
+    ],
+  }));
+  await page.goto("/");
+  const woning = page.getByRole("link", { name: "Woning Gent", exact: true });
+  const atelier = page.getByRole("link", { name: "Atelier", exact: true });
+  const zoek = page.getByRole("searchbox", { name: "Projecten zoeken" });
+  await expect(woning).toBeVisible();
+  await expect(atelier).toBeVisible();
+
+  await zoek.fill(" GENT ");
+  await expect(woning).toBeVisible();
+  await expect(atelier).toHaveCount(0);
+  await zoek.fill("sMeT");
+  await expect(atelier).toBeVisible();
+  await expect(woning).toHaveCount(0);
+
+  await zoek.fill("onbekend");
+  await expect(page.getByText("Geen projecten gevonden. Pas je zoekopdracht aan.")).toBeVisible();
+  await expect(page.getByText("Nog geen projecten", { exact: false })).toHaveCount(0);
+  await page.getByRole("button", { name: "Zoekopdracht wissen" }).click();
+  await expect(zoek).toBeFocused();
+  await expect(zoek).toHaveValue("");
+  await expect(woning).toBeVisible();
+  await expect(atelier).toBeVisible();
+});
+
 test("een mislukte lijst toont een foutmelding in plaats van de lege staat", async ({ page }) => {
   await page.route("**/api/projecten", (route) =>
     route.fulfill({ status: 500, contentType: "application/json", body: '{"statusCode":500}' }),

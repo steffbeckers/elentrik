@@ -31,7 +31,7 @@ test("de tabel toont de kolommen van de pdf; een klik of toets selecteert het pu
 
   const tabel = page.getByTestId("kringenlijst");
   const koppen = tabel.getByRole("columnheader");
-  await expect(koppen).toHaveText(["Kring", "Punt", "Type", "Ruimte", "Beveiliging", "Differentieel", "Leiding"]);
+  await expect(koppen).toHaveText(["Kring", "Omschrijving kring", "Punt", "Omschrijving punt", "Type", "Ruimte", "Beveiliging", "Differentieel", "Leiding"]);
 
   const rijen = tabel.locator('tbody tr[data-testid^="kringenlijst-rij-"]');
   await expect(rijen.first()).toBeVisible();
@@ -43,6 +43,7 @@ test("de tabel toont de kolommen van de pdf; een klik of toets selecteert het pu
   await rijen.first().click();
   await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
   await expect(rijen.nth(1)).toHaveAttribute("aria-selected", "false");
+  await page.getByTestId("werkruimte-eigenschappen").click();
   await expect(page.getByTestId("eigenschappen-titel")).toBeVisible();
 
   // Toetsenbord: Enter of spatie op een gefocuste rij selecteert die rij.

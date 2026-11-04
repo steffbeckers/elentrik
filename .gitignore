@@ -13,3 +13,5 @@ apps/web/playwright-report
 apps/web/.data/
 
 apps/plan-editor/dist/
+
+apps/web/.impeccable/review/

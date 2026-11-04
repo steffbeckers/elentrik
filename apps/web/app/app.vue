@@ -26,6 +26,6 @@ useHead({
 <template>
   <UApp :locale="ui">
     <StagingBalk />
-    <NuxtPage />
+    <NuxtLayout><NuxtPage /></NuxtLayout>
   </UApp>
 </template>
