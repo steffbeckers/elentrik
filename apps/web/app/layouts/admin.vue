@@ -15,9 +15,8 @@ const links = [{ pad: '/admin', label: 'overzicht' }, ...['gebruikers', 'organis
       <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-4 sm:px-6">
         <NuxtLink to="/admin" class="mr-auto inline-flex items-center gap-2 font-semibold"><UIcon name="i-lucide-shield-check" class="size-5 text-primary" />{{ t('admin.titel') }}</NuxtLink>
         <UButton to="/" color="neutral" variant="ghost" size="sm" icon="i-lucide-arrow-left">{{ t('admin.naarApp') }}</UButton>
-        <UColorModeButton />
-        <GebruikerMenu beheer />
         <div class="order-last w-full lg:order-none lg:w-96"><AdminZoeken /></div>
+        <GebruikerMenu beheer />
       </div>
       <nav :aria-label="t('admin.navigatie')" class="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6">
         <NuxtLink v-for="link in links" :key="link.pad" :to="link.pad" class="whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary" :class="($route.path === link.pad || (link.pad !== '/admin' && $route.path.startsWith(link.pad + '/'))) ? '!border-primary !text-primary' : ''">{{ t(`admin.${link.label}`) }}</NuxtLink>
