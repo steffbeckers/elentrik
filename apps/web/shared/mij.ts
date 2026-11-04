@@ -9,7 +9,7 @@ import type { Taal } from "./taal";
 
 export type Rol = "eigenaar" | "lid";
 
-export type MijGebruiker = { id: string; naam: string; email: string; proefGebruikt: boolean; taal: Taal };
+export type MijGebruiker = { id: string; naam: string; email: string; proefGebruikt: boolean; taal: Taal; superuser: boolean };
 
 export type MijOrganisatie = { id: string; naam: string; rol: Rol; toegang: Toegang };
 

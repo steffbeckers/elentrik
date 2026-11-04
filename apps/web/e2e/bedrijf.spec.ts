@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { ga } from "./hulp/hydratatie";
 
 const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const PLAN_PDF = fileURLToPath(new URL("./fixtures/plan-2p.pdf", import.meta.url));
@@ -15,14 +16,16 @@ test.beforeEach(async ({ request }) => {
 });
 
 async function opKlaar(page: Page) {
-  await page.goto("/instellingen");
-  // Het formulier is geladen zodra de bewaarknop actief is.
-  await expect(page.getByTestId("bedrijf-bewaar")).toBeEnabled({ timeout: 20_000 });
+  await ga(page, "/instellingen");
+  // Bewaren wordt pas actief na een wijziging; de geladen basislijn bewijst gereedheid.
+  await expect(page.getByTestId("bedrijf-naam")).toHaveValue("E2E", { timeout: 20_000 });
+  await expect(page.getByTestId("bedrijf-bewaar")).toBeDisabled();
 }
 
 test("de projectenlijst linkt naar de bedrijfsgegevens", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("link", { name: "Bedrijfsgegevens" }).click();
+  await ga(page, "/");
+  await page.getByTestId("gebruiker-menu").click();
+  await page.getByRole("menuitem", { name: "Bedrijfsgegevens", exact: true }).click();
   await expect(page).toHaveURL(/\/instellingen$/);
   await expect(page.getByRole("heading", { name: "Bedrijfsgegevens", level: 1 })).toBeVisible();
   await expect(page.getByTestId("bedrijf-naam")).toBeVisible();
@@ -47,7 +50,7 @@ test("een gedeeltelijk adres wordt niet bewaard, een volledig adres wel", async 
   await page.getByLabel("Gemeente", { exact: true }).fill("Antwerpen");
   await page.getByLabel("E-mail", { exact: true }).fill("info@test.be");
   await page.getByTestId("bedrijf-bewaar").click();
-  await expect(page.getByText("Bedrijfsgegevens bewaard.", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("bedrijf-opslagstatus")).toHaveText("Bedrijfsgegevens bewaard.");
 
   const bewaard = (await (await request.get("/api/bedrijfsgegevens")).json()) as Record<string, unknown>;
   expect(bewaard).toMatchObject({
@@ -82,7 +85,7 @@ test("een adres leegmaken, ook met een ander land, laat het adres weg", async ({
   }
   await page.getByLabel("Land", { exact: true }).fill("Nederland");
   await page.getByTestId("bedrijf-bewaar").click();
-  await expect(page.getByText("Bedrijfsgegevens bewaard.", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("bedrijf-opslagstatus")).toHaveText("Bedrijfsgegevens bewaard.");
 
   const bewaard = (await (await request.get("/api/bedrijfsgegevens")).json()) as Record<string, unknown>;
   expect(bewaard.naam).toBe(naam);

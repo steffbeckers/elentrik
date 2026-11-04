@@ -1,4 +1,6 @@
 import type { Partij } from "@elentrik/model";
+import type { AdminAuditDoel } from "../../shared/admin/audit";
+import type { AdminProjectRevisie } from "../../shared/admin/projecten";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -105,6 +107,8 @@ export const exports = pgTable("exports", {
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
+  /** Systeembeheer, alleen door een operator te zetten; geen Better Auth-invoerveld. */
+  superuser: boolean("superuser").notNull().default(false),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
@@ -295,3 +299,78 @@ export const doorgestuurdeFacturen = pgTable("doorgestuurde_facturen", {
   nummer: text("nummer"),
   verstuurd: timestamp("verstuurd", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Historische actor/target-id's hebben bewust geen cascade: bewijs overleeft verwijdering.
+export const adminCorrecties = pgTable("admin_correcties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").notNull(),
+  organisatieId: text("organisatie_id").notNull(),
+  actorId: text("actor_id").notNull(),
+  sessieId: text("sessie_id").notNull(),
+  reden: text("reden").notNull(),
+  gestart: timestamp("gestart", { withTimezone: true }).notNull().defaultNow(),
+  verloopt: timestamp("verloopt", { withTimezone: true }).notNull(),
+  beeindigd: timestamp("beeindigd", { withTimezone: true }),
+}, (t) => [index("admin_correcties_project_idx").on(t.projectId, t.gestart)]);
+
+export const adminRevisies = pgTable("admin_revisies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").notNull(),
+  organisatieId: text("organisatie_id").notNull(),
+  correctieId: uuid("correctie_id").notNull(),
+  auditId: uuid("audit_id").notNull(),
+  voor: jsonb("voor").$type<AdminProjectRevisie>().notNull(),
+  na: jsonb("na").$type<AdminProjectRevisie>().notNull(),
+  tijd: timestamp("tijd", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("admin_revisies_project_idx").on(t.projectId, t.tijd), uniqueIndex("admin_revisies_audit_idx").on(t.auditId)]);
+
+export const adminNotities = pgTable("admin_notities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organisatieId: text("organisatie_id").notNull(),
+  projectId: uuid("project_id"),
+  tekst: text("tekst").notNull(),
+  opvolgdatum: text("opvolgdatum"),
+  auteurId: text("auteur_id").notNull(),
+  auteurNaam: text("auteur_naam").notNull(),
+  aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
+  gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
+  gearchiveerd: timestamp("gearchiveerd", { withTimezone: true }),
+}, (t) => [
+  index("admin_notities_organisatie_idx").on(t.organisatieId, t.aangemaakt, t.id),
+  index("admin_notities_project_idx").on(t.projectId, t.aangemaakt, t.id),
+  index("admin_notities_opvolging_idx").on(t.gearchiveerd, t.opvolgdatum),
+]);
+
+export const adminMutaties = pgTable("admin_mutaties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: text("actor_id").notNull(),
+  mutatieId: uuid("mutatie_id").notNull(),
+  actie: text("actie").notNull(),
+  doelId: text("doel_id").notNull(),
+  vingerafdruk: text("vingerafdruk").notNull(),
+  antwoord: jsonb("antwoord").$type<unknown>().notNull(),
+  tijd: timestamp("tijd", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("admin_mutaties_actor_mutatie_idx").on(t.actorId, t.mutatieId)]);
+
+export const adminAudit = pgTable("admin_audit", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: text("actor_id").notNull(),
+  actorNaam: text("actor_naam").notNull(),
+  doelType: text("doel_type").$type<AdminAuditDoel["type"]>().notNull(),
+  doelId: text("doel_id").notNull(),
+  organisatieId: text("organisatie_id"),
+  projectId: uuid("project_id"),
+  actie: text("actie").notNull(),
+  reden: text("reden").notNull(),
+  voor: jsonb("voor").$type<unknown>(),
+  na: jsonb("na").$type<unknown>(),
+  correctieId: uuid("correctie_id"),
+  tijd: timestamp("tijd", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("admin_audit_tijd_idx").on(t.tijd, t.id),
+  index("admin_audit_actor_idx").on(t.actorId, t.tijd, t.id),
+  index("admin_audit_doel_idx").on(t.doelId, t.tijd, t.id),
+  index("admin_audit_organisatie_idx").on(t.organisatieId, t.tijd, t.id),
+  index("admin_audit_project_idx").on(t.projectId, t.tijd, t.id),
+  index("admin_audit_correctie_idx").on(t.correctieId, t.tijd, t.id),
+]);

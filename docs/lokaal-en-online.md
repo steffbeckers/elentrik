@@ -19,12 +19,12 @@ bedrijfsgegevens. Dat gebeurt één keer.
 3. **De overname gebeurt bij de eerste bevestigde aanmelding**, dus wanneer je op de link in de
    bevestigingsmail klikt (in Mailpit op `http://127.0.0.1:8025`). Daarna staan je projecten en
    bedrijfsgegevens in je nieuwe organisatie.
-4. **Draai Playwright niet tussen het registreren en het klikken op de link.** De e2e-tests maken
-   de Mailpit-inbox leeg, en dan is je bevestigingsmail weg.
-5. **Is de mail toch weg of verlopen** (de link is 24 uur geldig)? Probeer in te loggen en kies
+4. **Is de mail weg of verlopen** (de link is 24 uur geldig)? Probeer in te loggen en kies
    "Bevestigingsmail opnieuw sturen".
 
 ## Online gaan
+
+Het superuserdashboard staat op `/admin`. Toegang verlenen, correcties uitvoeren, lokale gratis toegang en proefperiodes beheren en auditopslag onderhouden staan in [Systeembeheer](admin-beheer.md).
 
 **Online zetten op de NAS achter de Cloudflare Tunnel staat stap voor stap in
 [`docs/online.md`](online.md)** (Cloudflare, Microsoft 365, de NAS, Stripe, back-ups, updaten en
@@ -239,6 +239,12 @@ geef een bedrijf met een `proef_einde`-update opnieuw 30 dagen, bij voorkeur vó
 `.env` zet.
 
 ### Wat de e2e-tests doen
+
+Start de aparte testdiensten met `docker compose -f infra/docker-compose.yml up -d postgres-e2e mailpit-e2e`.
+Playwright gebruikt uitsluitend `elentrik_e2e` op localhost-poort 55432 en een aparte
+Mailpit-inbox op `http://127.0.0.1:8026` (SMTP 1026). De testopzet maakt die database,
+testbestanden en testinbox leeg; ontwikkelgegevens en ontwikkelmails blijven behouden.
+De vaste databasebewaker weigert andere hosts, poorten en databasenamen.
 
 Playwright draait met Stripe aan, tegen een nep-Stripe op `http://127.0.0.1:3199` (gestart door
 `e2e/global-setup.ts`) en testwaarden die vast in `e2e/omgeving.ts` staan. Daar gaat geen verkeer

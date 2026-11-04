@@ -1,0 +1,22 @@
+import { getQuery, setResponseHeaders } from "h3";
+import { haalAdminBestand } from "../../../admin/bestanden";
+import { bestandHeaders } from "../../../bestanden/headers";
+import { gebruikOpslag } from "../../../bestanden/opslag";
+import { exportBestandsnaam } from "../../../exports/repo";
+import { maakFout, nietGevondenFout } from "../../../fouten";
+import { bestandId } from "../../../utils/bestanden";
+import { vereisSuperuser } from "../../../admin/toegang";
+import { gebruikDb } from "../../../db";
+import { defineBeveiligdeHandler } from "../../../utils/toegang";
+export default defineBeveiligdeHandler(async (event) => {
+  const actor = await vereisSuperuser(event);
+  const verwacht = getQuery(event).gebruiker;
+  if (verwacht !== undefined && verwacht !== actor.id) throw maakFout(401, "De aangemelde gebruiker is gewijzigd", "ANDERE_GEBRUIKER");
+  const db = gebruikDb();
+  const bestand = await haalAdminBestand(db, bestandId(event));
+  const stroom = await gebruikOpslag().lees(bestand.sleutel);
+  if (!stroom) throw nietGevondenFout();
+  const download = bestand.soort === "export" ? await exportBestandsnaam(db, bestand.id) : undefined;
+  setResponseHeaders(event, { ...bestandHeaders(bestand.mime, download ? { download } : {}), "Cache-Control": "no-store" });
+  return stroom;
+});

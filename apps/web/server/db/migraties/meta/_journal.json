@@ -71,6 +71,34 @@
       "when": 1793345972119,
       "tag": "0009_bestanden-project-index",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793734901932,
+      "tag": "0010_superusers",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793735192938,
+      "tag": "0011_admin_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793735952349,
+      "tag": "0012_admin_notities",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793736117877,
+      "tag": "0013_admin_correcties",
+      "breakpoints": true
     }
   ]
 }

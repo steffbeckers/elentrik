@@ -15,7 +15,7 @@ import { TALEN } from "../shared/taal";
 describe("eisE2eDatabase", () => {
   test("de e2e-url wordt aanvaard", () => {
     expect(eisE2eDatabase(E2E_DATABASE_URL)).toBe(E2E_DATABASE_URL);
-    expect(eisE2eDatabase("postgres://elentrik:elentrik@localhost:5432/elentrik_e2e")).toContain(
+    expect(eisE2eDatabase("postgres://elentrik:elentrik@localhost:55432/elentrik_e2e")).toContain(
       "elentrik_e2e",
     );
   });
@@ -30,6 +30,7 @@ describe("eisE2eDatabase", () => {
     for (const url of [
       "postgres://elentrik:elentrik@db.voorbeeld.be:5432/elentrik_e2e",
       "postgres://elentrik:elentrik@127.0.0.1:5433/elentrik_e2e",
+      "postgres://elentrik:elentrik@127.0.0.1:5432/elentrik_e2e",
       "postgres://elentrik:elentrik@127.0.0.1/elentrik_e2e",
       "postgres://elentrik:elentrik@127.0.0.1:5432/andere_elentrik_e2e",
       "postgres://elentrik:elentrik@127.0.0.1:5432/elentrik_e2e/extra",

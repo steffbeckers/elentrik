@@ -173,10 +173,11 @@ export async function startCheckout(
   const resultaat = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"abonnement:" + i.organisatieId}))`);
     const [org] = await tx
-      .select({ naam: organization.name, proefEinde: organization.proefEinde })
+      .select({ naam: organization.name, proefEinde: organization.proefEinde, vrijgesteld: organization.vrijgesteld })
       .from(organization)
       .where(eq(organization.id, i.organisatieId));
     if (!org) throw nietGevondenFout();
+    if (org.vrijgesteld) throw maakFout(409, "Dit bedrijf heeft gratis toegang", "BEDRIJF_VRIJGESTELD");
     const leesRij = async () =>
       (await tx.select().from(abonnementen).where(eq(abonnementen.organisatieId, i.organisatieId)))[0];
     const blokkeert = (r: Awaited<ReturnType<typeof leesRij>>) => {

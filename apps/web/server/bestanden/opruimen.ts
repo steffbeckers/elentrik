@@ -48,6 +48,7 @@
 import { dirname } from "node:path/posix";
 import { and, count, eq, gt, inArray, isNotNull, isNull, lt } from "drizzle-orm";
 import type { Db } from "../db";
+import { auditBestandVerwijzingen, isAuditBestand, vergrendelAuditBestanden } from "../admin/revisies";
 import { bedrijfsinstellingen, bestanden, exports, organization, projecten, snapshots } from "../db/schema";
 import type { MetLock } from "../taken/lock";
 import type { BestandOpslag } from "./opslag";
@@ -116,7 +117,7 @@ function verzamelIds(waarde: unknown, verwijzers: Verwijzers, door: string): voi
 
 /** Alle bestand-id's die ergens nog in gebruik zijn, met wie ernaar verwijst. */
 async function gebruikteIds(db: Db): Promise<Verwijzers> {
-  const verwijzers: Verwijzers = new Map();
+  const verwijzers: Verwijzers = await auditBestandVerwijzingen(db);
 
   let na: string | null = null;
   for (;;) {
@@ -207,6 +208,8 @@ class TerugGezet extends Error {
   }
 }
 
+class AuditBeschermd extends Error {}
+
 /** Stap 1: de projecten die langer dan 30 dagen in de prullenbak staan. */
 async function ruimPrullenbakOp(
   { db, opslag, nu }: OpruimAfhankelijkheden,
@@ -243,6 +246,12 @@ async function ruimPrullenbakOp(
     try {
       // Eerst de rijen, in een transactie: alles of niets. Volgorde door de FK's (NO ACTION).
       sleutels = await db.transaction(async (tx) => {
+        // Een supportcorrectie kan ná de referentiescan voltooid zijn. Onder hetzelfde slot als
+        // revisie-opslag opnieuw controleren vóór rijen of bestanden verdwijnen.
+        await vergrendelAuditBestanden(tx);
+        const beschermd = await tx.select({ id: bestanden.id }).from(bestanden)
+          .where(and(eq(bestanden.projectId, id), isAuditBestand(bestanden.id))).limit(1);
+        if (beschermd.length) throw new AuditBeschermd();
         const rijen = await tx.select({ sleutel: bestanden.sleutel }).from(bestanden).where(eq(bestanden.projectId, id));
         await tx.delete(exports).where(eq(exports.projectId, id));
         await tx.delete(snapshots).where(eq(snapshots.projectId, id));
@@ -257,7 +266,8 @@ async function ruimPrullenbakOp(
         return rijen.map((r) => r.sleutel);
       });
     } catch (fout) {
-      if (!(fout instanceof TerugGezet)) fouten.aantal++;
+      if (fout instanceof AuditBeschermd) geblokkeerd++;
+      else if (!(fout instanceof TerugGezet)) fouten.aantal++;
       continue;
     }
     gewist++;
@@ -298,7 +308,14 @@ async function ruimVerweesdOp(
   for (const { id, sleutel } of kandidaten) {
     if (gebruikt.has(id.toLowerCase())) continue;
     try {
-      await db.delete(bestanden).where(eq(bestanden.id, id));
+      const verwijderd = await db.transaction(async (tx) => {
+        await vergrendelAuditBestanden(tx);
+        const beschermd = await tx.select({ id: bestanden.id }).from(bestanden).where(and(eq(bestanden.id, id), isAuditBestand(bestanden.id))).limit(1);
+        if (beschermd.length) return false;
+        await tx.delete(bestanden).where(eq(bestanden.id, id));
+        return true;
+      });
+      if (!verwijderd) continue;
     } catch {
       fouten.aantal++;
       continue;
