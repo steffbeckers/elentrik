@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Het menu van de ingelogde gebruiker: zijn naam, "Mijn organisatie", "Bedrijfsgegevens", "Abonnement" en
-// "Uitloggen", en de taal als submenu (dezelfde keuzes als `TaalKiezer`). Uitloggen gaat via de
+// "Uitloggen", de taal als submenu en de themakeuze. Uitloggen gaat via de
 // sessie-store, dus eerst langs `voorVertrek`.
 import type { DropdownMenuItem } from "@nuxt/ui";
 import { taalKeuzes } from "~/sessie/taal";
@@ -13,6 +13,8 @@ const { t } = useI18n();
 const sessie = useSessieStore();
 const toast = useToast();
 const { taal, zetTaal } = useTaal();
+const colorMode = useColorMode();
+const donker = computed(() => colorMode.value === "dark");
 
 const bezig = ref(false);
 const nieuwOpen = ref(false);
@@ -58,6 +60,14 @@ const items = computed<DropdownMenuItem[][]>(() => [
       icon: "i-lucide-languages",
       slot: "taal" as const,
       children: taalKeuzes(taal.value, zetTaal),
+    },
+    {
+      label: t(donker.value ? "menu.lichteModus" : "menu.donkereModus"),
+      icon: donker.value ? "i-lucide-sun" : "i-lucide-moon",
+      onSelect: (event: Event) => {
+        event.preventDefault();
+        colorMode.preference = donker.value ? "light" : "dark";
+      },
     },
   ],
   [{ label: t("menu.uitloggen"), icon: "i-lucide-log-out", slot: "uitloggen" as const, onSelect: uitloggen }],
