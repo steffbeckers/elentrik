@@ -53,7 +53,7 @@ export default defineNuxtConfig({
     client: { registerPlugin: false },
     devOptions: { enabled: false },
     injectManifest: {
-      globPatterns: ["_nuxt/**/*.{js,css,woff2,svg,png,webp}"],
+      globPatterns: ["_nuxt/**/*.{js,mjs,css,woff2,svg,png,webp}"],
       // Het versiebestand van Nuxt heeft geen hash en moet altijd vers zijn.
       globIgnores: ["_nuxt/builds/**"],
     },

@@ -1,7 +1,13 @@
 // De service worker in de productiebuild (playwright.sw.config.ts): hij bewaart de code van de app,
 // zodat een open tabblad schermen blijft openen terwijl de server weg is, maar hij beantwoordt nooit een
 // navigatie uit de cache. Alleen publieke pagina's.
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { WEB_DIR } from "../e2e/omgeving";
+
+/** De code van de build waar deze server mee draait (playwright.sw.config.ts bouwt in .output-sw). */
+const BUILD_CODE = join(WEB_DIR, ".output-sw", "public", "_nuxt");
 
 /** Wacht tot de service worker actief is en deze pagina beheert (na `clients.claim()`). */
 async function wachtOpServiceWorker(page: Page): Promise<void> {
@@ -32,6 +38,23 @@ test("na het eerste bezoek staan de app-bestanden in de cache", async ({ page })
     return (await cache.match(url)) !== undefined;
   }, src);
   expect(inCache).toBe(true);
+});
+
+test("na het installeren staat alle code van de build in de cache, ook de PDF.js-worker", async ({ page }) => {
+  // Ook bestanden die de pagina zelf nog niet laadde: een oud tabblad dat de PDF-viewer pas na een update
+  // opent, vindt zijn worker (`pdf.worker.min.<hash>.mjs`) dan nog.
+  const verwacht = readdirSync(BUILD_CODE)
+    .filter((naam) => /\.(js|mjs|css)$/.test(naam))
+    .map((naam) => `/_nuxt/${naam}`)
+    .sort();
+  expect(verwacht.some((pad) => /^\/_nuxt\/pdf\.worker\.min\.[\w-]+\.mjs$/.test(pad))).toBe(true);
+  await page.goto("/inloggen");
+  await wachtOpServiceWorker(page);
+  const inCache = await page.evaluate(async () => {
+    const cache = await caches.open("elentrik-code");
+    return (await cache.keys()).map((verzoek) => new URL(verzoek.url).pathname);
+  });
+  expect(verwacht.filter((pad) => !inCache.includes(pad))).toEqual([]);
 });
 
 test("offline opent een scherm waarvan de code nog niet geladen was", async ({ page, context }) => {
