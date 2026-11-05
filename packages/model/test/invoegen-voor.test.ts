@@ -136,7 +136,7 @@ test("new-to-child validation and injected structure fields reject before any mu
     m.voegInVoor(k.doc, k.ids[1]!, {
       ...m.STANDAARD.leiding,
       id: "injected",
-    } as m.NodeInvoer),
+    } as unknown as m.NodeInvoer),
   ).toThrow(m.DocumentFout);
   expect(JSON.stringify(k.doc)).toBe(before);
 });
