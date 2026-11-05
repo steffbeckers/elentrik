@@ -708,6 +708,32 @@
       "toevoegen": "Aftakking toevoegen",
       "uitbreiden": "{onderdeel} toevoegen aan aftakking",
       "bestemming": "Aftakking uitbreiden"
+    },
+    "invoegen": {
+      "sjabloonTitel": "Sjabloon invoegen",
+      "lichtTitel": "Lichtschakeling toevoegen",
+      "bestemming": "Bestemming",
+      "kiesBestemming": "Kies een geldig verdeelbord, differentieel of bestaande kring.",
+      "hergebruik": "Bestaande differentieel behouden:",
+      "nieuweDifferentieel": "Nieuwe differentieel (voorinstelling)",
+      "voorinstellingen": "Dit zijn voorinstellingen. Controleer de beveiliging en leiding voor deze installatie. De ruimteclassificatie blijft leeg.",
+      "onderdelen": "Toegevoegde onderdelen",
+      "ongeldigeWaarden": "Controleer de bestemming en de ingevoerde waarden.",
+      "toevoegen": "Toevoegen",
+      "schakeling": "Samenstelling",
+      "aantalLichtpunten": "Aantal afzonderlijke lichtpunten",
+      "lichtVoorbeeld": "Punt {punt}: {schakelaars} schakelaars en {lampen} afzonderlijk plaatsbare lichtpunten.",
+      "doelen": {
+        "nieuw-op-bord": "Nieuwe kring met differentieel",
+        "bestaande-differentieel": "Bestaande differentieel gebruiken",
+        "bestaande-kring": "Aftakking op bestaande kring"
+      },
+      "schakelingen": {
+        "enkel": "Enkelpolige schakelaar + lichtpunt",
+        "wissel": "Twee wisselschakelaars + lichtpunt",
+        "kruis": "Twee wisselschakelaars + kruisschakelaar + lichtpunt"
+      },
+      "annuleren": "Annuleren"
     }
   },
   "bedrijf": {
@@ -897,6 +923,28 @@
     },
     "lengte_m": {
       "label": "Tracélengte"
+    },
+    "kringCode": {
+      "label": "Vaste kringcode"
+    },
+    "referentie": {
+      "label": "Toestelreferentie"
+    },
+    "brandreactieklasse": {
+      "label": "Brandreactieklasse"
+    },
+    "aanleg": {
+      "ligging": {
+        "label": "Ligging",
+        "opties": {
+          "inbouw": "In een wand",
+          "opbouw": "Op een wand",
+          "grond": "Ondergronds"
+        }
+      },
+      "inBuis": {
+        "label": "In buis"
+      }
     }
   },
   "ruimtes": {

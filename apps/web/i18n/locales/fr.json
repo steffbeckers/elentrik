@@ -708,6 +708,32 @@
       "toevoegen": "Ajouter une dérivation",
       "uitbreiden": "Ajouter {onderdeel} à la dérivation",
       "bestemming": "Prolonger une dérivation"
+    },
+    "invoegen": {
+      "sjabloonTitel": "Insérer un modèle",
+      "lichtTitel": "Ajouter une commande d’éclairage",
+      "bestemming": "Destination",
+      "kiesBestemming": "Choisissez un tableau, un différentiel ou un circuit existant valable.",
+      "hergebruik": "Différentiel existant conservé :",
+      "nieuweDifferentieel": "Nouveau différentiel (valeurs prédéfinies)",
+      "voorinstellingen": "Ces valeurs sont prédéfinies. Vérifiez la protection et la canalisation pour cette installation. La classification du local reste vide.",
+      "onderdelen": "Éléments ajoutés",
+      "ongeldigeWaarden": "Vérifiez la destination et les valeurs saisies.",
+      "toevoegen": "Ajouter",
+      "schakeling": "Composition",
+      "aantalLichtpunten": "Nombre de points lumineux distincts",
+      "lichtVoorbeeld": "Point {punt} : {schakelaars} interrupteurs et {lampen} points lumineux à placer séparément.",
+      "doelen": {
+        "nieuw-op-bord": "Nouveau circuit avec différentiel",
+        "bestaande-differentieel": "Utiliser le différentiel existant",
+        "bestaande-kring": "Dérivation sur le circuit existant"
+      },
+      "schakelingen": {
+        "enkel": "Interrupteur unipolaire + point lumineux",
+        "wissel": "Deux interrupteurs va-et-vient + point lumineux",
+        "kruis": "Deux va-et-vient + permutateur + point lumineux"
+      },
+      "annuleren": "Annuler"
     }
   },
   "bedrijf": {
@@ -897,6 +923,28 @@
     },
     "lengte_m": {
       "label": "Longueur du parcours"
+    },
+    "kringCode": {
+      "label": "Code de circuit fixe"
+    },
+    "referentie": {
+      "label": "Repère de l’appareil"
+    },
+    "brandreactieklasse": {
+      "label": "Classe de réaction au feu"
+    },
+    "aanleg": {
+      "ligging": {
+        "label": "Pose",
+        "opties": {
+          "inbouw": "Dans une paroi",
+          "opbouw": "Sur une paroi",
+          "grond": "Souterraine"
+        }
+      },
+      "inBuis": {
+        "label": "Sous conduit"
+      }
     }
   },
   "ruimtes": {

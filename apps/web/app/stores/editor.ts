@@ -5,6 +5,14 @@ import { STANDAARD_PAPIER_A4, opmaak as legOp, type SchemaOpmaak } from "@elentr
 import {
   DocumentFout,
   magToevoegen,
+  legKringCodesVast as legCodesVast,
+  hernummerKringen as hernummer,
+  voorbeeldHernummering,
+  voegLichtschakelingToe as voegLichtToe,
+  type SjabloonDoel,
+  type DifferentieelInstellingen,
+  type LichtschakelingDoel,
+  type LichtschakelingOpties,
   pasPatchesToe,
   verwijder,
   verwijderAfwijking,
@@ -63,18 +71,6 @@ function vandaag(): string {
   const maand = String(nu.getMonth() + 1).padStart(2, "0");
   const dag = String(nu.getDate()).padStart(2, "0");
   return `${nu.getFullYear()}-${maand}-${dag}`;
-}
-
-/** Het eerste verdeelbord in pre-order. */
-function eersteVerdeelbord(doc: InstallatieDocument): NodeId | undefined {
-  const stapel: NodeId[] = [doc.rootId];
-  while (stapel.length > 0) {
-    const node = doc.nodes[stapel.pop()!];
-    if (!node) continue;
-    if (node.type === "verdeelbord") return node.id;
-    for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push(node.kinderen[i]!);
-  }
-  return undefined;
 }
 
 export const useEditorStore = defineStore("editor", () => {
@@ -283,18 +279,21 @@ export const useEditorStore = defineStore("editor", () => {
     voegToe({ soort: "aftakking", nodeId: selectie.value[0]! });
   }
 
-  /** Op het geselecteerde bord of differentieel, anders op het eerste verdeelbord in pre-order. */
-  function voegSjabloonToe(sjabloonId: string): void {
+  /** Expliciet doel uit de bevestigingsdialoog; geen automatische bordkeuze. */
+  function voegSjabloonToe(sjabloonId: string, doel?: SjabloonDoel, instellingen?: DifferentieelInstellingen): void {
     if (alleenLezen.value) return;
-    const doc = vereisDocument();
-    const geselecteerd = selectie.value.find((id) => {
-      const type = doc.nodes[id]?.type;
-      return type === "verdeelbord" || type === "differentieel";
-    });
-    const doel = geselecteerd ?? eersteVerdeelbord(doc);
-    if (doel === undefined) throw new DocumentFout("ONBEKENDE_NODE", { reden: "geen verdeelbord" });
-    pasToe(voegSjabloonToeAanDoc(doc, doel, sjabloonId));
+    if (!doel) throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "kies een sjabloonbestemming" });
+    const r = voegSjabloonToeAanDoc(vereisDocument(), doel, sjabloonId, instellingen);
+    pasToe(r); selectie.value = [r.id];
   }
+  function voegLichtschakelingToe(doel: LichtschakelingDoel, opties: LichtschakelingOpties, instellingen?: DifferentieelInstellingen): void {
+    if (alleenLezen.value) return;
+    const r = voegLichtToe(vereisDocument(), doel, opties, instellingen);
+    pasToe(r); selectie.value = [r.id];
+  }
+  function legKringCodesVast(): void { if (!alleenLezen.value) pasToe(legCodesVast(vereisDocument())); }
+  function hernummerKringen(): void { if (!alleenLezen.value) pasToe(hernummer(vereisDocument())); }
+  const hernummerVoorbeeld = computed(() => document.value ? voorbeeldHernummering(document.value) : []);
 
   /**
    * Wijzigt één veld op alle nodes in één undo-stap. Opeenvolgende wijzigingen van
@@ -307,7 +306,16 @@ export const useEditorStore = defineStore("editor", () => {
     const resultaten: OperatieResultaat[] = [];
     let huidig = doc;
     for (const id of nodeIds) {
-      const r = wijzigEigenschappen(huidig, id, { [sleutel]: waarde });
+      const node = huidig.nodes[id]!;
+      let wijziging: Record<string, unknown> = { [sleutel]: waarde };
+      if (sleutel === "aanleg.ligging" || sleutel === "aanleg.inBuis") {
+        if (node.type !== "leiding") throw new DocumentFout("ONGELDIG_SCHEMA");
+        const aanleg: Record<string, unknown> = { inBuis: false, ...node.aanleg, [sleutel.slice(7)]: waarde };
+        if (waarde === undefined) delete aanleg[sleutel.slice(7)];
+        // InBuis is verplicht zodra een aanleg is opgegeven.
+        wijziging = { aanleg: Object.keys(aanleg).length === 0 ? undefined : { inBuis: false, ...aanleg } };
+      }
+      const r = wijzigEigenschappen(huidig, id, wijziging);
       resultaten.push(r);
       huidig = r.doc;
     }
@@ -524,6 +532,10 @@ export const useEditorStore = defineStore("editor", () => {
     kanAftakkingToevoegen,
     voegAftakkingToeBijSelectie,
     voegSjabloonToe,
+    voegLichtschakelingToe,
+    legKringCodesVast,
+    hernummerKringen,
+    hernummerVoorbeeld,
     wijzigVeld,
     voegToeBijSelectie,
     navigeer,

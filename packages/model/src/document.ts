@@ -1,4 +1,5 @@
 import { DocumentFout } from "./fouten";
+import { bepaalKringCodes } from "./referenties";
 import { nieuwId } from "./ids";
 import {
   InstallatieDocumentSchema,
@@ -13,6 +14,7 @@ export function parseDocument(invoer: unknown): InstallatieDocument {
   if (!resultaat.success) {
     throw new DocumentFout("ONGELDIG_SCHEMA", { issues: resultaat.error.issues });
   }
+  bepaalKringCodes(resultaat.data);
   return resultaat.data;
 }
 

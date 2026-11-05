@@ -19,6 +19,7 @@ export type Veld = {
   soort: "getal" | "tekst" | "keuze" | "schakelaar";
   eenheid?: string;
   /** Zonder `labelSleutel` toont een optie haar waarde zelf: een getal (polen) of een symbool (curve B). */
+  suggesties?: string[];
   opties?: { waarde: string | number; labelSleutel?: string }[];
   min?: number;
   stap?: number;
@@ -72,6 +73,7 @@ type ZodVorm = {
   def: { type: string; innerType?: ZodVorm; options?: ZodVorm[] };
   options?: readonly (string | number)[];
   values?: Set<unknown>;
+  shape?: Record<string,ZodVorm>;
   minValue?: number | null;
   isInt?: boolean;
 };
@@ -121,6 +123,7 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
     default:
       throw new Error(`velden.ts: geen veldsoort voor ${sleutel} (${schema.def.type})`);
   }
+  if (sleutel === "brandreactieklasse") veld.suggesties = ["Eca", "Cca"];
   if (optioneel) veld.optioneel = true;
   return veld;
 }
@@ -141,7 +144,11 @@ export function bouwVelden(boom?: Boom): { GEMEENSCHAPPELIJK: Veld[]; VELDEN: Re
       const shape = variant.shape as unknown as Record<string, ZodVorm>;
       const eigen = Object.entries(shape)
         .filter(([sleutel]) => !STRUCTUUR.has(sleutel) && !(GEMEENSCHAPPELIJKE_SLEUTELS as readonly string[]).includes(sleutel))
-        .map(([sleutel, schema]) => veldVan(boom, sleutel, schema));
+        .flatMap(([sleutel, schema]) => {
+          if(sleutel !== "aanleg") return [veldVan(boom,sleutel,schema)];
+          const object=schema.def.innerType!;
+          return Object.entries(object.shape!).map(([deel,zod])=>({...veldVan(boom,`aanleg.${deel}`,zod),optioneel:true}));
+        });
       return [type, eigen];
     }),
   ) as Record<NodeType, Veld[]>;

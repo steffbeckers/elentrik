@@ -471,11 +471,11 @@ describe("voegToeBijSelectie", () => {
 });
 
 describe("voegSjabloonToe", () => {
-  test('"badkamer" zonder selectie komt op het eerste verdeelbord', () => {
+  test('"badkamer" met expliciete bordbestemming', () => {
     const store = laadNieuw();
     const bordId = eersteVan(store, "verdeelbord");
 
-    store.voegSjabloonToe("badkamer");
+    store.voegSjabloonToe("badkamer", {soort:"nieuw-op-bord",nodeId:eersteVan(store,"verdeelbord")});
 
     const kinderen = node(store, bordId).kinderen;
     expect(kinderen).toHaveLength(1);
@@ -485,11 +485,11 @@ describe("voegSjabloonToe", () => {
 
   test("met een geselecteerd differentieel komt het sjabloon op diens rail", () => {
     const store = laadNieuw();
-    store.voegSjabloonToe("badkamer");
+    store.voegSjabloonToe("badkamer", {soort:"nieuw-op-bord",nodeId:eersteVan(store,"verdeelbord")});
     const diffId = node(store, eersteVan(store, "verdeelbord")).kinderen[0]!;
 
     store.selectie = [diffId];
-    store.voegSjabloonToe("kring-verlichting");
+    store.voegSjabloonToe("kring-verlichting", {soort:"bestaande-differentieel",nodeId:diffId});
 
     expect(node(store, diffId).kinderen).toHaveLength(2);
   });
@@ -815,4 +815,18 @@ describe("navigeer", () => {
     expect(store.vooruit).toHaveLength(0);
     expect(store.document).toBe(voor);
   });
+});
+test('explicit destinations have no fallback and light assemblies are one read-only-safe undo step',()=>{
+ const store=laadNieuw();const bord=eersteVan(store,'verdeelbord');const voor=store.document;
+ expect(()=>store.voegSjabloonToe('wasmachine')).toThrow();expect(store.document).toBe(voor);
+ store.voegLichtschakelingToe({soort:'nieuw-op-bord',nodeId:bord},{schakeling:'kruis',aantal:3});
+ expect(store.terug).toHaveLength(1);expect(new Set(Object.values(store.analyse!.puntLabels))).toEqual(new Set(['A1']));
+ store.ongedaanMaken();expect(store.document).toEqual(voor);store.zetAlleenLezen(true);
+ store.voegLichtschakelingToe({soort:'nieuw-op-bord',nodeId:bord},{schakeling:'enkel',aantal:1});expect(store.document).toEqual(voor);
+});
+test('combined installation fields compose without losing sibling values',()=>{
+ const store=laadNieuw();const l=nieuweKring(store);
+ store.wijzigVeld([l],'aanleg.ligging','inbouw');store.wijzigVeld([l],'aanleg.inBuis',true);
+ expect(node(store,l)).toHaveProperty('aanleg',{ligging:'inbouw',inBuis:true});
+ store.wijzigVeld([l],'aanleg.ligging',undefined);expect(node(store,l)).toHaveProperty('aanleg',{inBuis:true});
 });

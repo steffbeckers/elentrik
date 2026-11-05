@@ -131,7 +131,7 @@ function kookplaat(polen: 2 | 4, aantalGeleiders: 3 | 5): Sjabloon {
     boom: keten(
       { type: "automaat", nominaal_A: 32, curve: "B", polen },
       leiding(6, aantalGeleiders),
-      { type: "toestel", soort: "kookplaat", ruimte: "keuken" },
+      { type: "toestel", soort: "kookplaat" },
     ),
   };
 }
@@ -182,7 +182,7 @@ export const SJABLONEN: readonly Sjabloon[] = [
       STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 20, curve: "B", polen: 2 },
       leiding(2.5),
-      { type: "toestel", soort: "wasmachine", ruimte: "wasplaats" },
+      { type: "toestel", soort: "wasmachine" },
     ),
   },
   {
@@ -192,8 +192,8 @@ export const SJABLONEN: readonly Sjabloon[] = [
       STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 16, curve: "B", polen: 2 },
       leiding(2.5),
-      contactdoos("badkamer"),
-      contactdoos("badkamer"),
+      contactdoos(),
+      contactdoos(),
     ),
   },
 ];

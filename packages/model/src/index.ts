@@ -47,6 +47,12 @@ export {
   magToevoegen,
   voegOnderdeelToe,
   voegSjabloonToe,
+  voegLichtschakelingToe,
+  lichtschakelingLeiding,
+  type SjabloonDoel,
+  type DifferentieelInstellingen,
+  type LichtschakelingDoel,
+  type LichtschakelingOpties,
   type Aanknoping,
 } from "./toevoegen";
 export {
@@ -87,3 +93,5 @@ export {
   type Taal,
   type Toestelsoort,
 } from "./schema";
+export { bepaalKringCodes, kringLetter, legKringCodesVast, hernummerKringen, voorbeeldHernummering, type Hernummering } from './referenties';
+export { dupliceerKring } from './referenties';

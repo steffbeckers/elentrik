@@ -708,6 +708,32 @@
       "toevoegen": "Add branch",
       "uitbreiden": "Add {onderdeel} to branch",
       "bestemming": "Extend a branch"
+    },
+    "invoegen": {
+      "sjabloonTitel": "Insert template",
+      "lichtTitel": "Add lighting circuit assembly",
+      "bestemming": "Destination",
+      "kiesBestemming": "Choose a valid distribution board, RCD or existing circuit.",
+      "hergebruik": "Keep existing RCD:",
+      "nieuweDifferentieel": "New RCD (preset values)",
+      "voorinstellingen": "These are preset values. Check the protection and cable for this installation. Room classification remains blank.",
+      "onderdelen": "Added components",
+      "ongeldigeWaarden": "Check the destination and entered values.",
+      "toevoegen": "Add",
+      "schakeling": "Assembly",
+      "aantalLichtpunten": "Number of separate light points",
+      "lichtVoorbeeld": "Point {punt}: {schakelaars} switches and {lampen} individually placeable light points.",
+      "doelen": {
+        "nieuw-op-bord": "New circuit with RCD",
+        "bestaande-differentieel": "Use existing RCD",
+        "bestaande-kring": "Branch on existing circuit"
+      },
+      "schakelingen": {
+        "enkel": "Single-pole switch + light point",
+        "wissel": "Two two-way switches + light point",
+        "kruis": "Two two-way switches + intermediate switch + light point"
+      },
+      "annuleren": "Cancel"
     }
   },
   "bedrijf": {
@@ -897,6 +923,28 @@
     },
     "lengte_m": {
       "label": "Route length"
+    },
+    "kringCode": {
+      "label": "Fixed circuit code"
+    },
+    "referentie": {
+      "label": "Device reference"
+    },
+    "brandreactieklasse": {
+      "label": "Reaction to fire class"
+    },
+    "aanleg": {
+      "ligging": {
+        "label": "Installation",
+        "opties": {
+          "inbouw": "In a wall",
+          "opbouw": "On a wall",
+          "grond": "Underground"
+        }
+      },
+      "inBuis": {
+        "label": "In conduit"
+      }
     }
   },
   "ruimtes": {

@@ -22,7 +22,7 @@ export function leidingLabel(node: NodeVan<"leiding">): string {
   const kabeltype = node.kabeltype.trim() === "" ? "?" : node.kabeltype;
   const tekst = doorsnedeTekst(node.doorsnede_mm2);
   const doorsnede = tekst === "0" ? "?" : tekst;
-  return `${kabeltype} ${node.aantalGeleiders}G${doorsnede}`;
+  return `${kabeltype} ${node.aantalGeleiders}G${doorsnede}${node.brandreactieklasse?.trim() ? ` ${node.brandreactieklasse.trim()}` : ""}`;
 }
 
 /** De gevoeligheid in ampere uit milliampere: maximaal 3 decimalen, zonder overbodige nullen en met een komma. Zonder Intl, voor een vast resultaat. */
@@ -41,7 +41,7 @@ export function beveiligingLabel(node: NodeVan<"automaat"> | NodeVan<"zekering">
     case "zekering":
       return `${node.nominaal_A} A`;
     case "differentieel":
-      return `${node.nominaal_A}/${ampereTekst(node.gevoeligheid_mA)}A type ${node.klasse}${polenSuffix(node.polen)}`;
+      return `${node.referentie ? `${node.referentie} \u00b7 ` : ""}${node.nominaal_A}/${ampereTekst(node.gevoeligheid_mA)}A type ${node.klasse}${polenSuffix(node.polen)}`;
   }
 }
 

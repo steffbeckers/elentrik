@@ -23,7 +23,7 @@ function bladeren(boom: Boom | string): string[] {
 }
 
 /** Sleutels die geen eigen veld krijgen: structuur, of in `GEMEENSCHAPPELIJK`. */
-const ZONDER_EIGEN_VELD = new Set(["id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam"]);
+const ZONDER_EIGEN_VELD = new Set(["id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam", "aanleg"]);
 
 /** Minimale vorm van een Zod-schema, zodat de test los staat van de introspectie in velden.ts. */
 type Schema = { def: { type: string; innerType?: Schema; options?: Schema[] }; options?: unknown[]; values?: Set<unknown> };
@@ -70,7 +70,7 @@ describe("VELDEN", () => {
     const sleutels = Object.keys(shape).filter((s) => !ZONDER_EIGEN_VELD.has(s));
 
     test("elke sleutel heeft precies één veld, en er zijn geen andere velden", () => {
-      expect(VELDEN[type].map((v) => v.sleutel).toSorted()).toEqual(sleutels.toSorted());
+      expect(VELDEN[type].filter(v => !v.sleutel.startsWith("aanleg.")).map((v) => v.sleutel).toSorted()).toEqual(sleutels.toSorted());
     });
 
     test.each(sleutels)("%s: soort, optioneel en keuzeopties volgen het schema", (sleutel) => {
@@ -153,3 +153,5 @@ describe("GEMEENSCHAPPELIJK", () => {
     expect(tekst("ruimtes.hal")).toBe("Hal");
   });
 });
+
+test("installation exposes separate optional location and conduit fields",()=>{expect(VELDEN.leiding).toContainEqual(expect.objectContaining({sleutel:"aanleg.ligging",soort:"keuze",optioneel:true}));expect(VELDEN.leiding).toContainEqual(expect.objectContaining({sleutel:"aanleg.inBuis",soort:"schakelaar",optioneel:true}));});

@@ -90,7 +90,7 @@ describe("parseDocument", () => {
 
   test("andere schemaVersion wordt geweigerd", () => {
     const doc: any = nieuwDocument();
-    doc.schemaVersion = 2;
+    doc.schemaVersion = SCHEMA_VERSIE + 1;
     expect(vangFout(() => parseDocument(doc)).code).toBe("ONGELDIG_SCHEMA");
   });
 
@@ -113,7 +113,7 @@ describe("parseDocument", () => {
       { ...basis, id: nieuwId(), type: "automaat", nominaal_A: 16, polen: 1, curve: "B", kortsluitvermogen_kA: 6 },
       { ...basis, id: nieuwId(), type: "zekering", nominaal_A: 20 },
       { ...basis, id: nieuwId(), type: "verdeelbord", naam: "Hoofdbord" },
-      { ...basis, id: nieuwId(), type: "leiding", kabeltype: "VOB", doorsnede_mm2: 2.5, aantalGeleiders: 3, plaatsing: "inbouw" },
+      { ...basis, id: nieuwId(), type: "leiding", kabeltype: "VOB", doorsnede_mm2: 2.5, aantalGeleiders: 3, aanleg: {ligging: "inbouw", inBuis:false} },
       { ...basis, id: nieuwId(), type: "contactdoos", aantal: 2, randaarde: true, kinderbeveiliging: true, waterdicht: false },
       { ...basis, id: nieuwId(), type: "lichtpunt", aantal: 1, soort: "led", ruimte: "keuken", label: "Plafond" },
       { ...basis, id: nieuwId(), type: "schakelaar", soort: "wissel", waterdicht: false },

@@ -9,20 +9,8 @@ import {
 } from "@elentrik/model";
 import type { Analyse, Keten, Kring } from "./types";
 
-/** Bijectief base-26: 0 → "A", 25 → "Z", 26 → "AA", 27 → "AB", … */
-export function kringLetter(index: number): string {
-  if (!Number.isSafeInteger(index) || index < 0) {
-    throw new RangeError(`kringLetter: ongeldige index ${index}`);
-  }
-  let letters = "";
-  let rest = index + 1;
-  while (rest > 0) {
-    const cijfer = (rest - 1) % 26;
-    letters = String.fromCharCode(65 + cijfer) + letters;
-    rest = (rest - 1 - cijfer) / 26;
-  }
-  return letters;
-}
+export { kringLetter } from "@elentrik/model";
+import { bepaalKringCodes } from "@elentrik/model";
 
 const isBeveiliging = (node: Node): boolean => (BEVEILIGING_TYPES as readonly string[]).includes(node.type);
 const isPunt = (node: Node): boolean => (PUNT_TYPES as readonly string[]).includes(node.type);
@@ -87,6 +75,7 @@ type Kader = {
  *   `Keten.differentielen`-array; die is bevroren.
  */
 export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
+  const lokaleCodes = bepaalKringCodes(doc);
   const kringen: Kring[] = [];
   const kringVanNode: Record<NodeId, NodeId> = {};
   const puntLabels: Record<NodeId, string> = {};
@@ -137,7 +126,7 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
     } else if (bordBoven && isBeveiliging(node)) {
       const nieuw: Kring = {
         id,
-        label: bordBoven.reeks.prefix + kringLetter(bordBoven.reeks.volgende++),
+        label: bordBoven.reeks.prefix + lokaleCodes[id],
         beveiligingId: id,
         verdeelbordId: bordBoven.id,
         puntIds: [],

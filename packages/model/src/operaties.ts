@@ -5,6 +5,8 @@ import { NodeSchema, type InstallatieDocument, type Node, type NodeId } from "./
 import { TOEGELATEN_KINDEREN } from "./structuur";
 import { magAftakkingKind } from "./aftakkingen";
 
+import { bepaalKringCodes } from "./referenties";
+
 enablePatches();
 
 /** Eigenschappen van een nieuwe node: alles behalve de structuurvelden `id`, `parentId` en `kinderen`. */
@@ -73,6 +75,7 @@ export function resultaat<T extends object>(
   extra?: T,
 ): OperatieResultaat & T {
   const [nieuw, patches, inversePatches] = produceWithPatches(doc, recept);
+  bepaalKringCodes(nieuw);
   return { ...(extra as T), doc: nieuw, patches, inversePatches };
 }
 

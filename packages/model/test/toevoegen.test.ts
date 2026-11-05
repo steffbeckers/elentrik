@@ -486,7 +486,6 @@ describe("SJABLONEN", () => {
     expect(enkel.kinderen?.[0]?.kinderen?.[0]).toMatchObject({
       type: "toestel",
       soort: "kookplaat",
-      ruimte: "keuken",
     });
     const drie = sjabloonVoor("kookplaat", "3N400V").boom;
     expect(drie).toMatchObject({ polen: 4 });
@@ -504,7 +503,6 @@ describe("SJABLONEN", () => {
     expect(was.kinderen?.[0]).toMatchObject({ nominaal_A: 20, polen: 2, curve: "B" });
     expect(was.kinderen?.[0]?.kinderen?.[0]?.kinderen?.[0]).toMatchObject({
       soort: "wasmachine",
-      ruimte: "wasplaats",
     });
     const bad = sjabloonVoor("badkamer", "2x230V").boom;
     expect(typesVan(bad)).toEqual([
@@ -516,7 +514,7 @@ describe("SJABLONEN", () => {
     ]);
     expect(bad).toMatchObject({ gevoeligheid_mA: 30 });
     expect(bad.kinderen?.[0]).toMatchObject({ nominaal_A: 16 });
-    expect(bad.kinderen?.[0]?.kinderen?.[0]?.kinderen?.[0]).toMatchObject({ ruimte: "badkamer" });
+    expect(bad.kinderen?.[0]?.kinderen?.[0]?.kinderen?.[0]).not.toHaveProperty("ruimte");
   });
 
   test("onbekend sjabloon gooit ONGELDIG_SCHEMA", () => {
@@ -528,7 +526,7 @@ describe("voegSjabloonToe", () => {
   test("op een verdeelbord: één undo-stap en geldige structuur", () => {
     const { doc, bordId } = start();
     for (const sjabloon of SJABLONEN) {
-      const r = voegSjabloonToe(doc, bordId, sjabloon.id);
+      const r = voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:bordId}, sjabloon.id);
       expect(haal(r.doc, bordId).kinderen).toEqual([r.id]);
       expect(valideerStructuur(r.doc)).toEqual([]);
       expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
@@ -536,22 +534,24 @@ describe("voegSjabloonToe", () => {
   });
 
   test("op een differentieel", () => {
-    const { doc, differentieelId } = start();
-    const r = voegSjabloonToe(doc, differentieelId, "badkamer");
+    const x = start();
+    const d = voegToe(x.doc,x.bordId,STANDAARD.differentieel);
+    const doc=d.doc, differentieelId=d.id;
+    const r = voegSjabloonToe(doc, {soort:"bestaande-differentieel",nodeId:differentieelId}, "badkamer");
     expect(haal(r.doc, r.id).parentId).toBe(differentieelId);
     expect(valideerStructuur(r.doc)).toEqual([]);
   });
 
   test("het kookplaatsjabloon volgt het stroomtype van het document", () => {
     const { doc, bordId } = start("3N400V");
-    const r = voegSjabloonToe(doc, bordId, "kookplaat");
-    expect(haal(r.doc, r.id)).toMatchObject({ type: "automaat", polen: 4 });
+    const r = voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:bordId}, "kookplaat");
+    expect(haal(r.doc, haal(r.doc,r.id).kinderen[0]!)).toMatchObject({ type: "automaat", polen: 4 });
   });
 
   test("een ander doel: NIET_TOEGELATEN_KIND", () => {
     const { doc, tellerId } = start();
     for (const id of [doc.rootId, tellerId]) {
-      expect(vangFout(() => voegSjabloonToe(doc, id, "kring-verlichting")).code).toBe(
+      expect(vangFout(() => voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:id}, "kring-verlichting")).code).toBe(
         "NIET_TOEGELATEN_KIND",
       );
     }
@@ -559,7 +559,7 @@ describe("voegSjabloonToe", () => {
 
   test("een onbekende node: ONBEKENDE_NODE", () => {
     const { doc } = start();
-    expect(vangFout(() => voegSjabloonToe(doc, "bestaat-niet", "kookplaat")).code).toBe(
+    expect(vangFout(() => voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:"bestaat-niet"}, "kookplaat")).code).toBe(
       "ONBEKENDE_NODE",
     );
   });
@@ -567,7 +567,7 @@ describe("voegSjabloonToe", () => {
   test("de sjablonen zijn onveranderd na gebruik", () => {
     const voor: Sjabloon[] = kloon([...SJABLONEN]);
     const { doc, bordId } = start();
-    voegSjabloonToe(doc, bordId, "kring-stopcontacten");
+    voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:bordId}, "kring-stopcontacten");
     expect(kloon([...SJABLONEN])).toEqual(voor);
   });
 });
