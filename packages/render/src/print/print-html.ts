@@ -106,9 +106,13 @@ function situatiePaginas(c: Context, pagina: SituatiePagina, bestand: string): P
   const kolommen = Math.max(1, Math.ceil((breedte - 1e-7) / c.ruimte.breedte));
   const rijen = Math.max(1, Math.ceil((hoogte - 1e-7) / planHoogte));
   const grootte = symboolGrootte(achtergrond);
-  const items = situatieItems(c.doc, c.analyse, pagina.id, c.terugval).map(item => ({ ...item,
-    labelGrootte_px: Math.max(item.labelGrootte_px ?? (item.symboolGrootte_px ?? grootte) * .45, 2.5 / schaal),
-  }));
+  const items = situatieItems(c.doc, c.analyse, pagina.id, c.terugval).map(item => {
+    const node = c.doc.nodes[item.nodeId];
+    return { ...item,
+      labelGrootte_px: Math.max(item.labelGrootte_px ?? (item.symboolGrootte_px ?? grootte) * .45, 2.5 / schaal),
+      ...(node && (node.type === "contactdoos" || node.type === "lichtpunt") && node.aantal > 1 ? { aantalLabel: `×${node.aantal}` } : {}),
+    };
+  });
   const laag = situatieLaagSvg(items, grootte);
   const melding = { nl: "Passend op papier", fr: "Adapté au papier", en: "Fit to paper" }[c.taal];
   const bijschrift = gekalibreerd
