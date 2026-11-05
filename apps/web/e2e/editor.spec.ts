@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { selecteerSchemaNode } from "./hulp/schema-selectie";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "editor" });
@@ -45,16 +46,14 @@ async function selecteerBij(page: Page, tekst: string) {
     const afstand = Math.hypot(m.x - tekstMidden.x, m.y - tekstMidden.y);
     if (afstand < beste.afstand) beste = { afstand, id: (await symbool.getAttribute("data-node-id"))! };
   }
-  await canvas.locator(`[data-node-id="${beste.id}"]`).click({ force: true });
-  await expect(page.getByTestId(`selectie-${beste.id}`)).toHaveCount(1);
+  await selecteerSchemaNode(page, beste.id);
   return beste.id;
 }
 
-/** Selecteert een node via zijn id (een leiding is een lijn zonder breedte, dus een geforceerde klik). */
+/** Selecteert een node via een werkelijk aanklikbaar symboolsegment. */
 async function selecteerOpId(page: Page, id: string) {
   await pasTeMaken(page);
-  await page.getByTestId("schema-canvas").locator(`[data-node-id="${id}"]`).click({ force: true });
-  await expect(page.getByTestId(`selectie-${id}`)).toHaveCount(1);
+  await selecteerSchemaNode(page, id);
 }
 
 test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({ page, request }) => {

@@ -12,6 +12,7 @@ import {
   type NodeInvoer,
 } from "@elentrik/model";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { selecteerSchemaNode } from "./hulp/schema-selectie";
 
 gebruikTestgebruiker(test, { voorvoegsel: "elektricien-workflow" });
 type Project = { versie: number; document: InstallatieDocument };
@@ -53,10 +54,7 @@ async function seed(request: APIRequestContext) {
 }
 async function selecteer(page: Page, id: string) {
   await page.getByRole("button", { name: "Passend maken" }).click();
-  await page
-    .getByTestId("schema-canvas")
-    .locator(`[data-node-id="${id}"]`)
-    .click({ force: true });
+  await selecteerSchemaNode(page, id);
 }
 function aantalDifferentielen(doc: InstallatieDocument) {
   return Object.values(doc.nodes).filter((n) => n.type === "differentieel")
