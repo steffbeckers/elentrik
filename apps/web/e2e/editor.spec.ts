@@ -174,6 +174,7 @@ test("ongeldige nominale stroom blijft zichtbaar na blur en selectie verlaten", 
   await nieuw.getByLabel("Naam").fill(projectNaam);
   await nieuw.getByRole("button", { name: "Aanmaken" }).click();
   await page.getByRole("row").filter({ hasText: projectNaam }).getByRole("link", { name: "Openen" }).click();
+  await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
   const projectId = new URL(page.url()).pathname.split("/").pop()!;
   await pasTeMaken(page);
   await page.getByTestId("schema-canvas").locator('[data-testid^="plus-rail-einde-"]').click();
@@ -181,6 +182,7 @@ test("ongeldige nominale stroom blijft zichtbaar na blur en selectie verlaten", 
   await page.getByTestId("werkruimte-eigenschappen").click();
   const stroom = page.getByTestId("veld-nominaal_A");
   await expect(stroom).toHaveValue("16");
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
   await stroom.fill("-1");
   await stroom.blur();
   await expect(stroom).toHaveValue("-1");
@@ -193,8 +195,10 @@ test("ongeldige nominale stroom blijft zichtbaar na blur en selectie verlaten", 
   await page.getByTestId("gebruiker-menu").click();
   await page.getByTestId("taal-menu").click();
   await page.getByRole("menuitemcheckbox", { name: "Nederlands" }).click();
-  const doc = (await (await request.get(`/api/projecten/${projectId}`)).json()).document;
-  // Even while autosave settles, no invalid value can enter the document.
+  const antwoord = await request.get(`/api/projecten/${projectId}`);
+  expect(antwoord.ok()).toBe(true);
+  const doc = (await antwoord.json()).document;
+  // The saved valid value survives invalid drafts, blur and a language round-trip.
   expect(doc.nodes[automaatId].nominaal_A).toBe(16);
   await selecteerBij(page, "A1");
   const melding = page.getByTestId("verlaten-concept");
