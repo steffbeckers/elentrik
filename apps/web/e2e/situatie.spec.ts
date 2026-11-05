@@ -151,7 +151,7 @@ test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend pla
   await expect(page.getByTestId("plan-leeg")).toBeVisible();
   await expect(page.getByTestId("te-plaatsen-A1")).toBeVisible();
   await expect(page.getByTestId("te-plaatsen-A2")).toBeVisible();
-  const ongeplaatst = await page.locator('button[data-testid^="te-plaatsen-"]').count();
+  const ongeplaatst = await page.locator('button[draggable][data-testid^="te-plaatsen-"]').count();
   await voegPlanToe(page, PLAN_PNG, { leeg: true });
   await expect(page.getByTestId("pagina-tab-0")).toContainText("plan");
   await expect.poll(() => planAfbeeldingGeladen(page)).toBe(1200);
