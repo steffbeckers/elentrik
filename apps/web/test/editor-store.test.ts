@@ -8,18 +8,31 @@ import {
 } from "@elentrik/model";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test } from "vitest";
-import { BEGIN_VOORINSTELLINGEN, MAX_STAPPEN, useEditorStore } from "../app/stores/editor";
+import {
+  BEGIN_VOORINSTELLINGEN,
+  MAX_STAPPEN,
+  useEditorStore,
+} from "../app/stores/editor";
 import { useSessieStore } from "../app/stores/sessie";
 
 type Store = ReturnType<typeof useEditorStore>;
 
 function startDocument(): InstallatieDocument {
-  return nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+  return nieuwProjectDocument({
+    klantNaam: "Janssens",
+    stroomtype: "2x230V",
+    datum: "2026-10-18",
+  });
 }
 
 function laadNieuw(): Store {
   const store = useEditorStore();
-  store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
+  store.laad({
+    id: "p1",
+    naam: "Woning Janssens",
+    versie: 1,
+    document: startDocument(),
+  });
   return store;
 }
 
@@ -44,7 +57,10 @@ function eersteVan(store: Store, type: Node["type"]): NodeId {
 function nieuweKring(store: Store): NodeId {
   const onderdeel = store.onderdeel;
   store.onderdeel = "leiding";
-  store.voegToe({ soort: "rail-einde", nodeId: eersteVan(store, "verdeelbord") });
+  store.voegToe({
+    soort: "rail-einde",
+    nodeId: eersteVan(store, "verdeelbord"),
+  });
   store.onderdeel = onderdeel;
   return store.selectie[0]!;
 }
@@ -74,12 +90,18 @@ describe("vrije aftakkingen", () => {
     const eerste = store.selectie[0]!;
     store.voegToeBijSelectie();
     const tweede = store.selectie[0]!;
-    expect(node(store, tweede)).toMatchObject({ type: "schakelaar", soort: "wissel", aftakking: true });
+    expect(node(store, tweede)).toMatchObject({
+      type: "schakelaar",
+      soort: "wissel",
+      aftakking: true,
+    });
     store.kiesVariant("lichtpunt", { aantal: 2 });
     store.voegToeBijSelectie();
     const lamp = store.selectie[0]!;
     expect(node(store, lamp)).toMatchObject({ aantal: 2, aftakking: true });
-    expect([eerste, tweede, lamp].map((id) => store.analyse!.puntLabels[id])).toEqual(["A1", "A1", "A1"]);
+    expect(
+      [eerste, tweede, lamp].map((id) => store.analyse!.puntLabels[id]),
+    ).toEqual(["A1", "A1", "A1"]);
     store.ongedaanMaken();
     expect(doc(store).nodes[lamp]).toBeUndefined();
     store.opnieuw();
@@ -95,7 +117,11 @@ describe("vrije aftakkingen", () => {
     const leiding = nieuweKring(store);
     store.kiesVariant("schakelaar", {});
     const voor = store.document;
-    for (const ids of [[], [leiding, eersteVan(store, "verdeelbord")], [eersteVan(store, "verdeelbord")]]) {
+    for (const ids of [
+      [],
+      [leiding, eersteVan(store, "verdeelbord")],
+      [eersteVan(store, "verdeelbord")],
+    ]) {
       store.selectie = ids;
       expect(store.kanAftakkingToevoegen).toBe(false);
       store.voegAftakkingToeBijSelectie();
@@ -126,7 +152,12 @@ describe("laad", () => {
   test("elke laad verhoogt de laadgeneratie, ook voor hetzelfde project", () => {
     const store = laadNieuw();
     const eerste = store.laadGeneratie;
-    store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
+    store.laad({
+      id: "p1",
+      naam: "Woning Janssens",
+      versie: 1,
+      document: startDocument(),
+    });
     expect(store.laadGeneratie).toBe(eerste + 1);
   });
 });
@@ -173,14 +204,24 @@ describe("voorinstelling per onderdeel", () => {
   test("laad raakt de voorinstellingen niet aan", () => {
     const store = laadNieuw();
     store.kiesVariant("contactdoos", { waterdicht: true });
-    store.laad({ id: "p2", naam: "Andere", versie: 1, document: startDocument() });
+    store.laad({
+      id: "p2",
+      naam: "Andere",
+      versie: 1,
+      document: startDocument(),
+    });
     expect(store.voorinstelling).toEqual({ waterdicht: true });
   });
 
   test("laad sluit het symbolenvenster", () => {
     const store = laadNieuw();
     store.symbolenOpen = true;
-    store.laad({ id: "p2", naam: "Andere", versie: 1, document: startDocument() });
+    store.laad({
+      id: "p2",
+      naam: "Andere",
+      versie: 1,
+      document: startDocument(),
+    });
     expect(store.symbolenOpen).toBe(false);
   });
 
@@ -188,12 +229,16 @@ describe("voorinstelling per onderdeel", () => {
     const store = laadNieuw();
     expect(Object.isFrozen(BEGIN_VOORINSTELLINGEN)).toBe(true);
     expect(Object.isFrozen(BEGIN_VOORINSTELLINGEN.toestel)).toBe(true);
-    expect(store.voorinstellingen.toestel).not.toBe(BEGIN_VOORINSTELLINGEN.toestel);
+    expect(store.voorinstellingen.toestel).not.toBe(
+      BEGIN_VOORINSTELLINGEN.toestel,
+    );
     store.toestelsoort = "boiler";
     expect(BEGIN_VOORINSTELLINGEN.toestel).toEqual({ soort: "wasmachine" });
     store.zetStandaard("toestel");
     expect(store.voorinstellingen.toestel).toEqual({ soort: "wasmachine" });
-    expect(store.voorinstellingen.toestel).not.toBe(BEGIN_VOORINSTELLINGEN.toestel);
+    expect(store.voorinstellingen.toestel).not.toBe(
+      BEGIN_VOORINSTELLINGEN.toestel,
+    );
   });
 
   test("alleen-lezen: kiesVariant verandert niets, het venster mag wel open", () => {
@@ -213,7 +258,12 @@ describe("tabblad", () => {
     expect(store.tabblad).toBe("eendraadschema");
     store.tabblad = "kringenlijst";
     expect(store.tabblad).toBe("kringenlijst");
-    store.laad({ id: "p2", naam: "Andere", versie: 1, document: startDocument() });
+    store.laad({
+      id: "p2",
+      naam: "Andere",
+      versie: 1,
+      document: startDocument(),
+    });
     expect(store.tabblad).toBe("eendraadschema");
   });
 
@@ -236,13 +286,18 @@ describe("undo/redo", () => {
     const na = doc(store);
 
     expect(store.terug).toHaveLength(1);
-    expect(Object.keys(na.nodes)).toHaveLength(Object.keys(origineel.nodes).length + 3);
+    expect(Object.keys(na.nodes)).toHaveLength(
+      Object.keys(origineel.nodes).length + 3,
+    );
     // Het gekozen onderdeel staat meteen boven de nieuwe leiding en is geselecteerd.
     const contactdoos = node(store, store.selectie[0]!);
     expect(contactdoos.type).toBe("contactdoos");
     const leiding = node(store, contactdoos.parentId!);
     expect(leiding.type).toBe("leiding");
-    expect(node(store, leiding.parentId!)).toMatchObject({ type: "automaat", parentId: bordId });
+    expect(node(store, leiding.parentId!)).toMatchObject({
+      type: "automaat",
+      parentId: bordId,
+    });
 
     store.ongedaanMaken();
     expect(store.document).toEqual(origineel);
@@ -316,7 +371,9 @@ describe("undo/redo", () => {
     const voor = doc(store);
     // De automaat van de tweede kring heeft geen `doorsnede_mm2`.
     const automaat = node(store, b).parentId!;
-    expect(() => store.wijzigVeld([a, automaat], "doorsnede_mm2", 4)).toThrow(DocumentFout);
+    expect(() => store.wijzigVeld([a, automaat], "doorsnede_mm2", 4)).toThrow(
+      DocumentFout,
+    );
     expect(store.document).toBe(voor);
     expect(store.terug).toHaveLength(2);
   });
@@ -325,7 +382,9 @@ describe("undo/redo", () => {
     const store = laadNieuw();
     const leidingId = nieuweKring(store); // stap 1
     for (let i = 0; i < MAX_STAPPEN; i++) {
-      store.pasToe(wijzigEigenschappen(doc(store), leidingId, { label: `L${i}` }));
+      store.pasToe(
+        wijzigEigenschappen(doc(store), leidingId, { label: `L${i}` }),
+      );
     }
     expect(store.terug).toHaveLength(MAX_STAPPEN);
     for (let i = 0; i < MAX_STAPPEN; i++) store.ongedaanMaken();
@@ -346,7 +405,9 @@ describe("afgeleide gegevens", () => {
 
     stapel(store, 1);
     expect(store.aantalFouten).toBeGreaterThan(voor);
-    expect(store.bevindingen.some((b) => b.ernst === "fout" && b.regelId.length > 0)).toBe(true);
+    expect(
+      store.bevindingen.some((b) => b.ernst === "fout" && b.regelId.length > 0),
+    ).toBe(true);
   });
 
   test("opmaak en svg volgen het document", () => {
@@ -411,22 +472,25 @@ describe("verwijderSelectie", () => {
     ["teller", false],
     ["aansluiting", true],
     ["aansluiting", false],
-  ] as const)("%s (heleTak %s) gooit ROOT_NIET_WIJZIGBAAR en laat het document ongewijzigd", (type, heleTak) => {
-    const store = laadNieuw();
-    const voor = doc(store);
-    store.selectie = [eersteVan(store, type)];
+  ] as const)(
+    "%s (heleTak %s) gooit ROOT_NIET_WIJZIGBAAR en laat het document ongewijzigd",
+    (type, heleTak) => {
+      const store = laadNieuw();
+      const voor = doc(store);
+      store.selectie = [eersteVan(store, type)];
 
-    let fout: unknown;
-    try {
-      store.verwijderSelectie(heleTak);
-    } catch (e) {
-      fout = e;
-    }
-    expect(fout).toBeInstanceOf(DocumentFout);
-    expect((fout as DocumentFout).code).toBe("ROOT_NIET_WIJZIGBAAR");
-    expect(store.document).toBe(voor);
-    expect(store.terug).toHaveLength(0);
-  });
+      let fout: unknown;
+      try {
+        store.verwijderSelectie(heleTak);
+      } catch (e) {
+        fout = e;
+      }
+      expect(fout).toBeInstanceOf(DocumentFout);
+      expect((fout as DocumentFout).code).toBe("ROOT_NIET_WIJZIGBAAR");
+      expect(store.document).toBe(voor);
+      expect(store.terug).toHaveLength(0);
+    },
+  );
 });
 
 describe("voegToeBijSelectie", () => {
@@ -475,21 +539,33 @@ describe("voegSjabloonToe", () => {
     const store = laadNieuw();
     const bordId = eersteVan(store, "verdeelbord");
 
-    store.voegSjabloonToe("badkamer", {soort:"nieuw-op-bord",nodeId:eersteVan(store,"verdeelbord")});
+    store.voegSjabloonToe("badkamer", {
+      soort: "nieuw-op-bord",
+      nodeId: eersteVan(store, "verdeelbord"),
+    });
 
     const kinderen = node(store, bordId).kinderen;
     expect(kinderen).toHaveLength(1);
-    expect(node(store, kinderen[0]!)).toMatchObject({ type: "differentieel", gevoeligheid_mA: 30 });
+    expect(node(store, kinderen[0]!)).toMatchObject({
+      type: "differentieel",
+      gevoeligheid_mA: 30,
+    });
     expect(store.terug).toHaveLength(1);
   });
 
   test("met een geselecteerd differentieel komt het sjabloon op diens rail", () => {
     const store = laadNieuw();
-    store.voegSjabloonToe("badkamer", {soort:"nieuw-op-bord",nodeId:eersteVan(store,"verdeelbord")});
+    store.voegSjabloonToe("badkamer", {
+      soort: "nieuw-op-bord",
+      nodeId: eersteVan(store, "verdeelbord"),
+    });
     const diffId = node(store, eersteVan(store, "verdeelbord")).kinderen[0]!;
 
     store.selectie = [diffId];
-    store.voegSjabloonToe("kring-verlichting", {soort:"bestaande-differentieel",nodeId:diffId});
+    store.voegSjabloonToe("kring-verlichting", {
+      soort: "bestaande-differentieel",
+      nodeId: diffId,
+    });
 
     expect(node(store, diffId).kinderen).toHaveLength(2);
   });
@@ -497,18 +573,31 @@ describe("voegSjabloonToe", () => {
 
 describe("afwijkingen en projectgegevens", () => {
   test("zetAfwijking maakt de bevinding afgeweken, wisAfwijking haalt ze weg", () => {
-    useSessieStore().gebruiker = { id: "u1", naam: "An Peeters", email: "an@example.test" };
+    useSessieStore().gebruiker = {
+      id: "u1",
+      naam: "An Peeters",
+      email: "an@example.test",
+    };
     const store = laadNieuw();
     nieuweKring(store);
     stapel(store, 9);
-    const fout = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
+    const fout = store.bevindingen.find(
+      (b) => b.ernst === "fout" && !b.afgeweken,
+    )!;
     const voor = store.aantalFouten;
 
-    store.zetAfwijking(fout.regelId, fout.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    store.zetAfwijking(
+      fout.regelId,
+      fout.nodeIds[0]!,
+      "Bewust zo ontworpen door de klant",
+    );
     expect(store.aantalFouten).toBe(voor - 1);
     const afwijking = doc(store).afwijkingen[0]!;
     // `door` is de naam van de ingelogde gebruiker.
-    expect(afwijking).toMatchObject({ regelId: fout.regelId, door: "An Peeters" });
+    expect(afwijking).toMatchObject({
+      regelId: fout.regelId,
+      door: "An Peeters",
+    });
     expect(afwijking.datum).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     store.wisAfwijking(fout.regelId, fout.nodeIds[0]!);
@@ -518,39 +607,84 @@ describe("afwijkingen en projectgegevens", () => {
 
   test("zetAfwijking na een verlopen sessie: de naam van wie het project opende", () => {
     const sessie = useSessieStore();
-    sessie.gebruiker = { id: "u1", naam: "An Peeters", email: "an@example.test" };
+    sessie.gebruiker = {
+      id: "u1",
+      naam: "An Peeters",
+      email: "an@example.test",
+    };
     const store = laadNieuw();
     nieuweKring(store);
     stapel(store, 9);
-    const fout = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
+    const fout = store.bevindingen.find(
+      (b) => b.ernst === "fout" && !b.afgeweken,
+    )!;
     // De sessie verliep: de sessie-store is leeg, de editor werkt lokaal verder.
     sessie.gebruiker = null;
-    store.zetAfwijking(fout.regelId, fout.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    store.zetAfwijking(
+      fout.regelId,
+      fout.nodeIds[0]!,
+      "Bewust zo ontworpen door de klant",
+    );
     expect(doc(store).afwijkingen[0]).toMatchObject({ door: "An Peeters" });
   });
 
   test("zetAfwijking: een andere gebruiker die intussen inlogde, neemt de naam van het venster niet over", () => {
     const sessie = useSessieStore();
-    sessie.gebruiker = { id: "u1", naam: "An Peeters", email: "an@example.test" };
+    sessie.gebruiker = {
+      id: "u1",
+      naam: "An Peeters",
+      email: "an@example.test",
+    };
     const store = useEditorStore();
     store.nieuwVenster();
-    store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
+    store.laad({
+      id: "p1",
+      naam: "Woning Janssens",
+      versie: 1,
+      document: startDocument(),
+    });
     nieuweKring(store);
     stapel(store, 9);
-    sessie.gebruiker = { id: "u2", naam: "Bart Claes", email: "bart@example.test" };
+    sessie.gebruiker = {
+      id: "u2",
+      naam: "Bart Claes",
+      email: "bart@example.test",
+    };
     // Ook een nieuwe laad in hetzelfde venster (de serverversie) verandert dat niet.
-    store.laad({ id: "p1", naam: "Woning Janssens", versie: 2, document: doc(store) });
-    const fout = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
-    store.zetAfwijking(fout.regelId, fout.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    store.laad({
+      id: "p1",
+      naam: "Woning Janssens",
+      versie: 2,
+      document: doc(store),
+    });
+    const fout = store.bevindingen.find(
+      (b) => b.ernst === "fout" && !b.afgeweken,
+    )!;
+    store.zetAfwijking(
+      fout.regelId,
+      fout.nodeIds[0]!,
+      "Bewust zo ontworpen door de klant",
+    );
     expect(doc(store).afwijkingen[0]).toMatchObject({ door: "An Peeters" });
 
     // Een nieuw venster van Bart: dan wel Bart.
     store.nieuwVenster();
-    store.laad({ id: "p1", naam: "Woning Janssens", versie: 3, document: startDocument() });
+    store.laad({
+      id: "p1",
+      naam: "Woning Janssens",
+      versie: 3,
+      document: startDocument(),
+    });
     nieuweKring(store);
     stapel(store, 9);
-    const andere = store.bevindingen.find((b) => b.ernst === "fout" && !b.afgeweken)!;
-    store.zetAfwijking(andere.regelId, andere.nodeIds[0]!, "Bewust zo ontworpen door de klant");
+    const andere = store.bevindingen.find(
+      (b) => b.ernst === "fout" && !b.afgeweken,
+    )!;
+    store.zetAfwijking(
+      andere.regelId,
+      andere.nodeIds[0]!,
+      "Bewust zo ontworpen door de klant",
+    );
     expect(doc(store).afwijkingen[0]).toMatchObject({ door: "Bart Claes" });
   });
 
@@ -558,7 +692,9 @@ describe("afwijkingen en projectgegevens", () => {
     const store = laadNieuw();
     const leidingId = nieuweKring(store);
     const voor = doc(store);
-    expect(() => store.zetAfwijking("max-contactdozen", leidingId, "kort")).toThrow(DocumentFout);
+    expect(() =>
+      store.zetAfwijking("max-contactdozen", leidingId, "kort"),
+    ).toThrow(DocumentFout);
     expect(store.document).toBe(voor);
     expect(store.terug).toHaveLength(1);
   });
@@ -583,8 +719,21 @@ describe("afwijkingen en projectgegevens", () => {
   });
 
   describe("wijzigProjectgegevens met adressen, EAN en datum", () => {
-    const kerkstraat = { straat: "Kerkstraat", nummer: "12", postcode: "2000", gemeente: "Antwerpen", land: "België" };
-    const dorpsstraat = { straat: "Dorpsstraat", nummer: "3", bus: "b", postcode: "9000", gemeente: "Gent", land: "België" };
+    const kerkstraat = {
+      straat: "Kerkstraat",
+      nummer: "12",
+      postcode: "2000",
+      gemeente: "Antwerpen",
+      land: "België",
+    };
+    const dorpsstraat = {
+      straat: "Dorpsstraat",
+      nummer: "3",
+      bus: "b",
+      postcode: "9000",
+      gemeente: "Gent",
+      land: "België",
+    };
 
     test("alle documentvelden samen zijn één undo-stap en undo herstelt het oude adres", () => {
       const store = laadNieuw();
@@ -599,7 +748,10 @@ describe("afwijkingen en projectgegevens", () => {
         datum: "2026-11-02",
       });
 
-      expect(doc(store).meta.klant).toEqual({ naam: "Peeters", adres: kerkstraat });
+      expect(doc(store).meta.klant).toEqual({
+        naam: "Peeters",
+        adres: kerkstraat,
+      });
       expect(doc(store).meta.werfadres).toEqual(dorpsstraat);
       expect(doc(store).meta.ean).toBe("541448800000000001");
       expect(doc(store).meta.datum).toBe("2026-11-02");
@@ -633,7 +785,11 @@ describe("afwijkingen en projectgegevens", () => {
 
     test("ongewijzigde adressen, EAN en datum maken geen undo-stap", () => {
       const store = laadNieuw();
-      store.wijzigProjectgegevens({ klantAdres: kerkstraat, werfadres: dorpsstraat, ean: "123" });
+      store.wijzigProjectgegevens({
+        klantAdres: kerkstraat,
+        werfadres: dorpsstraat,
+        ean: "123",
+      });
       const stappen = store.terug.length;
       const teller = store.gewijzigdSindsOpslaan;
 
@@ -658,7 +814,10 @@ describe("afwijkingen en projectgegevens", () => {
       const store = laadNieuw();
       const voor = doc(store);
       expect(() =>
-        store.wijzigProjectgegevens({ naam: "X", werfadres: { straat: 1 } as never }),
+        store.wijzigProjectgegevens({
+          naam: "X",
+          werfadres: { straat: 1 } as never,
+        }),
       ).toThrow(DocumentFout);
       expect(store.document).toBe(voor);
       expect(store.naam).toBe("Woning Janssens");
@@ -777,7 +936,11 @@ describe("navigeer", () => {
   test("links en rechts springen naar de beveiliging van de vorige of volgende kring en klemmen aan de uiteinden", () => {
     const store = laadNieuw();
     driekringen(store);
-    const [eerste, midden, laatste] = beveiligingen(store) as [NodeId, NodeId, NodeId];
+    const [eerste, midden, laatste] = beveiligingen(store) as [
+      NodeId,
+      NodeId,
+      NodeId,
+    ];
     expect(new Set([eerste, midden, laatste]).size).toBe(3);
 
     // Start vanaf een punt in de middelste kring.
@@ -801,7 +964,8 @@ describe("navigeer", () => {
     const voor = doc(store);
 
     store.selectie = [];
-    for (const r of ["op", "neer", "links", "rechts"] as const) store.navigeer(r);
+    for (const r of ["op", "neer", "links", "rechts"] as const)
+      store.navigeer(r);
     expect(store.selectie).toEqual([]);
 
     const teller = eersteVan(store, "teller");
@@ -816,17 +980,46 @@ describe("navigeer", () => {
     expect(store.document).toBe(voor);
   });
 });
-test('explicit destinations have no fallback and light assemblies are one read-only-safe undo step',()=>{
- const store=laadNieuw();const bord=eersteVan(store,'verdeelbord');const voor=store.document;
- expect(()=>store.voegSjabloonToe('wasmachine')).toThrow();expect(store.document).toBe(voor);
- store.voegLichtschakelingToe({soort:'nieuw-op-bord',nodeId:bord},{schakeling:'kruis',aantal:3});
- expect(store.terug).toHaveLength(1);expect(new Set(Object.values(store.analyse!.puntLabels))).toEqual(new Set(['A1']));
- store.ongedaanMaken();expect(store.document).toEqual(voor);store.zetAlleenLezen(true);
- store.voegLichtschakelingToe({soort:'nieuw-op-bord',nodeId:bord},{schakeling:'enkel',aantal:1});expect(store.document).toEqual(voor);
+test("explicit destinations have no fallback and light assemblies are one read-only-safe undo step", () => {
+  const store = laadNieuw();
+  const bord = eersteVan(store, "verdeelbord");
+  const voor = store.document;
+  expect(() => store.voegSjabloonToe("wasmachine")).toThrow();
+  expect(store.document).toBe(voor);
+  store.voegLichtschakelingToe(
+    { soort: "nieuw-op-bord", nodeId: bord },
+    { schakeling: "kruis", aantal: 3 },
+  );
+  expect(store.terug).toHaveLength(1);
+  expect(new Set(Object.values(store.analyse!.puntLabels))).toEqual(
+    new Set(["A1"]),
+  );
+  store.ongedaanMaken();
+  expect(store.document).toEqual(voor);
+  store.zetAlleenLezen(true);
+  store.voegLichtschakelingToe(
+    { soort: "nieuw-op-bord", nodeId: bord },
+    { schakeling: "enkel", aantal: 1 },
+  );
+  expect(store.document).toEqual(voor);
 });
-test('combined installation fields compose without losing sibling values',()=>{
- const store=laadNieuw();const l=nieuweKring(store);
- store.wijzigVeld([l],'aanleg.ligging','inbouw');store.wijzigVeld([l],'aanleg.inBuis',true);
- expect(node(store,l)).toHaveProperty('aanleg',{ligging:'inbouw',inBuis:true});
- store.wijzigVeld([l],'aanleg.ligging',undefined);expect(node(store,l)).toHaveProperty('aanleg',{inBuis:true});
+test("combined installation fields compose without losing sibling values", () => {
+  const store = laadNieuw();
+  const l = nieuweKring(store);
+  store.wijzigVeld([l], "aanleg.ligging", "inbouw");
+  store.wijzigVeld([l], "aanleg.inBuis", true);
+  expect(node(store, l)).toHaveProperty("aanleg", {
+    ligging: "inbouw",
+    inBuis: true,
+  });
+  store.wijzigVeld([l], "aanleg.ligging", undefined);
+  expect(node(store, l)).toHaveProperty("aanleg", { inBuis: true });
+});
+test("loading a recovered v1 concept migrates it before exposing fields", () => {
+  const store = laadNieuw();
+  const raw = JSON.parse(JSON.stringify(startDocument()));
+  raw.schemaVersion = 1;
+  store.laad({ id: "p", naam: "Concept", versie: 1, document: raw });
+  expect(store.document!.schemaVersion).toBe(2);
+  expect(raw.schemaVersion).toBe(1);
 });

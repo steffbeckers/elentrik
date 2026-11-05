@@ -4,20 +4,33 @@ import {
   DocumentFout,
   nieuwId,
   nieuwProjectDocument,
-  parseDocument,
+  migreer,
   valideerStructuur,
   type InstallatieDocument,
   type Stroomtype,
   type Taal,
 } from "@elentrik/model";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import type { Project, ProjectSamenvatting } from "../../shared/projecten";
 import type { Db, Tx } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { controleerOpslagruimte } from "../bestanden/opslagruimte";
 import { bestanden, projecten } from "../db/schema";
-import { controleerPlanverwijzingen, nieuwePlanIds, planBestandIdsVan, UUID } from "./planverwijzingen";
+import {
+  controleerPlanverwijzingen,
+  nieuwePlanIds,
+  planBestandIdsVan,
+  UUID,
+} from "./planverwijzingen";
 
 export type ProjectFoutCode = "NIET_GEVONDEN" | "CONFLICT" | "ONGELDIG";
 
@@ -39,14 +52,21 @@ const leeft = isNull(projecten.verwijderd);
 
 /** Een project van een organisatie: het id en de organisatie moeten allebei kloppen. */
 function vanOrganisatie(organisatieId: string, id: string) {
-  return and(eq(projecten.id, id), eq(projecten.organisatieId, organisatieId), leeft);
+  return and(
+    eq(projecten.id, id),
+    eq(projecten.organisatieId, organisatieId),
+    leeft,
+  );
 }
 
 /**
  * De organisatie van een levend project, of null als het project niet bestaat, verwijderd is of
  * (nog) geen organisatie heeft. Voor de toegangscontrole op id (server/utils/toegang.ts).
  */
-export async function projectOrganisatie(db: Db, id: string): Promise<string | null> {
+export async function projectOrganisatie(
+  db: Db,
+  id: string,
+): Promise<string | null> {
   const [rij] = await db
     .select({ organisatieId: projecten.organisatieId })
     .from(projecten)
@@ -55,7 +75,10 @@ export async function projectOrganisatie(db: Db, id: string): Promise<string | n
 }
 
 /** De projecten van één organisatie, het laatst gewijzigde eerst. */
-export async function lijstProjecten(db: Db, organisatieId: string): Promise<ProjectSamenvatting[]> {
+export async function lijstProjecten(
+  db: Db,
+  organisatieId: string,
+): Promise<ProjectSamenvatting[]> {
   const rijen = await db
     .select({
       id: projecten.id,
@@ -66,7 +89,10 @@ export async function lijstProjecten(db: Db, organisatieId: string): Promise<Pro
     .from(projecten)
     .where(and(eq(projecten.organisatieId, organisatieId), leeft))
     .orderBy(desc(projecten.gewijzigd));
-  return rijen.map((rij) => ({ ...rij, gewijzigd: rij.gewijzigd.toISOString() }));
+  return rijen.map((rij) => ({
+    ...rij,
+    gewijzigd: rij.gewijzigd.toISOString(),
+  }));
 }
 
 /**
@@ -76,21 +102,37 @@ export async function lijstProjecten(db: Db, organisatieId: string): Promise<Pro
 export async function maakProject(
   db: Db,
   organisatieId: string,
-  invoer: { naam: string; klantnaam: string; stroomtype: Stroomtype; dossierTaal?: Taal },
+  invoer: {
+    naam: string;
+    klantnaam: string;
+    stroomtype: Stroomtype;
+    dossierTaal?: Taal;
+  },
 ): Promise<{ id: string; versie: number }> {
   const document = nieuwProjectDocument({
     klantNaam: invoer.klantnaam,
     stroomtype: invoer.stroomtype,
-    ...(invoer.dossierTaal !== undefined ? { dossierTaal: invoer.dossierTaal } : {}),
+    ...(invoer.dossierTaal !== undefined
+      ? { dossierTaal: invoer.dossierTaal }
+      : {}),
   });
   const [rij] = await db
     .insert(projecten)
-    .values({ organisatieId, naam: invoer.naam, klantnaam: invoer.klantnaam, document })
+    .values({
+      organisatieId,
+      naam: invoer.naam,
+      klantnaam: invoer.klantnaam,
+      document,
+    })
     .returning({ id: projecten.id, versie: projecten.versie });
   return rij!;
 }
 
-export async function haalProject(db: Db, organisatieId: string, id: string): Promise<Project | null> {
+export async function haalProject(
+  db: Db,
+  organisatieId: string,
+  id: string,
+): Promise<Project | null> {
   const [rij] = await db
     .select({
       id: projecten.id,
@@ -106,7 +148,7 @@ export async function haalProject(db: Db, organisatieId: string, id: string): Pr
   return {
     ...rij,
     organisatieId,
-    document: rij.document as InstallatieDocument,
+    document: valideerDocument(rij.document),
     gewijzigd: rij.gewijzigd.toISOString(),
   };
 }
@@ -114,9 +156,10 @@ export async function haalProject(db: Db, organisatieId: string, id: string): Pr
 function valideerDocument(invoer: unknown): InstallatieDocument {
   let document: InstallatieDocument;
   try {
-    document = parseDocument(invoer);
+    document = migreer(invoer);
   } catch (fout) {
-    if (fout instanceof DocumentFout) throw new ProjectFout("ONGELDIG", fout.details);
+    if (fout instanceof DocumentFout)
+      throw new ProjectFout("ONGELDIG", fout.details);
     throw fout;
   }
   const problemen = valideerStructuur(document);
@@ -141,20 +184,34 @@ export async function bewaarProject(
   id: string,
   versie: number,
   invoer: { naam?: string; document: unknown },
-  metWijziging?: (tx: Tx, voor: { naam: string; versie: number; document: InstallatieDocument }, na: { naam: string; versie: number; document: InstallatieDocument }) => Promise<void>,
+  metWijziging?: (
+    tx: Tx,
+    voor: { naam: string; versie: number; document: InstallatieDocument },
+    na: { naam: string; versie: number; document: InstallatieDocument },
+  ) => Promise<void>,
 ): Promise<{ versie: number }> {
   const document = valideerDocument(invoer.document);
 
   return db.transaction(async (tx) => {
     const [huidig] = await tx
-      .select({ naam: projecten.naam, versie: projecten.versie, document: projecten.document })
+      .select({
+        naam: projecten.naam,
+        versie: projecten.versie,
+        document: projecten.document,
+      })
       .from(projecten)
       .where(vanOrganisatie(organisatieId, id))
       .for("update");
     if (!huidig) throw new ProjectFout("NIET_GEVONDEN");
-    if (huidig.versie !== versie) throw new ProjectFout("CONFLICT", { versie: huidig.versie });
+    if (huidig.versie !== versie)
+      throw new ProjectFout("CONFLICT", { versie: huidig.versie });
 
-    await controleerPlanverwijzingen(tx, id, nieuwePlanIds(huidig.document as InstallatieDocument, document));
+    const voorDocument = valideerDocument(huidig.document);
+    await controleerPlanverwijzingen(
+      tx,
+      id,
+      nieuwePlanIds(voorDocument, document),
+    );
 
     const [bijgewerkt] = await tx
       .update(projecten)
@@ -165,11 +222,20 @@ export async function bewaarProject(
         versie: sql`${projecten.versie} + 1`,
         gewijzigd: sql`now()`,
       })
-      .where(and(vanOrganisatie(organisatieId, id), eq(projecten.versie, versie)))
+      .where(
+        and(vanOrganisatie(organisatieId, id), eq(projecten.versie, versie)),
+      )
       .returning({ versie: projecten.versie });
-    if (metWijziging) await metWijziging(tx,
-      { naam: huidig.naam, versie: huidig.versie, document: huidig.document as InstallatieDocument },
-      { naam: invoer.naam ?? huidig.naam, versie: bijgewerkt!.versie, document });
+    if (metWijziging)
+      await metWijziging(
+        tx,
+        { naam: huidig.naam, versie: huidig.versie, document: voorDocument },
+        {
+          naam: invoer.naam ?? huidig.naam,
+          versie: bijgewerkt!.versie,
+          document,
+        },
+      );
     return bijgewerkt!;
   });
 }
@@ -182,7 +248,11 @@ type BestandRij = typeof bestanden.$inferSelect;
  * organisatie, onbekende id's en bestanden die geen plan zijn, ontbreken in het resultaat. Zo kopieert
  * ook een kopie van vóór deze fix (die nog naar de planbestanden van haar bron verwijst) die mee.
  */
-async function planBestandenVanOrganisatie(db: Db, organisatieId: string, ids: string[]): Promise<BestandRij[]> {
+async function planBestandenVanOrganisatie(
+  db: Db,
+  organisatieId: string,
+  ids: string[],
+): Promise<BestandRij[]> {
   if (ids.length === 0) return [];
   return db
     .select(getTableColumns(bestanden))
@@ -203,13 +273,20 @@ async function planBestandenVanOrganisatie(db: Db, organisatieId: string, ids: s
  * ontbreekt wordt niet gekopieerd en telt hier toch mee: een kleine overschatting). Zonder bestanden
  * kost de kopie niets en is er niets te controleren.
  */
-async function controleerRuimteVoorKopie(db: Db, organisatieId: string, bronnen: readonly BestandRij[]): Promise<void> {
+async function controleerRuimteVoorKopie(
+  db: Db,
+  organisatieId: string,
+  bronnen: readonly BestandRij[],
+): Promise<void> {
   const bytes = bronnen.reduce((som, rij) => som + rij.grootte, 0);
   if (bytes > 0) await controleerOpslagruimte(db, organisatieId, bytes);
 }
 
 /** Het document met nieuwe planbestand-id's (oud -> nieuw); een id zonder toewijzing blijft staan. */
-function metNieuwePlanIds(document: InstallatieDocument, nieuweIds: ReadonlyMap<string, string>): InstallatieDocument {
+function metNieuwePlanIds(
+  document: InstallatieDocument,
+  nieuweIds: ReadonlyMap<string, string>,
+): InstallatieDocument {
   return {
     ...document,
     situatie: {
@@ -220,8 +297,12 @@ function metNieuwePlanIds(document: InstallatieDocument, nieuweIds: ReadonlyMap<
               ...p,
               achtergrond: {
                 ...p.achtergrond,
-                origineelBestandId: nieuweIds.get(p.achtergrond.origineelBestandId) ?? p.achtergrond.origineelBestandId,
-                rasterBestandId: nieuweIds.get(p.achtergrond.rasterBestandId) ?? p.achtergrond.rasterBestandId,
+                origineelBestandId:
+                  nieuweIds.get(p.achtergrond.origineelBestandId) ??
+                  p.achtergrond.origineelBestandId,
+                rasterBestandId:
+                  nieuweIds.get(p.achtergrond.rasterBestandId) ??
+                  p.achtergrond.rasterBestandId,
               },
             }
           : p,
@@ -238,7 +319,10 @@ type PlanKopieen = {
   sleutels: string[];
 };
 
-async function wisKopieen(opslag: BestandOpslag, sleutels: string[]): Promise<void> {
+async function wisKopieen(
+  opslag: BestandOpslag,
+  sleutels: string[],
+): Promise<void> {
   for (const sleutel of sleutels) {
     try {
       await opslag.verwijder(sleutel);
@@ -260,7 +344,11 @@ async function kopieerPlanbestanden(
   bronnen: readonly BestandRij[],
   kopieId: string,
 ): Promise<PlanKopieen> {
-  const kopieen: PlanKopieen = { nieuweIds: new Map(), nieuweRijen: [], sleutels: [] };
+  const kopieen: PlanKopieen = {
+    nieuweIds: new Map(),
+    nieuweRijen: [],
+    sleutels: [],
+  };
   try {
     for (const bronRij of bronnen) {
       const stroom = await opslag.lees(bronRij.sleutel);
@@ -319,16 +407,26 @@ export async function dupliceerProject(
 
   const kopieId = randomUUID();
   const bestandIds = [
-    ...new Set([...planBestandIdsVan(bron.document), ...extraBestandIds.filter((bestandId) => UUID.test(bestandId))]),
+    ...new Set([
+      ...planBestandIdsVan(bron.document),
+      ...extraBestandIds.filter((bestandId) => UUID.test(bestandId)),
+    ]),
   ];
   // Elk planbestand van de organisatie, niet alleen die van het bronproject: een kopie van vóór deze fix
   // verwijst nog naar de bestanden van haar eigen bron en krijgt zo alsnog eigen bestanden.
-  const bronnen = await planBestandenVanOrganisatie(db, organisatieId, bestandIds);
+  const bronnen = await planBestandenVanOrganisatie(
+    db,
+    organisatieId,
+    bestandIds,
+  );
   await controleerRuimteVoorKopie(db, organisatieId, bronnen);
 
   const kopieen = await kopieerPlanbestanden(opslag, bronnen, kopieId);
   try {
-    const document = { ...metNieuwePlanIds(bron.document, kopieen.nieuweIds), id: nieuwId() };
+    const document = {
+      ...metNieuwePlanIds(bron.document, kopieen.nieuweIds),
+      id: nieuwId(),
+    };
     await db.transaction(async (tx) => {
       await tx.insert(projecten).values({
         id: kopieId,
@@ -337,7 +435,8 @@ export async function dupliceerProject(
         klantnaam: bron.klantnaam,
         document,
       });
-      if (kopieen.nieuweRijen.length > 0) await tx.insert(bestanden).values(kopieen.nieuweRijen);
+      if (kopieen.nieuweRijen.length > 0)
+        await tx.insert(bestanden).values(kopieen.nieuweRijen);
     });
   } catch (fout) {
     await wisKopieen(opslag, kopieen.sleutels);
@@ -365,18 +464,36 @@ export async function maakProjectUitDocument(
   opslag: BestandOpslag,
   organisatieId: string,
   invoer: { naam: string; document: unknown },
-): Promise<{ id: string; versie: number; documentId: string; bestandIds: Record<string, string> }> {
+): Promise<{
+  id: string;
+  versie: number;
+  documentId: string;
+  bestandIds: Record<string, string>;
+}> {
   const bronDocument = valideerDocument(invoer.document);
   const kopieId = randomUUID();
   const documentId = nieuwId();
 
-  const bestandIds = [...new Set(planBestandIdsVan(bronDocument).filter((bestandId) => UUID.test(bestandId)))];
-  const bronnen = await planBestandenVanOrganisatie(db, organisatieId, bestandIds);
+  const bestandIds = [
+    ...new Set(
+      planBestandIdsVan(bronDocument).filter((bestandId) =>
+        UUID.test(bestandId),
+      ),
+    ),
+  ];
+  const bronnen = await planBestandenVanOrganisatie(
+    db,
+    organisatieId,
+    bestandIds,
+  );
   await controleerRuimteVoorKopie(db, organisatieId, bronnen);
 
   const kopieen = await kopieerPlanbestanden(opslag, bronnen, kopieId);
   try {
-    const document = { ...metNieuwePlanIds(bronDocument, kopieen.nieuweIds), id: documentId };
+    const document = {
+      ...metNieuwePlanIds(bronDocument, kopieen.nieuweIds),
+      id: documentId,
+    };
     const versie = await db.transaction(async (tx) => {
       const [rij] = await tx
         .insert(projecten)
@@ -388,17 +505,27 @@ export async function maakProjectUitDocument(
           document,
         })
         .returning({ versie: projecten.versie });
-      if (kopieen.nieuweRijen.length > 0) await tx.insert(bestanden).values(kopieen.nieuweRijen);
+      if (kopieen.nieuweRijen.length > 0)
+        await tx.insert(bestanden).values(kopieen.nieuweRijen);
       return rij!.versie;
     });
-    return { id: kopieId, versie, documentId, bestandIds: Object.fromEntries(kopieen.nieuweIds) };
+    return {
+      id: kopieId,
+      versie,
+      documentId,
+      bestandIds: Object.fromEntries(kopieen.nieuweIds),
+    };
   } catch (fout) {
     await wisKopieen(opslag, kopieen.sleutels);
     throw fout;
   }
 }
 
-export async function verwijderProject(db: Db, organisatieId: string, id: string): Promise<void> {
+export async function verwijderProject(
+  db: Db,
+  organisatieId: string,
+  id: string,
+): Promise<void> {
   const rijen = await db
     .update(projecten)
     .set({ verwijderd: sql`now()` })

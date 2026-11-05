@@ -5,6 +5,7 @@ import { STANDAARD_PAPIER_A4, opmaak as legOp, type SchemaOpmaak } from "@elentr
 import {
   DocumentFout,
   magToevoegen,
+  migreer,
   legKringCodesVast as legCodesVast,
   hernummerKringen as hernummer,
   voorbeeldHernummering,
@@ -163,7 +164,7 @@ export const useEditorStore = defineStore("editor", () => {
   let vensterAuteur: { id: string; naam: string } | null = null;
 
   function laad(project: TeLadenProject): void {
-    document.value = project.document;
+    document.value = migreer(project.document);
     projectId.value = project.id;
     naam.value = project.naam;
     versie.value = project.versie;

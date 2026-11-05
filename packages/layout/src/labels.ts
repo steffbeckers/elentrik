@@ -27,7 +27,9 @@ export function leidingLabel(node: NodeVan<"leiding">): string {
   const kabeltype = node.kabeltype.trim() === "" ? "?" : node.kabeltype;
   const tekst = doorsnedeTekst(node.doorsnede_mm2);
   const doorsnede = tekst === "0" ? "?" : tekst;
-  return `${kabeltype} ${node.aantalGeleiders}G${doorsnede}${node.brandreactieklasse?.trim() ? ` ${node.brandreactieklasse.trim()}` : ""}`;
+  const klasse = node.brandreactieklasse?.trim();
+  const alVermeld = klasse && ` ${kabeltype.toLowerCase()} `.includes(` ${klasse.toLowerCase()} `);
+  return `${kabeltype} ${node.aantalGeleiders}G${doorsnede}${klasse && !alVermeld ? ` ${klasse}` : ""}`;
 }
 
 /** De gevoeligheid in ampere uit milliampere: maximaal 3 decimalen, zonder overbodige nullen en met een komma. Zonder Intl, voor een vast resultaat. */

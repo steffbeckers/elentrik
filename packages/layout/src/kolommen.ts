@@ -309,7 +309,7 @@ function teksten(node: Node, symbool: Symbool, kringLabel: string | undefined, p
   if (node.type === "leiding") {
     resultaat.push({
       soort: "tekst",
-      x: 2,
+      x: rechts,
       y: midden + 0.7,
       tekst: leidingLabel(node),
       grootte: 2,
