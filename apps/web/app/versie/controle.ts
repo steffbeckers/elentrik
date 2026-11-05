@@ -3,22 +3,29 @@
 //
 // Een controle vraagt twee dingen op, elk met een eigen foutafhandeling: de build-id van de server
 // (`latest.json`, voor de toast) en `/api/gezondheid` (alleen voor de header met de minimumversie,
-// voor het modale venster; die leest de omhulling van `$fetch`). Een mislukte vraag (de update is nog
-// bezig, de verbinding is weg) wordt stil genegeerd: de volgende controle probeert het opnieuw.
+// voor het modale venster; die leest de omhulling van `fetch`, app/versie/fetch.ts). Een mislukte vraag
+// (de update is nog bezig, de verbinding is weg) wordt stil genegeerd: de volgende controle probeert
+// het opnieuw. Een vraag die niet antwoordt wordt na een time-out afgebroken, anders bleef `bezig`
+// voor altijd waar en liep er nooit meer een controle.
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
 
+/** Hoe lang één vraag mag duren voor ze wordt afgebroken. */
+export const VRAAG_TIMEOUT_MS = 15_000;
+
 export type VersiecontroleOpties = {
   /** De build waar deze pagina uit komt. */
   eigenBuildId: string;
-  /** De id van de nieuwste build op de server. Gooit bij een niet-ok antwoord. */
-  haalLaatsteBuildId: () => Promise<string>;
-  /** Vraagt de gezondheid op; het antwoord zelf telt niet, wel de header ervan. */
-  haalGezondheid: () => Promise<unknown>;
+  /** De id van de nieuwste build op de server. Gooit bij een niet-ok antwoord. Geef `signal` aan `fetch`. */
+  haalLaatsteBuildId: (signal: AbortSignal) => Promise<string>;
+  /** Vraagt de gezondheid op; het antwoord zelf telt niet, wel de header ervan. Geef `signal` aan `fetch`. */
+  haalGezondheid: (signal: AbortSignal) => Promise<unknown>;
   /** Bij elke controle waarvan de server een andere build heeft. */
   bijNieuweBuild: (id: string) => void;
   intervalMs: number;
+  /** Time-out per vraag; standaard `VRAAG_TIMEOUT_MS`. */
+  timeoutMs?: number;
 };
 
 export type Versiecontrole = {
@@ -32,10 +39,29 @@ export type Versiecontrole = {
 export function maakVersiecontrole(opties: VersiecontroleOpties): Versiecontrole {
   let timer: ReturnType<typeof setInterval> | null = null;
   let bezig = false;
+  const timeoutMs = opties.timeoutMs ?? VRAAG_TIMEOUT_MS;
+
+  // Eén vraag met een time-out: het signaal gaat naar `fetch`, en de belofte valt ook zelf af (een
+  // vraag die het signaal negeert houdt de controle dan niet vast). Gooit bij de time-out.
+  async function metTimeout<T>(vraag: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    const afbreker = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const verlopen = new Promise<never>((_, afwijzen) => {
+      timer = setTimeout(() => {
+        afbreker.abort();
+        afwijzen(new Error("time-out"));
+      }, timeoutMs);
+    });
+    try {
+      return await Promise.race([vraag(afbreker.signal), verlopen]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
   async function controleBuild(): Promise<void> {
     try {
-      const id = await opties.haalLaatsteBuildId();
+      const id = await metTimeout(opties.haalLaatsteBuildId);
       if (id !== opties.eigenBuildId) opties.bijNieuweBuild(id);
     } catch {
       // Stil genegeerd.
@@ -44,7 +70,7 @@ export function maakVersiecontrole(opties: VersiecontroleOpties): Versiecontrole
 
   async function controleGezondheid(): Promise<void> {
     try {
-      await opties.haalGezondheid();
+      await metTimeout(opties.haalGezondheid);
     } catch {
       // Stil genegeerd.
     }

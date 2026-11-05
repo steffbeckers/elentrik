@@ -1,7 +1,7 @@
 // De eigen versiecontrole: vergelijkt de build-id uit latest.json met de eigen build, vraagt
 // /api/gezondheid op voor de minimumversie, en blijft lopen na een nieuwe build en na een fout.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { koppelVensters, maakVersiecontrole, type VensterVoorControle } from "../app/versie/controle";
+import { koppelVensters, maakVersiecontrole, VRAAG_TIMEOUT_MS, type VensterVoorControle } from "../app/versie/controle";
 
 const INTERVAL = 300_000;
 
@@ -15,8 +15,8 @@ afterEach(() => {
 
 function maak(over: Partial<Parameters<typeof maakVersiecontrole>[0]> = {}) {
   const bijNieuweBuild = vi.fn<(id: string) => void>();
-  const haalLaatsteBuildId = vi.fn<() => Promise<string>>(async () => "eigen");
-  const haalGezondheid = vi.fn<() => Promise<unknown>>(async () => ({ ok: true }));
+  const haalLaatsteBuildId = vi.fn<(signal: AbortSignal) => Promise<string>>(async () => "eigen");
+  const haalGezondheid = vi.fn<(signal: AbortSignal) => Promise<unknown>>(async () => ({ ok: true }));
   const opties = { eigenBuildId: "eigen", haalLaatsteBuildId, haalGezondheid, bijNieuweBuild, intervalMs: INTERVAL, ...over };
   return { controle: maakVersiecontrole(opties), ...opties };
 }
@@ -107,6 +107,64 @@ describe("controleer", () => {
     los("eigen");
     await derde;
     expect(haal).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("time-out", () => {
+  test("een vraag die nooit antwoordt houdt de volgende controle niet tegen", async () => {
+    // Een fetch die nooit klaarkomt en het signaal negeert.
+    const haal = vi
+      .fn<(signal: AbortSignal) => Promise<string>>()
+      .mockImplementationOnce(() => new Promise<string>(() => {}))
+      .mockResolvedValue("nieuw");
+    const { controle, bijNieuweBuild, haalGezondheid } = maak({ haalLaatsteBuildId: haal });
+
+    const eerste = controle.controleer();
+    // Zolang de vraag hangt, doet een tweede controle niets.
+    await controle.controleer();
+    expect(haal).toHaveBeenCalledTimes(1);
+
+    // Na de time-out is de eerste controle klaar (zonder te gooien) en loopt een nieuwe weer.
+    await vi.advanceTimersByTimeAsync(VRAAG_TIMEOUT_MS);
+    await expect(eerste).resolves.toBeUndefined();
+    await controle.controleer();
+    expect(haal).toHaveBeenCalledTimes(2);
+    expect(haalGezondheid).toHaveBeenCalledTimes(2);
+    expect(bijNieuweBuild).toHaveBeenCalledWith("nieuw");
+  });
+
+  test("de time-out breekt het signaal af, en een snelle vraag laat het met rust", async () => {
+    const signalen: AbortSignal[] = [];
+    const { controle } = maak({
+      haalGezondheid: vi.fn(async (signal: AbortSignal) => {
+        signalen.push(signal);
+        return new Promise<unknown>(() => {});
+      }),
+      haalLaatsteBuildId: vi.fn(async (signal: AbortSignal) => {
+        signalen.push(signal);
+        return "eigen";
+      }),
+    });
+    const lopend = controle.controleer();
+    await vi.advanceTimersByTimeAsync(VRAAG_TIMEOUT_MS);
+    await lopend;
+    const [build, gezondheid] = signalen;
+    expect(build!.aborted).toBe(false);
+    expect(gezondheid!.aborted).toBe(true);
+  });
+
+  test("een eigen timeoutMs wordt gebruikt", async () => {
+    const { controle, haalLaatsteBuildId } = maak({
+      timeoutMs: 1_000,
+      haalLaatsteBuildId: vi.fn(() => new Promise<string>(() => {})),
+    });
+    const lopend = controle.controleer();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await lopend;
+    const tweede = controle.controleer();
+    expect(haalLaatsteBuildId).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await tweede;
   });
 });
 

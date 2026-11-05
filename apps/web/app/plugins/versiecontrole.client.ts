@@ -17,14 +17,16 @@ export default defineNuxtPlugin({
 
     const controle = maakVersiecontrole({
       eigenBuildId: app.buildId,
-      haalLaatsteBuildId: async () => {
-        const antwoord = await fetch(latestUrl, { cache: "no-store" });
+      // `signal`: de controle breekt een vraag na 15 s af (VRAAG_TIMEOUT_MS), zodat één hangend verzoek
+      // de volgende controles niet blokkeert.
+      haalLaatsteBuildId: async (signal) => {
+        const antwoord = await fetch(latestUrl, { cache: "no-store", signal });
         if (!antwoord.ok) throw new Error(`latest.json: ${antwoord.status}`);
         const { id } = (await antwoord.json()) as { id: string };
         return id;
       },
       // Het antwoord zelf telt niet; de omhulling van `fetch` (clientversie.client.ts) leest de header.
-      haalGezondheid: () => fetch("/api/gezondheid", { cache: "no-store" }),
+      haalGezondheid: (signal) => fetch("/api/gezondheid", { cache: "no-store", signal }),
       bijNieuweBuild: (id) => {
         store().meldBuild(id);
         // De service worker haalt de nieuwe bestanden alvast binnen, zodat ze klaarstaan bij het herladen.
