@@ -49,6 +49,7 @@ export const FR: Readonly<Record<string, string>> = {
   "waarde.laadpaal": "borne de recharge",
   "waarde.omvormer": "onduleur",
   "waarde.pvPaneel": "panneau photovoltaïque",
+  "waarde.deurbelMonitor": "carillon / moniteur",
   "waarde.bel": "sonnerie",
   "waarde.motor": "moteur",
   "waarde.ventilator": "ventilateur",

@@ -50,6 +50,7 @@ export const NL: Readonly<Record<string, string>> = {
   "waarde.laadpaal": "laadpaal",
   "waarde.omvormer": "omvormer",
   "waarde.pvPaneel": "fotovoltaïsch paneel",
+  "waarde.deurbelMonitor": "deurbel / monitor",
   "waarde.bel": "bel",
   "waarde.motor": "motor",
   "waarde.ventilator": "ventilator",

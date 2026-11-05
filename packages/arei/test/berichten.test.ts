@@ -133,10 +133,11 @@ describe("vertaalde parameterwaarden", () => {
         expect(formatteerBericht(kring(label), taal), `${taal} kring ${label}`).toContain(` ${label} `);
       }
     }
-    // Nederlandse enumwaarden blijven leesbaar; de technische PV-sleutel krijgt haar volledige naam.
+    // Nederlandse enumwaarden blijven leesbaar; technische sleutels krijgen hun volledige naam.
     const { RuimteSchema, ToestelsoortSchema } = await import("@elentrik/model");
+    const namen: Record<string, string> = { pvPaneel: "fotovoltaïsch paneel", deurbelMonitor: "deurbel / monitor" };
     for (const waarde of [...RuimteSchema.options, ...ToestelsoortSchema.options]) {
-      expect(formatteerBericht(maak({ reden: waarde, max: 30 }), "nl")).toContain(`(${waarde === "pvPaneel" ? "fotovoltaïsch paneel" : waarde})`);
+      expect(formatteerBericht(maak({ reden: waarde, max: 30 }), "nl")).toContain(`(${namen[waarde] ?? waarde})`);
     }
   });
 
