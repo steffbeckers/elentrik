@@ -721,6 +721,19 @@ sudo docker compose exec postgres psql -U elentrik -d elentrik -tA -c "select co
 
 Houd per release de tag van de vorige versie bij (de lijst met tags staat op de GitHub-pagina van het package).
 
+### Controleren dat Cloudflare `/sw.js` niet cachet
+
+De service worker (`/sw.js`) moet bij elke controle vers van de app komen, anders blijven browsers een oude versie
+gebruiken. Kijk na een update of Cloudflare hem niet uit de cache serveert:
+
+```
+curl -sI https://staging.elentrik.app/sw.js | grep -i -E "cf-cache-status|cache-control"
+```
+
+`cf-cache-status` mag niet `HIT` zijn (`DYNAMIC`, `BYPASS` of `MISS` is goed). Is het wel `HIT`, maak dan in
+Cloudflare (Caching, Cache Rules) een regel "URI path is gelijk aan `/sw.js`" met "Bypass cache", en controleer
+opnieuw. Doe dezelfde controle voor `https://elentrik.app/sw.js` als productie klaarstaat.
+
 ---
 
 ## 8. Problemen oplossen

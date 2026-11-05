@@ -861,12 +861,14 @@ goed "een project aanmaken en een PDF-export maken en ophalen via de proxy lukt 
 
 # --- 4. een eigen antwoord van de app gaat ongewijzigd door, ook een 4xx en een 5xx
 ONBEKEND_ID="00000000-0000-4000-8000-000000000000"
-# Rechtstreeks met dezelfde Host, want het antwoord van de app noemt hem in `url`.
-DIRECT_STATUS="$(curl -s -o "${TMP}/direct-body.txt" -w '%{http_code}' -H "$COOKIE_P" -H "Host: elentrik.app" "${BASIS}/api/projecten/${ONBEKEND_ID}")"
+# Rechtstreeks met dezelfde Host en X-Forwarded-Proto als de proxy (TLS eindigt bij Cloudflare, dus de proxy
+# zet `X-Forwarded-Proto: https`), want het antwoord van de app noemt beide in `url`.
+DIRECT_STATUS="$(curl -s -o "${TMP}/direct-body.txt" -w '%{http_code}' -H "$COOKIE_P" -H "Host: elentrik.app" -H "X-Forwarded-Proto: https" "${BASIS}/api/projecten/${ONBEKEND_ID}")"
 via_proxy elentrik.app -H "$COOKIE_P" "${PROXY}/api/projecten/${ONBEKEND_ID}"
 [ "$DIRECT_STATUS" = 404 ] || faal "rechtstreeks gaf /api/projecten/<onbekend> ${DIRECT_STATUS}, verwacht 404"
 [ "$P_STATUS" = 404 ] || faal "via de proxy gaf /api/projecten/<onbekend> ${P_STATUS}, verwacht de 404 van de app"
 [ "$P_BODY" = "$(cat "${TMP}/direct-body.txt")" ] || faal "de 404 van de app komt via de proxy anders terug: ${P_BODY}"
+printf '%s' "$P_BODY" | grep -q '"url": "https://elentrik.app/' || faal "de app ziet via de proxy geen https (X-Forwarded-Proto): ${P_BODY}"
 [ -z "$(p_kop retry-after)" ] || faal "de proxy zette Retry-After op een antwoord van de app"
 via_proxy elentrik.app "${PROXY}/api/gezondheid"
 [ "$P_STATUS" = 200 ] && [ "$(printf '%s' "$P_BODY" | jget ok)" = true ] || faal "/api/gezondheid via de proxy: '${P_STATUS} ${P_BODY}'"

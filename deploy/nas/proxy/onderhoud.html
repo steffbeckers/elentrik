@@ -202,12 +202,13 @@
         }
 
         // Een nieuwe controle start pas als de vorige klaar is. Een controle die niet antwoordt,
-        // wordt na CONTROLE_TIMEOUT_MS afgebroken, zodat hij het controleren nooit blokkeert.
+        // wordt na CONTROLE_TIMEOUT_MS afgebroken, zodat hij het controleren nooit blokkeert. De knop blijft
+        // altijd bruikbaar (uitzetten bij elke automatische controle liet het toetsenbordfocus verliezen);
+        // een klik tijdens een lopende controle doet niets door `bezig`.
         var bezig = false;
         function controleer() {
           if (bezig) return;
           bezig = true;
-          knop.disabled = true;
           var afbreker = new AbortController();
           var timer = setTimeout(function () {
             afbreker.abort();
@@ -225,7 +226,6 @@
             .then(function () {
               clearTimeout(timer);
               bezig = false;
-              knop.disabled = false;
             });
         }
 

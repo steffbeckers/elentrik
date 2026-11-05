@@ -59,16 +59,22 @@
 	}
 }
 
+# TLS eindigt bij Cloudflare: Caddy ziet plain HTTP en zou `X-Forwarded-Proto: http` doorgeven. De app
+# (secure cookies, absolute URL's) moet https zien; vandaar `header_up` in beide blokken.
 http://elentrik.app:8080 {
 	import gezondheid
 	import onderhoud
-	reverse_proxy web:3000
+	reverse_proxy web:3000 {
+		header_up X-Forwarded-Proto https
+	}
 }
 
 http://staging.elentrik.app:8080 {
 	import gezondheid
 	import onderhoud
-	reverse_proxy web-staging:3000
+	reverse_proxy web-staging:3000 {
+		header_up X-Forwarded-Proto https
+	}
 }
 
 # Elke andere host: een eigen 404, zonder door te sturen.
