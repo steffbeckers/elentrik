@@ -57,7 +57,8 @@ test("een nieuwe build geeft de toast, en navigeren herlaadt niet", async ({ pag
   await expect(page.getByRole("button", { name: "Herladen" })).toBeVisible();
 
   // Naar een ander scherm: geen volledige herlading, de markering op `window` blijft.
-  await page.getByRole("link", { name: "Bedrijfsgegevens" }).click();
+  await page.getByTestId("gebruiker-menu").click();
+  await page.getByRole("menuitem", { name: "Bedrijfsgegevens", exact: true }).click();
   await expect(page).toHaveURL(/\/instellingen$/);
   await expect(page.getByRole("heading", { name: "Bedrijfsgegevens", level: 1 })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as Markering).__markering)).toBe("blijft");
