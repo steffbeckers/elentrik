@@ -648,7 +648,8 @@
         "passendMelding": "Passend op papier — de afdrukmaat volgt het gekozen papier.",
         "kalibratieMelding": "Gekalibreerde afdruk — verdeeld over meerdere bladen indien nodig.",
         "referentie": "Referentieblad — wordt niet afgedrukt."
-      }
+      },
+      "referentieUitleg": "Dit is een referentieblad: plaats hier geen definitieve punten. Het blad wordt niet geëxporteerd. Kies een planpagina om punten te plaatsen."
     },
     "export": {
       "titel": "Exporteren als PDF",

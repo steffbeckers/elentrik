@@ -15,6 +15,11 @@ export function parseDocument(invoer: unknown): InstallatieDocument {
     throw new DocumentFout("ONGELDIG_SCHEMA", { issues: resultaat.error.issues });
   }
   bepaalKringCodes(resultaat.data);
+  for (const pagina of resultaat.data.situatie.paginas) {
+    if (pagina.referentie && pagina.plaatsingen.length) {
+      throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "referentieblad met plaatsingen", paginaId: pagina.id });
+    }
+  }
   return resultaat.data;
 }
 

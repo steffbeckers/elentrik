@@ -1,3 +1,4 @@
+import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
@@ -22,6 +23,7 @@ async function nieuwProject(request: APIRequestContext, achtervoegsel: string): 
 async function openMetKring(page: Page, id: string): Promise<void> {
   await page.goto(`/projecten/${id}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
 }
 
 test("exporteren bewaart eerst, downloadt de PDF en werkt de lijst bij", async ({ page, request }) => {
@@ -89,6 +91,7 @@ test("exporteren kan niet als opslaan mislukt", async ({ page, request }) => {
     route.request().method() === "PUT" ? route.fulfill({ status: 503 }) : route.fallback(),
   );
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   await page.getByTestId("exporteren").click();
 
   const dialoog = page.getByRole("dialog");

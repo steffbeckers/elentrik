@@ -1,3 +1,4 @@
+import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 // Abonnementen end-to-end, tegen een nep-Stripe op poort 3199 (zie hulp/nep-stripe.ts en
 // global-setup.ts). De server draait met Stripe aan, dus elke nieuwe organisatie krijgt een proef.
 // Een verlopen proef zetten we rechtstreeks in de e2e-database.
@@ -82,6 +83,7 @@ test("verlopen proef: alleen-lezen met banner, zonder Nieuw project, geen wijzig
   const { id } = (await aangemaakt.json()) as { id: string };
   await ga(page, `/projecten/${id}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   // Wachten tot de kring op de server staat (de versie gaat omhoog).
   await expect
     .poll(async () => ((await (await request.get(`/api/projecten/${id}`)).json()) as { versie: number }).versie, {

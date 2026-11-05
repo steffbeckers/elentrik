@@ -648,7 +648,8 @@
         "passendMelding": "Fit to paper — printed size follows the chosen paper.",
         "kalibratieMelding": "Calibrated print — tiled across sheets when necessary.",
         "referentie": "Reference sheet — excluded from print."
-      }
+      },
+      "referentieUitleg": "This is a reference sheet: final points cannot be placed here and the sheet is excluded from export. Choose a plan page to place points."
     },
     "export": {
       "titel": "Export as PDF",

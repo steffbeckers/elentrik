@@ -648,7 +648,8 @@
         "passendMelding": "Adapté au papier — la taille imprimée dépend du papier choisi.",
         "kalibratieMelding": "Impression étalonnée — répartie sur plusieurs feuilles si nécessaire.",
         "referentie": "Feuille de référence — exclue de l’impression."
-      }
+      },
+      "referentieUitleg": "Ceci est une feuille de référence : aucun point définitif ne peut y être placé. Elle est exclue de l’export. Choisissez une page de plan pour placer des points."
     },
     "export": {
       "titel": "Exporter en PDF",

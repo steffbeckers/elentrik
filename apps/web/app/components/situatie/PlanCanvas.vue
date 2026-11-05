@@ -43,6 +43,7 @@ const MEETPUNT_STRAAL = 0.12;
 
 const editor = useEditorStore();
 const situatie = useSituatieStore();
+const alleenLezen = computed(() => editor.alleenLezen || !!situatie.actievePagina?.referentie);
 const bestanden = useBestandenApi();
 const voerUit = useDocumentFoutMelding();
 const { terugval } = useNodeTekst();
@@ -176,7 +177,7 @@ function pointerDown(event: PointerEvent): void {
   const element = (event.target as Element).closest<SVGGElement>("[data-node-id]");
   const nodeId = element?.getAttribute("data-node-id") ?? null;
   // Zonder schrijfrecht verschuift een symbool niet: slepen erop pant het plan.
-  const opSymbool = !ruimteIngedrukt.value && modus.value === "normaal" && event.isPrimary && !editor.alleenLezen;
+  const opSymbool = !ruimteIngedrukt.value && modus.value === "normaal" && event.isPrimary && !alleenLezen.value;
   // Pannen: op lege ruimte, met de spatie ingedrukt, of tijdens plaatsen en meten. Twee vingers pinchen.
   canvas.pointerDown(event, !(opSymbool && element !== null));
   if (!opSymbool || !element || nodeId === null || canvas.pincht()) return;
@@ -240,7 +241,7 @@ function pointerAfgebroken(event: PointerEvent): void {
 
 function plaatsOp(nodeId: NodeId, punt: Positie): void {
   const doc = editor.document;
-  if (editor.alleenLezen || !achtergrond.value || !doc || !Object.hasOwn(doc.nodes, nodeId)) return;
+  if (alleenLezen.value || !achtergrond.value || !doc || !Object.hasOwn(doc.nodes, nodeId)) return;
   const { x, y } = binnenRaster(punt);
   const uitkomst: { van: string | null } = { van: null };
   if (!voerUit(() => (uitkomst.van = situatie.plaatsNode(nodeId, x, y)))) return;
@@ -270,7 +271,7 @@ async function kiesPlanPunt(event: Event): Promise<void> {
 }
 
 function bevestigCursor(): void {
-  if (editor.alleenLezen || planOntbreekt.value) return;
+  if (alleenLezen.value || planOntbreekt.value) return;
   if (modus.value === "meet") meetKlik(cursor.value);
   else if (props.teplaatsen) plaatsOp(props.teplaatsen, cursor.value);
 }
@@ -278,7 +279,7 @@ function bevestigCursor(): void {
 function cursorToets(event: KeyboardEvent): void {
   if (modus.value === "normaal" || planOntbreekt.value || event.isComposing || event.altKey) return;
   const actie = planCursorToets({ key: event.key, shiftKey: event.shiftKey,
-    ctrlKey: event.ctrlKey, metaKey: event.metaKey, alleenLezen: editor.alleenLezen });
+    ctrlKey: event.ctrlKey, metaKey: event.metaKey, alleenLezen: alleenLezen.value });
   if (!actie) return;
   event.preventDefault();
   if (actie.soort === "schuif") cursor.value = binnenRaster({ x: cursor.value.x + actie.dx, y: cursor.value.y + actie.dy });
@@ -287,12 +288,12 @@ function cursorToets(event: KeyboardEvent): void {
 }
 
 function slepenBoven(event: DragEvent): void {
-  if (editor.alleenLezen || !achtergrond.value || !event.dataTransfer?.types.includes(NODE_SLEEP_TYPE)) return;
+  if (alleenLezen.value || !achtergrond.value || !event.dataTransfer?.types.includes(NODE_SLEEP_TYPE)) return;
   event.preventDefault();
 }
 
 function neerzetten(event: DragEvent): void {
-  if (editor.alleenLezen) return;
+  if (alleenLezen.value) return;
   const nodeId = event.dataTransfer?.getData(NODE_SLEEP_TYPE);
   if (!nodeId) return;
   event.preventDefault();
@@ -391,7 +392,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     metaKey: event.metaKey,
     doelIsInvoer: soort === "invoer",
     doelIsKnop: soort === "knop",
-    alleenLezen: editor.alleenLezen,
+    alleenLezen: alleenLezen.value,
   });
   if (!actie) return;
   // Zonder zichtbaar plan wijzigt niets de plaatsingen; ongedaan maken en opnieuw blijven werken.
@@ -471,7 +472,7 @@ const markeringen = computed(() => {
         <option v-for="item in items" :key="item.nodeId" :value="item.nodeId">{{ keuzeLabels.get(item.nodeId) ?? item.label }}</option>
       </select>
     <div
-      v-if="achtergrond && !planOntbreekt && !editor.alleenLezen"
+      v-if="achtergrond && !planOntbreekt && !alleenLezen"
       role="toolbar"
       data-testid="plan-werkbalk"
       :aria-label="$t('editor.situatie.canvas.werkbalk')"
@@ -515,7 +516,7 @@ const markeringen = computed(() => {
       <p :id="hulpId" data-testid="plan-keyboard-help" class="sr-only">{{ $t(modus === 'normaal' ? 'editor.situatie.canvas.toetsenbord' : 'editor.situatie.canvas.plaatsToetsenbord') }}</p>
       <div v-if="modus !== 'normaal'" class="absolute bottom-14 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded border border-default bg-default px-2 py-1">
         <output aria-live="polite" class="text-xs tabular-nums">{{ $t('editor.situatie.canvas.cursorPositie', { x: Math.round(cursor.x), y: Math.round(cursor.y) }) }}</output>
-        <UButton :disabled="editor.alleenLezen" :label="$t(modus === 'meet' ? 'editor.situatie.canvas.bevestigMeetpunt' : 'editor.situatie.canvas.bevestigPlaats')" @click="bevestigCursor" />
+        <UButton :disabled="alleenLezen" :label="$t(modus === 'meet' ? 'editor.situatie.canvas.bevestigMeetpunt' : 'editor.situatie.canvas.bevestigPlaats')" @click="bevestigCursor" />
       </div>
     </div>
     <div
@@ -553,7 +554,7 @@ const markeringen = computed(() => {
           @error="planFout = true"
         />
         <!-- v-html is hier veilig: `situatieLaagSvg` escapet alle documenttekst. -->
-        <g class="laag" :class="{ verschuifbaar: modus === 'normaal' && !editor.alleenLezen }" v-html="laagSvg" />
+        <g class="laag" :class="{ verschuifbaar: modus === 'normaal' && !alleenLezen }" v-html="laagSvg" />
         <g class="pointer-events-none">
           <g v-if="modus !== 'normaal'" data-testid="plan-toetscursor" :transform="`translate(${cursor.x},${cursor.y})`" fill="none" style="stroke: var(--ui-primary)" stroke-width="2">
             <circle :r="symbool / 2" vector-effect="non-scaling-stroke" />
@@ -617,7 +618,7 @@ const markeringen = computed(() => {
         <UButton
           icon="i-lucide-image-up"
           :label="$t('editor.situatie.canvas.planOpnieuwKiezen')"
-          :disabled="editor.alleenLezen"
+          :disabled="alleenLezen"
           @click="pagina && emit('vervangPlan', pagina.id)"
         />
       </div>

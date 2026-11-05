@@ -1,3 +1,4 @@
+import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
@@ -27,6 +28,7 @@ test("zonder kringen staat er Geen kringen", async ({ page, request }) => {
 test("de tabel toont de kolommen van de pdf; een klik of toets selecteert het punt", async ({ page, request }) => {
   await page.goto(`/projecten/${await nieuwProject(request, "tabel")}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   await page.getByTestId("tab-kringenlijst").click();
 
   const tabel = page.getByTestId("kringenlijst");
@@ -91,6 +93,7 @@ test("de tabel toont de kolommen van de pdf; een klik of toets selecteert het pu
 test("de selectie van het schema staat gemarkeerd en in beeld, onder een vaste kop", async ({ page, request }) => {
   await page.goto(`/projecten/${await nieuwProject(request, "scroll")}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   // Een extra punt onderaan: het wordt geselecteerd.
   await page.getByTestId("schema-canvas").locator('[data-testid^="plus-kring-einde-"]').click();
 
@@ -114,6 +117,7 @@ test("de selectie van het schema staat gemarkeerd en in beeld, onder een vaste k
 test("een selectie elders scrolt een rij boven het beeld onder de vaste kop vandaan", async ({ page, request }) => {
   await page.goto(`/projecten/${await nieuwProject(request, "elders")}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   await page.setViewportSize({ width: 1280, height: 220 });
   await page.getByTestId("tab-kringenlijst").click();
 

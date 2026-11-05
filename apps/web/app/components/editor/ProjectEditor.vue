@@ -468,7 +468,7 @@ const hint = computed(() => {
   return null;
 });
 
-watch(() => store.alleenLezen, alleenLezen => { if (alleenLezen) stopPlaatsenEnMeten(); });
+watch(() => store.alleenLezen || situatie.actievePagina?.referentie, alleenLezen => { if (alleenLezen) stopPlaatsenEnMeten(); });
 watch([plaatsZoek, plaatsKring], () => { teplaatsen.value = null; });
 
 function geplaatst(nodeId: NodeId, vanPagina: string | null): void {
@@ -602,13 +602,14 @@ onBeforeUnmount(() => {
       <EditorWerkruimte ref="werkruimte" :tabblad="store.tabblad" :selectie="store.selectie" :heeft-plan="!!situatie.actievePagina?.achtergrond">
         <template #gereedschap>
           <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" @sjabloon="openSjabloon" @lichtschakeling="lichtschakelingOpen = true" @referenties="referentiesOpen = true" />
-          <TePlaatsenPaneel v-else v-model:gekozen="teplaatsen" v-model:zoek="plaatsZoek" v-model:kring="plaatsKring" v-model:doorgaan="doorplaatsen" @volgorde="plaatsVolgorde = $event" />
+          <TePlaatsenPaneel v-else :inert="situatie.actievePagina?.referentie || undefined" v-model:gekozen="teplaatsen" v-model:zoek="plaatsZoek" v-model:kring="plaatsKring" v-model:doorgaan="doorplaatsen" @volgorde="plaatsVolgorde = $event" />
         </template>
         <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />
         <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="min-h-0 flex-1" />
         <MateriaallijstTabel v-else-if="store.tabblad === 'materiaallijst'" class="min-h-0 flex-1" />
         <template v-else>
           <div v-if="heeftPaginas" class="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <p v-if="situatie.actievePagina?.referentie" role="status" class="border-b border-default px-3 py-2 text-sm" data-testid="referentieblad-melding">{{ $t('editor.situatie.referentieUitleg') }}</p>
 
             <div
               v-if="hint"

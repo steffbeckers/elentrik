@@ -1,3 +1,4 @@
+import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 import { expect, test } from "@playwright/test";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
@@ -11,6 +12,7 @@ test("materiaallijst telt kabel en draad en bewaart aanpasbare lengtes", async (
   const { id } = await antwoord.json();
   await page.goto(`/projecten/${id}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   await page.getByTestId("tab-materiaallijst").click();
   const tabel = page.getByTestId("materiaallijst");
   const kabel = tabel.locator('[data-materiaal-type="leiding"]');
