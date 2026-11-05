@@ -64,7 +64,9 @@ async function maakProjectMetContactdozen(page: Page, projectNaam: string, aanta
 
   await page.keyboard.press("c");
   await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
-  for (let i = 1; i <= aantal; i++) {
+  // The rail action already added A1. Add only the remaining requested points.
+  await expect(schemaTekst(page, "A1")).toHaveCount(1);
+  for (let i = 2; i <= aantal; i++) {
     await pasTeMaken(page);
     await kringPlus.click();
     await expect(schemaTekst(page, `A${i}`)).toHaveCount(1);
@@ -415,7 +417,7 @@ test("alleen-lezen worden stopt een gekozen punt en blokkeert doorplaatsen", asy
   }
 });
 
-test("mislukte opslag houdt lokale plaatsing en foutstatus tot opnieuw proberen", async ({ page, request }) => {
+test("mislukte opslag houdt lokale plaatsing en lokale status tot automatische herpoging", async ({ page, request }) => {
   test.setTimeout(120_000);
   const projectId = await maakProjectMetContactdozen(page, `${naam} opslagfout`);
   await page.getByTestId("tab-situatieschema").click();
@@ -429,11 +431,12 @@ test("mislukte opslag houdt lokale plaatsing en foutstatus tot opnieuw proberen"
   await page.getByTestId("te-plaatsen-A1").click();
   await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
   await expect(planSymbolen(page)).toHaveCount(1);
-  await expect(page.getByTestId("opslagstatus")).toHaveText("Opslaan mislukt", { timeout: 15_000 });
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Niet opgeslagen: lokaal bewaard", { timeout: 15_000 });
   expect((await haalProject(request, projectId)).document.situatie.paginas[0]!.plaatsingen).toHaveLength(0);
   await page.unroute(url);
-  await page.getByRole("button", { name: "Opnieuw proberen", exact: true }).click();
-  await wachtOpPlaatsingen(request, projectId, 1);
+  // Recoverable 5xx failures retry after ten seconds; the explicit error button belongs to terminal failures.
+  await expect.poll(async () => (await haalProject(request, projectId)).document.situatie.paginas[0]!.plaatsingen.length,
+    { timeout: 15_000 }).toBe(1);
   await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
 });
 
