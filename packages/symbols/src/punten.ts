@@ -142,7 +142,9 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">, horizontaal = false, 
     }
     case "wand":
       // ACA maart 2025 p.29: kruis met een afzonderlijke korte wandlijn.
-      svg += kruis(arm) + lijn(x + arm + 1, cy - arm, x + arm + 1, cy + arm, { data: { rol: "wand" } });
+      svg += kruis(arm) + (horizontaal
+        ? lijn(x - arm, cy + arm + 1, x + arm, cy + arm + 1, { data: { rol: "wand" } })
+        : lijn(x + arm + 1, cy - arm, x + arm + 1, cy + arm, { data: { rol: "wand" } }));
       break;
     case "led":
       // Basislijn cy + 0,6: de tekst (1,8 mm) staat rechtop naast het kruis.

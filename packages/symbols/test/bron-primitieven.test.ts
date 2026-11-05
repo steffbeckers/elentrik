@@ -22,16 +22,20 @@ test("wall light is the ordinary cross plus a separate short wall stroke", () =>
     aantal: 1,
     soort: "wand",
   } as NodeVan<"lichtpunt">;
-  for (const s of [tekenSymbool(node), tekenAftakkingSymbool(node, true)]) {
+  for (const [index, s] of [tekenSymbool(node), tekenAftakkingSymbool(node, true), tekenAftakkingSymbool(node, false)].entries()) {
     const kruis = lijnen(s.svg, "kruis");
     const wall = lijnen(s.svg, "wand");
     expect(kruis).toHaveLength(2);
     expect(wall).toHaveLength(1);
-    expect(wall[0]!.x1).toBe(wall[0]!.x2);
-    expect(wall[0]!.x1).toBeGreaterThan(
-      Math.max(...kruis.flatMap((l) => [l.x1!, l.x2!])),
-    );
-    expect(Math.abs(wall[0]!.y1! - wall[0]!.y2!)).toBe(5);
+    if (index === 0) {
+      expect(wall[0]!.x1).toBe(wall[0]!.x2);
+      expect(wall[0]!.x1).toBeGreaterThan(Math.max(...kruis.flatMap(l => [l.x1!,l.x2!])));
+      expect(Math.abs(wall[0]!.y1! - wall[0]!.y2!)).toBe(5);
+    } else {
+      expect(wall[0]!.y1).toBe(wall[0]!.y2);
+      expect(wall[0]!.y1).toBeGreaterThan(Math.max(...kruis.flatMap(l => [l.y1!,l.y2!])));
+      expect(Math.abs(wall[0]!.x1! - wall[0]!.x2!)).toBe(5);
+    }
     expect(buitenVak(s)).toEqual([]);
     expect(isGoedgevormd(s)).toBe(true);
   }
