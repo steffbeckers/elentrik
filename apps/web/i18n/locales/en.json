@@ -369,7 +369,10 @@
       "zelfdeType": "{aantal} × {type}",
       "verschillend": "—",
       "geen": "None",
-      "ongeldig": "Invalid value"
+      "ongeldig": "This value has not been saved. Correct the input or press Escape to restore the saved value.",
+      "conceptVerlaten": "This invalid input from a previous selection has not been saved.",
+      "terugNaarConcept": "Return to input",
+      "conceptHerstellen": "Restore saved values"
     },
     "bevindingen": {
       "titel": "Findings",
@@ -482,7 +485,12 @@
         "allesGeplaatst": "All points are on a plan",
         "kring": "Circuit {label}",
         "zonderKring": "Without circuit",
-        "verdeelborden": "Distribution boards"
+        "verdeelborden": "Distribution boards",
+        "zoeken": "Search by code, type or description",
+        "kringFilter": "Circuit",
+        "alleKringen": "All circuits",
+        "doorgaan": "Continue with the next point",
+        "geenResultaten": "No points match this search or circuit."
       },
       "paginas": {
         "titel": "Pages",

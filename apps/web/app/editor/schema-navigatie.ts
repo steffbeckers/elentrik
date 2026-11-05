@@ -28,7 +28,15 @@ export function schemaKeuzes(doc: InstallatieDocument, analyse: Analyse, typeNaa
     keuzes.push({ id, label: [identiteit, typeNaam(node.type), node.label].filter(Boolean).join(" · ") });
     for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push({ id: node.kinderen[i]!, kring });
   }
-  return keuzes;
+  const aantallen = new Map<string, number>();
+  for (const keuze of keuzes) aantallen.set(keuze.label, (aantallen.get(keuze.label) ?? 0) + 1);
+  const nummers = new Map<string, number>();
+  return keuzes.map(keuze => {
+    if (aantallen.get(keuze.label)! < 2) return keuze;
+    const nummer = (nummers.get(keuze.label) ?? 0) + 1;
+    nummers.set(keuze.label, nummer);
+    return { ...keuze, label: `${keuze.label} ${nummer}` };
+  });
 }
 
 /** Sorteer bestemmingen los van de geometrische volgorde van de plusknoppen. */

@@ -24,6 +24,7 @@ import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
 import PlanOpmaak from "~/components/situatie/PlanOpmaak.vue";
 import PlanToevoegenDialoog from "~/components/situatie/PlanToevoegenDialoog.vue";
 import SchaalDialoog from "~/components/situatie/SchaalDialoog.vue";
+import { volgendPunt } from "~/situatie/plaatskeuzes";
 import TePlaatsenPaneel from "~/components/situatie/TePlaatsenPaneel.vue";
 import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
@@ -402,7 +403,17 @@ const exportOpen = ref(false);
 
 /** Het punt dat met een klik op het plan geplaatst wordt (gekozen in "Te plaatsen"), of null. */
 const teplaatsen = ref<NodeId | null>(null);
-watch(teplaatsen, (id) => { if (id !== null) werkruimte.value?.toonWerk(); });
+const plaatsZoek = ref("");
+const plaatsKring = ref("");
+const doorplaatsen = ref(false);
+const plaatsVolgorde = ref<string[]>([]);
+let plaatsReeks: string[] = [];
+watch(teplaatsen, (id) => {
+  if (id === null) return;
+  plaatsReeks = [...plaatsVolgorde.value];
+  // Small screens keep the established route back to the full plan.
+  if (window.matchMedia("(max-width: 767px)").matches) werkruimte.value?.toonWerk();
+});
 /** De pagina waarop twee klikken een afstand meten (schaalmodus), of null. */
 const meetPaginaId = ref<string | null>(null);
 const meetSchaal = computed(() => meetPaginaId.value !== null && meetPaginaId.value === situatie.actievePaginaId);
@@ -431,6 +442,7 @@ watch(
   () => situatie.actievePaginaId,
   (id) => {
     if (id !== meetPaginaId.value) meetPaginaId.value = null;
+    teplaatsen.value = null;
   },
 );
 watch(
@@ -448,8 +460,12 @@ const hint = computed(() => {
   return null;
 });
 
+watch(() => store.alleenLezen, alleenLezen => { if (alleenLezen) stopPlaatsenEnMeten(); });
+watch([plaatsZoek, plaatsKring], () => { teplaatsen.value = null; });
+
 function geplaatst(nodeId: NodeId, vanPagina: string | null): void {
-  stopPlaatsenEnMeten();
+  teplaatsen.value = doorplaatsen.value && teplaatsen.value === nodeId ? volgendPunt(plaatsReeks, nodeId) : null;
+  meetPaginaId.value = null;
   const naar = situatie.actievePagina?.titel;
   if (vanPagina === null || naar === undefined) return;
   toast.add({ title: t("editor.situatie.verplaatst", { label: nodeTekst(nodeId), van: vanPagina, naar }) });
@@ -578,7 +594,7 @@ onBeforeUnmount(() => {
       <EditorWerkruimte ref="werkruimte" :tabblad="store.tabblad" :selectie="store.selectie" :heeft-plan="!!situatie.actievePagina?.achtergrond">
         <template #gereedschap>
           <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" />
-          <TePlaatsenPaneel v-else v-model:gekozen="teplaatsen" />
+          <TePlaatsenPaneel v-else v-model:gekozen="teplaatsen" v-model:zoek="plaatsZoek" v-model:kring="plaatsKring" v-model:doorgaan="doorplaatsen" @volgorde="plaatsVolgorde = $event" />
         </template>
         <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />
         <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="min-h-0 flex-1" />
@@ -588,7 +604,7 @@ onBeforeUnmount(() => {
 
             <div
               v-if="hint"
-              class="flex min-h-9 shrink-0 items-center gap-2 border-b border-default bg-primary/5 px-3 py-1 text-sm"
+              class="absolute inset-x-3 top-12 z-10 flex min-h-9 items-center gap-2 rounded border border-default bg-default px-3 py-1 text-sm"
               role="status"
               data-testid="plan-hint"
             >

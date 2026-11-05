@@ -164,3 +164,47 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
 
   expect(dialogen).toEqual([]);
 });
+
+
+test("ongeldige nominale stroom blijft zichtbaar na blur en selectie verlaten", async ({ page, request }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Nieuw project" }).click();
+  const nieuw = page.getByRole("dialog");
+  const projectNaam = `${naam} ongeldige invoer`;
+  await nieuw.getByLabel("Naam").fill(projectNaam);
+  await nieuw.getByRole("button", { name: "Aanmaken" }).click();
+  await page.getByRole("row").filter({ hasText: projectNaam }).getByRole("link", { name: "Openen" }).click();
+  const projectId = new URL(page.url()).pathname.split("/").pop()!;
+  await pasTeMaken(page);
+  await page.getByTestId("schema-canvas").locator('[data-testid^="plus-rail-einde-"]').click();
+  const automaatId = await selecteerBij(page, "B16 2P");
+  await page.getByTestId("werkruimte-eigenschappen").click();
+  const stroom = page.getByTestId("veld-nominaal_A");
+  await expect(stroom).toHaveValue("16");
+  await stroom.fill("-1");
+  await stroom.blur();
+  await expect(stroom).toHaveValue("-1");
+  await expect(page.getByText("Deze waarde is niet opgeslagen.", { exact: false })).toBeVisible();
+  await page.getByTestId("gebruiker-menu").click();
+  await page.getByTestId("taal-menu").click();
+  await page.getByRole("menuitemcheckbox", { name: "Français" }).click();
+  await expect(stroom).toHaveValue("-1");
+  await expect(page.getByText("Cette valeur n’est pas enregistrée.", { exact: false })).toBeVisible();
+  await page.getByTestId("gebruiker-menu").click();
+  await page.getByTestId("taal-menu").click();
+  await page.getByRole("menuitemcheckbox", { name: "Nederlands" }).click();
+  const doc = (await (await request.get(`/api/projecten/${projectId}`)).json()).document;
+  // Even while autosave settles, no invalid value can enter the document.
+  expect(doc.nodes[automaatId].nominaal_A).toBe(16);
+  await selecteerBij(page, "A1");
+  const melding = page.getByTestId("verlaten-concept");
+  await expect(melding).toContainText("-1");
+  await expect(page.getByTestId("veld-label")).toHaveValue("");
+  await melding.getByRole("button", { name: "Terug naar invoer" }).click();
+  await expect(stroom).toHaveValue("-1");
+  await stroom.focus();
+  await page.keyboard.press("Escape");
+  await expect(stroom).toHaveValue("16");
+  await expect(page.getByText("Deze waarde is niet opgeslagen.", { exact: false })).toHaveCount(0);
+});

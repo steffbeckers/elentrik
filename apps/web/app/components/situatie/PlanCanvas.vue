@@ -8,6 +8,7 @@ import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeer
 import { useDocumentFoutMelding } from "~/composables/useDocumentFoutMelding";
 import { useNodeTekst } from "~/composables/useNodeTekst";
 import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
+import { schemaKeuzes } from "~/editor/schema-navigatie";
 import { maxPlanZoom, schermNaarInhoud } from "~/editor/weergave";
 import { planCursorToets } from "~/situatie/bediening";
 import { schuif, symboolGrootte } from "~/situatie/geometrie";
@@ -16,6 +17,7 @@ import { situatieSneltoets } from "~/situatie/sneltoetsen";
 import { useEditorStore } from "~/stores/editor";
 import { useSituatieStore } from "~/stores/situatie";
 
+const { t } = useI18n();
 const props = defineProps<{
   /** Het punt dat met een klik op het plan geplaatst wordt (gekozen in "Te plaatsen"), of null. */
   teplaatsen: NodeId | null;
@@ -76,6 +78,8 @@ watch(
 /** Een pagina zonder plan, of met een plan dat niet laadt. */
 const planOntbreekt = computed(() => pagina.value !== undefined && (!achtergrond.value || planFout.value));
 
+const keuzeLabels = computed(() => editor.document && editor.analyse
+  ? new Map(schemaKeuzes(editor.document, editor.analyse, type => t(`editor.types.${type}`)).map(k => [k.id, k.label])) : new Map<string, string>());
 const items = computed(() => {
   const doc = editor.document;
   const analyse = editor.analyse;
@@ -105,6 +109,7 @@ const canvas = useCanvasWeergave({
   inhoud: () => inhoud.value,
   marge: () => (inhoud.value ? Math.max(inhoud.value.breedte, inhoud.value.hoogte) * MARGE_FRACTIE : 0),
   maxZoom: maxPlanZoom,
+  behoudSchaalBijResize: true,
   onderbreek: breekVerschuivingAf,
 });
 const { weergave, viewBox, ruimteIngedrukt, sleept, maakPassend, zoomOpWiel } = canvas;
@@ -463,7 +468,7 @@ const markeringen = computed(() => {
         @change="kiesPlanPunt"
       >
         <option value="">{{ $t('editor.situatie.canvas.kiesPuntLeeg') }}</option>
-        <option v-for="item in items" :key="item.nodeId" :value="item.nodeId">{{ item.label }}</option>
+        <option v-for="item in items" :key="item.nodeId" :value="item.nodeId">{{ keuzeLabels.get(item.nodeId) ?? item.label }}</option>
       </select>
     <div
       v-if="achtergrond && !planOntbreekt && !editor.alleenLezen"
@@ -508,10 +513,10 @@ const markeringen = computed(() => {
     </div>
 
       <p :id="hulpId" data-testid="plan-keyboard-help" class="sr-only">{{ $t(modus === 'normaal' ? 'editor.situatie.canvas.toetsenbord' : 'editor.situatie.canvas.plaatsToetsenbord') }}</p>
-      <template v-if="modus !== 'normaal'">
+      <div v-if="modus !== 'normaal'" class="absolute bottom-14 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded border border-default bg-default px-2 py-1">
         <output aria-live="polite" class="text-xs tabular-nums">{{ $t('editor.situatie.canvas.cursorPositie', { x: Math.round(cursor.x), y: Math.round(cursor.y) }) }}</output>
         <UButton :disabled="editor.alleenLezen" :label="$t(modus === 'meet' ? 'editor.situatie.canvas.bevestigMeetpunt' : 'editor.situatie.canvas.bevestigPlaats')" @click="bevestigCursor" />
-      </template>
+      </div>
     </div>
     <div
       ref="venster"

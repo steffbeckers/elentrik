@@ -5,6 +5,19 @@ import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie } from "../app/
 
 const tekst = (key: string, waarden: Record<string, string | number>) => `${key}:${Object.values(waarden).join("/")}`;
 
+test("gelijke puntnamen blijven onderscheidbaar zonder opgeslagen codes te wijzigen", () => {
+  const start = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
+  const bord = Object.values(start.nodes).find(n => n.type === "verdeelbord")!;
+  const eerste = voegOnderdeelToe(start, { soort: "rail-einde", nodeId: bord.id }, "schakelaar");
+  const tweede = voegOnderdeelToe(eerste.doc, { soort: "kring-einde", nodeId: eerste.ids.at(-1)! }, "schakelaar");
+  const analyse = analyseer(tweede.doc);
+  const schakelaars = Object.values(tweede.doc.nodes).filter(n => n.type === "schakelaar");
+  for (const n of schakelaars) analyse.puntLabels[n.id] = "B2";
+  const keuzes = schemaKeuzes(tweede.doc, analyse, type => type).filter(k => schakelaars.some(n => n.id === k.id));
+  expect(keuzes.map(k => k.label)).toEqual(["B2 · schakelaar 1", "B2 · schakelaar 2"]);
+  expect(schakelaars.map(n => analyse.puntLabels[n.id])).toEqual(["B2", "B2"]);
+});
+
 test("aftakkingen hebben een kringbestemming en selectie volgt de eigen aftakking", () => {
   const start = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
   const bord = Object.values(start.nodes).find(n => n.type === "verdeelbord")!;

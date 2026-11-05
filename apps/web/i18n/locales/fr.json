@@ -369,7 +369,10 @@
       "zelfdeType": "{aantal} × {type}",
       "verschillend": "—",
       "geen": "Aucun",
-      "ongeldig": "Valeur non valide"
+      "ongeldig": "Cette valeur n’est pas enregistrée. Corrigez la saisie ou appuyez sur Échap pour rétablir la valeur enregistrée.",
+      "conceptVerlaten": "Cette saisie incorrecte d’une sélection précédente n’est pas enregistrée.",
+      "terugNaarConcept": "Revenir à la saisie",
+      "conceptHerstellen": "Rétablir les valeurs enregistrées"
     },
     "bevindingen": {
       "titel": "Constats",
@@ -482,7 +485,12 @@
         "allesGeplaatst": "Tous les points sont placés sur un plan",
         "kring": "Circuit {label}",
         "zonderKring": "Sans circuit",
-        "verdeelborden": "Tableaux de distribution"
+        "verdeelborden": "Tableaux de distribution",
+        "zoeken": "Rechercher par code, type ou description",
+        "kringFilter": "Circuit",
+        "alleKringen": "Tous les circuits",
+        "doorgaan": "Continuer avec le point suivant",
+        "geenResultaten": "Aucun point pour cette recherche ou ce circuit."
       },
       "paginas": {
         "titel": "Pages",

@@ -369,7 +369,10 @@
       "zelfdeType": "{aantal} × {type}",
       "verschillend": "—",
       "geen": "Geen",
-      "ongeldig": "Ongeldige waarde"
+      "ongeldig": "Deze waarde is niet opgeslagen. Corrigeer de invoer of druk op Escape om de opgeslagen waarde te herstellen.",
+      "conceptVerlaten": "Deze ongeldige invoer van een vorige selectie is niet opgeslagen.",
+      "terugNaarConcept": "Terug naar invoer",
+      "conceptHerstellen": "Opgeslagen waarden herstellen"
     },
     "bevindingen": {
       "titel": "Bevindingen",
@@ -482,7 +485,12 @@
         "allesGeplaatst": "Alle punten staan op een plan",
         "kring": "Kring {label}",
         "zonderKring": "Zonder kring",
-        "verdeelborden": "Verdeelborden"
+        "verdeelborden": "Verdeelborden",
+        "zoeken": "Zoeken op code, type of omschrijving",
+        "kringFilter": "Kring",
+        "alleKringen": "Alle kringen",
+        "doorgaan": "Doorgaan met volgend punt",
+        "geenResultaten": "Geen punten voor deze zoekopdracht of kring."
       },
       "paginas": {
         "titel": "Pagina's",

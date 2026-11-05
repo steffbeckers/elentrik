@@ -41,7 +41,7 @@ async function pasTeMaken(page: Page) {
 }
 
 /** Maakt een project met een kring en twee contactdozen (A1 en A2) en opent het op het eendraadschema. */
-async function maakProjectMetContactdozen(page: Page, projectNaam: string): Promise<string> {
+async function maakProjectMetContactdozen(page: Page, projectNaam: string, aantal = 2): Promise<string> {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Nieuw project" }).click();
@@ -62,7 +62,7 @@ async function maakProjectMetContactdozen(page: Page, projectNaam: string): Prom
 
   await page.keyboard.press("c");
   await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
-  for (let i = 1; i <= 2; i++) {
+  for (let i = 1; i <= aantal; i++) {
     await pasTeMaken(page);
     await kringPlus.click();
     await expect(schemaTekst(page, `A${i}`)).toHaveCount(1);
@@ -303,4 +303,83 @@ test.describe("touch", () => {
       })
       .toBe(true);
   });
+});
+
+
+test("zeven punten doorplaatsen houdt het paneel en plananker stabiel", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  // Six contact points plus their distribution board are seven unplaced items.
+  const projectId = await maakProjectMetContactdozen(page, `${naam} doorplaatsen`, 6);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await planAfbeeldingGeladen(page);
+  // Start with a closed pane: open, enable mode, choose first, seven placements = ten clicks.
+  const toggle = page.getByTestId("werkruimte-onderdelen");
+  if (await toggle.getAttribute("aria-expanded") === "true") await toggle.click();
+  await toggle.click();
+  await page.getByTestId("te-plaatsen-doorgaan").click();
+  const afbeelding = page.getByTestId("plan-afbeelding");
+  const voor = (await afbeelding.boundingBox())!;
+  await page.getByTestId("te-plaatsen-A1").click();
+  const canvas = page.getByTestId("plan-canvas");
+  for (let i = 0; i < 7; i++) {
+    await canvas.click({ position: { x: 90 + 36 * i, y: 130 } });
+    await expect(planSymbolen(page)).toHaveCount(i + 1);
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const na = (await afbeelding.boundingBox())!;
+    expect(Math.abs(na.x - voor.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(na.y - voor.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(na.width - voor.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(na.height - voor.height)).toBeLessThanOrEqual(1);
+  }
+  await canvas.click({ position: { x: 170, y: 210 } });
+  await expect(planSymbolen(page)).toHaveCount(7);
+  await wachtOpPlaatsingen(request, projectId, 7);
+  await page.keyboard.press("Control+z");
+  await expect(planSymbolen(page)).toHaveCount(6);
+  // Undo returns the point to the list without restarting the queue.
+  await canvas.click({ position: { x: 210, y: 210 } });
+  await expect(planSymbolen(page)).toHaveCount(6);
+});
+
+test("zoeken, kringfilter en Escape stoppen de plaatskeuze", async ({ page }) => {
+  test.setTimeout(120_000);
+  await maakProjectMetContactdozen(page, `${naam} filters`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  const zoek = page.getByTestId("te-plaatsen-zoeken");
+  await zoek.fill("A2");
+  await expect(page.getByTestId("te-plaatsen-A1")).toHaveCount(0);
+  await expect(page.getByTestId("te-plaatsen-A2")).toBeVisible();
+  await page.getByTestId("te-plaatsen-A2").click();
+  await page.getByTestId("te-plaatsen-kring").click();
+  await page.getByRole("option", { name: "Verdeelborden", exact: true }).click();
+  await page.getByTestId("plan-canvas").click({ position: { x: 180, y: 180 } });
+  await expect(planSymbolen(page)).toHaveCount(0);
+  await page.getByTestId("te-plaatsen-kring").click();
+  await page.getByRole("option", { name: "Kring A", exact: true }).click();
+  await page.getByTestId("te-plaatsen-A2").click();
+  await page.keyboard.press("Escape");
+  await page.getByTestId("plan-canvas").click({ position: { x: 180, y: 180 } });
+  await expect(planSymbolen(page)).toHaveCount(0);
+});
+
+
+test("pagina wisselen stopt de keuze; smalle schermen behouden de paneelroute", async ({ page }) => {
+  test.setTimeout(120_000);
+  await maakProjectMetContactdozen(page, `${naam} pagina mobiel`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await voegPlanToe(page, PLAN_PNG);
+  await page.getByTestId("te-plaatsen-A1").click();
+  await page.getByTestId("pagina-tab-0").click();
+  await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
+  await expect(planSymbolen(page)).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const toggle = page.getByTestId("werkruimte-onderdelen");
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  await page.getByTestId("te-plaatsen-A1").click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
+  await expect(planSymbolen(page)).toHaveCount(1);
 });
