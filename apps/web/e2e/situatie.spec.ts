@@ -1,5 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
+import type { Mij } from "../shared/mij";
+import { zetProefEinde } from "./hulp/database";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
@@ -308,11 +310,13 @@ test.describe("touch", () => {
 
 test("zeven punten doorplaatsen houdt het paneel en plananker stabiel", async ({ page, request }) => {
   test.setTimeout(120_000);
-  // Six contact points plus their distribution board are seven unplaced items.
-  const projectId = await maakProjectMetContactdozen(page, `${naam} doorplaatsen`, 6);
+  const projectId = await maakProjectMetContactdozen(page, `${naam} doorplaatsen`, 7);
   await page.getByTestId("tab-situatieschema").click();
   await voegPlanToe(page, PLAN_PNG, { leeg: true });
   await planAfbeeldingGeladen(page);
+  // The circuit filter is an existing work context before counting the placement route.
+  await page.getByTestId("te-plaatsen-kring").click();
+  await page.getByRole("option", { name: "Kring A", exact: true }).click();
   // Start with a closed pane: open, enable mode, choose first, seven placements = ten clicks.
   const toggle = page.getByTestId("werkruimte-onderdelen");
   if (await toggle.getAttribute("aria-expanded") === "true") await toggle.click();
@@ -382,4 +386,52 @@ test("pagina wisselen stopt de keuze; smalle schermen behouden de paneelroute", 
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
   await expect(planSymbolen(page)).toHaveCount(1);
+});
+
+
+test("alleen-lezen worden stopt een gekozen punt en blokkeert doorplaatsen", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  await maakProjectMetContactdozen(page, `${naam} alleen lezen`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
+  await page.getByTestId("te-plaatsen-doorgaan").click();
+  await page.getByTestId("te-plaatsen-A1").click();
+  const mij = (await (await request.get("/api/mij")).json()) as Mij;
+  const dag = 24 * 3600 * 1000;
+  try {
+    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() - dag));
+    const sessie = page.waitForResponse(r => r.url().endsWith("/api/mij") && r.request().method() === "GET");
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    expect((await sessie).ok()).toBe(true);
+    await expect(page.getByTestId("abonnement-banner-alleen-lezen")).toBeVisible();
+    await expect(page.getByTestId("te-plaatsen-A1")).toBeDisabled();
+    await expect(page.getByTestId("te-plaatsen-doorgaan")).toBeDisabled();
+    await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
+    await expect(planSymbolen(page)).toHaveCount(0);
+  } finally {
+    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * dag));
+  }
+});
+
+test("mislukte opslag houdt lokale plaatsing en foutstatus tot opnieuw proberen", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  const projectId = await maakProjectMetContactdozen(page, `${naam} opslagfout`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
+  const url = `**/api/projecten/${projectId}`;
+  await page.route(url, async route => {
+    if (route.request().method() === "PUT") await route.fulfill({ status: 500, json: { statusMessage: "Opslaan mislukt" } });
+    else await route.continue();
+  });
+  await page.getByTestId("te-plaatsen-A1").click();
+  await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
+  await expect(planSymbolen(page)).toHaveCount(1);
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opslaan mislukt", { timeout: 15_000 });
+  expect((await haalProject(request, projectId)).document.situatie.paginas[0]!.plaatsingen).toHaveLength(0);
+  await page.unroute(url);
+  await page.getByRole("button", { name: "Opnieuw proberen", exact: true }).click();
+  await wachtOpPlaatsingen(request, projectId, 1);
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
 });
