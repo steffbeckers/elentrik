@@ -28,8 +28,8 @@ function nummerReeksen(doc: InstallatieDocument) {
     let { id, reeks, bord, kring } = stapel.pop()!;
     if (gezien.has(id)) continue;
     gezien.add(id);
-    const node = doc.nodes[id];
-    if (!node) continue;
+    if (!Object.hasOwn(doc.nodes, id)) continue;
+    const node = doc.nodes[id]!;
     if (node.type === "verdeelbord") {
       if (kring) reeks = id;
       bord = true;
@@ -68,7 +68,7 @@ export function bepaalKringCodes(
             : undefined;
       if (!code) continue;
       const ander = bezet.get(code);
-      if (ander)
+      if (ander !== undefined)
         throw new DocumentFout("ONGELDIG_SCHEMA", {
           reden: "dubbele referentie",
           code,
@@ -126,12 +126,13 @@ export function dupliceerKring(
   nodeId: NodeId,
   nieuweCode: string,
 ): OperatieResultaat & { id: NodeId } {
-  const node = doc.nodes[nodeId];
+  const node = Object.hasOwn(doc.nodes, nodeId) ? doc.nodes[nodeId] : undefined;
+  const codes = bepaalKringCodes(doc);
   if (
     !node ||
     (node.type !== "automaat" && node.type !== "zekering") ||
     node.parentId === null ||
-    !bepaalKringCodes(doc)[nodeId]
+    !codes[nodeId]
   )
     throw new DocumentFout("NIET_TOEGELATEN_KIND", {
       reden: "geen kring",
@@ -139,6 +140,23 @@ export function dupliceerKring(
     });
   if (!/^[A-Z]+$/.test(nieuweCode))
     throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "ongeldige kringcode" });
+  // An automatic reference is occupied too: reserving it for the clone would renumber its owner.
+  const { groepen } = nummerReeksen(doc);
+  const reeks = [...groepen.values()].find((ids) => ids.includes(nodeId))!;
+  const bezetDoor = reeks.find((id) => {
+    const n = doc.nodes[id]!;
+    return (
+      codes[id] === nieuweCode ||
+      (n.type === "differentieel" && n.referentie === nieuweCode)
+    );
+  });
+  if (bezetDoor !== undefined) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", {
+      reden: "dubbele referentie",
+      code: nieuweCode,
+      nodeIds: [bezetDoor, nodeId],
+    });
+  }
   const maak = (id: NodeId): SjabloonNode => {
     const {
       id: _id,

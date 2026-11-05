@@ -136,3 +136,60 @@ test("node ids matching Object prototype names still receive circuit codes", () 
   );
   expect(analyseer(raw).kringen.map((k) => k.label)).toEqual(["A", "B"]);
 });
+test.each(["A", "B"])(
+  "duplication rejects effective automatic code %s without renumbering existing circuits",
+  (code) => {
+    const x = basis();
+    const voor = JSON.stringify(x.doc);
+    expect(() => m.dupliceerKring(x.doc, x.a, code)).toThrowError(
+      expect.objectContaining({
+        code: "ONGELDIG_SCHEMA",
+        details: expect.objectContaining({ reden: "dubbele referentie", code }),
+      }),
+    );
+    expect(JSON.stringify(x.doc)).toBe(voor);
+    expect(m.bepaalKringCodes(x.doc)).toMatchObject({ [x.a]: "A", [x.b]: "B" });
+  },
+);
+
+test("duplication chooses a free local code while independent subboard codes stay available", () => {
+  const x = basis();
+  const main = m.dupliceerKring(x.doc, x.a, "C");
+  expect(m.bepaalKringCodes(main.doc)).toMatchObject({
+    [x.a]: "A",
+    [x.b]: "B",
+    [main.id]: "C",
+  });
+  const l = Object.values(x.doc.nodes).find((n) => n.type === "lichtpunt")!;
+  const sub = m.voegOnderdeelToe(
+    x.doc,
+    { soort: "kring-einde", nodeId: l.id },
+    "onderbord",
+  );
+  const k = m.voegOnderdeelToe(
+    sub.doc,
+    { soort: "rail-einde", nodeId: sub.ids.at(-1)! },
+    "lichtpunt",
+  );
+  const copy = m.dupliceerKring(k.doc, k.ids[0]!, "B");
+  expect(m.bepaalKringCodes(copy.doc)).toMatchObject({
+    [x.a]: "A",
+    [x.b]: "B",
+    [k.ids[0]!]: "A",
+    [copy.id]: "B",
+  });
+});
+
+test("an empty node id cannot bypass imported explicit reference collision evidence", () => {
+  const x = basis();
+  const raw = JSON.parse(JSON.stringify(x.doc).replaceAll(x.a, ""));
+  raw.nodes[""].kringCode = "J";
+  raw.nodes[x.b].kringCode = "J";
+  expect(m.valideerStructuur(raw)).toEqual([]);
+  expect(() => m.migreer(raw)).toThrowError(
+    expect.objectContaining({
+      code: "ONGELDIG_SCHEMA",
+      details: { reden: "dubbele referentie", code: "J", nodeIds: ["", x.b] },
+    }),
+  );
+});

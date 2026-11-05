@@ -124,3 +124,35 @@ test("duplicate imported references are rejected with node evidence and leave st
     .where(eq(projecten.id, x.id));
   expect((stored!.document as any).schemaVersion).toBe(1);
 });
+test.each(["constructor", "__proto__"])(
+  "missing prototype-named root %s receives targeted import rejection",
+  async (name) => {
+    const x = await seed();
+    const invalid = JSON.parse(JSON.stringify(x.raw));
+    invalid.rootId = name;
+    await expect(
+      maakProjectUitDocument(db, opslag, x.org, {
+        naam: "Ongeldig",
+        document: invalid,
+      }),
+    ).rejects.toMatchObject({
+      code: "ONGELDIG",
+      details: { problemen: expect.any(Array) },
+    });
+  },
+);
+
+test("a dangling prototype-named child receives targeted import rejection", async () => {
+  const x = await seed();
+  const invalid = JSON.parse(JSON.stringify(x.raw));
+  invalid.nodes[invalid.rootId].kinderen.push("__proto__");
+  await expect(
+    maakProjectUitDocument(db, opslag, x.org, {
+      naam: "Ongeldig",
+      document: invalid,
+    }),
+  ).rejects.toMatchObject({
+    code: "ONGELDIG",
+    details: { problemen: expect.any(Array) },
+  });
+});
