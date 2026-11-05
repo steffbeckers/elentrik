@@ -244,21 +244,28 @@ test.describe("echte pdf-export", () => {
     const bytes = new Uint8Array(Buffer.concat(delen));
     expect(Buffer.from(bytes.subarray(0, 5)).toString("latin1")).toBe("%PDF-");
 
-    // De PDF heeft: de eendraadschemapagina's, 1 situatiepagina (A1 staat op het plan), minstens 1
-    // kringenlijstpagina en 1 bijlagepagina (A2 tot A6 staan niet op het plan: dat is info). Het aantal
-    // eendraadschemapagina's volgt uit de PDF zelf (de pagina's met de titel Eendraadschema) en moet
-    // voor dit kleine project 1 zijn: één kring met zes punten past op één liggende A4.
+    // De PDF behoudt de technische tekstgrootte. Ook een kring met zes seriepunten kan
+    // door de hoofd- en bijkomende differentieel meerdere schemabladen nodig hebben.
+    // Controleer volledige inhoud en blokvolgorde, zonder een vaste paginatelling af te dwingen.
     const pdf = await leesPdf(bytes);
     const volgorde = soorten(pdf.paginaTeksten);
     const aantal = (soort: string) => volgorde.filter((v) => v === soort).length;
     expect(aantal("onbekend")).toBe(0);
-    expect(aantal("Eendraadschema")).toBe(1);
+    expect(aantal("Eendraadschema")).toBeGreaterThanOrEqual(1);
     expect(aantal("Situatieschema")).toBe(1);
     expect(aantal("Kringenlijst")).toBeGreaterThanOrEqual(1);
     expect(aantal("Bijlage")).toBe(1);
     expect(pdf.aantalPaginas).toBe(aantal("Eendraadschema") + 1 + aantal("Kringenlijst") + 1);
     // De onderdelen staan in vaste volgorde en elke cartouche telt mee in "Pagina k / N".
-    expect(volgorde).toEqual(["Eendraadschema", "Situatieschema", "Kringenlijst", "Bijlage"]);
+    expect(volgorde).toEqual([
+      ...Array(aantal("Eendraadschema")).fill("Eendraadschema"),
+      "Situatieschema",
+      ...Array(aantal("Kringenlijst")).fill("Kringenlijst"),
+      "Bijlage",
+    ]);
+    const schemaTekst = pdf.paginaTeksten.slice(0, aantal("Eendraadschema")).join(" ");
+    for (let punt = 1; punt <= 6; punt++) expect(schemaTekst).toMatch(new RegExp(`\\bA${punt}\\b`));
+    pdf.paginaTeksten.forEach(tekst => expect(tekst).toContain("230 V"));
     pdf.paginaTeksten.forEach((tekst, i) => expect(tekst).toContain(`Pagina ${i + 1} / ${pdf.aantalPaginas}`));
     // De bijlage vermeldt de info en de situatiepagina is niet overgeslagen. "Info (5)" hangt af van het
     // sjabloon "Kring stopcontacten" (6 contactdozen, A1 tot A6) waarvan enkel A1 op het plan staat.

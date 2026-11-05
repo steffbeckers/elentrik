@@ -1077,3 +1077,14 @@ test("kleine situatiesymbolen houden afdruklabels van minstens 2,5 mm", () => {
  expect(fonts.length).toBeGreaterThan(0);
  for (const font of fonts) expect(font * breedte / 3000).toBeGreaterThanOrEqual(2.49);
 });
+
+test("zes seriestopcontacten met hoofd- en bijkomende differentieel behouden alle labels op leesbare vervolgbladen", () => {
+ const doc = installatie().differentieel(300, d => d.verdeelbord(b => b.differentieel(30, bd => bd.kring(k => k.automaat(20).leiding(2.5).contactdozen(6))))).bouw().doc;
+ const uit = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("eendraadschema"), installateur: { naam: "Elektro E2E" }, logo: "logo.png" }));
+ expect(uit.paginas).toBe(2);
+ expect(uit.html).not.toMatch(/scale\(0\./);
+ const labels = [...uit.html.matchAll(/<text class="tekst-punt"[^>]*>(A\d+)<\/text>/g)].map(m => m[1]).sort();
+ expect(labels).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);
+ const secties = paginas(uit.html);
+ for (const sectie of secties) expect(sectie).toContain("2 × 230 V ~");
+});
