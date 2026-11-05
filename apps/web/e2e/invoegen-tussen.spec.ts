@@ -24,7 +24,8 @@ async function openProject(page: Page, request: APIRequestContext) {
   expect(response.status()).toBe(201);
   const { id } = (await response.json()) as { id: string };
   await page.goto(`/projecten/${id}`);
-  await expect(page.getByTestId("schema-canvas")).toBeVisible();
+  // The first editor navigation also loads Nuxt's development modules.
+  await expect(page.getByTestId("schema-canvas")).toBeVisible({ timeout: 20_000 });
   return { id, doc: await haal(request, id) };
 }
 // Same real-symbol-segment hit testing as root's current hulp/schema-selectie.ts.
