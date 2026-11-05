@@ -2,8 +2,8 @@
 # .env.voorbeeld en vul in); zie docs/online.md.
 #
 # Er worden bewust geen poorten gepubliceerd: de enige weg naar binnen is de Cloudflare Tunnel, die
-# dit netwerk (`elentrik`) deelt en de app bereikt op http://elentrik-web:3000 (productie) en
-# http://elentrik-web-staging:3000 (staging).
+# dit netwerk (`elentrik`) deelt en voor productie en staging naar http://elentrik-proxy:8080 wijst. Die
+# proxy stuurt op hostnaam door naar web:3000 en web-staging:3000 (zie proxy/Caddyfile).
 #
 # Staging draait naast productie: een eigen web-dienst (web-staging) en een eigen Mailpit, maar dezelfde
 # Postgres (een eigen database en rol) en dezelfde Gotenberg. Staging verstuurt nooit echte mail en
@@ -165,6 +165,28 @@ services:
       MP_MAX_MESSAGES: "500"
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - elentrik
+
+  # De vaste proxy tussen de Cloudflare Tunnel en de web-diensten: hij stuurt op hostnaam door naar `web`
+  # en `web-staging` en toont een eigen onderhoudspagina (503) als die even niet antwoorden, in plaats van
+  # de 502-pagina van Cloudflare. Geen depends_on op de web-diensten, want hij moet juist antwoorden als die
+  # er niet zijn, en `bijwerken.sh` raakt hem nooit aan. Zijn eigen update staat in docs/online.md (sectie 7).
+  proxy:
+    image: caddy:2.10.2-alpine
+    container_name: elentrik-proxy
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Brussels
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./proxy/onderhoud.html:/srv/onderhoud.html:ro
+    healthcheck:
+      # Een eigen route van de proxy die niet doorstuurt, dus ook gezond als de web-diensten er niet zijn.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/__proxy/gezond"]
       interval: 10s
       timeout: 5s
       retries: 5

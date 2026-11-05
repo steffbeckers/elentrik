@@ -3,6 +3,8 @@
 **/node_modules
 **/.nuxt
 **/.nuxt-e2e
+**/.nuxt-sw
+**/.output-sw
 **/.output
 **/.data
 **/.env
