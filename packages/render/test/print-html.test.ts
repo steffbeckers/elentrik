@@ -23,6 +23,15 @@ const INSTALLATEUR: Partij = {
   adres: { straat: "Stationsstraat", nummer: "12", postcode: "3500", gemeente: "Hasselt", land: "BE" },
 };
 
+test.each(["nl", "fr", "en"] as const)("voeding op elk afgedrukt blad (%s)", taal => {
+  const doc = kloon(referentieWoning());
+  doc.voeding.stroomtype = "3N400V";
+  const resultaat = printHtml(doc, analyseer(doc), [], opties({ taal }));
+  for (const sectie of resultaat.html.split('<section class="pagina">').slice(1)) {
+    expect(sectie).toContain("3N × 400 V ~");
+  }
+});
+
 function opties(extra: Partial<PrintOpties> = {}): PrintOpties {
   return {
     papier: "A4",
@@ -463,7 +472,7 @@ describe("printHtml", () => {
       opties({ onderdelen: alleenOnderdeel("situatieschema"), afbeeldingen: { "raster-1": "plan.png" } }),
     );
     expect(uit.paginas).toBe(1);
-    const m = /<div class="kader" style="left:([\d.]+)mm;top:([\d.]+)mm;width:([\d.]+)mm;height:([\d.]+)mm">/.exec(
+    const m = /<div class="kader"[^>]*style="left:([\d.]+)mm;top:([\d.]+)mm;width:([\d.]+)mm;height:([\d.]+)mm"[^>]*>/.exec(
       uit.html,
     )!;
     const [links, boven, breedte, hoogte] = m.slice(1).map(Number) as [number, number, number, number];
@@ -474,7 +483,7 @@ describe("printHtml", () => {
     expect(boven + hoogte).toBeLessThan(noticeTop);
     expect(links).toBeGreaterThanOrEqual(10);
     expect(links + breedte).toBeLessThanOrEqual(10 + ruimte.breedte + 0.01);
-    expect(boven).toBe(10);
+    expect(boven).toBeGreaterThanOrEqual(16);
     expect(uit.html).toContain('<svg class="laag" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3000 2000"');
     // Symboolgrootte: de lange zijde van het raster / 60 = 50 px.
     expect(uit.html).toMatch(/<g data-node-id="[^"]+" transform="translate\(500 400\)"><rect x="-25" y="-25" width="50"/);
@@ -760,6 +769,7 @@ describe("cartouche", () => {
       papier: STANDAARD_PAPIER_A4,
       teksten,
       meta: doc.meta,
+      voeding: doc.voeding,
       installateur: INSTALLATEUR,
       logo: undefined,
       titel: "Bijlage",
@@ -865,20 +875,22 @@ describe("talen", () => {
     });
   }
 
-  test("de vertaalde kolomkoppen, typen en ruimtes passen in hun kolom op A4, zonder afkorting", () => {
+  test("vertaalde kolomkoppen, typen en ruimtes worden volledig leesbaar afgebroken op A4", () => {
     const rijBreedte = bruikbaar({ ...STANDAARD_PAPIER_A4, formaat: "A4" }).breedte;
     const kolomBreedte = (aandeel: number) => rijBreedte * aandeel - 2 * 1 - 0.25;
     for (const taal of talen) {
       const t = TEKSTEN[taal];
       const koppen: [string, number][] = [
-        [t.kolommen.kring, 0.07], [t.kolommen.punt, 0.07], [t.kolommen.type, 0.2], [t.kolommen.ruimte, 0.14],
-        [t.kolommen.beveiliging, 0.16], [t.kolommen.differentieel, 0.16], [t.kolommen.leiding, 0.2],
+        [t.kolommen.kring, .07], [t.kolommen.kringOmschrijving, .13], [t.kolommen.punt, .06], [t.kolommen.puntOmschrijving, .13], [t.kolommen.type, .14], [t.kolommen.ruimte, .10],
+        [t.kolommen.beveiliging, .12], [t.kolommen.differentieel, .13], [t.kolommen.leiding, .12],
       ];
-      const typen = Object.values(t.types).map((x): [string, number] => [x, 0.2]);
-      const toestellen = Object.values(t.toestelsoorten).map((x): [string, number] => [`${t.types.toestel} (${x})`, 0.2]);
-      const ruimtes = Object.values(t.ruimtes).map((x): [string, number] => [x, 0.14]);
+      const typen = Object.values(t.types).map((x): [string, number] => [x, .14]);
+      const toestellen = Object.values(t.toestelsoorten).map((x): [string, number] => [`${t.types.toestel} (${x})`, .14]);
+      const ruimtes = Object.values(t.ruimtes).map((x): [string, number] => [x, .10]);
       for (const [tekst, aandeel] of [...koppen, ...typen, ...toestellen, ...ruimtes]) {
-        expect(tekstBreedte(tekst, 3), `${taal} ${tekst}`).toBeLessThanOrEqual(kolomBreedte(aandeel));
+        const lijnen = breekRegels(tekst, kolomBreedte(aandeel), 3, 1.35);
+        expect(lijnen.join("").replaceAll(" ", "")).toBe(tekst.replaceAll(" ", ""));
+        for (const lijn of lijnen) expect(tekstBreedte(lijn, 3) * 1.35, `${taal} ${lijn}`).toBeLessThanOrEqual(kolomBreedte(aandeel));
       }
     }
   });
@@ -1019,4 +1031,49 @@ describe("printHtml: watermerk (staging)", () => {
       .join("\n");
     expect(gestript).toBe(zonder.html);
   });
+});
+
+
+test.each(["A4", "A3"] as const)("situatie heeft eigen staand papier en gekalibreerde grootte (%s)", papier => {
+  const doc = metSituatie(referentieWoning());
+  const pagina = doc.situatie.paginas[0]!;
+  pagina.afdruk = { papier, orientatie: "staand", schaalmodus: "gekalibreerd", schaalNoemer: 100 };
+  pagina.achtergrond!.schaal = { mmPerPx: 10 };
+  const r = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("situatieschema"), afbeeldingen: { "raster-1": "plan.png" } }));
+  expect(r.html).toContain(papier === "A4" ? "size:210mm 297mm" : "size:297mm 420mm");
+  expect(r.html).toContain('data-plan-breedte-mm="300"');
+  expect(r.html).toContain('data-schaalmodus="gekalibreerd"');
+});
+
+test("referentiebladen worden bewust overgeslagen zonder ontbrekende-planmelding", () => {
+  const doc = metSituatie(referentieWoning());
+  doc.situatie.paginas[0]!.referentie = true;
+  const r = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("situatieschema"), afbeeldingen: {} }));
+  expect(r.overgeslagen).toEqual([]);
+  expect(r.html).not.toContain("Situatieschema — Gelijkvloers");
+});
+
+test("grote schema's worden verticaal gepagineerd zonder technisch tekst te verkleinen", () => {
+  const doc = installatie().verdeelbord(b => b.kring(k => { let l = k.automaat(16).leiding(2.5); for (let i = 0; i < 60; i++) l = l.contactdozen(1); return l; })).bouw().doc;
+  const r = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("eendraadschema") }));
+  expect(r.paginas).toBeGreaterThan(1);
+  expect(r.html).not.toMatch(/scale\(0\./);
+});
+
+test("kringenlijst herhaalt de kringgroep op elk vervolgblad", () => {
+ const doc = installatie().verdeelbord(b => b.kring(k => k.automaat(16).leiding(2.5).contactdozen(120))).bouw().doc;
+ const r = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
+ expect(r.paginas).toBeGreaterThan(1);
+ for (const blad of paginas(r.html)) expect(blad).toContain('class="groepskop"');
+});
+
+test("kleine situatiesymbolen houden afdruklabels van minstens 2,5 mm", () => {
+ const doc = metSituatie(referentieWoning());
+ doc.situatie.paginas[0]!.labelSchaal = .25;
+ const r = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("situatieschema"), afbeeldingen: { "raster-1": "p.png" } }));
+ const breedte = Number(r.html.match(/data-plan-breedte-mm="([\d.]+)"/)![1]);
+ const laag = r.html.match(/<svg class="laag"[\s\S]*?<\/svg>/)![0];
+ const fonts = [...laag.matchAll(/font-size="([\d.]+)" text-anchor="start"/g)].map(m => Number(m[1]));
+ expect(fonts.length).toBeGreaterThan(0);
+ for (const font of fonts) expect(font * breedte / 3000).toBeGreaterThanOrEqual(2.49);
 });

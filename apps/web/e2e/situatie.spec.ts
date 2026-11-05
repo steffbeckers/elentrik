@@ -308,6 +308,7 @@ test.describe("touch", () => {
 });
 
 
+
 test("zeven punten doorplaatsen houdt het paneel en plananker stabiel", async ({ page, request }) => {
   test.setTimeout(120_000);
   const projectId = await maakProjectMetContactdozen(page, `${naam} doorplaatsen`, 7);
@@ -434,4 +435,48 @@ test("mislukte opslag houdt lokale plaatsing en foutstatus tot opnieuw proberen"
   await page.getByRole("button", { name: "Opnieuw proberen", exact: true }).click();
   await wachtOpPlaatsingen(request, projectId, 1);
   await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
+});
+
+test("twee uitsneden uit één PDF, rotatie, bronbehoud en samen undo", async ({ page, request }) => {
+  const id = await maakProjectMetContactdozen(page, `${naam} uitsneden`);
+  await page.getByTestId("tab-situatieschema").click();
+  await page.getByTestId("plan-toevoegen-leeg").click();
+  const dialoog = page.getByRole("dialog");
+  await dialoog.getByTestId("plan-bestand").setInputFiles(PLAN_PDF);
+  await dialoog.getByTestId("pdf-pagina-1").click();
+  await dialoog.getByRole("button", { name: "Nog een uitsnede" }).click();
+  const crops = dialoog.getByTestId("plan-uitsnede");
+  await expect(crops).toHaveCount(2);
+  await crops.nth(0).getByLabel("Naam van de verdieping").fill("Gelijkvloers");
+  await crops.nth(0).getByLabel("Hoogte (%)").fill("45");
+  await crops.nth(1).getByLabel("Naam van de verdieping").fill("Verdieping 1");
+  await crops.nth(1).getByLabel("Boven (%)").fill("50");
+  await crops.nth(1).getByLabel("Hoogte (%)").fill("45");
+  await crops.nth(1).getByRole("button", { name: /90° draaien/ }).click();
+  await dialoog.getByTestId("plan-toevoegen-bevestig").click();
+  await expect(dialoog).toHaveCount(0, { timeout: 30_000 });
+  await expect.poll(async () => (await haalProject(request, id)).document.situatie.paginas.length).toBe(2);
+  const paginas = (await haalProject(request, id)).document.situatie.paginas as (Pagina & { achtergrond: { bronUitsnede: { rotatie: number }; schaal?: unknown } })[];
+  expect(paginas.map(p => p.titel)).toEqual(["Gelijkvloers", "Verdieping 1"]);
+  expect(paginas[0]!.achtergrond.origineelBestandId).toBe(paginas[1]!.achtergrond.origineelBestandId);
+  expect(paginas[1]!.achtergrond.bronUitsnede.rotatie).toBe(90);
+  expect(paginas.every(p => p.achtergrond.schaal === undefined)).toBe(true);
+  await page.keyboard.press("Control+z");
+  await expect.poll(async () => (await haalProject(request, id)).document.situatie.paginas.length).toBe(0);
+});
+
+test("referentieblad importeert zonder export of definitieve plaatsing", async ({ page, request }) => {
+  const id = await maakProjectMetContactdozen(page, `${naam} referentie`);
+  await page.getByTestId("tab-situatieschema").click();
+  await page.getByTestId("plan-toevoegen-leeg").click();
+  const dialoog = page.getByRole("dialog");
+  await dialoog.getByTestId("plan-bestand").setInputFiles(PLAN_PNG);
+  await dialoog.getByLabel("Referentieblad, niet exporteren").check();
+  await dialoog.getByTestId("plan-toevoegen-bevestig").click();
+  await expect(dialoog).toHaveCount(0, { timeout: 30_000 });
+  await expect.poll(async () => (await haalProject(request, id)).document.situatie.paginas.length).toBe(1);
+  const project = await haalProject(request, id);
+  expect((project.document.situatie.paginas[0] as Pagina & { referentie: boolean }).referentie).toBe(true);
+  expect(project.document.situatie.paginas[0]!.plaatsingen).toEqual([]);
+
 });

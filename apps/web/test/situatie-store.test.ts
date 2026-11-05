@@ -402,3 +402,26 @@ test('getekend plan toevoegen en bewerken is undoable; alleen-lezen houdt bron e
   expect(situatie.actievePagina?.tekening).toEqual(bron);
   expect(doc(editor).situatie.paginas).toHaveLength(1);
 });
+
+ test("meerdere planpaginas zijn samen één undo-stap en behouden bestaande plaatsingen", () => {
+  const { editor, situatie } = opzet();
+  const oud = situatie.voegPlanPaginaToe("Bestaand", ACHTERGROND);
+  const punt = punten(editor)[0]!;
+  situatie.plaatsNode(punt, 20, 30);
+  const voor = structuredClone(doc(editor));
+  const ids = situatie.voegPlanPaginasToe([{ titel: "Gelijkvloers", achtergrond: ACHTERGROND }, { titel: "Verdieping 1", achtergrond: ACHTERGROND }]);
+  expect(ids).toHaveLength(2);
+  expect(plaatsingen(editor, oud)).toHaveLength(1);
+  editor.ongedaanMaken();
+  expect(doc(editor)).toEqual(voor);
+ });
+
+test("ongeldige tweede pagina en alleen-lezen laten het document volledig ongemoeid", () => {
+ const { editor, situatie } = opzet();
+ const voor = structuredClone(doc(editor));
+ expect(() => situatie.voegPlanPaginasToe([{ titel: "Eerste", achtergrond: ACHTERGROND }, { titel: "Tweede", achtergrond: { ...ACHTERGROND, rasterBestandId: undefined as unknown as string } }])).toThrow();
+ expect(doc(editor)).toEqual(voor);
+ editor.alleenLezen = true;
+ expect(situatie.voegPlanPaginasToe([{ titel: "Geen toevoeging", achtergrond: ACHTERGROND }])).toEqual([]);
+ expect(doc(editor)).toEqual(voor);
+});

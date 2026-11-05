@@ -30,6 +30,8 @@ export {
   zetGetekendPlan,
   zetSchaal,
   zetPaginaOpmaak,
+  zetPaginaAfdruk,
+  zetReferentiePagina,
   zetLabelOffset,
 } from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";

@@ -4,7 +4,9 @@ import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useBestandenApi } from "~/composables/useBestandenApi";
 import { laadPdf, verkleinAfbeelding, type PdfDocument } from "~/situatie/pdf";
-import { isAfgebroken, laadPlanOp, uploadFoutMelding, type UploadFoutSleutel } from "~/situatie/plan-opladen";
+import { isAfgebroken, laadPlannenOp, uploadFoutMelding, type UploadFoutSleutel } from "~/situatie/plan-opladen";
+import PlanUitsnede, { type UitsnedeConcept } from "~/components/situatie/PlanUitsnede.vue";
+import { snijdRaster } from "~/situatie/uitsnede";
 import { paginaTitel } from "~/situatie/raster";
 import { useEditorStore } from "~/stores/editor";
 import { useSituatieStore } from "~/stores/situatie";
@@ -40,6 +42,9 @@ const soort = ref<BestandSoort | null>(null);
 const pdf = ref<PdfDocument | null>(null);
 const voorbeelden = ref<Voorbeeld[]>([]);
 const gekozenPagina = ref<number | null>(null);
+const uitsneden = ref<UitsnedeConcept[]>([]);
+const afbeeldingUrl = ref<string | null>(null);
+const uitsnedeVoorbeelden = ref<Record<number, string>>({});
 const bezigMet = ref<"pdf" | "renderen" | "opladen" | null>(null);
 const sleept = ref(false);
 const invoer = useTemplateRef<HTMLInputElement>("invoer");
@@ -53,7 +58,7 @@ const kanBevestigen = computed(
     !editor.alleenLezen &&
     bezigMet.value === null &&
     bestand.value !== null &&
-    (soort.value !== "pdf" || (pdf.value !== null && gekozenPagina.value !== null)),
+    uitsneden.value.length > 0 && uitsneden.value.every(u => u.titel.trim() && [u.x, u.y, u.breedte, u.hoogte].every(Number.isFinite) && u.x >= 0 && u.y >= 0 && u.breedte >= 1 && u.hoogte >= 1 && u.x + u.breedte <= 100 && u.y + u.hoogte <= 100),
 );
 
 function geefVoorbeeldenVrij() {
@@ -73,9 +78,14 @@ function reset() {
   // Een fout bij het sluiten van een document dat we niet meer nodig hebben is niet interessant.
   void oudePdf?.sluit().catch(() => undefined);
   geefVoorbeeldenVrij();
+  for (const url of Object.values(uitsnedeVoorbeelden.value)) URL.revokeObjectURL(url);
+  uitsnedeVoorbeelden.value = {};
   bestand.value = null;
   soort.value = null;
   gekozenPagina.value = null;
+  uitsneden.value = [];
+  if (afbeeldingUrl.value) URL.revokeObjectURL(afbeeldingUrl.value);
+  afbeeldingUrl.value = null;
   bezigMet.value = null;
   sleept.value = false;
   if (invoer.value) invoer.value.value = "";
@@ -123,7 +133,11 @@ async function kies(gekozen: File) {
 
   bestand.value = gekozen;
   soort.value = controle.soort;
-  if (controle.soort !== "pdf") return;
+  if (controle.soort !== "pdf") {
+    afbeeldingUrl.value = URL.createObjectURL(gekozen);
+    voegUitsnedeToe();
+    return;
+  }
 
   bezigMet.value = "pdf";
   let document: PdfDocument;
@@ -147,8 +161,27 @@ async function kies(gekozen: File) {
     fout: false,
   }));
   // Een PDF van één pagina hoeft niets te kiezen.
-  if (document.aantalPaginas === 1) gekozenPagina.value = 1;
+  if (document.aantalPaginas === 1) { gekozenPagina.value = 1; voegUitsnedeToe(1); }
   await laadVoorbeelden(document, dezeSessie);
+}
+
+async function voegUitsnedeToe(nr?: number) {
+  if (nr) gekozenPagina.value = nr;
+  const pdfPagina = nr ?? (soort.value === "pdf" ? gekozenPagina.value ?? undefined : undefined);
+  if (soort.value === "pdf" && !pdfPagina) return;
+  uitsneden.value.push({ titel: paginaTitel(bestand.value?.name ?? "", pdfPagina, t("editor.situatie.toevoegen.standaardTitel", { nummer: uitsneden.value.length + 1 })), ...(pdfPagina ? { pdfPagina } : {}), x: 0, y: 0, breedte: 100, hoogte: 100, rotatie: 0, referentie: false });
+  if (pdfPagina && pdf.value && !uitsnedeVoorbeelden.value[pdfPagina]) {
+    const dezeSessie = sessie;
+    try {
+      const url = URL.createObjectURL(await pdf.value.voorbeeld(pdfPagina, 1000));
+      if (dezeSessie !== sessie) URL.revokeObjectURL(url);
+      else {
+        const oud = uitsnedeVoorbeelden.value[pdfPagina];
+        if (oud) URL.revokeObjectURL(oud);
+        uitsnedeVoorbeelden.value[pdfPagina] = url;
+      }
+    } catch { /* The source page remains selectable when a preview cannot render. */ }
+  }
 }
 
 function opBestandGekozen(gebeurtenis: Event) {
@@ -170,37 +203,38 @@ async function bevestig() {
   const afbreker = new AbortController();
   controller = afbreker;
   const dezeSessie = sessie;
-  const pdfPagina = soort.value === "pdf" ? (gekozenPagina.value ?? undefined) : undefined;
   try {
     bezigMet.value = "renderen";
-    // Blijft een afbeelding ongewijzigd, dan is de blob gelijk aan het origineel en dient het bestand ook als raster.
-    const raster =
-      pdf.value && pdfPagina !== undefined
-        ? (await pdf.value.raster(pdfPagina)).blob
-        : (await verkleinAfbeelding(gekozen)).blob;
-    if (afbreker.signal.aborted) return;
-
+    const concepten = uitsneden.value.map(u => ({ ...u }));
+    const bronnen = new Map<number, Awaited<ReturnType<typeof verkleinAfbeelding>>>();
+    const invoeren = [];
+    for (const u of concepten) {
+      const nr = u.pdfPagina ?? 0;
+      let bron = bronnen.get(nr);
+      if (!bron) {
+        bron = pdf.value && u.pdfPagina ? await pdf.value.raster(u.pdfPagina) : await verkleinAfbeelding(gekozen);
+        bronnen.set(nr, bron);
+      }
+      const x = Math.floor(u.x * bron.breedte / 100);
+      const y = Math.floor(u.y * bron.hoogte / 100);
+      const bronUitsnede = { x, y, breedte: Math.min(bron.breedte - x, Math.round(u.breedte * bron.breedte / 100)), hoogte: Math.min(bron.hoogte - y, Math.round(u.hoogte * bron.hoogte / 100)), rotatie: u.rotatie };
+      const volledig = u.x === 0 && u.y === 0 && u.breedte === 100 && u.hoogte === 100 && u.rotatie === 0;
+      const raster = volledig ? bron.blob : await snijdRaster(bron.blob, bronUitsnede);
+      invoeren.push({ origineel: gekozen, raster, naam: gekozen.name, ...(u.pdfPagina ? { pdfPagina: u.pdfPagina } : {}), bronUitsnede });
+      if (afbreker.signal.aborted || dezeSessie !== sessie) return;
+    }
     bezigMet.value = "opladen";
-    const achtergrond = await laadPlanOp(
-      bestanden,
-      projectId,
-      { origineel: gekozen, raster, naam: gekozen.name, ...(pdfPagina === undefined ? {} : { pdfPagina }) },
-      afbreker.signal,
-    );
-    if (afbreker.signal.aborted) return;
-
-    // Werd de editor intussen alleen-lezen, dan kan het plan niet meer in het document: de dialoog blijft
-    // open met de melding in plaats van stil te sluiten.
-    if (editor.alleenLezen) return;
-    // Pas nu, na elke geslaagde upload, verandert het document.
+    const achtergronden = await laadPlannenOp(bestanden, projectId, invoeren, afbreker.signal);
+    if (afbreker.signal.aborted || dezeSessie !== sessie || editor.alleenLezen) return;
+    // Recropping a page with existing points always creates a new page.
+    const bestaandePagina = editor.document?.situatie.paginas.find(p => p.id === props.vervangPaginaId);
     let paginaId: string;
-    if (props.vervangPaginaId) {
-      paginaId = props.vervangPaginaId;
-      situatie.vervangAchtergrond(paginaId, achtergrond);
+    if (bestaandePagina && !bestaandePagina.referentie && bestaandePagina.plaatsingen.length === 0 && concepten.length === 1 && !concepten[0]!.referentie) {
+      paginaId = bestaandePagina.id;
+      situatie.vervangAchtergrond(paginaId, achtergronden[0]!);
     } else {
-      const nummer = (editor.document?.situatie.paginas.length ?? 0) + 1;
-      const standaardTitel = t("editor.situatie.toevoegen.standaardTitel", { nummer });
-      paginaId = situatie.voegPlanPaginaToe(paginaTitel(gekozen.name, pdfPagina, standaardTitel), achtergrond);
+      const ids = situatie.voegPlanPaginasToe(concepten.map((u, i) => ({ titel: u.titel.trim(), achtergrond: achtergronden[i]!, referentie: u.referentie })));
+      paginaId = ids[0]!;
     }
     open.value = false;
     emit("klaar", paginaId);
@@ -293,11 +327,11 @@ function annuleer() {
               :key="voorbeeld.nr"
               type="button"
               :data-testid="`pdf-pagina-${voorbeeld.nr}`"
-              :aria-pressed="gekozenPagina === voorbeeld.nr"
+              :aria-pressed="uitsneden.some(u => u.pdfPagina === voorbeeld.nr)"
               :disabled="bezigMet !== null"
               class="flex flex-col items-center gap-1 rounded-md border p-2 text-xs"
-              :class="gekozenPagina === voorbeeld.nr ? 'border-primary ring-2 ring-primary' : 'border-default'"
-              @click="gekozenPagina = voorbeeld.nr"
+              :class="uitsneden.some(u => u.pdfPagina === voorbeeld.nr) ? 'border-primary ring-2 ring-primary' : 'border-default'"
+              @click="voegUitsnedeToe(voorbeeld.nr)"
             >
               <span class="flex aspect-[3/4] w-full items-center justify-center bg-elevated">
                 <img
@@ -318,6 +352,12 @@ function annuleer() {
             </button>
           </div>
         </div>
+
+        <p v-if="bestand" class="text-sm text-muted">{{ t('editor.situatie.uitsnede.uitleg') }}</p>
+        <p v-if="vervangPaginaId && editor.document?.situatie.paginas.find(p => p.id === vervangPaginaId)?.plaatsingen.length" class="text-sm text-warning">{{ t('editor.situatie.uitsnede.bestaandePunten') }}</p>
+        <PlanUitsnede v-for="(uitsnede, index) in uitsneden" :key="index" v-model="uitsneden[index]!" :url="uitsnede.pdfPagina ? uitsnedeVoorbeelden[uitsnede.pdfPagina] ?? voorbeelden[uitsnede.pdfPagina - 1]?.url : afbeeldingUrl" :disabled="bezigMet !== null" @verwijder="uitsneden.splice(index, 1)" />
+        <UButton v-if="bestand" icon="i-lucide-crop" color="neutral" variant="outline" :disabled="bezigMet !== null || (soort === 'pdf' && !gekozenPagina)" :label="t('editor.situatie.uitsnede.extra')" @click="voegUitsnedeToe()" />
+        <p v-if="bestand" class="text-sm text-warning">{{ t('editor.situatie.uitsnede.kalibratie') }}</p>
 
         <div v-if="bezigMet === 'renderen' || bezigMet === 'opladen'" class="space-y-1" data-testid="plan-voortgang">
           <UProgress animation="carousel" />

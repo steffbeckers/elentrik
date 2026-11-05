@@ -12,7 +12,7 @@ export type SchemaElement =
       tekst: string;
       grootte: number;
       anker: "start" | "middle" | "end";
-      rol: "kring" | "punt" | "leiding" | "beveiliging" | "onderbord";
+      rol: "kring" | "punt" | "leiding" | "beveiliging" | "onderbord" | "voeding";
     }
   | { soort: "vervolg"; x: number; y: number; richting: "links" | "rechts"; paginaNummer: number };
 

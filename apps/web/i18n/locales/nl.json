@@ -615,6 +615,39 @@
         "ongeldigPercentage": "Vul een getal van 25 tot en met 400 in. De opgeslagen grootte is niet gewijzigd.",
         "ongeldigeOffset": "Vul een geldig getal in, bijvoorbeeld 0 of -15. De opgeslagen positie is niet gewijzigd.",
         "herstelInvoer": "Opgeslagen waarden herstellen"
+      },
+      "uitsnede": {
+        "naam": "Naam van de verdieping",
+        "verwijder": "Uitsnede verwijderen",
+        "x": "Links (%)",
+        "y": "Boven (%)",
+        "breedte": "Breedte (%)",
+        "hoogte": "Hoogte (%)",
+        "draai": "90° draaien",
+        "referentie": "Referentieblad, niet exporteren",
+        "uitleg": "Kies bronpagina’s en benoem elke uitsnede. Percentages worden gemeten vóór rotatie. Bijsnijden verwijdert geen oude elektrische symbolen.",
+        "extra": "Nog een uitsnede",
+        "kalibratie": "Stel de schaal in op elke nieuwe definitieve uitsnede. De oude kalibratie wordt niet overgenomen.",
+        "bestaandePunten": "Dit blad bevat punten. De uitsneden worden als nieuwe bladen toegevoegd; de bestaande punten blijven behouden."
+      },
+      "afdruk": {
+        "titel": "Afdrukinstellingen",
+        "papier": "Papier",
+        "orientatie": "Oriëntatie",
+        "staand": "Staand",
+        "liggend": "Liggend",
+        "schaal": "Afdrukschaal",
+        "passend": "Passend op papier",
+        "gekalibreerd": "Gekalibreerd op schaal",
+        "noemer": "Schaal 1 :",
+        "ontbreekt": "Kalibreer eerst deze definitieve uitsnede.",
+        "bewaren": "Instellingen bewaren",
+        "voorbeeld": "Afdrukvoorbeeld",
+        "uitleg": "Controleer op 100% de tekstgrootte en paginagrenzen. Technische tekst streeft naar minstens 2,5 mm; dit is geen wettelijke conformiteitscontrole.",
+        "zoom": "Voorbeeldzoom",
+        "passendMelding": "Passend op papier — de afdrukmaat volgt het gekozen papier.",
+        "kalibratieMelding": "Gekalibreerde afdruk — verdeeld over meerdere bladen indien nodig.",
+        "referentie": "Referentieblad — wordt niet afgedrukt."
       }
     },
     "export": {

@@ -3,7 +3,7 @@ import type { InstallatieDocument, Node, NodeId } from "@elentrik/model";
 import { KOLOM_BREEDTE_MM, tekenSymbool, type Symbool } from "@elentrik/symbols";
 import { heeftKringEinde, heeftRailEinde } from "./aanknopingen";
 import { lijnAftakkingBlokkenUit, maakAftakkingBlokken } from "./aftakkingen";
-import { beveiligingLabel, leidingLabel, tekstBreedte } from "./labels";
+import { beveiligingLabel, leidingLabel, tekstBreedte, voedingTekst } from "./labels";
 import {
   KRING_EINDE_AFSTAND_MM,
   RAIL_AFSTAND_MM,
@@ -39,7 +39,7 @@ const TEKST_GLYPH_HOOGTE = 0.7;
  * kolomlijn het verste symbool of de verste tekst plus 1 mm, rechts het verste symbool of de
  * verste tekst. Tekstbreedtes zijn geschat met `tekstBreedte`.
  */
-export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analyseer(doc)): Strook {
+export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analyseer(doc), minimaleTekst_mm = 0): Strook {
   // Een structureel ongeldig document moet ook eindigen: elke node wordt hoogstens één keer
   // bezocht, en een verwijzing naar een ontbrekende of al bezochte node wordt overgeslagen. Een
   // kind dat meermaals voorkomt, hangt zo alleen onder de ouder die het eerst in pre-order bereikt.
@@ -72,6 +72,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   const bladen = new Map<NodeId, number>();
   for (let i = preOrder.length - 1; i >= 0; i--) {
     const id = preOrder[i]!;
+
     const kinderen = kinderenVan(id);
     let som = 0;
     for (const kind of kinderen) som += bladen.get(kind)!;
@@ -100,7 +101,10 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     const symbool = tekenSymbool(node);
     symbolen.set(id, symbool);
     const puntLabel = Object.hasOwn(analyse.puntLabels, id) ? analyse.puntLabels[id] : undefined;
-    tekstenVanNode.set(id, teksten(node, symbool, kringLabelVan.get(id), puntLabel));
+    const regels = teksten(node, symbool, kringLabelVan.get(id), puntLabel);
+    if (node.type === "aansluiting") regels.push({ soort: "tekst", x: symbool.maat.breedte / 2 + 1, y: symbool.maat.hoogte / 2, tekst: voedingTekst(doc.voeding.stroomtype), grootte: 2.5, anker: "start", rol: "voeding" });
+    for (const regel of regels) regel.grootte = Math.max(regel.grootte, minimaleTekst_mm);
+    tekstenVanNode.set(id, regels);
   }
 
   // Budget per bladkolom: hoe ver de elementen met hun anker in die kolom links en rechts van de
@@ -118,6 +122,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
       naarLinks = Math.max(naarLinks, -van);
       naarRechts = Math.max(naarRechts, tot);
     }
+
     const blok = blokken.get(id);
     if (blok) {
       naarRechts = Math.max(naarRechts, blok.breedte);

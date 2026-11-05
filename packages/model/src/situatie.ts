@@ -49,6 +49,7 @@ export function zetAchtergrond(
   return resultaat(doc, (draft) => {
     const pagina = draft.situatie.paginas.find((p) => p.id === paginaId)!;
     pagina.achtergrond = nieuw;
+    if (pagina.afdruk?.schaalmodus === "gekalibreerd") delete pagina.afdruk;
     delete pagina.tekening;
   });
 }
@@ -90,6 +91,9 @@ export function plaats(
   positie: { x: number; y: number; rotatie: number },
 ): OperatieResultaat {
   vereisPagina(doc, paginaId);
+  if (doc.situatie.paginas.find(p => p.id === paginaId)!.referentie) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "Referentieblad: kies een definitief plan om punten te plaatsen" });
+  }
   const node = vereis(doc, nodeId);
   if (!(PLAATSBARE_TYPES as readonly string[]).includes(node.type)) {
     throw new DocumentFout("NIET_PLAATSBAAR", { nodeId, type: node.type });
@@ -130,6 +134,25 @@ export function zetPaginaOpmaak(
   return resultaat(doc, (draft) => {
     Object.assign(draft.situatie.paginas.find((p) => p.id === paginaId)!, geparsed.data);
   });
+}
+
+export function zetPaginaAfdruk(doc: InstallatieDocument, paginaId: string, afdruk: NonNullable<SituatiePagina["afdruk"]>): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const parsed = SituatiePaginaSchema.shape.afdruk.unwrap().safeParse(afdruk);
+  if (!parsed.success) throw new DocumentFout("ONGELDIG_SCHEMA", { issues: parsed.error.issues });
+  const pagina = doc.situatie.paginas.find(p => p.id === paginaId)!;
+  if (afdruk.schaalmodus === "gekalibreerd" && !(pagina.achtergrond?.schaal?.mmPerPx && pagina.achtergrond.schaal.mmPerPx > 0)) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "Kalibreer eerst de definitieve uitsnede" });
+  }
+  return resultaat(doc, draft => { draft.situatie.paginas.find(p => p.id === paginaId)!.afdruk = parsed.data; });
+}
+
+export function zetReferentiePagina(doc: InstallatieDocument, paginaId: string, referentie: boolean): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  if (referentie && doc.situatie.paginas.find(p => p.id === paginaId)!.plaatsingen.length) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "Een blad met definitieve punten kan geen referentieblad worden" });
+  }
+  return resultaat(doc, draft => { draft.situatie.paginas.find(p => p.id === paginaId)!.referentie = referentie; });
 }
 
 /** Wijzigt uitsluitend het label; het symbool behoudt zijn positie en rotatie. */

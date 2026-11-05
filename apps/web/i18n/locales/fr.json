@@ -615,6 +615,39 @@
         "ongeldigPercentage": "Saisissez un nombre de 25 à 400 inclus. La taille enregistrée n’a pas changé.",
         "ongeldigeOffset": "Saisissez un nombre valide, par exemple 0 ou -15. La position enregistrée n’a pas changé.",
         "herstelInvoer": "Rétablir les valeurs enregistrées"
+      },
+      "uitsnede": {
+        "naam": "Nom du niveau",
+        "verwijder": "Supprimer le cadrage",
+        "x": "Gauche (%)",
+        "y": "Haut (%)",
+        "breedte": "Largeur (%)",
+        "hoogte": "Hauteur (%)",
+        "draai": "Tourner de 90°",
+        "referentie": "Feuille de référence, sans export",
+        "uitleg": "Choisissez les pages sources et nommez chaque cadrage. Les pourcentages se mesurent avant rotation. Le cadrage ne supprime pas les anciens symboles électriques.",
+        "extra": "Ajouter un cadrage",
+        "kalibratie": "Étalonnez chaque nouveau cadrage définitif. L’ancien étalonnage n’est pas repris.",
+        "bestaandePunten": "Cette feuille contient des points. Les cadrages créent de nouvelles feuilles ; les points existants sont conservés."
+      },
+      "afdruk": {
+        "titel": "Paramètres d’impression",
+        "papier": "Papier",
+        "orientatie": "Orientation",
+        "staand": "Portrait",
+        "liggend": "Paysage",
+        "schaal": "Échelle d’impression",
+        "passend": "Adapter au papier",
+        "gekalibreerd": "Échelle étalonnée",
+        "noemer": "Échelle 1 :",
+        "ontbreekt": "Étalonnez d’abord ce cadrage définitif.",
+        "bewaren": "Enregistrer les paramètres",
+        "voorbeeld": "Aperçu avant impression",
+        "uitleg": "À 100 %, vérifiez la taille du texte et les limites des pages. L’objectif de 2,5 mm pour les textes techniques ne constitue pas un contrôle de conformité légale.",
+        "zoom": "Zoom de l’aperçu",
+        "passendMelding": "Adapté au papier — la taille imprimée dépend du papier choisi.",
+        "kalibratieMelding": "Impression étalonnée — répartie sur plusieurs feuilles si nécessaire.",
+        "referentie": "Feuille de référence — exclue de l’impression."
       }
     },
     "export": {

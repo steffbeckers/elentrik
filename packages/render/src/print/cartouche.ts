@@ -1,5 +1,5 @@
 // De cartouche: een strook van `cartoucheHoogte_mm` onderaan elke pagina, binnen de marge.
-import { papierMaat, type Papier } from "@elentrik/layout";
+import { papierMaat, voedingTekst, type Papier } from "@elentrik/layout";
 import type { Adres, InstallatieDocument, Partij } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import { LOCALES, type Taal, type Teksten } from "../teksten/index";
@@ -28,6 +28,7 @@ export type CartoucheGegevens = {
   teksten: Teksten;
   taal: Taal;
   meta: InstallatieDocument["meta"];
+  voeding: InstallatieDocument["voeding"];
   installateur: Partij;
   logo: string | undefined;
   titel: string;
@@ -63,13 +64,12 @@ export function formatteerDatum(datum: string, taal: Taal): string {
   return formatter.format(moment);
 }
 
-
 type VakInhoud = { soort: string; breedte: number; html: string; hoogte: number };
 
 /** Wrap before measuring: exported fields retain every character, at readable size. */
 function vakken(g: CartoucheGegevens): VakInhoud[] {
   const t = g.teksten;
-  const breedte = papierMaat(g.papier.formaat).breedte - 2 * g.papier.marge_mm;
+  const breedte = papierMaat(g.papier.formaat, g.papier.orientatie).breedte - 2 * g.papier.marge_mm;
   type Veld = [string, string?, number?];
   const maak = (i: number, soort: string, velden: Veld[], metLogo = false): VakInhoud => {
     const vakBreedte = breedte * AANDELEN[i]! + (i === 0 ? 0 : RAND_MM);
@@ -92,7 +92,7 @@ function vakken(g: CartoucheGegevens): VakInhoud[] {
   return [
     maak(0, "installateur", [[t.cartouche.installateur, "label"], [g.installateur.naam, "naam"], [i1], [i2], [g.installateur.telefoon ?? ""], [g.installateur.email ?? ""]], g.logo !== undefined),
     maak(1, "klant", [[t.cartouche.klant, "label"], [g.meta.klant.naam, "naam"], [k1], [k2]]),
-    maak(2, "werf", [[t.cartouche.werf, "label"], [w1], [w2], [t.cartouche.ean + ": " + (g.meta.ean ?? "")]]),
+    maak(2, "werf", [[t.cartouche.werf, "label"], [w1], [w2], [t.cartouche.ean + ": " + (g.meta.ean ?? "")], [voedingTekst(g.voeding.stroomtype), "voeding"]]),
     maak(3, "titel", [[g.titel, "titel", TITEL_MM], [t.cartouche.datum + ": " + formatteerDatum(g.datum, g.taal)], [t.cartouche.versie + ": " + g.versieLabel], [t.cartouche.pagina + " " + g.nummer + " / " + g.totaal, "paginanummer"]]),
     maak(4, "handtekening", [[t.cartouche.handtekeningInstallateur, "label"]]),
     maak(5, "handtekening", [[t.cartouche.handtekeningKeurder, "label"]]),
@@ -108,7 +108,7 @@ export function cartoucheHoogte(g: CartoucheGegevens): number {
 export function cartouche(g: CartoucheGegevens): string {
   const inhoud = vakken(g);
   const hoogte = Math.max(g.papier.cartoucheHoogte_mm, Math.ceil(Math.max(...inhoud.map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM));
-  const boven = papierMaat(g.papier.formaat).hoogte - g.papier.marge_mm - hoogte;
+  const boven = papierMaat(g.papier.formaat, g.papier.orientatie).hoogte - g.papier.marge_mm - hoogte;
   let links = g.papier.marge_mm;
   return '<div class="cartouche">' + inhoud.map((vak, i) => {
     const logo = i === 0 && g.logo !== undefined

@@ -326,3 +326,17 @@ test.describe("echte pdf-export", () => {
     await expect(page.getByTestId("eigenschappen-titel")).toContainText("A1");
   });
 });
+
+test("afdrukvoorbeeld toont dezelfde 400 V voeding zonder een export te bewaren", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", { data: { naam: `${naam} voorbeeld`, klantnaam: "", stroomtype: "3N400V" } });
+  expect(antwoord.status()).toBe(201);
+  const id = ((await antwoord.json()) as { id: string }).id;
+  await openMetKring(page, id);
+  await page.getByTestId("exporteren").click();
+  await expect(page.getByTestId("export-versie")).toHaveValue("V1");
+  await page.getByTestId("export-voorbeeld").click();
+  const frame = page.frameLocator('[data-testid="afdrukvoorbeeld"]');
+  await expect(frame.locator('.t.voeding').first()).toHaveText("3N × 400 V ~");
+  const exports = await request.get(`/api/projecten/${id}/exports`);
+  expect(await exports.json()).toEqual([]);
+});

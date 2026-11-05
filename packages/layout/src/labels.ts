@@ -1,4 +1,9 @@
-import type { NodeVan } from "@elentrik/model";
+import type { NodeVan, Stroomtype } from "@elentrik/model";
+
+/** Alleen opgeslagen voedingsinformatie; geen afgeleide stroom of frequentie. */
+export function voedingTekst(stroomtype: Stroomtype): string {
+  return { "2x230V": "2 × 230 V ~", "3x230V": "3 × 230 V ~", "3N400V": "3N × 400 V ~" }[stroomtype];
+}
 
 /** Geschatte breedte van één teken, als fractie van de tekstgrootte. */
 export const TEKEN_BREEDTE_FACTOR = 0.6;

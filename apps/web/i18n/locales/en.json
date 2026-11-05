@@ -615,6 +615,39 @@
         "ongeldigPercentage": "Enter a number from 25 to 400 inclusive. The saved size has not changed.",
         "ongeldigeOffset": "Enter a valid number, such as 0 or -15. The saved position has not changed.",
         "herstelInvoer": "Restore saved values"
+      },
+      "uitsnede": {
+        "naam": "Floor name",
+        "verwijder": "Remove crop",
+        "x": "Left (%)",
+        "y": "Top (%)",
+        "breedte": "Width (%)",
+        "hoogte": "Height (%)",
+        "draai": "Rotate 90°",
+        "referentie": "Reference sheet, exclude from export",
+        "uitleg": "Choose source pages and name each crop. Percentages are measured before rotation. Cropping does not remove old electrical symbols.",
+        "extra": "Add another crop",
+        "kalibratie": "Calibrate each new final crop. Previous calibration is not carried over.",
+        "bestaandePunten": "This sheet contains points. Crops will create new sheets; existing points are preserved."
+      },
+      "afdruk": {
+        "titel": "Print settings",
+        "papier": "Paper",
+        "orientatie": "Orientation",
+        "staand": "Portrait",
+        "liggend": "Landscape",
+        "schaal": "Print scale",
+        "passend": "Fit to paper",
+        "gekalibreerd": "Calibrated scale",
+        "noemer": "Scale 1 :",
+        "ontbreekt": "Calibrate this final crop first.",
+        "bewaren": "Save settings",
+        "voorbeeld": "Print preview",
+        "uitleg": "At 100%, check text size and page boundaries. Technical text targets at least 2.5 mm; this is not a legal compliance check.",
+        "zoom": "Preview zoom",
+        "passendMelding": "Fit to paper — printed size follows the chosen paper.",
+        "kalibratieMelding": "Calibrated print — tiled across sheets when necessary.",
+        "referentie": "Reference sheet — excluded from print."
       }
     },
     "export": {
