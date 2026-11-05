@@ -8,7 +8,7 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
   const basis = pagineer(strook, papier, 1);
   const hoogte = bruikbaar(papier).hoogte - 8;
   const paginas: SchemaOpmaak['paginas'] = [];
-  const bronnen: number[] = [];
+  const bronnen: { horizontaal: number; yVan: number; yTot: number }[] = [];
   const verticaleLinks: { index: number; vorig: boolean; x: number; y: number }[] = [];
   for (const horizontaal of basis.paginas) {
     const bereiken = horizontaal.elementen.flatMap(e => e.soort === 'symbool' ? [{ van: e.y - .5, tot: e.y + e.symbool.maat.hoogte + .5 }] : e.soort === 'tekst' ? [{ van: e.y - e.grootte, tot: e.y + e.grootte * .35 }] : []);
@@ -39,14 +39,18 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
       }
       if (elementen.length) {
         paginas.push({ ...horizontaal, index, yVan: yVan - 4, elementen });
-        bronnen.push(horizontaal.index);
+        bronnen.push({ horizontaal: horizontaal.index, yVan, yTot });
       }
       if (yTot >= strook.hoogte) break;
       yVan = yTot;
     }
   }
-  // Horizontal links originally referred to horizontal slices; resolve them after vertical tiling.
-  for (const pagina of paginas) for (const e of pagina.elementen) if (e.soort === 'vervolg') e.paginaNummer = bronnen.indexOf(e.paginaNummer - 1) + 1;
+  // Follow the rail to the tile containing its Y, rather than the first tile of that horizontal slice.
+  for (const pagina of paginas) for (const e of pagina.elementen) if (e.soort === 'vervolg') {
+    const doel = bronnen.findIndex(bron => bron.horizontaal === e.paginaNummer - 1 && e.y >= bron.yVan && e.y < bron.yTot);
+    if (doel === -1) throw new RangeError("Geen vervolgblad voor de horizontale verbinding");
+    e.paginaNummer = doel + 1;
+  }
   for (const link of verticaleLinks) paginas[link.index]?.elementen.push({ soort: 'tekst', rol: 'punt', x: link.x, y: link.y, grootte: 2.5, anker: 'start', tekst: `p. ${link.index + (link.vorig ? 0 : 2)}` });
   return { ...basis, paginas };
 }
