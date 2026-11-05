@@ -1,7 +1,8 @@
+import { invoegBestemmingen } from "../app/editor/invoegen";
 import { expect, test } from "vitest";
-import { nieuwProjectDocument, voegOnderdeelToe } from "@elentrik/model";
+import { nieuwProjectDocument, voegOnderdeelToe, wijzigEigenschappen, voegToe } from "@elentrik/model";
 import { analyseer } from "@elentrik/arei";
-import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie } from "../app/editor/schema-navigatie";
+import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie, invoegDoelKeuzes } from "../app/editor/schema-navigatie";
 
 const tekst = (key: string, waarden: Record<string, string | number>) => `${key}:${Object.values(waarden).join("/")}`;
 
@@ -122,4 +123,45 @@ test("de keuzelijst behoudt eigen omschrijvingen zonder de kringidentiteit te ve
   licht.label = "Plafond keuken";
   const keuze = schemaKeuzes(doc, analyseer(doc), type => `type:${type}`).find(k => k.id === licht.id)!;
   expect(keuze.label).toBe("A1 · type:lichtpunt · Plafond keuken");
+});
+
+test('all destination selectors preserve explicit RCD reference F', () => {
+  const start = nieuwProjectDocument({ klantNaam: 'Test', stroomtype: '2x230V' });
+  const bord = Object.values(start.nodes).find(n => n.type === 'verdeelbord')!;
+  const added = voegOnderdeelToe(start, { soort: 'rail-einde', nodeId: bord.id }, 'differentieel');
+  const doc = structuredClone(added.doc);
+  const diff = doc.nodes[added.ids[0]!]!;
+  if (diff.type !== 'differentieel') throw new Error('expected differential');
+  diff.referentie = 'F';
+  const analyse = analyseer(doc);
+  expect(schemaKeuzes(doc, analyse, type => type).find(k => k.id === diff.id)!.label).toContain('F');
+  expect(schemaInvoegKeuzes(doc, analyse, [{ soort:'rail-einde', nodeId:diff.id }], type => type, tekst)[0]!.label).toContain('F');
+  expect(invoegDoelKeuzes(doc, analyse, [{soort:'bestaande-differentieel',nodeId:diff.id}], type => type, soort => soort)[0]!.label).toContain('F');
+});
+
+test('template and lighting targets distinguish equal boards and unnamed differentials without ordinal collisions', () => {
+  let doc = nieuwProjectDocument({ klantNaam:'Test',stroomtype:'2x230V' });
+  const bord = Object.values(doc.nodes).find(n => n.type === 'verdeelbord')!;
+  doc = wijzigEigenschappen(doc, bord.id, {naam:'Garage'}).doc;
+  const tweede = voegToe(doc, bord.parentId!, {type:'verdeelbord',naam:'Garage'});
+  const derde = voegToe(tweede.doc, bord.parentId!, {type:'verdeelbord',naam:'Garage 1'});
+  doc = derde.doc;
+  for (const label of [undefined, undefined, 'Keuken', 'Keuken', 'Keuken 1']) {
+    const r = voegOnderdeelToe(doc,{soort:'rail-einde',nodeId:bord.id},'differentieel');
+    doc = label ? wijzigEigenschappen(r.doc,r.ids[0]!,{label}).doc : r.doc;
+  }
+  const analyse = analyseer(doc);
+  const doelen = invoegBestemmingen(doc);
+  const before = JSON.stringify(doc);
+  const keuzes = invoegDoelKeuzes(doc,analyse,doelen,type=>type,soort=>soort);
+  expect(new Set(keuzes.map(k=>k.label)).size).toBe(keuzes.length);
+  expect(keuzes.map(k=>k.value)).toEqual(doelen.map(d=>`${d.soort}:${d.nodeId}`));
+  const diffKeuzes = keuzes.filter(k=>k.value.startsWith('bestaande-differentieel:'));
+  expect(diffKeuzes.every(k=>k.label.includes('Garage'))).toBe(true);
+  const navigatie = schemaInvoegKeuzes(doc,analyse,doelen.map(d=>({soort:'rail-einde',nodeId:d.nodeId})),type=>type,tekst);
+  expect(new Set(navigatie.filter(k=>doc.nodes[k.nodeId]!.type==='verdeelbord').map(k=>k.bord)).size).toBe(3);
+  for (const k of navigatie.filter(k => doc.nodes[k.nodeId]!.type === 'verdeelbord')) {
+    expect(keuzes.find(item => item.value === `nieuw-op-bord:${k.nodeId}`)!.label).toContain(k.bord);
+  }
+  expect(JSON.stringify(doc)).toBe(before);
 });

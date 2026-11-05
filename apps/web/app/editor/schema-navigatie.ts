@@ -1,5 +1,5 @@
 import type { Analyse } from "@elentrik/arei";
-import type { Aanknoping, InstallatieDocument, NodeType } from "@elentrik/model";
+import type { Aanknoping, InstallatieDocument, NodeType, LichtschakelingDoel } from "@elentrik/model";
 
 /** A new selection never silently leaves insertion pointing at an unrelated circuit. */
 export function invoegpuntBijSelectie<T extends Aanknoping>(analyse: Analyse, punten: readonly T[], id: string): T | undefined {
@@ -24,10 +24,15 @@ export function schemaKeuzes(doc: InstallatieDocument, analyse: Analyse, typeNaa
     if (!node || gezien.has(id)) continue;
     gezien.add(id);
     const kring = kringen.get(id) ?? bovenliggendeKring;
-    const identiteit = analyse.puntLabels[id] ?? (node.type === "verdeelbord" ? node.naam : kring);
+    const identiteit = analyse.puntLabels[id] ?? (node.type === "verdeelbord" ? node.naam : node.type === "differentieel" ? node.referentie || kring : kring);
     keuzes.push({ id, label: [identiteit, typeNaam(node.type), node.label].filter(Boolean).join(" · ") });
     for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push({ id: node.kinderen[i]!, kring });
   }
+  return uniekeKeuzeLabels(keuzes);
+}
+
+/** Reserve existing descriptions before assigning ordinals, including descriptions such as "Keuken 1". */
+function uniekeKeuzeLabels<T extends { label: string }>(keuzes: T[]): T[] {
   const aantallen = new Map<string, number>();
   for (const keuze of keuzes) aantallen.set(keuze.label, (aantallen.get(keuze.label) ?? 0) + 1);
   const nummers = new Map<string, number>();
@@ -44,6 +49,47 @@ export function schemaKeuzes(doc: InstallatieDocument, analyse: Analyse, typeNaa
   });
 }
 
+/** Nearest board context is shared by the canvas insertion chooser and assembly dialogs. */
+function bordVanNode(doc: InstallatieDocument, id: string): string | undefined {
+  const gezien = new Set<string>();
+  let node = Object.hasOwn(doc.nodes, id) ? doc.nodes[id] : undefined;
+  while (node && !gezien.has(node.id)) {
+    gezien.add(node.id);
+    if (node.type === "verdeelbord") return node.id;
+    node = node.parentId !== null && Object.hasOwn(doc.nodes, node.parentId) ? doc.nodes[node.parentId] : undefined;
+  }
+  return undefined;
+}
+
+function bordKeuzeLabels(doc: InstallatieDocument, structuur: {id: string; label: string}[], typeNaam: (type: NodeType) => string): Map<string, string> {
+  const borden = structuur.filter(k => doc.nodes[k.id]!.type === "verdeelbord");
+  return new Map(uniekeKeuzeLabels(borden.map((k, index) => {
+    const node = doc.nodes[k.id]!;
+    return { id: k.id, label: node.type === "verdeelbord" && node.naam?.trim() ? k.label : `${typeNaam("verdeelbord")} ${index + 1}` };
+  })).map(k => [k.id, k.label]));
+}
+
+/** Unique node labels, source references and board context for template and lighting destinations. */
+export function invoegDoelKeuzes(
+  doc: InstallatieDocument,
+  analyse: Analyse,
+  doelen: readonly LichtschakelingDoel[],
+  typeNaam: (type: NodeType) => string,
+  doelNaam: (soort: LichtschakelingDoel["soort"]) => string,
+): {value: string; label: string}[] {
+  const structuur = schemaKeuzes(doc, analyse, typeNaam);
+  const namen = new Map(structuur.map(k => [k.id, k.label]));
+  const borden = bordKeuzeLabels(doc, structuur, typeNaam);
+  return uniekeKeuzeLabels(doelen.map(doel => {
+    const bordId = bordVanNode(doc, doel.nodeId);
+    const context = bordId !== undefined && bordId !== doel.nodeId ? borden.get(bordId) : undefined;
+    return {
+      value: `${doel.soort}:${doel.nodeId}`,
+      label: [borden.get(doel.nodeId) ?? namen.get(doel.nodeId), context, doelNaam(doel.soort)].filter(Boolean).join(" — "),
+    };
+  }));
+}
+
 /** Sorteer bestemmingen los van de geometrische volgorde van de plusknoppen. */
 export function schemaInvoegKeuzes(
   doc: InstallatieDocument,
@@ -54,19 +100,10 @@ export function schemaInvoegKeuzes(
 ): (Aanknoping & { sleutel: string; label: string; bordId: string; bord: string })[] {
   const structuur = schemaKeuzes(doc, analyse, typeNaam);
   const bordIds = structuur.filter(n => doc.nodes[n.id]?.type === "verdeelbord").map(n => n.id);
+  const bordLabels = bordKeuzeLabels(doc, structuur, typeNaam);
   const differentielen = structuur.filter(n => doc.nodes[n.id]?.type === "differentieel").map(n => n.id);
   const kringIndex = new Map(analyse.kringen.map((k, index) => [k.id, index]));
   const natuurlijk = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
-  function bordVan(id: string): string {
-    const gezien = new Set<string>();
-    let node = doc.nodes[id];
-    while (node && !gezien.has(node.id)) {
-      gezien.add(node.id);
-      if (node.type === "verdeelbord") return node.id;
-      node = node.parentId ? doc.nodes[node.parentId] : undefined;
-    }
-    return "";
-  }
   function ligtOnder(id: string, voorouderId: string): boolean {
     const gezien = new Set<string>();
     let node = doc.nodes[id];
@@ -79,11 +116,8 @@ export function schemaInvoegKeuzes(
   }
   return aanknopingen.filter(a => !!doc.nodes[a.nodeId]).map(a => {
     const node = doc.nodes[a.nodeId]!;
-    const bordId = bordVan(node.id);
-    const bordNode = doc.nodes[bordId];
-    const bord = bordNode?.type === "verdeelbord"
-      ? bordNode.naam || `${typeNaam("verdeelbord")} ${bordIds.indexOf(bordId) + 1}`
-      : typeNaam("aansluiting");
+    const bordId = bordVanNode(doc, node.id) ?? "";
+    const bord = bordLabels.get(bordId) ?? typeNaam("aansluiting");
     const kring = analyse.kringen.find(k => k.id === analyse.kringVanNode[node.id]);
     let label: string;
     if (a.soort === "kring-einde" || a.soort === "aftakking-einde") {
@@ -91,9 +125,9 @@ export function schemaInvoegKeuzes(
       label = tekst("kringBestemming", { kring: kring?.label ?? "—", punt });
       if (node.label) label += ` · ${node.label}`;
     } else if (node.type === "differentieel") {
-      const nummer = differentielen.filter(id => bordVan(id) === bordId).indexOf(node.id) + 1;
+      const nummer = differentielen.filter(id => (bordVanNode(doc, id) ?? "") === bordId).indexOf(node.id) + 1;
       const kringen = analyse.kringen.filter(k => ligtOnder(k.beveiligingId, node.id)).map(k => k.label);
-      label = `${typeNaam(node.type)} ${nummer} · ${node.nominaal_A} A / ${node.gevoeligheid_mA} mA · ${node.polen}P · ${node.klasse}`;
+      label = `${node.referentie ? `${node.referentie} · ` : ""}${typeNaam(node.type)} ${nummer} · ${node.nominaal_A} A / ${node.gevoeligheid_mA} mA · ${node.polen}P · ${node.klasse}`;
       if (node.label) label += ` · ${node.label}`;
       if (kringen.length) label += ` · ${tekst("voorKringen", { kringen: kringen.join(", ") })}`;
     } else {

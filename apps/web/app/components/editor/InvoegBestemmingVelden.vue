@@ -5,6 +5,7 @@ import type {
 } from "@elentrik/model";
 import { useEditorStore } from "~/stores/editor";
 import { invoegSpecificatie } from "~/editor/invoegen";
+import { invoegDoelKeuzes } from "~/editor/schema-navigatie";
 
 const props = defineProps<{ doelen: LichtschakelingDoel[] }>();
 const doel = defineModel<LichtschakelingDoel | undefined>("doel");
@@ -20,23 +21,10 @@ const waarde = computed({
     doel.value = props.doelen.find((d) => `${d.soort}:${d.nodeId}` === value);
   },
 });
-const items = computed(() =>
-  props.doelen.map((d) => {
-    const n = store.document!.nodes[d.nodeId]!;
-    const naam =
-      (n.type === "verdeelbord"
-        ? n.naam
-        : n.type === "differentieel"
-          ? n.referentie
-          : store.analyse?.kringen.find((k) => k.id === n.id)?.label) ||
-      n.label ||
-      t(`editor.types.${n.type}`);
-    return {
-      value: `${d.soort}:${d.nodeId}`,
-      label: `${naam} — ${t(`editor.invoegen.doelen.${d.soort}`)}`,
-    };
-  }),
-);
+const items = computed(() => store.document && store.analyse
+  ? invoegDoelKeuzes(store.document, store.analyse, props.doelen,
+    type => t(`editor.types.${type}`), soort => t(`editor.invoegen.doelen.${soort}`))
+  : []);
 const bestaandeDifferentieel = computed(() =>
   doel.value?.soort === "bestaande-differentieel"
     ? store.document?.nodes[doel.value.nodeId]

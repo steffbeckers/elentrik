@@ -18,11 +18,12 @@ export function kringLetter(index: number): string {
 }
 /** Nummerreeksen volgen de analyse: hoofdborden delen een reeks, onderborden een eigen reeks. */
 function nummerReeksen(doc: InstallatieDocument) {
-  const groepen = new Map<string, NodeId[]>();
+  const hoofdReeks = Symbol("hoofd");
+  const groepen = new Map<string | symbol, NodeId[]>();
   const kringIds = new Set<NodeId>();
   const gezien = new Set<NodeId>();
-  const stapel = [
-    { id: doc.rootId, reeks: "hoofd", bord: false, kring: false },
+  const stapel: { id: NodeId; reeks: string | symbol; bord: boolean; kring: boolean }[] = [
+    { id: doc.rootId, reeks: hoofdReeks, bord: false, kring: false },
   ];
   while (stapel.length) {
     let { id, reeks, bord, kring } = stapel.pop()!;

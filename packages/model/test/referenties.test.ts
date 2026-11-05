@@ -193,3 +193,20 @@ test("an empty node id cannot bypass imported explicit reference collision evide
     }),
   );
 });
+test.each([false, true])('imported subboard id hoofd keeps its independent namespace (fixed=%s)', (fixed) => {
+  const x = basis();
+  const lamp = Object.values(x.doc.nodes).find(n => n.type === 'lichtpunt')!;
+  const sub = m.voegOnderdeelToe(x.doc, { soort: 'kring-einde', nodeId: lamp.id }, 'onderbord');
+  const kring = m.voegOnderdeelToe(sub.doc, { soort: 'rail-einde', nodeId: sub.ids.at(-1)! }, 'lichtpunt');
+  let doc = kring.doc;
+  if (fixed) {
+    doc = m.wijzigEigenschappen(doc, x.a, { kringCode: 'J' }).doc;
+    doc = m.wijzigEigenschappen(doc, kring.ids[0]!, { kringCode: 'J' }).doc;
+  }
+  const raw = JSON.parse(JSON.stringify(doc).replaceAll(sub.ids.at(-1)!, 'hoofd'));
+  if (!fixed) raw.schemaVersion = 1;
+  expect(m.valideerStructuur(raw)).toEqual([]);
+  const migrated = m.migreer(raw);
+  expect(analyseer(migrated).kringen.map(k => k.label)).toEqual(fixed ? ['J','A','A.J'] : ['A','B','B.A']);
+  expect(migrated.nodes['hoofd']!.id).toBe('hoofd');
+});
