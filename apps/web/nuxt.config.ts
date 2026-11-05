@@ -19,11 +19,49 @@ export default defineNuxtConfig({
   compatibilityDate: "2026-10-18",
   // De e2e-server (Playwright) bouwt in een eigen map, naast de ontwikkelserver.
   buildDir: process.env.ELENTRIK_BUILD_DIR || ".nuxt",
-  modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
+  modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n", "@vite-pwa/nuxt"],
   // Deze dynamische menu-iconen meteen meesturen: de taal- en themakiezer mogen niet afhankelijk zijn
   // van een aparte icoonaanvraag wanneer het gebruikersmenu wordt geopend.
   icon: { clientBundle: { icons: ["lucide:languages", "lucide:sun", "lucide:moon"] } },
   css: ["~/assets/css/main.css"],
+  // Alleen voor een productiebuild op Windows (de e2e van de service worker, playwright.sw.config.ts):
+  // door `makeAbsoluteExternalsRelative: false` hieronder importeert de plugin van @pinia/nuxt pinia via
+  // een absoluut pad. Nitro herkent dat pad op Windows niet als het pakket (het vergelijkt `/` met `\`)
+  // en bundelt een tweede kopie, waarna elke store "no active Pinia" geeft. Meebundelen in de
+  // server-build van Vite houdt één kopie. Op Linux (het image) verandert er niets.
+  build: { transpile: process.platform === "win32" ? ["pinia"] : [] },
+  experimental: {
+    // De app-manifest (`/_nuxt/builds/latest.json`) blijft aan: de eigen versiecontrole
+    // (app/plugins/versiecontrole.client.ts) leest hem. De controle van Nuxt zelf stopt na de eerste
+    // nieuwe build en na een mislukte controle, en herlaadt bij de volgende navigatie; beide kunnen
+    // we niet gebruiken. Met "manual" geeft Nuxt alleen nog de fout bij het laden van code door
+    // (`app:chunkError`); de eigen plugin chunkfout.client.ts beslist wat daarmee gebeurt.
+    checkOutdatedBuildInterval: false,
+    emitRouteChunkError: "manual",
+  },
+  // De service worker (spec 4.1): app/service-worker/sw.ts, alleen in de productiebuild. Geen precache van
+  // Workbox: sw.ts bewaart de bestanden zelf, zonder oude versies weg te gooien. De module registreert
+  // niets en maakt geen manifest; dat doen app/plugins/service-worker.client.ts en
+  // server/routes/manifest.webmanifest.ts. `srcDir` is relatief ten opzichte van app/ (de root van Vite).
+  pwa: {
+    strategies: "injectManifest",
+    srcDir: "service-worker",
+    filename: "sw.ts",
+    injectRegister: false,
+    registerType: "prompt",
+    manifest: false,
+    client: { registerPlugin: false },
+    devOptions: { enabled: false },
+    injectManifest: {
+      globPatterns: ["_nuxt/**/*.{js,mjs,css,woff2,svg,png,webp}"],
+      // Het versiebestand van Nuxt heeft geen hash en moet altijd vers zijn.
+      globIgnores: ["_nuxt/builds/**"],
+    },
+  },
+  // Een nieuwe /sw.js moet meteen aankomen; de browser vraagt hem altijd opnieuw na.
+  routeRules: {
+    "/sw.js": { headers: { "cache-control": "no-cache" } },
+  },
   runtimeConfig: {
     // Alleen op de server: de basis-URL waarmee de auth-client tijdens SSR Better Auth aanspreekt.
     authBasisUrl: process.env.BETTER_AUTH_URL || "http://127.0.0.1:3000",
@@ -37,6 +75,8 @@ export default defineNuxtConfig({
     build: { rolldownOptions: { makeAbsoluteExternalsRelative: false } },
   },
   nitro: {
+    // De e2e van de service worker (playwright.sw.config.ts) bouwt in een eigen map, naast .output.
+    output: { dir: process.env.ELENTRIK_OUTPUT_DIR || undefined },
     // Taken (server/tasks) en hun planning: de uurlijkse inhaaltaak voor gemiste Stripe-meldingen en
     // het dagelijkse opruimen van de prullenbak en van verweesde bestanden (04:00, tijdzone van de container).
     experimental: { tasks: true },
@@ -61,6 +101,8 @@ export default defineNuxtConfig({
         "../drizzle.config.ts",
         "../vitest.config.ts",
         "../playwright.config.ts",
+        "../e2e-sw/**/*",
+        "../playwright.sw.config.ts",
       ],
     },
   },

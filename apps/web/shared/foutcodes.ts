@@ -77,6 +77,9 @@ export const SERVER_FOUTCODES = [
   // Begrenzing: ook de rate limiter van Better Auth (429 zonder code) is voor de client dit
   "TE_VEEL_UITNODIGINGEN",
   "TE_VEEL_POGINGEN",
+  // Een schrijfactie van een client met een ander compatibiliteitsgetal dan de server (426,
+  // server/middleware/clientversie.ts): de client moet eerst herladen.
+  "NIEUWE_VERSIE_VEREIST",
   // Een serverfout na het klikken op een geldige inloglink: een redirect naar /inloggen?fout=<CODE>
   // (server/auth/inloglink.ts), geen h3-fout.
   "INLOGLINK_MISLUKT",

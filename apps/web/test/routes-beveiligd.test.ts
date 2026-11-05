@@ -63,19 +63,30 @@ describe("beveiligde routes", () => {
     expect(PUBLIEK.test(zonderCommentaar("export default defineBeveiligdeHandler(() => 1, { publiek: true });"))).toBe(true);
   });
 
-  test("server/routes bestaat niet (Nitro zou het ongecontroleerd serveren)", () => {
+  // Nitro serveert server/routes zonder de toegangswrapper. De enige route daar is het manifest
+  // (Task 6 van de updates zonder onderbreking): publiek, zonder sessie of database, alleen de naam
+  // volgens de omgeving. Een andere route moet hier met naam bekend zijn.
+  test("server/routes bevat alleen manifest.webmanifest.ts, zonder sessie of database", () => {
+    const map = join(SERVER, "routes");
     expect(
-      existsSync(join(SERVER, "routes")),
-      "server/routes bestaat: breid deze test en de routetabel uit voor je het toevoegt",
-    ).toBe(false);
+      readdirSync(map).sort(),
+      "een nieuwe route in server/routes: breid deze test en de routetabel uit voor je het toevoegt",
+    ).toEqual(["manifest.webmanifest.ts"]);
+    const imports = [...readFileSync(join(map, "manifest.webmanifest.ts"), "utf8").matchAll(/from\s+"([^"]+)"/g)]
+      .map((treffer) => treffer[1])
+      .sort();
+    expect(imports).toEqual(["../../shared/omgeving", "h3"]);
   });
 
-  // De enige middleware is die voor /robots.txt op staging (plan 10): zonder sessie, en alleen voor dat pad.
-  // Een andere middleware moet hier met naam bekend zijn.
-  test("server/middleware bevat alleen robots.ts, en die antwoordt alleen op /robots.txt", () => {
+  // De middleware is met naam bekend: robots.ts (plan 10, /robots.txt op staging, zonder sessie) en
+  // clientversie.ts (alleen /api, geeft nooit een lichaam, alleen een header of een 426). Een andere
+  // middleware moet hier met naam bekend zijn.
+  test("server/middleware bevat alleen robots.ts en clientversie.ts, elk met een eigen pad", () => {
     const map = join(SERVER, "middleware");
-    expect(readdirSync(map)).toEqual(["robots.ts"]);
-    const inhoud = readFileSync(join(map, "robots.ts"), "utf8");
-    expect(inhoud).toMatch(/pathname\s*!==\s*"\/robots\.txt"\)\s*return;/);
+    expect(readdirSync(map).sort()).toEqual(["clientversie.ts", "robots.ts"]);
+    const robots = readFileSync(join(map, "robots.ts"), "utf8");
+    expect(robots).toMatch(/pathname\s*!==\s*"\/robots\.txt"\)\s*return;/);
+    const versie = readFileSync(join(map, "clientversie.ts"), "utf8");
+    expect(versie).toMatch(/pathname\.startsWith\("\/api\/"\)\)\s*return;/);
   });
 });

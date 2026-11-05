@@ -191,6 +191,11 @@
   "omgeving": {
     "staging": "Staging: test environment, no real data"
   },
+  "versie": {
+    "nieuw": "A new version of Elentrik is available",
+    "herladen": "Reload",
+    "vereist": "Elentrik has been updated. Reload the app to continue. Your work in the editor is kept."
+  },
   "algemeen": {
     "annuleren": "Cancel"
   },
@@ -449,7 +454,8 @@
       "beschrijving": "This device has a draft of this project with changes that are not on the server yet ({tijd}).",
       "laden": "Load draft",
       "later": "Later",
-      "verwerpen": "Discard"
+      "verwerpen": "Discard",
+      "herstelMislukt": "The locally saved work could not be loaded. It is still kept."
     },
     "verlaten": {
       "bevestiging": "Your changes are not on the server yet. Do you still want to leave the editor?"
@@ -1183,6 +1189,7 @@
     "TE_VEEL_UITNODIGINGEN": "Too many invitations. Try again later.",
     "TE_VEEL_POGINGEN": "Too many attempts. Wait a moment and try again.",
     "INLOGLINK_MISLUKT": "Signing in with the link did not work. Request a new link.",
+    "NIEUWE_VERSIE_VEREIST": "Elentrik has been updated. Reload the app to continue.",
     "INVALID_EMAIL_OR_PASSWORD": "The email address or password is incorrect.",
     "EMAIL_NOT_VERIFIED": "Your email address has not been confirmed yet.",
     "INVALID_TOKEN": "This link has expired or has already been used. Request a new one.",
