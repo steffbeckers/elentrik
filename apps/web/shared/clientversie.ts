@@ -4,10 +4,12 @@
 // (426 NIEUWE_VERSIE_VEREIST). Een client zonder getal (de Stripe-webhook, de Docker-healthcheck)
 // gaat altijd door.
 //
-// Verhoog het getal alleen als een oude client en de nieuwe server samen schade kunnen doen: een
-// wijziging van het formaat van een /api-verzoek of -antwoord die een oude client niet aankan. Een
-// wijziging van het documentmodel komt altijd met een migratie in `MIGRATIES`, en verhoogt het
-// getal niet: oude documenten blijven leesbaar.
+// Verhoog het getal als een oude client en de nieuwe server samen schade kunnen doen: een wijziging
+// van het formaat van een /api-verzoek of -antwoord, van een validatie, of van het documentmodel
+// (`SCHEMA_VERSIE` in packages/model). Een oude client stuurt documenten met het oude
+// `schemaVersion`, en de server weigert die (`z.literal(SCHEMA_VERSIE)`); alleen een nieuwe client
+// kan dus nog bewaren. Een wijziging van het model komt bovendien met een migratie in `MIGRATIES`,
+// zodat bestaande documenten leesbaar blijven. `test/clientversie.test.ts` pint beide getallen.
 //
 // Expliciete import in de server en client (ruling E1): dit bestand importeert niets.
 
