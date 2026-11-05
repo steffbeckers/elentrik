@@ -84,6 +84,7 @@ export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({
     ...basis,
     type: z.literal("differentieel"),
+    referentie: z.string().regex(/^[A-Z]+$/).optional(),
     gevoeligheid_mA: positief,
     nominaal_A: positief,
     polen: PolenSchema,
@@ -92,12 +93,13 @@ export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({
     ...basis,
     type: z.literal("automaat"),
+    kringCode: z.string().regex(/^[A-Z]+$/).optional(),
     nominaal_A: positief,
     polen: PolenSchema,
     curve: z.enum(["B", "C", "D"]),
     kortsluitvermogen_kA: z.number().optional(),
   }),
-  z.strictObject({ ...basis, type: z.literal("zekering"), nominaal_A: positief }),
+  z.strictObject({ ...basis, type: z.literal("zekering"), nominaal_A: positief, kringCode: z.string().regex(/^[A-Z]+$/).optional() }),
   z.strictObject({ ...basis, type: z.literal("verdeelbord"), naam: z.string().optional() }),
   z.strictObject({
     ...basis,
@@ -109,7 +111,8 @@ export const NodeSchema = z.discriminatedUnion("type", [
     aantalGeleiders: positiefGeheel,
     /** Lengte van het tracé in meter; ontbrekend betekent nog niet opgemeten. */
     lengte_m: z.number().min(0).optional(),
-    plaatsing: z.enum(["inbouw", "opbouw", "buis", "grond"]).optional(),
+    brandreactieklasse: z.string().max(64).optional(),
+    aanleg: z.strictObject({ ligging: z.enum(["inbouw", "opbouw", "grond"]).optional(), inBuis: z.boolean() }).optional(),
   }),
   z.strictObject({
     ...basis,
@@ -162,6 +165,8 @@ export type PlanTekening = z.infer<typeof PlanTekeningSchema>;
 export const SituatiePaginaSchema = z.strictObject({
   id: z.string(),
   titel: z.string(),
+  referentie: z.boolean().optional(),
+  afdruk: z.strictObject({ papier: z.enum(["A4", "A3"]), orientatie: z.enum(["staand", "liggend"]), schaalmodus: z.enum(["passend", "gekalibreerd"]) }).optional(),
   tekening: PlanTekeningSchema.optional(),
   /** Factor ten opzichte van het oorspronkelijke formaat; ontbrekend betekent 1. */
   symboolSchaal: z.number().min(0.25).max(4).optional(),
@@ -171,6 +176,7 @@ export const SituatiePaginaSchema = z.strictObject({
       origineelBestandId: z.string(),
       rasterBestandId: z.string(),
       pdfPagina: z.number().optional(),
+      bronUitsnede: z.strictObject({ x: z.number().finite().min(0), y: z.number().finite().min(0), breedte: z.number().finite().positive(), hoogte: z.number().finite().positive(), rotatie: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]) }).optional(),
       breedte_px: z.number(),
       hoogte_px: z.number(),
       schaal: z.strictObject({ mmPerPx: z.number() }).optional(),
