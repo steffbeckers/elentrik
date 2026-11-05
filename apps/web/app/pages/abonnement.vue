@@ -97,7 +97,7 @@ const beheer = () => voerUit("beheer", () => beheerAbonnement({ api, ...doorstur
 <template>
   <div class="min-h-dvh">
     <AppBovenbalk />
-    <UContainer class="max-w-3xl py-8">
+    <UContainer class="comfortabele-formulieren max-w-3xl py-8">
       <h1 class="mb-6 text-2xl font-semibold">{{ $t("abonnement.titel") }}</h1>
 
       <UAlert
@@ -114,6 +114,9 @@ const beheer = () => voerUit("beheer", () => beheerAbonnement({ api, ...doorstur
       </p>
       <div v-else class="space-y-6">
         <p v-if="statusTekst" class="text-lg" data-testid="abonnement-status">{{ statusTekst }}</p>
+        <p v-if="overzicht.reden === 'vrijgesteld' && overzicht.status" class="text-muted">
+          {{ $t("abonnement.vrijstellingStripe") }}
+        </p>
 
         <UAlert
           v-if="weergave.melding === 'lid'"
@@ -171,6 +174,21 @@ const beheer = () => voerUit("beheer", () => beheerAbonnement({ api, ...doorstur
             </template>
           </UCard>
         </div>
+
+        <section v-if="overzicht.formule && overzicht.status" aria-labelledby="abonnement-details" class="space-y-3 border-t border-default pt-5" data-testid="abonnement-details">
+          <h2 id="abonnement-details" class="font-semibold">{{ $t('werkbaarheidBeheer.huidigAbonnement') }}</h2>
+          <dl class="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt class="text-muted">{{ $t('werkbaarheidBeheer.formule') }}</dt>
+              <dd class="mt-1 font-medium">{{ formuleLabel(overzicht.formule) }}</dd>
+            </div>
+            <div v-if="overzicht.periodeEinde">
+              <dt class="text-muted">{{ $t('werkbaarheidBeheer.periodeTot') }}</dt>
+              <dd class="mt-1 font-medium">{{ datumTekst(overzicht.periodeEinde, taal) }}</dd>
+            </div>
+          </dl>
+          <p v-if="weergave.beheer" class="text-sm text-muted">{{ $t('werkbaarheidBeheer.betaalportaal') }}</p>
+        </section>
 
         <UButton
           v-if="weergave.beheer"

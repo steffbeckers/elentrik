@@ -6,7 +6,7 @@ import { afmetingen, herkenSoort, MAX_LOGO_BYTES, type BestandInfo } from "../..
 import { BestandFout, schrijfBestandMetRij } from "../bestanden/repo";
 import type { BestandOpslag } from "../bestanden/opslag";
 import type { Db } from "../db";
-import { bedrijfsinstellingen } from "../db/schema";
+import { bedrijfsinstellingen, organization } from "../db/schema";
 
 export type BedrijfFoutCode = "ONGELDIG";
 
@@ -51,10 +51,13 @@ export async function bewaarBedrijf(db: Db, organisatieId: string, partij: Parti
   const resultaat = PartijSchema.safeParse(partij);
   if (!resultaat.success) throw new BedrijfFout("ONGELDIG", resultaat.error.issues);
   const { logoBestandId: _genegeerd, ...invoer } = resultaat.data;
-  const { logoBestandId } = await haalBedrijf(db, organisatieId);
-  const bewaard: Partij = { ...invoer, ...(logoBestandId !== undefined ? { logoBestandId } : {}) };
-  await schrijfBedrijf(db, organisatieId, bewaard);
-  return bewaard;
+  return db.transaction(async (tx) => {
+    await tx.select({ id: organization.id }).from(organization).where(eq(organization.id, organisatieId)).for("no key update");
+    const { logoBestandId } = await haalBedrijf(tx, organisatieId);
+    const bewaard: Partij = { ...invoer, ...(logoBestandId !== undefined ? { logoBestandId } : {}) };
+    await schrijfBedrijf(tx, organisatieId, bewaard);
+    return bewaard;
+  });
 }
 
 /**
@@ -81,6 +84,7 @@ export async function bewaarLogo(
     opslag,
     { projectId: null, organisatieId, soort: "logo", map: `org/${organisatieId}`, type, data },
     async (tx, info) => {
+      await tx.select({ id: organization.id }).from(organization).where(eq(organization.id, organisatieId)).for("no key update");
       const huidig = await haalBedrijf(tx, organisatieId);
       await schrijfBedrijf(tx, organisatieId, { ...huidig, logoBestandId: info.id });
     },

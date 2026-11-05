@@ -14,12 +14,13 @@ describe("haalRegelset", () => {
 });
 
 describe("arei-2020@1", () => {
-  test("bevat de 10 regels in volgorde en is niet gepubliceerd", () => {
+  test("bevat de aanvullende controle en is niet gepubliceerd", () => {
     const set = haalRegelset("arei-2020@1");
     expect(set.gepubliceerd).toBe(false);
     expect(set.regels.map((r) => r.id)).toEqual([
       "arei.differentieel.algemeen",
       "arei.differentieel.natte-ruimte",
+      "arei.differentieel.aanvullend",
       "arei.kring.doorsnede-beveiliging",
       "arei.kring.max-contactdozen",
       "arei.kring.min-doorsnede",

@@ -6,6 +6,14 @@ export type Weergave = { x: number; y: number; b: number; h: number };
 
 export type Afmeting = { breedte: number; hoogte: number };
 
+/** Focus a working region without overzooming tiny symbols. */
+export function focusWeergave(vak: Afmeting & { x: number; y: number }, venster: Afmeting, passend: Weergave, maxZoom: number): Weergave {
+  const verhouding = venster.breedte / Math.max(1, venster.hoogte);
+  const b = Math.max(vak.breedte + 10, (vak.hoogte + 10) * verhouding, passend.b / maxZoom);
+  const h = b / verhouding;
+  return { x: vak.x + vak.breedte / 2 - b / 2, y: vak.y + vak.hoogte / 2 - h / 2, b, h };
+}
+
 /** Zoom is begrensd tot 25 % – 400 % van de passende weergave; een plan mag verder (`maxPlanZoom`). */
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 4;
@@ -41,6 +49,25 @@ export function begrens(w: Weergave, inhoud: Afmeting): Weergave {
   const midX = Math.min(Math.max(w.x + w.b / 2, 0), inhoud.breedte);
   const midY = Math.min(Math.max(w.y + w.h / 2, 0), inhoud.hoogte);
   return { ...w, x: midX - w.b / 2, y: midY - w.h / 2 };
+}
+
+/** A fitted drawing follows the viewport; a manually zoomed drawing keeps its scale and centre. */
+export function weergaveNaResize(
+  huidig: Weergave,
+  vorig: Afmeting,
+  volgend: Afmeting,
+  inhoud: Afmeting,
+  marge: number,
+): Weergave {
+  if (volgend.breedte <= 0 || volgend.hoogte <= 0) return huidig;
+  const wasPassend = passendeWeergave(inhoud, vorig, marge);
+  const nuPassend = passendeWeergave(inhoud, volgend, marge)!;
+  if (!wasPassend || (["x", "y", "b", "h"] as const).every(k =>
+    Math.abs(huidig[k] - wasPassend[k]) <= 1e-8 * Math.max(1, Math.abs(wasPassend[k])))) return nuPassend;
+  const eenhedenPerPixel = huidig.b / vorig.breedte;
+  const b = volgend.breedte * eenhedenPerPixel;
+  const h = volgend.hoogte * eenhedenPerPixel;
+  return begrens({ x: huidig.x + (huidig.b - b) / 2, y: huidig.y + (huidig.h - h) / 2, b, h }, inhoud);
 }
 
 /**

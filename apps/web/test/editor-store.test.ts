@@ -40,9 +40,12 @@ function eersteVan(store: Store, type: Node["type"]): NodeId {
   return n.id;
 }
 
-/** Nieuwe kring op het bord; geeft de id van de leiding (de bovenste nieuwe node). */
+/** Lege kring op het bord; geeft de leiding en herstelt het onderdeel voor volgende toevoegingen. */
 function nieuweKring(store: Store): NodeId {
+  const onderdeel = store.onderdeel;
+  store.onderdeel = "leiding";
   store.voegToe({ soort: "rail-einde", nodeId: eersteVan(store, "verdeelbord") });
+  store.onderdeel = onderdeel;
   return store.selectie[0]!;
 }
 
@@ -58,6 +61,52 @@ function stapel(store: Store, n: number): NodeId[] {
 
 beforeEach(() => {
   setActivePinia(createPinia());
+});
+
+describe("vrije aftakkingen", () => {
+  test("voegt twee wisselschakelaars en een lamp toe met één label en afzonderlijke undo-stappen", () => {
+    const store = laadNieuw();
+    const leiding = nieuweKring(store);
+    expect(store.kanAftakkingToevoegen).toBe(false);
+    store.kiesVariant("schakelaar", { soort: "wissel" });
+    expect(store.kanAftakkingToevoegen).toBe(true);
+    store.voegAftakkingToeBijSelectie();
+    const eerste = store.selectie[0]!;
+    store.voegToeBijSelectie();
+    const tweede = store.selectie[0]!;
+    expect(node(store, tweede)).toMatchObject({ type: "schakelaar", soort: "wissel", aftakking: true });
+    store.kiesVariant("lichtpunt", { aantal: 2 });
+    store.voegToeBijSelectie();
+    const lamp = store.selectie[0]!;
+    expect(node(store, lamp)).toMatchObject({ aantal: 2, aftakking: true });
+    expect([eerste, tweede, lamp].map((id) => store.analyse!.puntLabels[id])).toEqual(["A1", "A1", "A1"]);
+    store.ongedaanMaken();
+    expect(doc(store).nodes[lamp]).toBeUndefined();
+    store.opnieuw();
+    expect(doc(store).nodes[lamp]).toBeDefined();
+    store.selectie = [leiding];
+    store.voegAftakkingToeBijSelectie();
+    expect(store.analyse!.puntLabels[store.selectie[0]!]).toBe("A2");
+    expect(node(store, leiding).kinderen).toHaveLength(2);
+  });
+
+  test("ongeldige selecties en alleen-lezen voegen niets toe", () => {
+    const store = laadNieuw();
+    const leiding = nieuweKring(store);
+    store.kiesVariant("schakelaar", {});
+    const voor = store.document;
+    for (const ids of [[], [leiding, eersteVan(store, "verdeelbord")], [eersteVan(store, "verdeelbord")]]) {
+      store.selectie = ids;
+      expect(store.kanAftakkingToevoegen).toBe(false);
+      store.voegAftakkingToeBijSelectie();
+      expect(store.document).toBe(voor);
+    }
+    store.selectie = [leiding];
+    store.zetAlleenLezen(true);
+    expect(store.kanAftakkingToevoegen).toBe(false);
+    store.voegAftakkingToeBijSelectie();
+    expect(store.document).toBe(voor);
+  });
 });
 
 describe("laad", () => {
@@ -187,9 +236,13 @@ describe("undo/redo", () => {
     const na = doc(store);
 
     expect(store.terug).toHaveLength(1);
-    expect(Object.keys(na.nodes)).toHaveLength(Object.keys(origineel.nodes).length + 2);
-    // De bovenste nieuwe node (de leiding) is geselecteerd.
-    expect(node(store, store.selectie[0]!).type).toBe("leiding");
+    expect(Object.keys(na.nodes)).toHaveLength(Object.keys(origineel.nodes).length + 3);
+    // Het gekozen onderdeel staat meteen boven de nieuwe leiding en is geselecteerd.
+    const contactdoos = node(store, store.selectie[0]!);
+    expect(contactdoos.type).toBe("contactdoos");
+    const leiding = node(store, contactdoos.parentId!);
+    expect(leiding.type).toBe("leiding");
+    expect(node(store, leiding.parentId!)).toMatchObject({ type: "automaat", parentId: bordId });
 
     store.ongedaanMaken();
     expect(store.document).toEqual(origineel);

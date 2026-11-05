@@ -8,7 +8,11 @@ import {
   verwijderPlaatsing,
   voegPaginaToe,
   zetAchtergrond,
+  zetGetekendPlan,
+  type PlanTekening,
   zetSchaal as zetSchaalInDoc,
+  zetPaginaOpmaak as zetPaginaOpmaakInDoc,
+  zetLabelOffset as zetLabelOffsetInDoc,
   type NodeId,
   type OperatieResultaat,
   type SituatiePagina,
@@ -61,6 +65,20 @@ export const useSituatieStore = defineStore("situatie", () => {
     editor.pasToe(zetAchtergrond(vereisDocument(), paginaId, achtergrond));
   }
 
+  function bewaarTekening(titel: string, achtergrond: Achtergrond, tekening: PlanTekening, paginaId?: string): string {
+    if (editor.alleenLezen) return "";
+    const doc = vereisDocument();
+    if (paginaId) {
+      editor.pasToe(zetGetekendPlan(doc, paginaId, achtergrond, tekening));
+    } else {
+      const toegevoegd = voegPaginaToe(doc, titel);
+      paginaId = toegevoegd.id;
+      editor.pasToe(samengevoegd(doc, [toegevoegd, zetGetekendPlan(toegevoegd.doc, paginaId, achtergrond, tekening)]));
+    }
+    gekozenPaginaId.value = paginaId;
+    return paginaId;
+  }
+
   function hernoem(paginaId: string, titel: string): void {
     if (editor.alleenLezen) return;
     editor.pasToe(hernoemPagina(vereisDocument(), paginaId, titel));
@@ -79,6 +97,16 @@ export const useSituatieStore = defineStore("situatie", () => {
   function zetSchaal(paginaId: string, mmPerPx: number | undefined): void {
     if (editor.alleenLezen) return;
     editor.pasToe(zetSchaalInDoc(vereisDocument(), paginaId, mmPerPx));
+  }
+
+  function zetPaginaOpmaak(paginaId: string, opmaak: Pick<SituatiePagina, "symboolSchaal" | "labelSchaal">): void {
+    if (editor.alleenLezen) return;
+    editor.pasToe(zetPaginaOpmaakInDoc(vereisDocument(), paginaId, opmaak));
+  }
+
+  function zetLabelOffset(paginaId: string, nodeId: NodeId, offset: { x: number; y: number }): void {
+    if (editor.alleenLezen) return;
+    editor.pasToe(zetLabelOffsetInDoc(vereisDocument(), paginaId, nodeId, offset));
   }
 
   /** De pagina en plaatsing van een node, of `undefined` als hij nergens staat. */
@@ -173,10 +201,13 @@ export const useSituatieStore = defineStore("situatie", () => {
     actievePagina,
     voegPlanPaginaToe,
     vervangAchtergrond,
+    bewaarTekening,
     hernoem,
     verwijderPagina,
     verplaatsPagina,
     zetSchaal,
+    zetPaginaOpmaak,
+    zetLabelOffset,
     plaatsNode,
     haalVanPlan,
     haalSelectieVanPlan,

@@ -36,7 +36,11 @@ export function terugZonderFout(pad: string): { pad: string; fout: boolean } {
 export type RouteInfo = { path: string; fullPath: string };
 
 /** Wat de middleware van de sessie nodig heeft; null is niet ingelogd. */
-export type SessieInfo = { actieveOrganisatieId: string | null } | null;
+export type SessieInfo = { actieveOrganisatieId: string | null; superuser?: boolean } | null;
+
+export function isAdminPad(pad: string): boolean {
+  return pad === "/admin" || pad.startsWith("/admin/");
+}
 
 /**
  * De doorverwijzing voor een navigatie, of null als de pagina mag:
@@ -51,6 +55,7 @@ export function bestemming(route: RouteInfo, sessie: SessieInfo): string | null 
     if (route.fullPath === "/") return "/inloggen";
     return `/inloggen?terug=${encodeURIComponent(route.fullPath)}`;
   }
+  if (sessie.superuser === true && isAdminPad(route.path)) return null;
   if (sessie.actieveOrganisatieId === null && route.path !== GEEN_ORGANISATIE) return GEEN_ORGANISATIE;
   return null;
 }

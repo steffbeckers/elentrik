@@ -37,7 +37,7 @@ function ampereTekst(mA: number): string {
 export function beveiligingLabel(node: NodeVan<"automaat"> | NodeVan<"zekering"> | NodeVan<"differentieel">): string {
   switch (node.type) {
     case "automaat":
-      return `${node.curve}${node.nominaal_A}${polenSuffix(node.polen)}`;
+      return `${node.curve}${node.nominaal_A}${polenSuffix(node.polen)}${node.kortsluitvermogen_kA === undefined ? "" : ` ${String(node.kortsluitvermogen_kA).replace(".", ",")} kA`}`;
     case "zekering":
       return `${node.nominaal_A} A`;
     case "differentieel":

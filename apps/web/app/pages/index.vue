@@ -5,6 +5,7 @@ import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
+import { filterProjecten } from "~/utils/projectenZoeken";
 
 const { t } = useI18n();
 const api = useProjectenApi();
@@ -26,6 +27,14 @@ const { data: projecten, status, error, refresh } = useAsyncData("projecten", ()
 
 // Verlopen sessie of niet meer lid van de actieve organisatie (spec 5b.5).
 watch(error, useSessieHerstel());
+
+const zoek = ref("");
+const zoekveld = useTemplateRef("zoekveld");
+const gefilterdeProjecten = computed(() => filterProjecten(projecten.value, zoek.value));
+
+watch(() => sessie.actieveOrganisatieId, () => {
+  zoek.value = "";
+});
 
 const gemount = ref(false);
 const laadt = computed(() => gemount.value && status.value === "pending");
@@ -103,16 +112,32 @@ async function bevestigVerwijderen() {
       <div class="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <h1 class="text-2xl font-semibold">{{ $t("projecten.titel") }}</h1>
         <div class="flex flex-wrap gap-2">
-          <UButton
-            to="/instellingen"
-            icon="i-lucide-building-2"
-            color="neutral"
-            variant="outline"
-            :label="$t('bedrijf.link')"
-          />
           <UButton v-if="kanSchrijven" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
         </div>
       </div>
+
+      <UInput
+        ref="zoekveld"
+        v-model="zoek"
+        type="search"
+        icon="i-lucide-search"
+        :placeholder="$t('projecten.zoeken.placeholder')"
+        :aria-label="$t('projecten.zoeken.label')"
+        class="mb-4 w-full sm:max-w-md"
+        :ui="{ base: '[&::-webkit-search-cancel-button]:appearance-none', trailing: 'pe-1' }"
+      >
+        <template v-if="zoek" #trailing>
+          <UButton
+            icon="i-lucide-x"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :aria-label="$t('projecten.zoeken.wissen')"
+            :title="$t('projecten.zoeken.wissen')"
+            @click="zoek = ''; zoekveld?.inputRef?.focus()"
+          />
+        </template>
+      </UInput>
 
       <UAlert
         v-if="error"
@@ -125,11 +150,16 @@ async function bevestigVerwijderen() {
       />
       <UTable
         v-else
-        :data="projecten"
+        :data="gefilterdeProjecten"
         :columns="kolommen"
         :loading="laadt"
-        :empty="$t('projecten.leeg')"
+        :empty="zoek.trim() && projecten.length ? $t('projecten.zoeken.geenResultaten') : $t('projecten.leeg')"
       >
+        <template #naam-cell="{ row }">
+          <ULink :to="`/projecten/${row.original.id}`" class="font-medium text-primary underline-offset-4 hover:underline">
+            {{ row.original.naam }}
+          </ULink>
+        </template>
         <template #acties-header>
           <span class="sr-only">{{ $t("projecten.kolommen.acties") }}</span>
         </template>

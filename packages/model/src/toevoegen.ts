@@ -1,4 +1,5 @@
 import { DocumentFout } from "./fouten";
+import { isAftakkingNode } from "./aftakkingen";
 import { controleerType, vereis, type NodeInvoer, type OperatieResultaat } from "./operaties";
 import { NodeSchema, type InstallatieDocument, type NodeId } from "./schema";
 import { pasSjabloonToe, type Sjabloon } from "./sjablonen";
@@ -16,7 +17,7 @@ import {
  * Waar een onderdeel bijkomt: op het einde van een kring (een node zonder kinderen)
  * of op het einde van een rail (een verdeelbord of een differentieel).
  */
-export type Aanknoping = { soort: "kring-einde" | "rail-einde"; nodeId: NodeId };
+export type Aanknoping = { soort: "kring-einde" | "rail-einde" | "aftakking" | "aftakking-einde"; nodeId: NodeId };
 
 type Plan = { ouderId: NodeId; sjabloon: Sjabloon; aantal: number };
 
@@ -43,7 +44,17 @@ function nieuweNodes(
   voorinstelling?: Voorinstelling,
 ): NodeInvoer[] {
   const node = vereis(doc, aanknoping.nodeId);
+  if (aanknoping.soort === "aftakking" || aanknoping.soort === "aftakking-einde") {
+    const geldigDoel = aanknoping.soort === "aftakking"
+      ? node.type === "leiding"
+      : isAftakkingNode(node) && node.kinderen.length === 0;
+    if (!geldigDoel || (onderdeel !== "schakelaar" && onderdeel !== "lichtpunt")) {
+      throw nietToegelaten({ reden: "ongeldige aftakking", nodeId: node.id, onderdeel });
+    }
+    return [{ ...onderdeelInvoer(onderdeel, voorinstelling), aftakking: true } as NodeInvoer];
+  }
   if (aanknoping.soort === "kring-einde") {
+    if (isAftakkingNode(node)) throw nietToegelaten({ reden: "gebruik aftakking-einde", nodeId: node.id });
     if (node.kinderen.length > 0) throw nietToegelaten({ reden: "geen einde", nodeId: node.id });
     if (onderdeel === "differentieel" || onderdeel === "zekering") {
       throw nietToegelaten({ reden: "geen beveiliging op een kring-einde", onderdeel });
@@ -61,7 +72,10 @@ function nieuweNodes(
   }
   if (onderdeel === "differentieel") return [STANDAARD.differentieel];
   if (onderdeel === "zekering") return [STANDAARD.zekering, STANDAARD.leiding];
-  return [NIEUWE_KRING_AUTOMAAT, STANDAARD.leiding];
+  const basis = [NIEUWE_KRING_AUTOMAAT, STANDAARD.leiding];
+  // De leiding is al deel van de nieuwe kring. Elk ander gekozen onderdeel
+  // hoort meteen mee in dezelfde operatie, inclusief zijn voorinstelling.
+  return onderdeel === "leiding" ? basis : [...basis, onderdeelInvoer(onderdeel, voorinstelling)];
 }
 
 /**

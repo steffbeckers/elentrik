@@ -1,20 +1,29 @@
 <script setup lang="ts">
 // Het menu van de ingelogde gebruiker: zijn naam, "Mijn organisatie", "Bedrijfsgegevens", "Abonnement" en
-// "Uitloggen", en de taal als submenu (dezelfde keuzes als `TaalKiezer`). Uitloggen gaat via de
+// "Uitloggen", de taal als submenu en de themakeuze. Uitloggen gaat via de
 // sessie-store, dus eerst langs `voorVertrek`.
 import type { DropdownMenuItem } from "@nuxt/ui";
 import { taalKeuzes } from "~/sessie/taal";
 import { useSessieStore } from "~/stores/sessie";
 
 /** Compact (de editor): de naam pas vanaf een breed scherm, anders alleen het icoon. */
-defineProps<{ compact?: boolean }>();
+const props = defineProps<{ compact?: boolean; beheer?: boolean }>();
 
 const { t } = useI18n();
 const sessie = useSessieStore();
 const toast = useToast();
 const { taal, zetTaal } = useTaal();
+const colorMode = useColorMode();
+const donker = computed(() => colorMode.value === "dark");
 
 const bezig = ref(false);
+const nieuwOpen = ref(false);
+const { bezig: wisselt, organisatieItems, organisatieOptie } = useOrganisatieKeuzes();
+
+async function aangemaakt() {
+  nieuwOpen.value = false;
+  await navigateTo("/");
+}
 
 async function uitloggen() {
   if (bezig.value) return;
@@ -30,22 +39,35 @@ async function uitloggen() {
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [{ type: "label", label: sessie.gebruiker?.naam ?? "", description: sessie.gebruiker?.email ?? "" }],
+  ...(sessie.gebruiker?.superuser ? [[{ label: t("admin.titel"), icon: "i-lucide-shield-check", to: "/admin" }]] : []),
+  // Bij twee organisaties blijft wisselen bereikbaar zonder een extra knop in de bovenbalk.
+  ...(!props.beheer && sessie.organisaties.length === 2 ? [organisatieItems.value] : []),
   // Zonder organisatie hebben deze pagina's niets te tonen.
-  ...(sessie.actieveOrganisatie
+  ...(!props.beheer && sessie.actieveOrganisatie
     ? [
         [
+          { type: "label" as const, label: sessie.actieveOrganisatie.naam, slot: "actieve-organisatie" as const },
           { label: t("menu.mijnOrganisatie"), icon: "i-lucide-users", to: "/organisatie", slot: "organisatie" as const },
           { label: t("menu.bedrijfsgegevens"), icon: "i-lucide-building-2", to: "/instellingen" },
           { label: t("menu.abonnement"), icon: "i-lucide-credit-card", to: "/abonnement" },
         ],
       ]
     : []),
+  ...(!props.beheer ? [[{ label: t("menu.nieuwBedrijf"), icon: "i-lucide-plus", slot: "nieuw" as const, onSelect: () => { nieuwOpen.value = true; } }]] : []),
   [
     {
       label: t("taal.label"),
       icon: "i-lucide-languages",
       slot: "taal" as const,
       children: taalKeuzes(taal.value, zetTaal),
+    },
+    {
+      label: t(donker.value ? "menu.lichteModus" : "menu.donkereModus"),
+      icon: donker.value ? "i-lucide-sun" : "i-lucide-moon",
+      onSelect: (event: Event) => {
+        event.preventDefault();
+        colorMode.preference = donker.value ? "light" : "dark";
+      },
     },
   ],
   [{ label: t("menu.uitloggen"), icon: "i-lucide-log-out", slot: "uitloggen" as const, onSelect: uitloggen }],
@@ -59,13 +81,22 @@ const items = computed<DropdownMenuItem[][]>(() => [
       variant="ghost"
       icon="i-lucide-circle-user-round"
       class="min-w-0 max-w-48"
-      :loading="bezig"
+      :loading="bezig || wisselt"
       :aria-label="$t('menu.gebruiker')"
       :title="$t('menu.gebruiker')"
       data-testid="gebruiker-menu"
     >
-      <span class="hidden truncate" :class="compact ? 'xl:inline' : 'sm:inline'">{{ sessie.gebruiker.naam }}</span>
+      <span class="hidden truncate" :class="compact ? '' : 'sm:inline'">{{ sessie.gebruiker.naam }}</span>
     </UButton>
+    <template #actieve-organisatie-label>
+      <span data-testid="actieve-organisatie">{{ sessie.actieveOrganisatie?.naam }}</span>
+    </template>
+    <template #organisatie-optie-label="{ item }">
+      <span :data-testid="`organisatie-optie-${organisatieOptie(item).organisatieId}`">{{ organisatieOptie(item).label }}</span>
+    </template>
+    <template #nieuw-label>
+      <span data-testid="organisatie-nieuw">{{ $t('menu.nieuwBedrijf') }}</span>
+    </template>
     <template #organisatie-label>
       <span data-testid="mijn-organisatie">{{ $t("menu.mijnOrganisatie") }}</span>
     </template>
@@ -76,4 +107,9 @@ const items = computed<DropdownMenuItem[][]>(() => [
       <span data-testid="uitloggen">{{ $t("menu.uitloggen") }}</span>
     </template>
   </UDropdownMenu>
+  <UModal v-model:open="nieuwOpen" :title="$t('geenOrganisatie.nieuw.titel')">
+    <template #body>
+      <NieuwBedrijfFormulier @aangemaakt="aangemaakt" />
+    </template>
+  </UModal>
 </template>

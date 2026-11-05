@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // Het kader van de inlog-, registratie- en uitnodigingspagina's: de naam van de app en een kaart
-// met de titel, gecentreerd, ook op een smal scherm. Onder de kaart de taalkiezer.
+// met de titel, gecentreerd, ook op een smal scherm. Onder de kaart de taal- en themakiezer.
 defineProps<{ titel: string }>();
 </script>
 
 <template>
-  <main class="flex min-h-dvh flex-col items-center justify-center px-4 py-8">
+  <main class="comfortabele-formulieren flex min-h-dvh flex-col items-center justify-center px-4 py-8">
     <p class="mb-6 flex items-center gap-2 text-lg font-semibold">
       <UIcon name="i-lucide-zap" class="size-5 text-primary" />{{ $t("app.naam") }}
     </p>
@@ -18,6 +18,9 @@ defineProps<{ titel: string }>();
         <slot name="voet" />
       </template>
     </UCard>
-    <TaalKiezer class="mt-4" />
+    <div class="mt-4 flex items-center gap-2">
+      <TaalKiezer />
+      <UColorModeButton />
+    </div>
   </main>
 </template>

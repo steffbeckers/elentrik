@@ -20,6 +20,9 @@ export default defineNuxtConfig({
   // De e2e-server (Playwright) bouwt in een eigen map, naast de ontwikkelserver.
   buildDir: process.env.ELENTRIK_BUILD_DIR || ".nuxt",
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n", "@vite-pwa/nuxt"],
+  // Deze dynamische menu-iconen meteen meesturen: de taal- en themakiezer mogen niet afhankelijk zijn
+  // van een aparte icoonaanvraag wanneer het gebruikersmenu wordt geopend.
+  icon: { clientBundle: { icons: ["lucide:languages", "lucide:sun", "lucide:moon"] } },
   css: ["~/assets/css/main.css"],
   // Alleen voor een productiebuild op Windows (de e2e van de service worker, playwright.sw.config.ts):
   // door `makeAbsoluteExternalsRelative: false` hieronder importeert de plugin van @pinia/nuxt pinia via
@@ -79,6 +82,7 @@ export default defineNuxtConfig({
     experimental: { tasks: true },
     scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"], "0 4 * * *": ["bestanden:opruimen"] },
     publicAssets: [
+      { dir: "../plan-editor/dist", baseURL: "/plan-editor", maxAge: 0 },
       pdfjsBron("wasm"),
       pdfjsBron("standard_fonts"),
       pdfjsBron("iccs"),

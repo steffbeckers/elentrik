@@ -86,15 +86,17 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
  * - "led": een kruis met de tekst "LED" (staat niet in de tabel).
  * Het aantal komt als tekst "n×" links van het symbool.
  */
-export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
-  const breedte = 14;
+export function tekenLichtpunt(node: NodeVan<"lichtpunt">, horizontaal = false, einde = false): Symbool {
+  const breedte = horizontaal ? Math.max(14, (String(node.aantal).length + 1) * 1.2 + 2) : 14;
   const hoogte = 10;
   const x = breedte / 2;
   const cy = 5;
   /** Halve armlengte van het kruis en straal van de cirkel van de projector, in mm. */
   const arm = 2.5;
   // Eén doorlopende leiding van `in` naar `uit`; de projector vervangt ze door twee stukken.
-  let svg = node.soort === "spot" ? "" : lijn(x, hoogte, x, 0);
+  let svg = node.soort === "spot" ? "" : horizontaal
+    ? lijn(0, cy, einde ? x : breedte, cy)
+    : lijn(x, hoogte, x, 0);
   /** De twee diagonalen van het kruis, met halve armlengte `a` rond (x, cy). */
   const kruis = (a: number) =>
     lijn(x - a, cy + a, x + a, cy - a, { data: { rol: "kruis" } }) +
@@ -103,7 +105,11 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
     case "tl": {
       // Een lijn van 6 mm dwars op de leiding, met een streepje van 2 mm aan elk uiteinde.
       const half = 3;
-      svg +=
+      svg += horizontaal
+        ? lijn(x, cy - half, x, cy + half, { data: { rol: "tl" } }) +
+          lijn(x - 1, cy - half, x + 1, cy - half, { data: { rol: "tl-einde" } }) +
+          lijn(x - 1, cy + half, x + 1, cy + half, { data: { rol: "tl-einde" } })
+        :
         lijn(x - half, cy, x + half, cy, { data: { rol: "tl" } }) +
         lijn(x - half, cy - 1, x - half, cy + 1, { data: { rol: "tl-einde" } }) +
         lijn(x + half, cy - 1, x + half, cy + 1, { data: { rol: "tl-einde" } });
@@ -120,19 +126,21 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
       const dx = boogR * Math.sin(hoek);
       const dy = boogR * Math.cos(hoek);
       svg +=
-        lijn(x, hoogte, x, cy + r) +
+        (horizontaal ? lijn(0, cy, x - r, cy) : lijn(x, hoogte, x, cy + r)) +
         cirkel(x, cy, r) +
-        lijn(x, cy - r, x, 0) +
+        (horizontaal ? (einde ? "" : lijn(x + r, cy, breedte, cy)) : lijn(x, cy - r, x, 0)) +
         kruis(r * Math.SQRT1_2) +
         pad(
-          `M${getal(x - dx)} ${getal(cy + dy)} A${getal(boogR)} ${getal(boogR)} 0 0 0 ${getal(x + dx)} ${getal(cy + dy)}`,
+          horizontaal
+            ? `M${getal(x - dy)} ${getal(cy - dx)} A${getal(boogR)} ${getal(boogR)} 0 0 0 ${getal(x - dy)} ${getal(cy + dx)}`
+            : `M${getal(x - dx)} ${getal(cy + dy)} A${getal(boogR)} ${getal(boogR)} 0 0 0 ${getal(x + dx)} ${getal(cy + dy)}`,
           { data: { rol: "projector" } },
         );
       break;
     }
     case "led":
       // Basislijn cy + 0,6: de tekst (1,8 mm) staat rechtop naast het kruis.
-      svg += kruis(arm) + tekst(x + 3, cy + 0.6, "LED", { anker: "start", grootte: 1.8 });
+      svg += kruis(arm) + tekst(horizontaal ? x : x + 3, horizontaal ? 9.8 : cy + 0.6, "LED", { anker: horizontaal ? "middle" : "start", grootte: 1.8 });
       break;
     case "noodverlichting":
       svg += kruis(arm) + cirkel(x, cy, 0.8, { gevuld: true, data: { rol: "nood" } });
@@ -142,8 +150,10 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">): Symbool {
       svg += kruis(arm);
       break;
   }
-  svg += aantalTekst(node.aantal, cy + 0.8);
-  return { maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
+  svg += horizontaal
+    ? (node.aantal > 1 ? tekst(x, 1.8, `${node.aantal}${KEER}`, { anker: "middle", grootte: AANTAL_GROOTTE_MM, data: { rol: "aantal" } }) : "")
+    : aantalTekst(node.aantal, cy + 0.8);
+  return { maat: { breedte, hoogte, in: horizontaal ? { x: 0, y: cy } : { x, y: hoogte }, uit: horizontaal ? { x: einde ? x : breedte, y: cy } : { x, y: 0 } }, svg };
 }
 
 /** Lengte van het streepje van een haak, in mm. */
@@ -179,7 +189,7 @@ function haak(x1: number, y1: number, x2: number, y2: number): string {
  * - "drukknop": een cirkel in een cirkel, zonder hendel.
  * Waterdicht is de letter h rechts naast het symbool.
  */
-export function tekenSchakelaar(node: NodeVan<"schakelaar">): Symbool {
+export function tekenSchakelaar(node: NodeVan<"schakelaar">, horizontaal = false, einde = false): Symbool {
   const breedte = 14;
   const hoogte = 12;
   const x = breedte / 2;
@@ -198,8 +208,8 @@ export function tekenSchakelaar(node: NodeVan<"schakelaar">): Symbool {
     const [x1, y1, x2, y2] = [x + r * dx, cy + r * dy, x + (r + buiten) * dx, cy + (r + buiten) * dy];
     return lijn(x1, y1, x2, y2, { data: { rol: "hendel" } }) + (metHaak ? haak(x1, y1, x2, y2) : "");
   };
-  let svg = lijn(x, hoogte, x, cy + r) + cirkel(x, cy, r);
-  svg += lijn(x, cy - r, x, 0);
+  let svg = (horizontaal ? lijn(0, cy, x - r, cy) : lijn(x, hoogte, x, cy + r)) + cirkel(x, cy, r);
+  svg += horizontaal ? (einde ? "" : lijn(x + r, cy, breedte, cy)) : lijn(x, cy - r, x, 0);
   switch (node.soort) {
     case "enkel":
       svg += hendel(1, -1, false);
@@ -226,8 +236,13 @@ export function tekenSchakelaar(node: NodeVan<"schakelaar">): Symbool {
       svg += cirkel(x, cy, 1.1);
       break;
   }
-  if (node.waterdicht) svg += letterH(x + r + 1.6, cy + 1.2);
-  return { maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
+  if (node.waterdicht) svg += letterH(x + r + 1.6, horizontaal ? 11.2 : cy + 1.2);
+  return { maat: { breedte, hoogte, in: horizontaal ? { x: 0, y: cy } : { x, y: hoogte }, uit: horizontaal ? { x: einde ? x : breedte, y: cy } : { x, y: 0 } }, svg };
+}
+
+/** Horizontale aansluitingen, met behoud van rechtopstaande symbolen en teksten. */
+export function tekenAftakkingSymbool(node: NodeVan<"lichtpunt"> | NodeVan<"schakelaar">, einde = false): Symbool {
+  return node.type === "lichtpunt" ? tekenLichtpunt(node, true, einde) : tekenSchakelaar(node, true, einde);
 }
 
 /** Rol van de pictogramelementen in een toestel; het vierkant en de aansluitlijntjes hebben geen rol. */

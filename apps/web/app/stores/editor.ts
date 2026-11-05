@@ -43,7 +43,7 @@ export type Stap = { patches: Patch[]; inversePatches: Patch[]; groep?: string }
 export const MAX_STAPPEN = 200;
 
 /** De tabbladen van de editor. */
-export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst";
+export type Tabblad = "eendraadschema" | "situatieschema" | "kringenlijst" | "materiaallijst";
 
 export type TeLadenProject = { id: string; naam: string; versie: number; document: InstallatieDocument };
 
@@ -270,6 +270,19 @@ export const useEditorStore = defineStore("editor", () => {
     selectie.value = [r.ids[r.ids.length - 1]!];
   }
 
+  const kanAftakkingToevoegen = computed(() => {
+    const doc = document.value;
+    const id = selectie.value[0];
+    return !alleenLezen.value && !!doc && selectie.value.length === 1 && id !== undefined &&
+      magToevoegen(doc, { soort: "aftakking", nodeId: id }, onderdeel.value, voorinstelling.value);
+  });
+
+  /** Nieuwe horizontale reeks op de geselecteerde leiding; uitbreiden gebeurt via het rechteruiteinde. */
+  function voegAftakkingToeBijSelectie(): void {
+    if (!kanAftakkingToevoegen.value) return;
+    voegToe({ soort: "aftakking", nodeId: selectie.value[0]! });
+  }
+
   /** Op het geselecteerde bord of differentieel, anders op het eerste verdeelbord in pre-order. */
   function voegSjabloonToe(sjabloonId: string): void {
     if (alleenLezen.value) return;
@@ -322,7 +335,7 @@ export const useEditorStore = defineStore("editor", () => {
       if (!kind) return undefined;
       node = kind;
     }
-    const einde = zoek("kring-einde", node.id);
+    const einde = zoek("aftakking-einde", node.id) ?? zoek("kring-einde", node.id);
     if (einde) return einde;
     // De keten loopt dood op een bord (bv. de teller in een nieuw project): dan op de rail.
     if (node.type === "verdeelbord" || node.type === "differentieel") return zoek("rail-einde", node.id);
@@ -446,6 +459,7 @@ export const useEditorStore = defineStore("editor", () => {
     datum?: string;
     /** De taal van het dossier (PDF); dezelfde taal opnieuw (of nl zonder taal) maakt geen stap. */
     dossierTaal?: Taal;
+    installatieContext?: "nieuw" | "bestaand" | "onbekend";
   }): void {
     if (alleenLezen.value) return;
     const doc = vereisDocument();
@@ -464,6 +478,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (gegevens.ean !== undefined && gegevens.ean !== (doc.meta.ean ?? "")) wijziging.ean = gegevens.ean;
     if (gegevens.datum !== undefined) wijziging.datum = gegevens.datum;
     if (gegevens.dossierTaal !== undefined) wijziging.dossierTaal = gegevens.dossierTaal;
+    if (gegevens.installatieContext !== undefined) wijziging.installatieContext = gegevens.installatieContext;
     // Eerst de operatie: gooit die, dan blijft ook de naam ongewijzigd.
     const r = wijzigProject(doc, wijziging);
     if (gegevens.naam !== undefined && gegevens.naam !== naam.value) {
@@ -506,6 +521,8 @@ export const useEditorStore = defineStore("editor", () => {
     ongedaanMaken,
     opnieuw,
     voegToe,
+    kanAftakkingToevoegen,
+    voegAftakkingToeBijSelectie,
     voegSjabloonToe,
     wijzigVeld,
     voegToeBijSelectie,

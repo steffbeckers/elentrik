@@ -23,6 +23,8 @@ export type Vak = { x: number; y: number; breedte: number; hoogte: number };
 export type Aanknoping =
   /** Het einde van een kring: boven de bovenkant van een node zonder kinderen (punt, leiding, automaat of zekering). */
   | { soort: "kring-einde"; nodeId: NodeId; x: number; y: number }
+  /** Rechts naast het laatste symbool van een horizontale aftakking. */
+  | { soort: "aftakking-einde"; nodeId: NodeId; x: number; y: number }
   /** Het einde van de rail van een bord of een differentieel in een bord, rechts van het laatste kind. */
   | { soort: "rail-einde"; nodeId: NodeId; x: number; y: number };
 
@@ -37,6 +39,8 @@ export type Strook = {
   kringGrenzen: number[];
   /** Linkerrand (mm) van elke bladkolom, gevolgd door `breedte`; oplopend. */
   kolomGrenzen: number[];
+  /** Aanvullende veilige PDF-knippen tussen horizontale symbolen. */
+  aftakkingGrenzen?: number[];
   /** Het vak van elk getekend symbool. */
   vakken: Record<NodeId, Vak>;
   /** In pre-order van de nodes. */

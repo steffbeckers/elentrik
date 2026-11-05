@@ -19,7 +19,7 @@ const appartement = referentieAppartement;
 const regelId = (id: string) => (b: Bevinding) => b.regelId === id;
 
 describe("referentie-installaties", () => {
-  test("appartement: enkel info niet-geplaatst, één per punt", () => {
+  test("oud appartement: plaatsingsinfo en expliciete controle van ontbrekende 30 mA", () => {
     const doc = appartement();
     expect(valideerStructuur(doc)).toEqual([]);
     const bevindingen = controleer(doc, regelset);
@@ -27,8 +27,10 @@ describe("referentie-installaties", () => {
     const aantalPunten = 6 + 5 + 1 + 1 + 2;
     expect(aantalPunten).toBe(15);
     expect(analyseer(doc).nietGeplaatst).toHaveLength(aantalPunten);
-    expect(bevindingen).toHaveLength(aantalPunten);
-    for (const b of bevindingen) {
+    expect(bevindingen).toHaveLength(aantalPunten + 11);
+    expect(waarschuwingen(bevindingen)).toHaveLength(11);
+    expect(waarschuwingen(bevindingen).every(b => b.regelId === "arei.differentieel.aanvullend")).toBe(true);
+    for (const b of bevindingen.filter(b => b.ernst === "info")) {
       expect(b.ernst).toBe("info");
       expect(b.regelId).toBe("arei.situatie.niet-geplaatst");
       expect(b.berichtSleutel).toBe("arei.situatie.niet-geplaatst.punt");
@@ -49,16 +51,18 @@ describe("referentie-installaties", () => {
       nodeIds: [ids["rij"]],
       parameters: { aantal: 9, max: 8 },
     });
-    expect(waarschuwingen(bevindingen)).toEqual([]);
+    expect(waarschuwingen(bevindingen)).toHaveLength(20);
+    expect(waarschuwingen(bevindingen).every(b => b.regelId === "arei.differentieel.aanvullend")).toBe(true);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 
-  test("woning met laadpaal en zonnepanelen (3N400V): geen fouten, geen waarschuwingen", () => {
+  test("woning met laadpaal en zonnepanelen (3N400V): ontbrekende 30 mA blijft ter beoordeling", () => {
     const doc = referentieWoning();
     expect(valideerStructuur(doc)).toEqual([]);
     const bevindingen = controleer(doc, regelset);
     expect(fouten(bevindingen)).toEqual([]);
-    expect(waarschuwingen(bevindingen)).toEqual([]);
+    expect(waarschuwingen(bevindingen)).toHaveLength(11);
+    expect(waarschuwingen(bevindingen).every(b => b.regelId === "arei.differentieel.aanvullend")).toBe(true);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 });

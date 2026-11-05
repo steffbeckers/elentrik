@@ -7,10 +7,11 @@ const props = withDefaults(
     bezig: boolean;
     /** Staan er wijzigingen in de editor die nog niet op de server staan? Anders spreekt het scherm er niet van. */
     lokaleWijzigingen?: boolean;
+    kopieToegestaan?: boolean;
   }>(),
-  { lokaleWijzigingen: true },
+  { lokaleWijzigingen: true, kopieToegestaan: true },
 );
-const emit = defineEmits<{ serverversie: []; kopie: [] }>();
+const emit = defineEmits<{ serverversie: []; kopie: []; download: [] }>();
 const sleutels = computed(() => conflictSleutels(props.lokaleWijzigingen));
 </script>
 
@@ -30,8 +31,9 @@ const sleutels = computed(() => conflictSleutels(props.lokaleWijzigingen));
           <p class="mt-1 text-sm text-muted">{{ $t(sleutels.serverversieUitleg) }}</p>
         </div>
         <div>
-          <UButton block :label="$t(sleutels.kopie)" :loading="bezig" :disabled="bezig" @click="emit('kopie')" />
-          <p class="mt-1 text-sm text-muted">{{ $t(sleutels.kopieUitleg) }}</p>
+          <UButton v-if="kopieToegestaan" block :label="$t(sleutels.kopie)" :loading="bezig" :disabled="bezig" @click="kopieToegestaan && emit('kopie')" />
+          <UButton v-else block :label="$t('admin.support.download')" :disabled="bezig" @click="emit('download')" />
+          <p class="mt-1 text-sm text-muted">{{ $t(kopieToegestaan ? sleutels.kopieUitleg : 'admin.jsonGeenArchief') }}</p>
         </div>
       </div>
     </template>

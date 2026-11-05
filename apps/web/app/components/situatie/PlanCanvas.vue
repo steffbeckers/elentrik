@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CanvasBediening from "~/components/editor/CanvasBediening.vue";
 import type { NodeId } from "@elentrik/model";
 import { situatieItems, situatieLaagSvg } from "@elentrik/render";
 import { doelSoort, moetNegeren, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
@@ -7,7 +8,8 @@ import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeer
 import { useDocumentFoutMelding } from "~/composables/useDocumentFoutMelding";
 import { useNodeTekst } from "~/composables/useNodeTekst";
 import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
-import { inhoudNaarScherm, maxPlanZoom, schermNaarInhoud } from "~/editor/weergave";
+import { maxPlanZoom, schermNaarInhoud } from "~/editor/weergave";
+import { planCursorToets } from "~/situatie/bediening";
 import { schuif, symboolGrootte } from "~/situatie/geometrie";
 import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
 import { situatieSneltoets } from "~/situatie/sneltoetsen";
@@ -36,9 +38,6 @@ const MARGE_FRACTIE = 0.02;
 const KADER_HALF = 0.75;
 const MARKERING_STRAAL = 0.15;
 const MEETPUNT_STRAAL = 0.12;
-/** Ruimte (px) die de selectiewerkbalk binnen het venster houdt. */
-const WERKBALK_HOOGTE_PX = 40;
-const WERKBALK_HALVE_BREEDTE_PX = 60;
 
 const editor = useEditorStore();
 const situatie = useSituatieStore();
@@ -47,6 +46,8 @@ const voerUit = useDocumentFoutMelding();
 const { terugval } = useNodeTekst();
 
 const venster = useTemplateRef<HTMLElement>("venster");
+const hulpId = useId();
+const puntKeuzeId = useId();
 
 const modus = computed<"normaal" | "plaats" | "meet">(() =>
   props.meetSchaal ? "meet" : props.teplaatsen !== null ? "plaats" : "normaal",
@@ -60,7 +61,7 @@ const inhoud = computed(() => {
   const a = achtergrond.value;
   return a ? { breedte: a.breedte_px, hoogte: a.hoogte_px } : null;
 });
-const symbool = computed(() => (achtergrond.value ? symboolGrootte(achtergrond.value) : 0));
+const symbool = computed(() => (achtergrond.value ? symboolGrootte(achtergrond.value, pagina.value?.symboolSchaal ?? 1) : 0));
 const planUrl = computed(() => (achtergrond.value ? bestanden.url(achtergrond.value.rasterBestandId) : null));
 
 /** Het rasterbestand kon niet geladen worden (weg of onbekend id). */
@@ -106,7 +107,7 @@ const canvas = useCanvasWeergave({
   maxZoom: maxPlanZoom,
   onderbreek: breekVerschuivingAf,
 });
-const { grootte, weergave, viewBox, ruimteIngedrukt, sleept, maakPassend, zoomOpWiel } = canvas;
+const { weergave, viewBox, ruimteIngedrukt, sleept, maakPassend, zoomOpWiel } = canvas;
 
 // Een andere pagina of een ander plan: opnieuw passend maken.
 watch(
@@ -240,6 +241,44 @@ function plaatsOp(nodeId: NodeId, punt: Positie): void {
   if (!voerUit(() => (uitkomst.van = situatie.plaatsNode(nodeId, x, y)))) return;
   editor.selectie = [nodeId];
   emit("geplaatst", nodeId, uitkomst.van);
+}
+
+// Een focusbare planruimte en puntkeuze bieden dezelfde bediening zonder aanwijzer.
+const cursor = ref<Positie>({ x: 0, y: 0 });
+const heeftSelectie = computed(() => items.value.some(item => editor.selectie.includes(item.nodeId)));
+const geselecteerdPunt = computed(() => items.value.find(item => editor.selectie.includes(item.nodeId))?.nodeId ?? "");
+
+watch([() => props.teplaatsen, () => props.meetSchaal, () => pagina.value?.id], async () => {
+  const a = achtergrond.value;
+  if (!a || modus.value === "normaal") return;
+  cursor.value = { x: a.breedte_px / 2, y: a.hoogte_px / 2 };
+  await nextTick();
+  venster.value?.focus({ preventScroll: true });
+}, { immediate: true });
+
+async function kiesPlanPunt(event: Event): Promise<void> {
+  const nodeId = (event.target as HTMLSelectElement).value;
+  if (!items.value.some(item => item.nodeId === nodeId)) return;
+  editor.selectie = [nodeId];
+  await nextTick();
+  venster.value?.focus({ preventScroll: true });
+}
+
+function bevestigCursor(): void {
+  if (editor.alleenLezen || planOntbreekt.value) return;
+  if (modus.value === "meet") meetKlik(cursor.value);
+  else if (props.teplaatsen) plaatsOp(props.teplaatsen, cursor.value);
+}
+
+function cursorToets(event: KeyboardEvent): void {
+  if (modus.value === "normaal" || planOntbreekt.value || event.isComposing || event.altKey) return;
+  const actie = planCursorToets({ key: event.key, shiftKey: event.shiftKey,
+    ctrlKey: event.ctrlKey, metaKey: event.metaKey, alleenLezen: editor.alleenLezen });
+  if (!actie) return;
+  event.preventDefault();
+  if (actie.soort === "schuif") cursor.value = binnenRaster({ x: cursor.value.x + actie.dx, y: cursor.value.y + actie.dy });
+  else if (actie.soort === "bevestig") bevestigCursor();
+  else annuleer();
 }
 
 function slepenBoven(event: DragEvent): void {
@@ -392,6 +431,14 @@ const selectieKaders = computed(() => {
   });
 });
 
+function focusSelectie(): void {
+  const kaders = selectieKaders.value;
+  if (!kaders.length) return;
+  const x = Math.min(...kaders.map(k => k.x));
+  const y = Math.min(...kaders.map(k => k.y));
+  canvas.focus({ x, y, breedte: Math.max(...kaders.map(k => k.x + k.zijde)) - x, hoogte: Math.max(...kaders.map(k => k.y + k.zijde)) - y });
+}
+
 /** Eén markering per geplaatste node, rechtsboven het symbool; de ernst-aggregatie zit in `editor/markeringen.ts`. */
 const markeringen = computed(() => {
   const half = symbool.value / 2;
@@ -401,28 +448,79 @@ const markeringen = computed(() => {
   });
 });
 
-/** De werkbalk boven het eerste geselecteerde symbool op deze pagina, binnen het venster gehouden. */
-const werkbalk = computed(() => {
-  const w = weergave.value;
-  const p = editor.selectie.map(positieVan).find((q) => q !== undefined);
-  if (!p || grootte.breedte === 0) return null;
-  // Relatief aan het venster zelf: de werkbalk staat absoluut in dezelfde container.
-  const vlak = { left: 0, top: 0, width: grootte.breedte, height: grootte.hoogte };
-  const { x: links, y: boven } = inhoudNaarScherm(p.x, p.y - symbool.value * KADER_HALF, vlak, w);
-  const begrensd = (v: number, min: number, max: number) => Math.min(Math.max(v, min), Math.max(min, max));
-  return {
-    left: `${begrensd(links, WERKBALK_HALVE_BREEDTE_PX, grootte.breedte - WERKBALK_HALVE_BREEDTE_PX)}px`,
-    top: `${begrensd(boven, WERKBALK_HOOGTE_PX, grootte.hoogte)}px`,
-  };
-});
 </script>
 
 <template>
-  <div class="relative size-full min-h-0">
+  <div class="relative flex size-full min-h-0 min-w-0 flex-col">
+    <div v-if="achtergrond && !planOntbreekt" class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default bg-default px-3 py-1">
+      <label :for="puntKeuzeId" class="sr-only">{{ $t('editor.situatie.canvas.kiesPunt') }}</label>
+      <select
+        :id="puntKeuzeId"
+        :value="geselecteerdPunt"
+        data-testid="plan-puntkeuze"
+        class="h-8 w-32 min-w-0 rounded border border-default bg-default px-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        :disabled="modus !== 'normaal' || items.length === 0"
+        @change="kiesPlanPunt"
+      >
+        <option value="">{{ $t('editor.situatie.canvas.kiesPuntLeeg') }}</option>
+        <option v-for="item in items" :key="item.nodeId" :value="item.nodeId">{{ item.label }}</option>
+      </select>
+    <div
+      v-if="achtergrond && !planOntbreekt && !editor.alleenLezen"
+      role="toolbar"
+      data-testid="plan-werkbalk"
+      :aria-label="$t('editor.situatie.canvas.werkbalk')"
+      class="flex shrink-0 items-center gap-1"
+    >
+      <UTooltip :text="$t('editor.situatie.canvas.draaiLinks')">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :disabled="!heeftSelectie || modus !== 'normaal'"
+          icon="i-lucide-rotate-ccw"
+          :aria-label="$t('editor.situatie.canvas.draaiLinks')"
+          @click="voerUit(() => situatie.draaiSelectie(-1))"
+        />
+      </UTooltip>
+      <UTooltip :text="$t('editor.situatie.canvas.draaiRechts')">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :disabled="!heeftSelectie || modus !== 'normaal'"
+          icon="i-lucide-rotate-cw"
+          :aria-label="$t('editor.situatie.canvas.draaiRechts')"
+          @click="voerUit(() => situatie.draaiSelectie(1))"
+        />
+      </UTooltip>
+      <UButton
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        :disabled="!heeftSelectie || modus !== 'normaal'"
+        icon="i-lucide-map-pin-off"
+        data-testid="van-plan-halen"
+        :aria-label="$t('editor.situatie.canvas.vanPlanHalen')"
+        :title="$t('editor.situatie.canvas.vanPlanHalen')"
+        @click="voerUit(() => situatie.haalSelectieVanPlan())"
+      />
+    </div>
+
+      <p :id="hulpId" data-testid="plan-keyboard-help" class="sr-only">{{ $t(modus === 'normaal' ? 'editor.situatie.canvas.toetsenbord' : 'editor.situatie.canvas.plaatsToetsenbord') }}</p>
+      <template v-if="modus !== 'normaal'">
+        <output aria-live="polite" class="text-xs tabular-nums">{{ $t('editor.situatie.canvas.cursorPositie', { x: Math.round(cursor.x), y: Math.round(cursor.y) }) }}</output>
+        <UButton :disabled="editor.alleenLezen" :label="$t(modus === 'meet' ? 'editor.situatie.canvas.bevestigMeetpunt' : 'editor.situatie.canvas.bevestigPlaats')" @click="bevestigCursor" />
+      </template>
+    </div>
     <div
       ref="venster"
       data-testid="plan-canvas"
-      class="relative size-full touch-none select-none overflow-hidden bg-neutral-100 text-neutral-900"
+      tabindex="0"
+      role="group"
+      :aria-label="$t('editor.situatie.canvas.tekenvlak')"
+      :aria-describedby="hulpId"
+      class="relative min-h-0 min-w-0 flex-1 touch-none select-none overflow-hidden bg-neutral-100 text-neutral-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
       :class="
         sleept || verschuift ? 'cursor-grabbing' : ruimteIngedrukt ? 'cursor-grab' : modus !== 'normaal' ? 'cursor-crosshair' : ''
       "
@@ -435,6 +533,7 @@ const werkbalk = computed(() => {
       @click="klik"
       @dragover="slepenBoven"
       @drop="neerzetten"
+      @keydown="cursorToets"
     >
       <svg v-if="achtergrond" class="absolute inset-0 size-full" :viewBox="viewBox">
         <image
@@ -451,6 +550,10 @@ const werkbalk = computed(() => {
         <!-- v-html is hier veilig: `situatieLaagSvg` escapet alle documenttekst. -->
         <g class="laag" :class="{ verschuifbaar: modus === 'normaal' && !editor.alleenLezen }" v-html="laagSvg" />
         <g class="pointer-events-none">
+          <g v-if="modus !== 'normaal'" data-testid="plan-toetscursor" :transform="`translate(${cursor.x},${cursor.y})`" fill="none" style="stroke: var(--ui-primary)" stroke-width="2">
+            <circle :r="symbool / 2" vector-effect="non-scaling-stroke" />
+            <path :d="`M${-symbool},0 H${symbool} M0,${-symbool} V${symbool}`" vector-effect="non-scaling-stroke" />
+          </g>
           <rect
             v-for="k in selectieKaders"
             :key="`selectie-${k.id}`"
@@ -495,61 +598,9 @@ const werkbalk = computed(() => {
           />
         </g>
       </svg>
+      <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="selectieKaders.length > 0" :hulp="$t(modus === 'normaal' ? 'editor.situatie.canvas.toetsenbord' : 'editor.situatie.canvas.plaatsToetsenbord')" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 
-    <div v-if="achtergrond" class="absolute right-3 top-3">
-      <UButton
-        color="neutral"
-        variant="outline"
-        size="sm"
-        icon="i-lucide-scan"
-        :label="$t('editor.canvas.passendMaken')"
-        class="bg-white text-neutral-900 hover:bg-neutral-100"
-        @click="maakPassend"
-      />
-    </div>
-
-    <div
-      v-if="werkbalk && !planOntbreekt && !editor.alleenLezen"
-      role="toolbar"
-      data-testid="plan-werkbalk"
-      :aria-label="$t('editor.situatie.canvas.werkbalk')"
-      class="absolute flex -translate-x-1/2 -translate-y-full gap-1 rounded-md border border-default bg-white p-1 text-neutral-900 shadow-sm"
-      :style="werkbalk"
-    >
-      <UTooltip :text="$t('editor.situatie.canvas.draaiLinks')">
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          class="text-neutral-900 hover:bg-neutral-100"
-          icon="i-lucide-rotate-ccw"
-          :aria-label="$t('editor.situatie.canvas.draaiLinks')"
-          @click="voerUit(() => situatie.draaiSelectie(-1))"
-        />
-      </UTooltip>
-      <UTooltip :text="$t('editor.situatie.canvas.draaiRechts')">
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          class="text-neutral-900 hover:bg-neutral-100"
-          icon="i-lucide-rotate-cw"
-          :aria-label="$t('editor.situatie.canvas.draaiRechts')"
-          @click="voerUit(() => situatie.draaiSelectie(1))"
-        />
-      </UTooltip>
-      <UButton
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        class="text-neutral-900 hover:bg-neutral-100"
-        icon="i-lucide-map-pin-off"
-        data-testid="van-plan-halen"
-        :label="$t('editor.situatie.canvas.vanPlanHalen')"
-        @click="voerUit(() => situatie.haalSelectieVanPlan())"
-      />
-    </div>
 
     <div
       v-if="planOntbreekt"

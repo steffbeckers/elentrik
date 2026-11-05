@@ -19,21 +19,21 @@ export type Concept = {
 export type AangebodenConcept = { sleutel: string; concept: Concept };
 
 /** Waar een concept staat: van welke gebruiker, voor welk project, uit welk venster. */
-export type ConceptPlek = { gebruikerId: string; projectId: string; instantieId: string };
+export type ConceptPlek = { gebruikerId: string; projectId: string; instantieId: string; modus?: 'klant' | 'admin' };
 
 /**
  * `concept:u:<gebruikerId>:<projectId>:<instantieId>`. Het voorvoegsel `u:` onderscheidt de sleutel
  * van de oude sleutels zonder gebruiker (`concept:<projectId>` en `concept:<projectId>:<instantieId>`):
  * een project-id is nooit `u`.
  */
-function sleutel({ gebruikerId, projectId, instantieId }: ConceptPlek): string {
-  return `${voorvoegsel(gebruikerId, projectId)}${instantieId}`;
+function sleutel({ gebruikerId, projectId, instantieId, modus }: ConceptPlek): string {
+  return `${voorvoegsel(gebruikerId, projectId, modus)}${instantieId}`;
 }
 
 /** Zonder gebruiker gooit dit: een concept zonder eigenaar bestaat nooit. */
-function voorvoegsel(gebruikerId: string, projectId: string): string {
+function voorvoegsel(gebruikerId: string, projectId: string, modus: 'klant' | 'admin' = 'klant'): string {
   if (!gebruikerId) throw new Error("Een concept hoort bij een gebruiker (gebruikerId ontbreekt).");
-  return `concept:u:${gebruikerId}:${projectId}:`;
+  return `${modus === 'admin' ? 'concept:admin' : 'concept:u'}:${gebruikerId}:${projectId}:`;
 }
 
 /** Een oude sleutel van het project, zonder gebruiker: van vóór het inloggen. */
@@ -146,9 +146,9 @@ async function neemOudeConceptenOver(projectId: string, gebruikerId: string): Pr
  * van de klok van de server: een concept bestaat alleen zolang er onbewaard werk is. Oude concepten
  * zonder gebruiker worden eerst van deze gebruiker (`neemOudeConceptenOver`).
  */
-export async function nieuwsteConcept(projectId: string, gebruikerId: string): Promise<AangebodenConcept | null> {
-  await neemOudeConceptenOver(projectId, gebruikerId);
-  const eigen = voorvoegsel(gebruikerId, projectId);
+export async function nieuwsteConcept(projectId: string, gebruikerId: string, modus: 'klant' | 'admin' = 'klant'): Promise<AangebodenConcept | null> {
+  if (modus === 'klant') await neemOudeConceptenOver(projectId, gebruikerId);
+  const eigen = voorvoegsel(gebruikerId, projectId, modus);
   const sleutels = (await keys()).filter((s): s is string => typeof s === "string" && s.startsWith(eigen));
   const concepten = await getMany<Concept | undefined>(sleutels);
   let nieuwste: AangebodenConcept | null = null;

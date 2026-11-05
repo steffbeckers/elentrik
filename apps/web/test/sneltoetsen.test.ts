@@ -135,6 +135,7 @@ describe("sneltoets", () => {
 describe("doelSoort", () => {
   test.each<[string, DoelElement, DoelSoort]>([
     ["een knop", { tagName: "BUTTON", type: "button" }, "knop"],
+    ["een uitklapbediening", { tagName: "SUMMARY" }, "knop"],
     ["een tekstinvoer", { tagName: "INPUT", type: "text" }, "invoer"],
     ["een invoer zonder type", { tagName: "INPUT" }, "invoer"],
     ["een getalinvoer", { tagName: "INPUT", type: "number" }, "invoer"],
@@ -153,6 +154,12 @@ describe("doelSoort", () => {
 });
 
 describe("spatieSchuift", () => {
+  test("Enter en spatie op een summary voegen niets toe en verschuiven het canvas niet", () => {
+    const soort = doelSoort({ tagName: "SUMMARY" });
+    expect(sneltoets(toets("Enter", { doelIsKnop: soort === "knop" }))).toBeNull();
+    expect(sneltoets(toets(" ", { doelIsKnop: soort === "knop" }))).toBeNull();
+    expect(spatieSchuift(" ", soort)).toBe(false);
+  });
   test("alleen op een gewoon doel", () => {
     expect(spatieSchuift(" ", "overig")).toBe(true);
     expect(spatieSchuift(" ", "knop")).toBe(false);

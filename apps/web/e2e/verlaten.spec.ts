@@ -1,3 +1,4 @@
+import { verwachtOrganisatie } from "./hulp/navigatie";
 import { expect, test } from "@playwright/test";
 import { meldAanOpPagina } from "./hulp/aanmelden";
 import { metE2eDatabase, zetVrijgesteld } from "./hulp/database";
@@ -138,7 +139,7 @@ test("een project van een andere eigen organisatie openen maakt die organisatie 
     await page.goto(`/projecten/${id}`);
     await expect(page.getByTestId("schema-canvas")).toBeVisible();
     await expect(page.getByText(`Je werkt nu in ${tweedeNaam}.`, { exact: true })).toBeVisible();
-    await expect(page.getByTestId("organisatie-keuze")).toHaveAttribute("title", `Organisatie kiezen: ${tweedeNaam}`);
+    await verwachtOrganisatie(page, tweedeNaam);
   } finally {
     await request.delete(`/api/projecten/${id}`);
     await request.post("/api/organisaties/actief", { data: { organisatieId: thuis } });

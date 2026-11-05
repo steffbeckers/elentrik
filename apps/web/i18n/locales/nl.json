@@ -1,4 +1,190 @@
 {
+  "admin": {
+    "tijdzone": "Europe/Brussels",
+    "titel": "Beheer",
+    "onbereikbaar": "Beheer is tijdelijk niet bereikbaar. Probeer opnieuw.",
+    "overzicht": "Overzicht",
+    "gebruikers": "Gebruikers",
+    "gebruiker": "Gebruiker",
+    "organisaties": "Bedrijven",
+    "organisatie": "Bedrijf",
+    "projecten": "Projecten",
+    "project": "Project",
+    "audit": "Auditgeschiedenis",
+    "auditDetail": "Auditdetail",
+    "opnieuw": "Opnieuw proberen",
+    "laden": "Gegevens laden…",
+    "zoeken": "Zoeken",
+    "zoekHint": "Zoek een gebruiker, bedrijf of project",
+    "zoekresultaten": "Zoekresultaten",
+    "zoekFout": "Zoeken is niet gelukt.",
+    "geenResultaten": "Geen resultaten voor deze selectie.",
+    "alleResultaten": "Alle resultaten bekijken",
+    "sluiten": "Sluiten",
+    "naarApp": "Naar de app",
+    "naarInhoud": "Naar de inhoud",
+    "navigatie": "Beheernavigatie",
+    "naam": "Naam",
+    "email": "E-mailadres",
+    "klant": "Klant",
+    "versie": "Versie",
+    "aangemaakt": "Aangemaakt",
+    "gewijzigd": "Gewijzigd",
+    "eigenaren": "Eigenaren",
+    "eigenaar": "Eigenaar",
+    "lid": "Lid",
+    "leden": "Leden",
+    "toegang": "Toegang",
+    "stripeStatus": "Geregistreerde Stripe-status",
+    "status": "Status",
+    "actief": "Actief",
+    "verwijderd": "Verwijderd",
+    "totaal": "{aantal} resultaten",
+    "alleToegang": "Alle toegangstypes",
+    "alleStatussen": "Alle statussen",
+    "filteren": "Filters toepassen",
+    "reden": "Reden voor de correctie",
+    "bewaren": "Wijziging bewaren",
+    "annuleren": "Annuleren",
+    "opgeslagen": "Wijziging bewaard",
+    "bewerken": "Bewerken",
+    "notities": "Supportnotities",
+    "notitie": "Notitie",
+    "notitieToevoegen": "Notitie toevoegen",
+    "notitieBewerken": "Notitie bewerken",
+    "notitiePrivé": "Alleen zichtbaar voor superusers. Wordt niet opgenomen in klantdocumenten of exports.",
+    "opvolgdatum": "Opvolgdatum (optioneel)",
+    "datumBrussel": "Kalenderdatum in Europe/Brussels. Een proefperiode loopt tot en met de gekozen dag.",
+    "archiveren": "Notitie archiveren",
+    "archiefTonen": "Gearchiveerde notities tonen",
+    "geenNotities": "Nog geen notities in deze selectie.",
+    "waaromToegang": "Waarom heeft dit bedrijf toegang?",
+    "waaromAlleenLezen": "Waarom is dit bedrijf alleen-lezen?",
+    "schrijven": "Bewerken toegestaan",
+    "alleenLezen": "Alleen-lezen",
+    "beoordeeldOp": "Beoordeeld op {datum}",
+    "rechtenUitleg": "Lidmaatschap, gebruikersrol en opslaglimieten blijven afzonderlijk gelden.",
+    "proefEinde": "Lokaal proefeinde (exclusief)",
+    "gratieEinde": "Einde betalingsgratie",
+    "onbekendOfNietVanToepassing": "Onbekend of niet van toepassing",
+    "vrijstelling": "Gratis toegang — geen abonnement nodig",
+    "ingeschakeld": "Ingeschakeld",
+    "uitgeschakeld": "Uitgeschakeld",
+    "proefVerlengen": "Proefperiode verlengen",
+    "vrijstellingStoppen": "Gratis toegang stopzetten",
+    "vrijstellingGeven": "Gratis toegang toekennen",
+    "nieuweEinddatum": "Nieuwe laatste proefdag",
+    "proefVoorbeeld": "Na een geldige verlenging loopt de lokale proef tot en met {datum}. De beslissende toegangsregel wordt:",
+    "vrijstellingUitleg": "Gratis toegang blijft actief tot je ze verwijdert. Opslaglimieten blijven gelden.",
+    "vrijstellingVerwijderenUitleg": "De bestaande proef- en abonnementsregels worden opnieuw toegepast. Dit start geen nieuwe proef of betaling.",
+    "billingUit": "Betalingsbeperkingen staan momenteel globaal uit. Lokale instellingen blijven bewaard.",
+    "stripeOngewijzigd": "Stripe-betalingen blijven ongewijzigd",
+    "stripeWaarschuwing": "Deze actie wijzigt alleen de toegang in Elentrik. Bestaande Stripe-abonnementen blijven doorlopen, ook tijdens een Stripe-proef of na een geplande opzegging. Een eerder geopende Checkout-link kan nog gebruikt worden. Beheer het abonnement of laat die link apart vervallen in Stripe.",
+    "stripeBevestigen": "Ik begrijp dat bestaande Stripe-betalingen niet stoppen of uitgesteld worden.",
+    "abonnement": "Stripe-abonnement",
+    "geenAbonnement": "Geen abonnement geregistreerd",
+    "formule": "Formule",
+    "periodeEinde": "Einde abonnementsperiode",
+    "opzegging": "Opgezegd tegen periode-einde",
+    "synchronisatie": "Laatst geregistreerde synchronisatie",
+    "openCheckout": "Open Checkout geregistreerd",
+    "ja": "Ja",
+    "nee": "Nee",
+    "openStripeAbonnement": "Abonnement openen in Stripe",
+    "openStripeKlant": "Klant openen in Stripe",
+    "stripeLinkOnbeschikbaar": "Een betrouwbare Stripe-link is niet beschikbaar voor deze omgeving.",
+    "geenAudit": "Nog geen administratieve wijzigingen.",
+    "correctiesessie": "Supportcorrectie",
+    "aantalWijzigingen": "{aantal} gebeurtenissen op deze pagina",
+    "vernieuwen": "Vernieuwen",
+    "activiteit30dagen": "Laatste 30 dagen: {gebruikers} nieuwe gebruikers, {organisaties} nieuwe bedrijven en {projecten} gewijzigde projecten.",
+    "bedrijfstoegang": "Toegang per bedrijf",
+    "geenAandacht": "Geen bedrijven in deze groep.",
+    "opvolging": "Opvolging vandaag en eerder",
+    "geenOpvolging": "Geen openstaande opvolging.",
+    "recenteProjecten": "Recent gewijzigde projecten",
+    "recenteCorrecties": "Recente beheeracties",
+    "naamCorrigeren": "Naam corrigeren",
+    "emailBevestigd": "E-mailadres bevestigd",
+    "bedrijfCorrigeren": "Bedrijfsgegevens corrigeren",
+    "organisatieNaam": "Naam van het bedrijf",
+    "logoBehouden": "Het bestaande logo blijft behouden. Eerdere dossierexports veranderen niet.",
+    "bedrijfsgegevens": "Bedrijfsgegevens",
+    "alleProjecten": "Alle projecten van dit bedrijf",
+    "projectOpenen": "Project openen",
+    "zonderOrganisatie": "Geen bedrijf gekoppeld",
+    "verwijderdUitleg": "Dit project is verwijderd en kan hier niet bewerkt of hersteld worden. Bewaarde geschiedenis blijft raadpleegbaar.",
+    "projectOpenenUitleg": "Het project opent alleen-lezen. Start in de editor een supportcorrectie met reden om te wijzigen.",
+    "exports": "Bestaande exports",
+    "geenExports": "Nog geen exports voor dit project.",
+    "downloaden": "Downloaden",
+    "vergelijkingBeperkt": "De vergelijking is begrensd voor grote documenten. Download de volledige revisie om alle velden te bekijken.",
+    "geenVerschillen": "Geen gewijzigde velden in deze weergave.",
+    "veld": "Veld of pad",
+    "voor": "Voor",
+    "na": "Na",
+    "wijzigingen": "Wijzigingen",
+    "recordOpenen": "Bijbehorend record openen",
+    "projectRevisie": "Bewaarde projectrevisie",
+    "revisieLaden": "Documentwijzigingen laden",
+    "revisieDownloaden": "Versie {versie} downloaden (JSON)",
+    "jsonGeenArchief": "De JSON bevat het document en bestandsverwijzingen, niet de planbestanden zelf. Het is geen volledig bestandsarchief.",
+    "groepen": {
+      "uit": "Betalingen uit",
+      "vrijgesteld": "Gratis toegang",
+      "abonnement": "Actief abonnement",
+      "betalingsgratie": "Betalingsgratie",
+      "proef": "Lokale proef",
+      "alleenLezen": "Alleen-lezen"
+    },
+    "redenen": {
+      "uit": "Betalingsbeperkingen staan globaal uit.",
+      "vrijgesteld": "Gratis toegang is ingeschakeld.",
+      "actief": "Het geregistreerde Stripe-abonnement geeft toegang.",
+      "betaling-mislukt": "Een mislukte betaling bepaalt de toegang; de eventuele betalingsgratie staat hieronder.",
+      "proef": "De lokale proefperiode geeft toegang.",
+      "proef-voorbij": "De lokale proefperiode is voorbij.",
+      "beeindigd": "Het abonnement is beëindigd en er is geen geldige lokale proef."
+    },
+    "acties": {
+      "gebruiker_naam": "Gebruikersnaam gecorrigeerd",
+      "organisatie_gegevens": "Bedrijfsgegevens gecorrigeerd",
+      "organisatie_vrijstelling": "Gratis toegang gewijzigd",
+      "organisatie_proefperiode": "Proefperiode verlengd",
+      "notitie_aangemaakt": "Supportnotitie toegevoegd",
+      "notitie_gewijzigd": "Supportnotitie gewijzigd",
+      "correctie_gestart": "Supportcorrectie gestart",
+      "correctie_afgerond": "Supportcorrectie afgerond",
+      "project_bewaard": "Projectcorrectie bewaard",
+      "project_plan-opgeladen": "Planbestand opgeladen"
+    },
+    "aandacht": {
+      "proefEindigt": "Proef loopt binnen 7 dagen af",
+      "betaling": "Betaling vraagt aandacht",
+      "alleenLezen": "Bedrijven met alleen-lezen toegang"
+    },
+    "auditFilters": {
+      "doelId": "Record-ID",
+      "actorId": "Beheerder-ID",
+      "organisatieId": "Bedrijf-ID",
+      "projectId": "Project-ID",
+      "actie": "Actiecode",
+      "vanaf": "Vanaf (UTC-tijdstip)",
+      "tot": "Tot (UTC-tijdstip)"
+    },
+    "support": {
+      "titel": "Supportcorrectie",
+      "actief": "Wijzigingen worden met jouw reden en account vastgelegd.",
+      "alleenLezen": "Alleen-lezen. Start een correctie met reden om te wijzigen.",
+      "terug": "Terug naar projectbeheer",
+      "download": "Lokaal document downloaden (JSON)",
+      "afronden": "Correctie afronden",
+      "verloopt": "Verloopt op {datum}",
+      "gestopt": "Deze correctie is gestopt of verlopen. Niet-opgeslagen werk blijft in dit venster en, indien mogelijk, in het lokale concept.",
+      "start": "Correctie starten",
+      "fout": "Bewaar of herstel eerst de resterende wijzigingen. Je invoer blijft behouden."
+    }
+  },
   "app": {
     "naam": "Elentrik"
   },
@@ -26,6 +212,20 @@
         "titel": "Hele tak verwijderen",
         "beschrijving": "Dit verwijdert {aantal} onderdelen. Je kunt het ongedaan maken.",
         "bevestigen": "Verwijderen"
+      },
+      "toetsenbord": {
+        "onderdeel": "Schemaonderdeel",
+        "kiesOnderdeel": "Kies een onderdeel",
+        "invoegpunt": "Toevoegen bij",
+        "rail-einde": "Nieuwe kring op",
+        "kring-einde": "Na",
+        "geenInvoegpunt": "Geen geldig invoegpunt",
+        "actie": "Toevoegactie",
+        "bestaandeKring": "Bestaande kring uitbreiden",
+        "nieuweKring": "Nieuwe kring",
+        "kringBestemming": "Kring {kring} · na {punt}",
+        "rechtstreeksOpBord": "Rechtstreeks op {bord}",
+        "voorKringen": "kringen {kringen}"
       }
     },
     "onderdelen": {
@@ -70,7 +270,8 @@
       "tabbladen": {
         "eendraadschema": "Eendraadschema",
         "situatieschema": "Situatieschema",
-        "kringenlijst": "Kringenlijst"
+        "kringenlijst": "Kringenlijst",
+        "materiaallijst": "Materiaallijst"
       },
       "bevindingen": "{fouten} en {waarschuwingen}",
       "aantalFouten": "{n} fout | {n} fouten",
@@ -80,7 +281,8 @@
       "exporteren": "Exporteren"
     },
     "kringenlijst": {
-      "titel": "Kringenlijst"
+      "titel": "Kringenlijst",
+      "toetsenbord": "Punten per kring. Pijl omhoog en omlaag verplaatsen de focus; Enter selecteert het punt. Scroll horizontaal voor alle specificaties."
     },
     "status": {
       "opgeslagen": "Opgeslagen",
@@ -176,7 +378,7 @@
     },
     "bevindingen": {
       "titel": "Bevindingen",
-      "leeg": "Geen bevindingen.",
+      "leeg": "Geen bevindingen binnen de uitgevoerde controles.",
       "ernst": {
         "fout": "Fouten",
         "waarschuwing": "Waarschuwingen",
@@ -184,7 +386,19 @@
       },
       "afgeweken": "Afgeweken: {motivatie}",
       "motiveren": "Afwijking motiveren",
-      "verwijderen": "Afwijking verwijderen"
+      "verwijderen": "Afwijking verwijderen",
+      "voorlopig": "Voorlopige, beperkte automatische controles. Niet alle AREI-voorschriften zijn gecontroleerd. Geen bevindingen is geen bewijs van conformiteit; laat het dossier inhoudelijk nakijken.",
+      "context": "Installatiecontext",
+      "contextWijzigen": "Context wijzigen",
+      "kring": "Kring {kring}",
+      "installatie": "Installatie",
+      "betrokkenPunten": "Betrokken onderdelen",
+      "bekijkPunt": "Bekijk {punt}",
+      "bekijk": {
+        "beveiliging": "Bekijk beveiliging",
+        "kring": "Bekijk kring"
+      },
+      "afwijkingenPerPunt": "Afwijkingen per onderdeel"
     },
     "afwijking": {
       "titel": "Afwijking motiveren",
@@ -226,6 +440,13 @@
         "naamVerplicht": "Geef het project een naam.",
         "adresVerplicht": "Verplicht voor een adres.",
         "datumVerplicht": "Kies een datum."
+      },
+      "context": {
+        "label": "Installatiecontext",
+        "hulp": "Voor huishoudelijke installaties. Kies nieuw voor nieuwe of gewijzigde delen waarop de huidige voorschriften gelden. Bij bestaande delen moeten uitvoeringsdatum en overgangsbepalingen afzonderlijk worden nagekeken.",
+        "nieuw": "Nieuw / gewijzigd deel — huidige voorschriften",
+        "bestaand": "Bestaand deel — overgangsbepalingen nakijken",
+        "onbekend": "Nog te bepalen"
       }
     },
     "concept": {
@@ -281,7 +502,7 @@
       },
       "leeg": {
         "titel": "Nog geen plan",
-        "beschrijving": "Voeg een plan toe om de punten op te plaatsen.",
+        "beschrijving": "Teken zelf een plattegrond of laad een bestaand plan op. Plaats daarna de elektrische symbolen.",
         "planToevoegen": "Plan toevoegen"
       },
       "hernoemen": {
@@ -291,7 +512,7 @@
         "bewaren": "Hernoemen"
       },
       "schaal": {
-        "tekst": "Schaal: 1 px = {waarde} mm",
+        "tekst": "Kalibratie: 1 planpixel = {waarde} mm",
         "wissen": "Schaal wissen",
         "titel": "Schaal instellen",
         "beschrijving": "De gemeten lijn is {px} pixels lang. Vul de echte afstand in.",
@@ -316,7 +537,15 @@
         "werkbalk": "Selectie op het plan",
         "draaiLinks": "Draai linksom (Shift+R)",
         "draaiRechts": "Draai rechtsom (R)",
-        "vanPlanHalen": "Van plan halen"
+        "vanPlanHalen": "Van plan halen",
+        "kiesPunt": "Punt op plan",
+        "kiesPuntLeeg": "Kies een punt",
+        "tekenvlak": "Situatieplan: toetsenbordbediening",
+        "toetsenbord": "Kies een punt. Pijlen verplaatsen; Shift verfijnt naar 1 px. R draait, Delete haalt van het plan. Tab verlaat het tekenvlak.",
+        "plaatsToetsenbord": "Pijlen verplaatsen het kruis; Shift verfijnt naar 1 px. Enter bevestigt, Escape annuleert.",
+        "cursorPositie": "Positie: x {x}, y {y} px",
+        "bevestigMeetpunt": "Meetpunt bevestigen",
+        "bevestigPlaats": "Hier plaatsen"
       },
       "toevoegen": {
         "titel": "Plan toevoegen",
@@ -341,6 +570,49 @@
           "mislukt": "Het plan kon niet worden opgeladen. Probeer het opnieuw.",
           "onleesbaar": "Dit bestand kon niet gelezen worden."
         }
+      },
+      "tekenen": {
+        "new": "Zelf plan tekenen",
+        "edit": "Plan bewerken",
+        "description": "Teken muren, deuren en ramen als basis voor het situatieschema.",
+        "noPlan": "Geen bouwplan beschikbaar?",
+        "name": "Naam van het plan",
+        "use": "Plan gebruiken",
+        "cancelHint": "Gebruik het plan om je wijzigingen te bewaren. Annuleren verwerpt deze tekensessie.",
+        "loading": "Tekenomgeving laden…",
+        "loadError": "De tekenomgeving kon niet laden. Sluit dit venster en probeer opnieuw.",
+        "exportError": "Het plan kon niet worden overgenomen. Teken minstens één muur en probeer opnieuw.",
+        "changed": "Het project is intussen gewijzigd. Sluit de tekenomgeving en open het plan opnieuw om de nieuwste versie te bewerken.",
+        "tools": "Tekengereedschap",
+        "select": "Selecteren",
+        "wall": "Muur",
+        "door": "Deur",
+        "window": "Raam",
+        "text": "Tekst",
+        "measure": "Meten",
+        "undo": "Ongedaan maken",
+        "redo": "Opnieuw",
+        "delete": "Verwijderen",
+        "length": "Lengte",
+        "thickness": "Muurdikte",
+        "width": "Breedte",
+        "hint": "Klik om muren te tekenen. Escape stopt de muur. Selecteer een muur om de afmetingen aan te passen."
+      },
+      "opmaak": {
+        "titel": "Planopmaak",
+        "symbolen": "Symboolgrootte",
+        "labels": "Labelgrootte",
+        "paginaHint": "Geldt voor deze pagina. 100% is het standaardformaat.",
+        "labelPositie": "Positie geselecteerd label",
+        "offsetX": "Horizontaal",
+        "offsetY": "Verticaal",
+        "offsetHint": "Extra verschuiving in planpixels: positief is rechts of omlaag.",
+        "herstelLabel": "Labelpositie herstellen",
+        "kiesLabel": "Selecteer één symbool om het label te verplaatsen.",
+        "bereik": "Van 25% tot 400%.",
+        "ongeldigPercentage": "Vul een getal van 25 tot en met 400 in. De opgeslagen grootte is niet gewijzigd.",
+        "ongeldigeOffset": "Vul een geldig getal in, bijvoorbeeld 0 of -15. De opgeslagen positie is niet gewijzigd.",
+        "herstelInvoer": "Opgeslagen waarden herstellen"
       }
     },
     "export": {
@@ -384,7 +656,7 @@
         "versie": "Versie",
         "datum": "Datum",
         "fouten": "Fouten",
-        "aantalFouten": "geen fouten | {n} fout | {n} fouten",
+        "aantalFouten": "0 elektrische fouten gemeld | 1 elektrische fout | {n} elektrische fouten",
         "downloaden": "Downloaden"
       }
     },
@@ -399,6 +671,41 @@
     "organisatieGewisseld": "Je werkt nu in {organisatie}.",
     "andereGebruiker": {
       "melding": "Je bent nu aangemeld als {naam}. Deze wijzigingen horen bij {oorspronkelijk} en blijven lokaal bewaard voor dat account."
+    },
+    "werkruimte": {
+      "panelen": "Werkpanelen",
+      "werk": "Tekening / lijst",
+      "onderdelen": "Onderdelen",
+      "eigenschappen": "Eigenschappen",
+      "bevindingen": "Bevindingen",
+      "opmaak": "Planopmaak",
+      "weergaven": "Dossieronderdelen",
+      "planHint": "Kies een punt op het plan of open Onderdelen om een punt te plaatsen.",
+      "sluiten": "Paneel sluiten",
+      "toetsenbordhulp": "Toetsenbordhulp"
+    },
+    "materiaallijst": {
+      "titel": "Materiaallijst",
+      "uitleg": "Benodigde materialen op basis van de onderdelen in dit project, gegroepeerd per uitvoering. Open de onderdelen om hun eigenschappen aan te passen.",
+      "lengteUitleg": "Vul bij elke leiding de tracélengte in via Eigenschappen. XVB telt als kabelmeter; VOB als tracélengte × aantal geleiders. Zonder snijverlies of reserve; VOB is niet uitgesplitst per kleur.",
+      "ontbrekend": "Bij {aantal} leiding(en) ontbreekt de lengte. De metertotalen zijn onvolledig.",
+      "leeg": "Voeg onderdelen toe aan het eendraadschema om de materiaallijst op te bouwen.",
+      "materiaal": "Materiaal en uitvoering",
+      "hoeveelheid": "Hoeveelheid",
+      "bronnen": "Onderdelen bekijken ({aantal})",
+      "onvolledig": "Lengte ontbreekt",
+      "onbekend": "Niet ingevuld",
+      "ja": "Ja",
+      "nee": "Nee",
+      "stuks": "stuk | stuks",
+      "m": "m"
+    },
+    "aftakkingen": {
+      "titel": "Aftakkingen",
+      "hulp": "Kies een schakelaar of lichtpunt en selecteer de kringleiding. Voeg een aftakking toe en bouw verder met de plus rechts.",
+      "toevoegen": "Aftakking toevoegen",
+      "uitbreiden": "{onderdeel} toevoegen aan aftakking",
+      "bestemming": "Aftakking uitbreiden"
     }
   },
   "bedrijf": {
@@ -448,6 +755,12 @@
     "titel": "Projecten",
     "nieuw": "Nieuw project",
     "leeg": "Nog geen projecten. Maak je eerste project aan.",
+    "zoeken": {
+      "label": "Projecten zoeken",
+      "placeholder": "Zoek op projectnaam of klant…",
+      "wissen": "Zoekopdracht wissen",
+      "geenResultaten": "Geen projecten gevonden. Pas je zoekopdracht aan."
+    },
     "laden": {
       "fout": {
         "titel": "Projecten laden mislukt",
@@ -489,7 +802,7 @@
       "label": "Label"
     },
     "ruimte": {
-      "label": "Ruimte"
+      "label": "Soort ruimte (controle)"
     },
     "gevoeligheid_mA": {
       "label": "Gevoeligheid"
@@ -570,6 +883,12 @@
         "omvormer": "Omvormer",
         "andere": "Andere"
       }
+    },
+    "ruimteNaam": {
+      "label": "Naam op het plan (vrij)"
+    },
+    "lengte_m": {
+      "label": "Tracélengte"
     }
   },
   "ruimtes": {
@@ -583,7 +902,8 @@
     "zolder": "Zolder",
     "buiten": "Buiten",
     "technisch": "Technische ruimte",
-    "andere": "Andere"
+    "andere": "Andere",
+    "hal": "Hal"
   },
   "rollen": {
     "eigenaar": "Eigenaar",
@@ -614,7 +934,7 @@
     "of": "of",
     "inloglink": "Stuur me een inloglink",
     "inloglinkVerstuurd": "Als dit adres bekend is, ontvang je een link.",
-    "inloglinkUitleg": "Met een inloglink bevestig je je adres. Een wachtwoord dat je nog niet bevestigde, vervalt dan.",
+    "inloglinkUitleg": "Log in zonder wachtwoord via een link in je mailbox. Die bevestigt ook je e-mailadres. Een nog niet bevestigd wachtwoord vervalt dan.",
     "ongeldig": "Het e-mailadres of het wachtwoord klopt niet.",
     "onbevestigd": {
       "titel": "Je e-mailadres is nog niet bevestigd",
@@ -741,6 +1061,7 @@
     }
   },
   "abonnement": {
+    "vrijstellingStripe": "Gratis toegang wijzigt je bestaande Stripe-abonnement niet. Je kunt het hieronder beheren.",
     "titel": "Abonnement",
     "laden": {
       "bezig": "Laden…",
@@ -786,6 +1107,8 @@
     }
   },
   "menu": {
+    "donkereModus": "Donkere modus",
+    "lichteModus": "Lichte modus",
     "nieuwBedrijf": "Nieuw bedrijf aanmaken",
     "gebruiker": "Gebruikersmenu",
     "mijnOrganisatie": "Mijn organisatie",
@@ -820,12 +1143,18 @@
     "wisselenMislukt": "De taal kon niet gewisseld worden. Probeer het opnieuw."
   },
   "fouten": {
+    "ADMIN_CORRECTIE_ONGELDIG": "Deze supportcorrectie is verlopen, afgerond of hoort bij een andere aanmelding. Je lokale werk blijft bewaard. Start een nieuwe correctie om verder te bewaren.",
+    "ADMIN_STRIPE_BEVESTIGING": "Bevestig dat bestaande Stripe-abonnementen en open betalingen blijven doorlopen. Beheer ze apart in Stripe.",
+    "ADMIN_PROEF_VERLENGEN": "Kies een einddatum die later ligt dan de huidige proefperiode en vandaag.",
+    "BEDRIJF_VRIJGESTELD": "Dit bedrijf heeft gratis toegang en kan geen nieuw abonnement afsluiten.",
     "onbekend": "Er ging iets mis. Probeer het opnieuw.",
     "NIET_AANGEMELD": "Je bent niet meer aangemeld. Log opnieuw in.",
     "ANDERE_GEBRUIKER": "Je bent intussen als iemand anders aangemeld. Laad de pagina opnieuw.",
     "ANDERE_ORGANISATIE": "Je actieve organisatie werd intussen gewijzigd. Kijk je wijziging na en probeer opnieuw.",
     "ALLEEN_EIGENAAR": "Alleen een eigenaar mag dit.",
     "NIET_TOEGELATEN": "Dit is niet toegelaten.",
+    "ADMIN_GEWIJZIGD": "Deze gegevens zijn intussen gewijzigd. Herlaad ze en controleer je wijziging.",
+    "ADMIN_MUTATIE_CONFLICT": "Deze bewaaractie hoort bij andere gegevens. Herlaad de gegevens voordat je opnieuw bewaart.",
     "VERZOEK_VAN_ANDERE_SITE": "Dit verzoek kwam niet van Elentrik en werd geweigerd. Laad de pagina opnieuw.",
     "NIET_GEVONDEN": "Dit bestaat niet (meer), of je hebt er geen toegang toe.",
     "ONGELDIGE_INVOER": "Sommige gegevens zijn niet geldig. Kijk ze na en probeer opnieuw.",
@@ -871,5 +1200,68 @@
     "INVALID_EMAIL": "Vul een geldig e-mailadres in.",
     "ORGANIZATION_ALREADY_EXISTS": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw.",
     "ORGANIZATION_SLUG_ALREADY_TAKEN": "Dit bedrijf kon niet aangemaakt worden omdat het al bestaat. Probeer het opnieuw."
+  },
+  "werkbaarheid": {
+    "tekenen": {
+      "toevoegen": "Toevoegen",
+      "kiesBestemming": "Kies waar je wilt toevoegen",
+      "sluitToevoegen": "Toevoegen sluiten",
+      "zoom": "Tekening vergroten en verplaatsen",
+      "inzoomen": "Inzoomen",
+      "uitzoomen": "Uitzoomen",
+      "focus": "Focus op selectie",
+      "hulp": "Scroll om te zoomen. Sleep op lege ruimte om te verplaatsen, of houd de spatiebalk ingedrukt. Kies een onderdeel om het te bewerken; de blauwe plusknoppen voegen toe op hun plaats.",
+      "zoekOnderdeel": "Zoek op kring, nummer of naam…",
+      "zoekBestemming": "Zoek een invoegpunt…"
+    },
+    "dossier": {
+      "titel": "Dossier afwerken",
+      "uitleg": "Volledigheid van het dossier, los van de elektrische controles.",
+      "volledig": "De gecontroleerde dossieronderdelen zijn ingevuld.",
+      "klant": "Klantnaam invullen",
+      "werfadres": "Werfadres aanvullen",
+      "context": "Nieuw of bestaand: installatiecontext kiezen",
+      "schema": "Eerste kring tekenen",
+      "plan": "Een grondplan toevoegen | {aantal} ontbrekende plannen aanvullen",
+      "plaatsen": "Nog 1 onderdeel op het plan plaatsen | Nog {aantal} onderdelen op het plan plaatsen",
+      "conceptUitleg": "Er ontbreken nog dossieronderdelen. Je kunt nu een concept exporteren en later verder afwerken.",
+      "conceptExport": "Concept-PDF maken"
+    },
+    "bevindingen": {
+      "controle": "Over deze voorlopige controle",
+      "punten": "{aantal} betrokken onderdelen",
+      "terug": "Alle bevindingen",
+      "sluiten": "Actieve bevinding sluiten",
+      "opgelost": "Deze bevinding is niet meer actief.",
+      "differentieel": "Controleer de differentieel vóór deze kring. Alleen de stroomsterkte van de automaat wijzigen verhelpt een ontbrekende differentieel niet.",
+      "volgende": "Volgende bevinding",
+      "geenElektrische": "Geen elektrische bevindingen gemeld. Controleer ook de volledigheid van het dossier."
+    }
+  },
+  "werkbaarheidBeheer": {
+    "navigatie": "Instellingen",
+    "wachtwoordTonen": "Wachtwoord tonen",
+    "wachtwoordVerbergen": "Wachtwoord verbergen",
+    "verlaten": "Je bedrijfsgegevens zijn nog niet opgeslagen. Wil je deze pagina verlaten en je wijzigingen verliezen?",
+    "logoDirect": "Het logo wordt meteen opgeslagen. Bewaar de andere bedrijfsgegevens met de knop onderaan.",
+    "bewaren": "Bedrijfsgegevens opslaan…",
+    "gewijzigd": "Niet-opgeslagen wijzigingen",
+    "geenWijzigingen": "Geen niet-opgeslagen wijzigingen",
+    "organisatieNaam": "Deze organisatienaam herken je in de app. De bedrijfsnaam op je PDF beheer je bij Bedrijfsgegevens.",
+    "rolTitel": "Rolwijziging bevestigen",
+    "rolVraag": "Wil je {naam} de rol {rol} geven?",
+    "eigenaarGevolg": "Een eigenaar beheert bedrijfsgegevens, leden, uitnodigingen en het abonnement, en kan projecten bewerken.",
+    "lidGevolg": "Een lid kan projecten bekijken en bewerken wanneer het abonnement dat toelaat, maar beheert geen bedrijfsgegevens, leden of abonnement.",
+    "eigenRolGevolg": "Je geeft je eigen beheertoegang op. Een andere eigenaar moet die later herstellen.",
+    "rolBevestigen": "Rol wijzigen",
+    "mailOntvanger": "Gebruikt e-mailadres: {email}",
+    "mailHulp": "Geen mail ontvangen? Controleer je spammap en of het adres klopt. De mail kan enkele minuten onderweg zijn. Heb je al een account, meld je dan aan.",
+    "mailOpnieuw": "Nieuwe bevestigingsmail sturen",
+    "emailWijzigenUitleg": "Adres verkeerd ingevuld? Registreer opnieuw met het juiste adres. Hiermee wijzig je geen bestaand account.",
+    "emailWijzigen": "E-mailadres corrigeren",
+    "huidigAbonnement": "Abonnementsgegevens",
+    "formule": "Formule",
+    "periodeTot": "Huidige periode tot",
+    "betaalportaal": "Abonnement beheren opent het betaalportaal. Daar vind je de bedragen en details van je abonnement."
   }
 }

@@ -61,9 +61,9 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
     document: id === "kopie1" ? { ...startDocument(), id: KOPIE_DOC_ID } : startDocument(),
     versie: 7,
   }));
-  const dupliceer = vi.fn<AutosaveOpties["dupliceer"]>(async (_id, _bestandIds) => ({ id: "kopie1" }));
+  const dupliceer = vi.fn<NonNullable<AutosaveOpties["dupliceer"]>>(async (_id, _bestandIds) => ({ id: "kopie1" }));
   const naarProject = vi.fn(async (_id: string) => {});
-  const maakNieuw = vi.fn<AutosaveOpties["maakNieuw"]>(async () => ({
+  const maakNieuw = vi.fn<NonNullable<AutosaveOpties["maakNieuw"]>>(async () => ({
     id: "nieuw1",
     versie: 1,
     documentId: NIEUW_DOC_ID,

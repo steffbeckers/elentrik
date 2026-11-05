@@ -182,9 +182,8 @@ async function stuurBevestiging() {
           />
         </UFormField>
         <UFormField name="wachtwoord" :label="$t('auth.wachtwoord')">
-          <UInput
+          <WachtwoordVeld
             v-model="formulier.wachtwoord"
-            type="password"
             autocomplete="current-password"
             class="w-full"
             data-testid="inloggen-wachtwoord"

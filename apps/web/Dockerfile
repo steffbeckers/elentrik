@@ -15,6 +15,7 @@ WORKDIR /app
 # Eerst alleen de manifesten: de installatielaag blijft in de cache zolang de afhankelijkheden gelijk zijn.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
+COPY apps/plan-editor/package.json apps/plan-editor/
 COPY packages/arei/package.json packages/arei/
 COPY packages/layout/package.json packages/layout/
 COPY packages/model/package.json packages/model/
@@ -25,6 +26,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY tsconfig.base.json ./
 COPY packages packages
 COPY apps/web apps/web
+COPY apps/plan-editor apps/plan-editor
 RUN NODE_ENV=production pnpm --filter @elentrik/web build
 
 # Het migratiescript (migreer.mjs) heeft drizzle-orm en postgres nodig. Nitro neemt in .output alleen mee wat de

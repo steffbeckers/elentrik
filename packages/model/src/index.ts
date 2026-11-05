@@ -1,4 +1,6 @@
 export { SCHEMA_VERSIE } from "./versie";
+export { isAftakkingNode, magAftakkingKind } from "./aftakkingen";
+export { materiaallijst, type MateriaalRij } from "./materialen";
 export { DocumentFout, type FoutCode } from "./fouten";
 export { nieuwId } from "./ids";
 export { MIGRATIES, migreer, pasMigratiesToe, type Migratie } from "./migraties";
@@ -25,7 +27,10 @@ export {
   verwijderPlaatsing,
   voegPaginaToe,
   zetAchtergrond,
+  zetGetekendPlan,
   zetSchaal,
+  zetPaginaOpmaak,
+  zetLabelOffset,
 } from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
 export {
@@ -61,6 +66,8 @@ export {
   PolenSchema,
   RuimteSchema,
   SituatiePaginaSchema,
+  PlanTekeningSchema,
+  type PlanTekening,
   StroomtypeSchema,
   TaalSchema,
   ToestelsoortSchema,

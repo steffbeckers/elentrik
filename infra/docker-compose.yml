@@ -1,6 +1,20 @@
 name: elentrik
 
 services:
+  postgres-e2e:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: elentrik
+      POSTGRES_PASSWORD: elentrik
+      POSTGRES_DB: elentrik_e2e
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elentrik -d elentrik_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   postgres:
     image: postgres:16
     restart: unless-stopped
@@ -38,6 +52,14 @@ services:
     ports:
       - "127.0.0.1:1025:1025"
       - "127.0.0.1:8025:8025"
+
+  # Gescheiden testmail: Playwright mag deze inbox leegmaken zonder ontwikkelmail te wissen.
+  mailpit-e2e:
+    image: axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1026:1025"
+      - "127.0.0.1:8026:8025"
 
 volumes:
   postgres-data:

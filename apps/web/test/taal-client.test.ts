@@ -127,7 +127,7 @@ describe("zetTaal", () => {
 });
 
 const MIJ: Mij = {
-  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", proefGebruikt: false, taal: "en" },
+  gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", superuser: false, proefGebruikt: false, taal: "en" },
   organisaties: [],
   actieveOrganisatieId: null,
   abonnementenIngeschakeld: false,

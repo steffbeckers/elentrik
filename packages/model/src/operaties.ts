@@ -3,6 +3,7 @@ import { DocumentFout } from "./fouten";
 import { nieuwId } from "./ids";
 import { NodeSchema, type InstallatieDocument, type Node, type NodeId } from "./schema";
 import { TOEGELATEN_KINDEREN } from "./structuur";
+import { magAftakkingKind } from "./aftakkingen";
 
 enablePatches();
 
@@ -23,7 +24,7 @@ export type OperatieResultaat = {
 
 export type { Patch };
 
-const STRUCTUURVELDEN = ["id", "type", "parentId", "kinderen"] as const;
+const STRUCTUURVELDEN = ["id", "type", "parentId", "kinderen", "aftakking"] as const;
 const AFGELEIDE_VELDEN = ["id", "parentId", "kinderen"] as const;
 
 // Object.hasOwn: ids als "constructor" mogen niet via de prototype resolven.
@@ -98,6 +99,9 @@ export function voegToe(
     throw new DocumentFout("ONGELDIG_SCHEMA", { issues: geparsed.error.issues });
   }
   const node = geparsed.data;
+  if (!magAftakkingKind(ouder, node, ouder.kinderen.length)) {
+    throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "ongeldige aftakking" });
+  }
 
   return resultaat(
     doc,
@@ -156,7 +160,7 @@ export function verwijderEnkel(doc: InstallatieDocument, nodeId: NodeId): Operat
   const toegelaten: readonly string[] = TOEGELATEN_KINDEREN[ouder.type];
   for (const kindId of node.kinderen) {
     const kind = vereis(doc, kindId);
-    if (!toegelaten.includes(kind.type)) {
+    if (!toegelaten.includes(kind.type) || !magAftakkingKind(ouder, kind, ouder.kinderen.length + node.kinderen.length - 2)) {
       throw new DocumentFout("NIET_TOEGELATEN_KIND", { kindId, ouderType: ouder.type });
     }
   }
@@ -195,6 +199,9 @@ export function verplaats(
   const doelLijst = zelfdeOuder
     ? nieuweOuder.kinderen.filter((id) => id !== nodeId)
     : nieuweOuder.kinderen;
+  if (!magAftakkingKind(nieuweOuder, node, doelLijst.length)) {
+    throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "ongeldige aftakking" });
+  }
   const plek = index ?? doelLijst.length;
   controleerIndex(plek, doelLijst.length);
 
