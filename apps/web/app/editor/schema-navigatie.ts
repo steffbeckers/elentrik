@@ -31,11 +31,16 @@ export function schemaKeuzes(doc: InstallatieDocument, analyse: Analyse, typeNaa
   const aantallen = new Map<string, number>();
   for (const keuze of keuzes) aantallen.set(keuze.label, (aantallen.get(keuze.label) ?? 0) + 1);
   const nummers = new Map<string, number>();
+  // Reserve original descriptions as well as generated labels; e.g. "Keuken 1" may already exist.
+  const bezet = new Set(keuzes.map(keuze => keuze.label));
   return keuzes.map(keuze => {
     if (aantallen.get(keuze.label)! < 2) return keuze;
-    const nummer = (nummers.get(keuze.label) ?? 0) + 1;
+    let nummer = (nummers.get(keuze.label) ?? 0) + 1;
+    while (bezet.has(`${keuze.label} ${nummer}`)) nummer++;
     nummers.set(keuze.label, nummer);
-    return { ...keuze, label: `${keuze.label} ${nummer}` };
+    const label = `${keuze.label} ${nummer}`;
+    bezet.add(label);
+    return { ...keuze, label };
   });
 }
 

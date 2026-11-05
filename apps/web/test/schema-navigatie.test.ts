@@ -5,6 +5,28 @@ import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie } from "../app/
 
 const tekst = (key: string, waarden: Record<string, string | number>) => `${key}:${Object.values(waarden).join("/")}`;
 
+test("gegenereerde volgnummers botsen niet met een bestaande genummerde omschrijving", () => {
+  let doc = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
+  const bord = Object.values(doc.nodes).find(n => n.type === "verdeelbord")!;
+  let einde = { soort: "rail-einde" as const, nodeId: bord.id } as Parameters<typeof voegOnderdeelToe>[1];
+  const ids: string[] = [];
+  for (const label of ["Keuken", "Keuken", "Keuken 1"]) {
+    const resultaat = voegOnderdeelToe(doc, einde, "schakelaar");
+    doc = structuredClone(resultaat.doc);
+    const id = resultaat.ids.at(-1)!;
+    doc.nodes[id]!.label = label;
+    ids.push(id);
+    einde = { soort: "kring-einde", nodeId: id };
+  }
+  const analyse = analyseer(doc);
+  for (const id of ids) analyse.puntLabels[id] = "B2";
+  const keuzes = schemaKeuzes(doc, analyse, type => type).filter(k => ids.includes(k.id));
+  expect(new Set(keuzes.map(k => k.label)).size).toBe(3);
+  expect(keuzes.map(k => k.id)).toEqual(ids);
+  expect(ids.map(id => doc.nodes[id]!.label)).toEqual(["Keuken", "Keuken", "Keuken 1"]);
+  expect(ids.map(id => analyse.puntLabels[id])).toEqual(["B2", "B2", "B2"]);
+});
+
 test("gelijke puntnamen blijven onderscheidbaar zonder opgeslagen codes te wijzigen", () => {
   const start = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
   const bord = Object.values(start.nodes).find(n => n.type === "verdeelbord")!;
