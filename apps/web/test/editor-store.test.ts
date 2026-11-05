@@ -67,7 +67,7 @@ describe("vrije aftakkingen", () => {
   test("voegt twee wisselschakelaars en een lamp toe met één label en afzonderlijke undo-stappen", () => {
     const store = laadNieuw();
     const leiding = nieuweKring(store);
-    expect(store.kanAftakkingToevoegen).toBe(false);
+    expect(store.kanAftakkingToevoegen).toBe(true); // Een contactdoos kan ook een gedeeld punt starten.
     store.kiesVariant("schakelaar", { soort: "wissel" });
     expect(store.kanAftakkingToevoegen).toBe(true);
     store.voegAftakkingToeBijSelectie();

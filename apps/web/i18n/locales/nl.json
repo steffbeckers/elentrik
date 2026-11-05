@@ -704,7 +704,7 @@
     },
     "aftakkingen": {
       "titel": "Aftakkingen",
-      "hulp": "Kies een schakelaar of lichtpunt en selecteer de kringleiding. Voeg een aftakking toe en bouw verder met de plus rechts.",
+      "hulp": "Kies een leiding en een onderdeel om een horizontale samenstelling met één puntnummer te starten. Voeg rechts schakelaars, lichtpunten, contactdozen of toestellen toe.",
       "toevoegen": "Aftakking toevoegen",
       "uitbreiden": "{onderdeel} toevoegen aan aftakking",
       "bestemming": "Aftakking uitbreiden"
@@ -734,6 +734,21 @@
         "kruis": "Twee wisselschakelaars + kruisschakelaar + lichtpunt"
       },
       "annuleren": "Annuleren"
+    },
+    "referenties": {
+      "titel": "Kringreferenties",
+      "behoudUitleg": "Leg de huidige kringcodes vast. Toevoegen en verplaatsen verandert deze codes daarna niet.",
+      "behouden": "Bestaande referenties behouden",
+      "vastgelegd": "De huidige kringcodes zijn vastgelegd.",
+      "hernummeren": "Opnieuw nummeren",
+      "hernummerUitleg": "Controleer de voorgestelde codes. De punten op het situatieplan volgen dezelfde kringcodes.",
+      "huidig": "Huidige code",
+      "nieuw": "Nieuwe code",
+      "bevestigen": "Deze nummering toepassen",
+      "dupliceren": "Kring {code} dupliceren",
+      "vrijeCode": "Nieuwe vrije kringcode",
+      "codeOngeldig": "Gebruik een vrije code met hoofdletters A–Z.",
+      "maakKopie": "Kring met deze code toevoegen"
     }
   },
   "bedrijf": {

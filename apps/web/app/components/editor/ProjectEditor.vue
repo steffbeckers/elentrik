@@ -26,6 +26,9 @@ import PlanToevoegenDialoog from "~/components/situatie/PlanToevoegenDialoog.vue
 import SchaalDialoog from "~/components/situatie/SchaalDialoog.vue";
 import { volgendPunt } from "~/situatie/plaatskeuzes";
 import TePlaatsenPaneel from "~/components/situatie/TePlaatsenPaneel.vue";
+import SjabloonInvoegenDialoog from "./SjabloonInvoegenDialoog.vue";
+import LichtschakelingDialoog from "./LichtschakelingDialoog.vue";
+import KringReferentiesDialoog from "./KringReferentiesDialoog.vue";
 import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
@@ -70,6 +73,11 @@ store.nieuwVenster();
 const { nodeTekst } = useNodeTekst();
 const { t } = useI18n();
 const toast = useToast();
+const sjabloonOpen = ref(false);
+const sjabloonId = ref("");
+const lichtschakelingOpen = ref(false);
+const referentiesOpen = ref(false);
+function openSjabloon(id: string): void { sjabloonId.value = id; sjabloonOpen.value = true; }
 
 useHead({ title: () => (store.projectId === id && store.naam ? `${store.naam} · ${t("app.naam")}` : t("app.naam")) });
 
@@ -593,7 +601,7 @@ onBeforeUnmount(() => {
       <AbonnementBanner v-if="!admin" />
       <EditorWerkruimte ref="werkruimte" :tabblad="store.tabblad" :selectie="store.selectie" :heeft-plan="!!situatie.actievePagina?.achtergrond">
         <template #gereedschap>
-          <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" />
+          <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" @sjabloon="openSjabloon" @lichtschakeling="lichtschakelingOpen = true" @referenties="referentiesOpen = true" />
           <TePlaatsenPaneel v-else v-model:gekozen="teplaatsen" v-model:zoek="plaatsZoek" v-model:kring="plaatsKring" v-model:doorgaan="doorplaatsen" @volgorde="plaatsVolgorde = $event" />
         </template>
         <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />
@@ -655,6 +663,9 @@ onBeforeUnmount(() => {
         <template #bevindingen><BevindingenPaneel id="bevindingen" @selecteer="herstelBevinding" @navigeer="navigeerDossier" /></template>
         <template #opmaak><PlanOpmaak /></template>
       </EditorWerkruimte>
+      <SjabloonInvoegenDialoog v-model:open="sjabloonOpen" :sjabloon-id="sjabloonId" />
+      <LichtschakelingDialoog v-model:open="lichtschakelingOpen" />
+      <KringReferentiesDialoog v-model:open="referentiesOpen" />
     </template>
 
     <UContainer v-else-if="laadstatus === 'nietGevonden'" class="py-8">

@@ -704,7 +704,7 @@
     },
     "aftakkingen": {
       "titel": "Dérivations",
-      "hulp": "Choisissez un interrupteur ou un point lumineux et sélectionnez la canalisation du circuit. Ajoutez une dérivation, puis complétez-la avec le plus à droite.",
+      "hulp": "Choisissez une canalisation et un élément pour créer un ensemble horizontal avec un seul repère de point. Ajoutez à droite des interrupteurs, points lumineux, prises ou appareils.",
       "toevoegen": "Ajouter une dérivation",
       "uitbreiden": "Ajouter {onderdeel} à la dérivation",
       "bestemming": "Prolonger une dérivation"
@@ -734,6 +734,21 @@
         "kruis": "Deux va-et-vient + permutateur + point lumineux"
       },
       "annuleren": "Annuler"
+    },
+    "referenties": {
+      "titel": "Repères des circuits",
+      "behoudUitleg": "Figez les repères actuels. Les ajouts et déplacements ne les modifieront plus.",
+      "behouden": "Conserver les repères actuels",
+      "vastgelegd": "Les repères actuels sont figés.",
+      "hernummeren": "Renuméroter",
+      "hernummerUitleg": "Vérifiez les repères proposés. Les points du plan de position suivent les mêmes repères.",
+      "huidig": "Repère actuel",
+      "nieuw": "Nouveau repère",
+      "bevestigen": "Appliquer cette numérotation",
+      "dupliceren": "Dupliquer le circuit {code}",
+      "vrijeCode": "Nouveau repère disponible",
+      "codeOngeldig": "Utilisez un repère disponible en majuscules A–Z.",
+      "maakKopie": "Ajouter le circuit avec ce repère"
     }
   },
   "bedrijf": {

@@ -704,7 +704,7 @@
     },
     "aftakkingen": {
       "titel": "Branches",
-      "hulp": "Choose a switch or light point and select the circuit cable. Add a branch, then extend it using the plus on the right.",
+      "hulp": "Select a cable and a component to start a horizontal assembly with one point reference. Add switches, light points, sockets or appliances on the right.",
       "toevoegen": "Add branch",
       "uitbreiden": "Add {onderdeel} to branch",
       "bestemming": "Extend a branch"
@@ -734,6 +734,21 @@
         "kruis": "Two two-way switches + intermediate switch + light point"
       },
       "annuleren": "Cancel"
+    },
+    "referenties": {
+      "titel": "Circuit references",
+      "behoudUitleg": "Fix the current circuit codes. Adding or moving circuits will then keep these codes.",
+      "behouden": "Keep existing references",
+      "vastgelegd": "The current circuit codes are fixed.",
+      "hernummeren": "Renumber circuits",
+      "hernummerUitleg": "Check the proposed codes. Points on the layout plan use the same circuit references.",
+      "huidig": "Current code",
+      "nieuw": "New code",
+      "bevestigen": "Apply this numbering",
+      "dupliceren": "Duplicate circuit {code}",
+      "vrijeCode": "New available circuit code",
+      "codeOngeldig": "Use an available code with capital letters A–Z.",
+      "maakKopie": "Add circuit with this code"
     }
   },
   "bedrijf": {

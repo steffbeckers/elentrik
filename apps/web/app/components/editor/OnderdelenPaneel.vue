@@ -20,6 +20,7 @@ const ONDERDELEN: Onderdeel[] = [
 ];
 
 const store = useEditorStore();
+const emit = defineEmits<{ sjabloon: [id: string]; lichtschakeling: []; referenties: [] }>();
 const { t, te } = useI18n();
 const voerUit = useDocumentFoutMelding();
 const { variantTekst } = useSymboolNamen();
@@ -57,7 +58,7 @@ function sjabloonNaam(id: string, naam: string): string {
 }
 
 function voegSjabloonToe(id: string): void {
-  voerUit(() => store.voegSjabloonToe(id));
+  emit('sjabloon', id);
 }
 </script>
 
@@ -140,6 +141,7 @@ function voegSjabloonToe(id: string): void {
     </section>
 
     <section aria-labelledby="aftakkingen-titel">
+      <UButton block color="neutral" variant="outline" icon="i-lucide-lightbulb" class="mb-3 justify-start" :label="$t('editor.invoegen.lichtTitel')" :disabled="store.alleenLezen" data-testid="lichtschakeling-openen" @click="emit('lichtschakeling')" />
       <h2 id="aftakkingen-titel" class="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
         {{ $t("editor.aftakkingen.titel") }}
       </h2>
@@ -179,5 +181,6 @@ function voegSjabloonToe(id: string): void {
         />
       </div>
     </section>
+    <UButton block color="neutral" variant="outline" icon="i-lucide-list-ordered" class="justify-start" :label="$t('editor.referenties.titel')" :disabled="store.alleenLezen" data-testid="referenties-openen" @click="emit('referenties')" />
   </aside>
 </template>

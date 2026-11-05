@@ -190,6 +190,7 @@ function plaatshouder(veld: Veld): string | undefined {
               :placeholder="plaatshouder(veld)"
               :disabled="store.alleenLezen"
               :data-testid="`veld-${veld.sleutel}`"
+              :list="veld.suggesties ? `suggesties-${veld.sleutel}` : undefined"
               class="w-full"
               :ui="veld.eenheid ? { trailing: 'pointer-events-none' } : undefined"
               @update:model-value="(w: string | number) => invoer(veld, w)"
@@ -200,6 +201,9 @@ function plaatshouder(veld: Veld): string | undefined {
                 <span class="text-xs text-muted">{{ veld.eenheid }}</span>
               </template>
             </UInput>
+            <datalist v-if="veld.suggesties" :id="`suggesties-${veld.sleutel}`">
+              <option v-for="suggestie in veld.suggesties" :key="suggestie" :value="suggestie" />
+            </datalist>
           </UFormField>
 
           <UFormField v-else-if="veld.soort === 'keuze'" :label="$t(veld.labelSleutel)" size="sm">
