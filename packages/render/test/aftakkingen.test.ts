@@ -22,13 +22,14 @@ test("aftakkingsreferenties blijven gelijk op schema, plan, kringenlijst en PDF;
   for (const item of items) expect(item.symbool.maat.in.y).toBe(item.symbool.maat.hoogte);
   const svg = schemaStripSvg(opmaak(doc));
   expect(svg.match(/>A1<\/text>/g)).toHaveLength(1);
+  expect(svg).toContain("2×");
   const pdf = printHtml(doc, analyse, [], {
     papier: "A4", onderdelen: { eendraadschema: true, situatieschema: false, kringenlijst: false, bijlage: false },
     taal: "nl", datum: "2026-11-01", versieLabel: "v1", installateur: { naam: "Voorbeeld" }, afbeeldingen: {},
   });
   expect(pdf.paginas).toBe(1);
   expect(pdf.html.match(/>A1<\/text>/g)).toHaveLength(1);
-  expect(pdf.html).toContain("2×");
+  expect(pdf.html.match(/<text class="tekst-aantal"[^>]*font-size="2.5"[^>]*>×2<\/text>/g)).toHaveLength(1);
   const weg = verwijder(doc, a.ids[0]!);
   expect(situatieItems(weg.doc, analyseer(weg.doc), pagina.id)).toEqual([]);
   expect(pasPatchesToe(weg.doc, weg.inversePatches)).toEqual(doc);
