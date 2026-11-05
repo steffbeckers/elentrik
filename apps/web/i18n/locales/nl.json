@@ -875,7 +875,13 @@
         "warmtepomp": "Warmtepomp",
         "laadpaal": "Laadpaal",
         "omvormer": "Omvormer",
-        "andere": "Andere"
+        "andere": "Andere",
+        "pvPaneel": "Fotovoltaïsch paneel",
+        "bel": "Bel",
+        "motor": "Motor",
+        "ventilator": "Ventilator",
+        "koelkast": "Koelkast",
+        "diepvriezer": "Diepvriezer"
       }
     },
     "ruimteNaam": {

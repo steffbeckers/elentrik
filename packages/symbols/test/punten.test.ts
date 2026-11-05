@@ -612,10 +612,14 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       "oven",
       "omvormer",
       "warmtepomp",
+      "ventilator",
+      "koelkast",
+      "diepvriezer",
+      "pvPaneel",
     ] as const;
 
     test("alle soorten hebben een test", () => {
-      expect([...vierkantSoorten, "boiler", "laadpaal"].sort()).toEqual([...ToestelsoortSchema.options].sort());
+      expect([...vierkantSoorten, "boiler", "laadpaal", "bel", "motor"].sort()).toEqual([...ToestelsoortSchema.options].sort());
     });
 
     test.each(vierkantSoorten)("%s is een vierkant van 10 × 10 in een kader van 12 × 12", (soort) => {
@@ -628,9 +632,9 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(r.a.get("data-rol")).toBeUndefined();
     });
 
-    test.each(ToestelsoortSchema.options)("%s heeft geen tekst, behalve de warmtepomp", (soort) => {
+    test.each(ToestelsoortSchema.options)("%s gebruikt tekst alleen voor de letteraanduiding van warmtepomp en motor", (soort) => {
       const teksten = alle(soort).filter((e) => e.naam === "text");
-      expect(teksten).toHaveLength(soort === "warmtepomp" ? 1 : 0);
+      expect(teksten).toHaveLength(soort === "warmtepomp" || soort === "motor" ? 1 : 0);
     });
 
     test("andere: het algemene symbool, een leeg vierkant", () => {

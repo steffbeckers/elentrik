@@ -875,7 +875,13 @@
         "warmtepomp": "Pompe à chaleur",
         "laadpaal": "Borne de recharge",
         "omvormer": "Onduleur",
-        "andere": "Autre"
+        "andere": "Autre",
+        "pvPaneel": "Panneau photovoltaïque",
+        "bel": "Sonnerie",
+        "motor": "Moteur",
+        "ventilator": "Ventilateur",
+        "koelkast": "Réfrigérateur",
+        "diepvriezer": "Congélateur"
       }
     },
     "ruimteNaam": {

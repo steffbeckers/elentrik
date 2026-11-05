@@ -875,7 +875,13 @@
         "warmtepomp": "Heat pump",
         "laadpaal": "EV charger",
         "omvormer": "Inverter",
-        "andere": "Other"
+        "andere": "Other",
+        "pvPaneel": "Photovoltaic panel",
+        "bel": "Bell",
+        "motor": "Motor",
+        "ventilator": "Fan",
+        "koelkast": "Refrigerator",
+        "diepvriezer": "Freezer"
       }
     },
     "ruimteNaam": {

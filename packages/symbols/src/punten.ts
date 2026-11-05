@@ -280,6 +280,33 @@ export function tekenToestel(node: NodeVan<"toestel">): Symbool {
   switch (node.soort) {
     case "andere":
       return { maat, svg: vierkant };
+    case "bel":
+      return { maat, svg: lijn(x, hoogte, x, 7) + lijn(2, 7, 10, 7, PICTO) + pad("M2 7 A4 4 0 0 1 10 7", PICTO) + lijn(x, 3, x, 0) };
+    case "motor":
+      return { maat, svg: lijn(x, hoogte, x, 10.5) + cirkel(x, y, 4.5, PICTO) + tekst(x, 7.2, "M", { anker: "middle", grootte: 3.5, ...PICTO }) + lijn(x, 1.5, x, 0) };
+    case "ventilator":
+      return { maat, svg: vierkant + cirkel(3.9, y, 2.1, PICTO) + cirkel(8.1, y, 2.1, PICTO) };
+    case "koelkast":
+    case "diepvriezer": {
+      // Eén respectievelijk drie sneeuwvlokken; bron: ACA-gids maart 2025, p. 29–30.
+      const vlok = (cx: number, straal: number) => {
+        let uit = "";
+        for (let i = 0; i < 6; i++) {
+          const hoek = i * Math.PI / 3;
+          const dx = Math.cos(hoek), dy = Math.sin(hoek);
+          const ex = cx + dx * straal, ey = y + dy * straal;
+          uit += lijn(cx, y, ex, ey, PICTO);
+          for (const kant of [-1, 1]) {
+            uit += lijn(ex, ey, cx + dx * straal * 0.65 - dy * straal * 0.22 * kant, y + dy * straal * 0.65 + dx * straal * 0.22 * kant, PICTO);
+          }
+        }
+        return uit;
+      };
+      return { maat, svg: vierkant + (node.soort === "koelkast" ? vlok(x, 3.3) : [3, 6, 9].map((cx) => vlok(cx, 1.3)).join("")) };
+    }
+    case "pvPaneel":
+      // Bron-symbool: paneel met invallende lichtpijlen (ACA-gids maart 2025, p. 30).
+      return { maat, svg: vierkant + lijn(3, 2, 6, 5, PICTO) + pad("M4.5 5 L6 5 L6 3.5", PICTO) + lijn(6, 2, 9, 5, PICTO) + pad("M7.5 5 L9 5 L9 3.5", PICTO) + lijn(1, 7, 11, 7, PICTO) };
     case "wasmachine":
       return { maat, svg: vierkant + cirkel(x, y, 3.8, PICTO) + stip(x, y, 1.3) };
     case "droogkast": {

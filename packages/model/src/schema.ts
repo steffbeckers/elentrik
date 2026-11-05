@@ -62,6 +62,12 @@ export const ToestelsoortSchema = z.enum([
   "warmtepomp",
   "laadpaal",
   "omvormer",
+  "pvPaneel",
+  "bel",
+  "motor",
+  "ventilator",
+  "koelkast",
+  "diepvriezer",
   "andere",
 ]);
 

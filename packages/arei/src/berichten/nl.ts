@@ -49,5 +49,11 @@ export const NL: Readonly<Record<string, string>> = {
   "waarde.warmtepomp": "warmtepomp",
   "waarde.laadpaal": "laadpaal",
   "waarde.omvormer": "omvormer",
+  "waarde.pvPaneel": "fotovoltaïsch paneel",
+  "waarde.bel": "bel",
+  "waarde.motor": "motor",
+  "waarde.ventilator": "ventilator",
+  "waarde.koelkast": "koelkast",
+  "waarde.diepvriezer": "diepvriezer",
   "waarde.andere": "andere",
 };
