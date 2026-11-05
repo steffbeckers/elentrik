@@ -172,7 +172,7 @@ export const SituatiePaginaSchema = z.strictObject({
   id: z.string(),
   titel: z.string(),
   referentie: z.boolean().optional(),
-  afdruk: z.strictObject({ papier: z.enum(["A4", "A3"]), orientatie: z.enum(["staand", "liggend"]), schaalmodus: z.enum(["passend", "gekalibreerd"]) }).optional(),
+  afdruk: z.strictObject({ papier: z.enum(["A4", "A3"]), orientatie: z.enum(["staand", "liggend"]), schaalNoemer: z.number().finite().positive().optional(), schaalmodus: z.enum(["passend", "gekalibreerd"]) }).optional(),
   tekening: PlanTekeningSchema.optional(),
   /** Factor ten opzichte van het oorspronkelijke formaat; ontbrekend betekent 1. */
   symboolSchaal: z.number().min(0.25).max(4).optional(),
