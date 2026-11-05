@@ -55,10 +55,16 @@ test('superuser zonder bedrijf zoekt, corrigeert, beheert toegang en leest audit
     await ga(page, `/admin/organisaties/${doel.actieveOrganisatieId}`);
     await expect(page.getByRole('heading', { name: 'Beheer Doelbedrijf', exact: true })).toBeVisible();
     await adminBeelden(page, 'bedrijf');
-    await page.getByRole('button', { name: 'Overschakelen naar donkere modus' }).click();
+    // De themakiezer staat in het gebruikersmenu; het menu blijft open na de keuze, Escape sluit het.
+    await page.getByTestId('gebruiker-menu').click();
+    await page.getByRole('menuitem', { name: 'Donkere modus' }).click();
+    await page.keyboard.press('Escape');
     await expect(page.locator('html')).toHaveClass(/dark/);
     await adminBeelden(page, 'bedrijf-donker');
-    await page.getByRole('button', { name: 'Overschakelen naar lichte modus' }).click();
+    await page.getByTestId('gebruiker-menu').click();
+    await page.getByRole('menuitem', { name: 'Lichte modus' }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
     await page.getByRole('button', { name: 'Gratis toegang toekennen' }).click();
     await page.getByRole('textbox', { name: 'Reden voor de correctie' }).fill('Partnerbedrijf krijgt gratis toegang');
     await page.getByRole('button', { name: 'Wijziging bewaren' }).click();

@@ -186,6 +186,8 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | dossier | dossier | dossier |
 | dossiertaal | langue du dossier | dossier language |
 | versie (van een project) | version | version |
+| nieuwe versie (van de app) | nouvelle version | new version |
+| herladen (de app) | recharger | reload |
 | exporteren | exporter | export |
 | bewaren | enregistrer | save |
 | ongedaan maken | annuler | undo |
