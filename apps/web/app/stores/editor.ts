@@ -311,7 +311,7 @@ export const useEditorStore = defineStore("editor", () => {
       let wijziging: Record<string, unknown> = { [sleutel]: waarde };
       if (sleutel === "aanleg.ligging" || sleutel === "aanleg.inBuis") {
         if (node.type !== "leiding") throw new DocumentFout("ONGELDIG_SCHEMA");
-        const aanleg: Record<string, unknown> = { inBuis: false, ...node.aanleg, [sleutel.slice(7)]: waarde };
+        const aanleg: Record<string, unknown> = { ...node.aanleg, [sleutel.slice(7)]: waarde };
         if (waarde === undefined) delete aanleg[sleutel.slice(7)];
         // InBuis is verplicht zodra een aanleg is opgegeven.
         wijziging = { aanleg: Object.keys(aanleg).length === 0 ? undefined : { inBuis: false, ...aanleg } };

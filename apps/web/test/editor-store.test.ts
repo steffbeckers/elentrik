@@ -1023,3 +1023,7 @@ test("loading a recovered v1 concept migrates it before exposing fields", () => 
   expect(store.document!.schemaVersion).toBe(2);
   expect(raw.schemaVersion).toBe(1);
 });
+test('clearing an unknown installation field does not invent a conduit value',()=>{
+ const store=laadNieuw();const l=nieuweKring(store);const avant=store.document;
+ store.wijzigVeld([l],'aanleg.ligging',undefined);expect(node(store,l)).not.toHaveProperty('aanleg');expect(store.document).toBe(avant);
+});
