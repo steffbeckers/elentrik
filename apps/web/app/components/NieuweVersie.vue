@@ -3,7 +3,9 @@
 // - een gewone update: een toast die blijft staan, met "Herladen" en een sluitknop. Gesloten telt als
 //   gemeld; pas een nog nieuwere build geeft hem opnieuw;
 // - een verplichte update: een modaal venster dat niet weg te klikken is. Het vervangt de toast.
-// "Herladen" gaat via de store: de editor bewaart eerst, en met alles bewaard vraagt de browser niets.
+// - "Herladen" in de toast is een gewone herlading: heeft de editor nog onbewaarde wijzigingen, dan
+//   vraagt de browser "pagina verlaten?" (spec 5.2). Het modale venster gaat via de store: de editor
+//   bewaart eerst, en met alles bewaard vraagt de browser niets.
 import { useVersieStore } from "~/stores/versie";
 
 const store = useVersieStore();
@@ -12,7 +14,8 @@ const { t } = useI18n();
 
 const TOAST_ID = "nieuwe-versie";
 
-// Zolang de herlading loopt (het bewaren van het concept) kan de knop niet nog eens ingedrukt worden.
+// Zolang de herlading loopt (het bewaren van het concept) kan de knop van het modale venster niet nog
+// eens ingedrukt worden.
 const bezig = ref(false);
 
 async function herlaad(): Promise<void> {
@@ -23,6 +26,30 @@ async function herlaad(): Promise<void> {
     // De gebruiker kan de vraag van de browser ("pagina verlaten?") annuleren: dan blijft de pagina staan.
     bezig.value = false;
   }
+}
+
+// De toast zelf: na een klik op "Herladen" is de knop even uitgeschakeld tegen een dubbele klik. Annuleert
+// de gebruiker de vraag van de browser, dan blijft de pagina staan en komt de knop terug (de browser
+// meldt een annulering niet; vandaar de timer).
+const TOAST_BEZIG_MS = 1_000;
+let toastBezig = false;
+
+function toastActies(uitgeschakeld: boolean) {
+  return [
+    // `closeOnClick: false`: annuleert de gebruiker het herladen, dan blijft de toast staan.
+    { label: t("versie.herladen"), closeOnClick: false, disabled: uitgeschakeld, onClick: herlaadToast },
+  ];
+}
+
+function herlaadToast(): void {
+  if (toastBezig) return;
+  toastBezig = true;
+  toast.update(TOAST_ID, { actions: toastActies(true) });
+  location.reload();
+  setTimeout(() => {
+    toastBezig = false;
+    if (getoond) toast.update(TOAST_ID, { actions: toastActies(false) });
+  }, TOAST_BEZIG_MS);
 }
 
 // `toast.remove` ruimt na 200 ms het toastobject met die id op: alleen aanroepen voor een toast die er is,
@@ -37,10 +64,7 @@ function toonToast(): void {
     // 0: geen automatisch verdwijnen.
     duration: 0,
     close: true,
-    actions: [
-      // `closeOnClick: false`: annuleert de gebruiker het herladen, dan blijft de toast staan.
-      { label: t("versie.herladen"), closeOnClick: false, onClick: () => void store.herlaad() },
-    ],
+    actions: toastActies(false),
     // Sluiten (kruisje, vegen of Escape) zonder herladen: deze build is gemeld.
     "onUpdate:open": (open: boolean) => {
       if (open) return;

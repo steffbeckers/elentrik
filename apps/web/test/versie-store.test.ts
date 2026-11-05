@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { useVersieStore } from "../app/stores/versie";
+import { useVersieStore, ZONDER_WAARSCHUWING_MS } from "../app/stores/versie";
 
 beforeEach(() => {
   setActivePinia(createPinia());
@@ -88,5 +88,21 @@ describe("herlaad", () => {
     await store.herlaad(vi.fn());
     expect(voor).not.toHaveBeenCalled();
     expect(store.zonderWaarschuwing).toBe(true);
+  });
+
+  test("de vlag gaat terug na een korte tijd, zodat een geannuleerde herlading de waarschuwing herstelt", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = useVersieStore();
+      store.zetVoorHerladen(async () => true);
+      await store.herlaad(vi.fn());
+      expect(store.zonderWaarschuwing).toBe(true);
+      await vi.advanceTimersByTimeAsync(ZONDER_WAARSCHUWING_MS - 1);
+      expect(store.zonderWaarschuwing).toBe(true);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(store.zonderWaarschuwing).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

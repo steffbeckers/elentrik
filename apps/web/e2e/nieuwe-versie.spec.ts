@@ -93,6 +93,81 @@ test("gesloten: dezelfde build meldt niet opnieuw, een volgende wel", async ({ p
   }).toPass({ timeout: 15_000 });
 });
 
+test("Herladen in de toast herlaadt een gewone pagina zonder vraag", async ({ page }) => {
+  const dialogen: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogen.push(dialog.type());
+    await dialog.dismiss();
+  });
+  await nepBuild(page, "nep-build-1");
+  await startOp(page, "/");
+  await page.evaluate(() => {
+    (window as unknown as Markering).__markering = "voor-herladen";
+  });
+  await expect(async () => {
+    await lokControleUit(page);
+    await expect(page.getByText(TOAST_TEKST, { exact: true })).toBeVisible({ timeout: 1_500 });
+  }).toPass({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Herladen" }).click();
+
+  // Een volledige herlading: de markering op `window` is weg.
+  await expect.poll(() => page.evaluate(() => (window as unknown as Markering).__markering)).toBeUndefined();
+  expect(dialogen).toEqual([]);
+});
+
+test("Herladen in de toast is een gewone herlading: de editor met onbewaard werk vraagt eerst om bevestiging", async ({
+  page,
+  request,
+}) => {
+  const dialogen: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogen.push(dialog.type());
+    // De gebruiker annuleert: de pagina blijft staan.
+    await dialog.dismiss();
+  });
+
+  const aangemaakt = await request.post("/api/projecten", {
+    data: { naam: `${naam} toast`, klantnaam: "Janssens", stroomtype: "2x230V" },
+  });
+  const { id } = (await aangemaakt.json()) as { id: string };
+  await nepBuild(page, "nep-build-1");
+  await startOp(page, `/projecten/${id}`);
+  await page.waitForLoadState("networkidle");
+  const canvas = page.getByTestId("schema-canvas");
+  await expect(canvas.locator('[data-testid^="plus-rail-einde-"]')).toHaveCount(1);
+
+  // Een ander venster bewaart intussen; een wijziging hier botst daarop: onbewaard werk (conflict).
+  const project = (await (await request.get(`/api/projecten/${id}`)).json()) as { versie: number; document: unknown };
+  const ander = await request.put(`/api/projecten/${id}`, {
+    headers: { "If-Match": String(project.versie) },
+    data: { document: project.document },
+  });
+  expect(ander.ok()).toBe(true);
+  await page.getByRole("button", { name: "Passend maken" }).click();
+  await canvas.locator('[data-testid^="plus-rail-einde-"]').click();
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Conflict", { timeout: 15_000 });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.evaluate(() => {
+    (window as unknown as Markering).__markering = "blijft";
+  });
+
+  await expect(async () => {
+    await lokControleUit(page);
+    await expect(page.getByText(TOAST_TEKST, { exact: true })).toBeVisible({ timeout: 1_500 });
+  }).toPass({ timeout: 15_000 });
+  const herladen = page.getByRole("button", { name: "Herladen" });
+  await herladen.click();
+
+  // De browser vraagt "pagina verlaten?" (beforeunload); geannuleerd blijft alles staan.
+  await expect.poll(() => dialogen).toEqual(["beforeunload"]);
+  expect(await page.evaluate(() => (window as unknown as Markering).__markering)).toBe("blijft");
+  await expect(page).toHaveURL(new RegExp(`/projecten/${id}$`));
+  // De knop komt na een tel terug en kan opnieuw.
+  await expect(herladen).toBeEnabled();
+});
+
 test("een API-antwoord met een andere minimumversie geeft het modale venster, dat niet weg te klikken is", async ({
   page,
 }) => {
@@ -145,6 +220,10 @@ test("Herladen in het modale venster herlaadt de editor zonder vraag, en het con
   await page.waitForLoadState("networkidle");
   const canvas = page.getByTestId("schema-canvas");
   await expect(canvas.locator('[data-testid^="plus-rail-einde-"]')).toHaveCount(1);
+  // Het aantal elementen in het schema: de wijziging voegt een onderdeel toe.
+  const aantalElementen = () => canvas.locator("*").count();
+  const voorWijziging = await aantalElementen();
+  const origineel = (await (await request.get(`/api/projecten/${id}`)).json()) as { versie: number; document: unknown };
 
   // De server vraagt een nieuwe versie: elke bewaring krijgt een 426.
   await page.route("**/api/projecten/*", async (route) => {
@@ -165,10 +244,28 @@ test("Herladen in het modale venster herlaadt de editor zonder vraag, en het con
     (window as unknown as Markering).__markering = "voor-herladen";
   });
 
+  const naWijziging = await aantalElementen();
   await venster.getByRole("button", { name: "Herladen" }).click();
 
   // Na het laden biedt het concept-herstel het werk aan.
   await expect(page.getByRole("dialog")).toContainText("Lokaal concept gevonden", { timeout: 30_000 });
   expect(await page.evaluate(() => (window as unknown as Markering).__markering)).toBeUndefined();
+  expect(dialogen).toEqual([]);
+
+  // De server accepteert weer (de nieuwe versie is binnen): het concept laden verliest het werk niet.
+  await page.unroute("**/api/projecten/*");
+  await page.getByRole("dialog").getByRole("button", { name: "Concept laden" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // De wijziging staat in de editor: er zijn meer elementen dan voor de wijziging (de selectie kan er een
+  // of twee van verschillen, vandaar geen gelijkheid met `naWijziging`).
+  await expect(canvas.locator('[data-testid^="plus-rail-einde-"]')).toHaveCount(1);
+  expect(naWijziging).toBeGreaterThan(voorWijziging);
+  expect(await aantalElementen()).toBeGreaterThan(voorWijziging);
+
+  // De autosave eindigt in een nette toestand: opgeslagen, en de server heeft de wijziging.
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 20_000 });
+  const bewaard = (await (await request.get(`/api/projecten/${id}`)).json()) as { versie: number; document: unknown };
+  expect(bewaard.versie).toBe(origineel.versie + 1);
+  expect(JSON.stringify(bewaard.document)).not.toBe(JSON.stringify(origineel.document));
   expect(dialogen).toEqual([]);
 });
