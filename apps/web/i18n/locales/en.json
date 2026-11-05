@@ -783,6 +783,11 @@
       "vrijeCode": "New available circuit code",
       "codeOngeldig": "Use an available code with capital letters A–Z.",
       "maakKopie": "Add circuit with this code"
+    },
+    "invoegenVoor": {
+      "actie": "Insert {onderdeel} before {doel}",
+      "selectie": "the selection",
+      "uitleg": "The existing component and its downstream components are kept. Check the new properties afterwards."
     }
   },
   "bedrijf": {

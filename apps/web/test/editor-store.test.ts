@@ -1027,3 +1027,14 @@ test('clearing an unknown installation field does not invent a conduit value',()
  const store=laadNieuw();const l=nieuweKring(store);const avant=store.document;
  store.wijzigVeld([l],'aanleg.ligging',undefined);expect(node(store,l)).not.toHaveProperty('aanleg');expect(store.document).toBe(avant);
 });
+test.each(['leiding','differentieel'] as const)('explicit %s insertion before selection is one undo step and selects the new node', tool=>{
+ const store=laadNieuw();const child=tool==='leiding'?eersteVan(store,'differentieel'):nieuweKring(store);store.onderdeel=tool;store.selectie=[child];
+ const before=store.document;const steps=store.terug.length;expect(store.kanVoorSelectieInvoegen).toBe(true);
+ store.voegVoorSelectieIn();const newId=store.selectie[0]!;expect(newId).not.toBe(child);expect(node(store,newId).type).toBe(tool);expect(node(store,newId).kinderen).toEqual([child]);expect(node(store,child).parentId).toBe(newId);expect(store.terug).toHaveLength(steps+1);
+ const after=store.document;store.ongedaanMaken();expect(store.document).toEqual(before);store.opnieuw();expect(store.document).toEqual(after);
+});
+test('insert-before is disabled with invalid/multiple selection or readonly and keeps state unchanged',()=>{
+ const store=laadNieuw();store.onderdeel='leiding';const before=store.document;
+ for(const ids of [[],[before!.rootId],[eersteVan(store,'differentieel'),eersteVan(store,'verdeelbord')]]){store.selectie=ids;expect(store.kanVoorSelectieInvoegen).toBe(false);store.voegVoorSelectieIn();expect(store.document).toBe(before);}
+ store.selectie=[eersteVan(store,'differentieel')];store.zetAlleenLezen(true);expect(store.kanVoorSelectieInvoegen).toBe(false);store.voegVoorSelectieIn();expect(store.document).toBe(before);expect(store.terug).toHaveLength(0);
+});

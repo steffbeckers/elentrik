@@ -11,6 +11,8 @@ export {
   verwijder,
   verwijderEnkel,
   voegToe,
+  voegInVoor,
+  magInvoegenVoor,
   wijzigEigenschappen,
   type NodeInvoer,
   type OperatieResultaat,

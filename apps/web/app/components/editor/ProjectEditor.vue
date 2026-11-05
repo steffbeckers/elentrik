@@ -601,7 +601,7 @@ onBeforeUnmount(() => {
       <AbonnementBanner v-if="!admin" />
       <EditorWerkruimte ref="werkruimte" :tabblad="store.tabblad" :selectie="store.selectie" :heeft-plan="!!situatie.actievePagina?.achtergrond">
         <template #gereedschap>
-          <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" @sjabloon="openSjabloon" @lichtschakeling="lichtschakelingOpen = true" @referenties="referentiesOpen = true" />
+          <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" @sjabloon="openSjabloon" @lichtschakeling="lichtschakelingOpen = true" @referenties="referentiesOpen = true" @eigenschappen="werkruimte?.toonEigenschappen()" />
           <TePlaatsenPaneel v-else :inert="situatie.actievePagina?.referentie || undefined" v-model:gekozen="teplaatsen" v-model:zoek="plaatsZoek" v-model:kring="plaatsKring" v-model:doorgaan="doorplaatsen" @volgorde="plaatsVolgorde = $event" />
         </template>
         <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />

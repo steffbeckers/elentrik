@@ -5,6 +5,9 @@ import { STANDAARD_PAPIER_A4, opmaak as legOp, type SchemaOpmaak } from "@elentr
 import {
   DocumentFout,
   magToevoegen,
+  magInvoegenVoor,
+  voegInVoor,
+  STANDAARD,
   migreer,
   legKringCodesVast as legCodesVast,
   hernummerKringen as hernummer,
@@ -265,6 +268,19 @@ export const useEditorStore = defineStore("editor", () => {
     );
     pasToe(r);
     selectie.value = [r.ids[r.ids.length - 1]!];
+  }
+
+  const kanVoorSelectieInvoegen = computed(() => {
+    const doc = document.value;
+    const id = selectie.value[0];
+    const tool = onderdeel.value;
+    return !alleenLezen.value && !!doc && selectie.value.length === 1 && id !== undefined &&
+      (tool === "leiding" || tool === "differentieel") && magInvoegenVoor(doc, id, STANDAARD[tool]);
+  });
+  function voegVoorSelectieIn(): void {
+    if (!kanVoorSelectieInvoegen.value) return;
+    const r = voegInVoor(vereisDocument(), selectie.value[0]!, STANDAARD[onderdeel.value]);
+    pasToe(r); selectie.value = [r.id];
   }
 
   const kanAftakkingToevoegen = computed(() => {
@@ -530,6 +546,8 @@ export const useEditorStore = defineStore("editor", () => {
     ongedaanMaken,
     opnieuw,
     voegToe,
+    kanVoorSelectieInvoegen,
+    voegVoorSelectieIn,
     kanAftakkingToevoegen,
     voegAftakkingToeBijSelectie,
     voegSjabloonToe,

@@ -3,7 +3,7 @@ import { DocumentFout } from "./fouten";
 import { nieuwId } from "./ids";
 import { NodeSchema, type InstallatieDocument, type Node, type NodeId } from "./schema";
 import { TOEGELATEN_KINDEREN } from "./structuur";
-import { magAftakkingKind } from "./aftakkingen";
+import { isAftakkingNode, magAftakkingKind } from "./aftakkingen";
 
 import { bepaalKringCodes } from "./referenties";
 
@@ -111,6 +111,113 @@ export function voegToe(
     (draft) => {
       draft.nodes[id] = node;
       draft.nodes[parentId]!.kinderen.splice(plek, 0, id);
+    },
+    { id },
+  );
+}
+
+type InvoegVoorPlan = { ouder: Node; kind: Node; plek: number; nieuw: Node };
+
+/** Valideert beide nieuwe verbindingen zonder de bestaande boom te wijzigen. */
+function invoegVoorPlan(
+  doc: InstallatieDocument,
+  childId: NodeId,
+  invoer: NodeInvoer,
+): InvoegVoorPlan {
+  const kind = vereis(doc, childId);
+  if (kind.id === doc.rootId || kind.parentId === null)
+    throw new DocumentFout("ROOT_NIET_WIJZIGBAAR", { nodeId: childId });
+  if (invoer.type !== "leiding" && invoer.type !== "differentieel")
+    throw new DocumentFout("NIET_TOEGELATEN_KIND", {
+      reden: "alleen leiding of differentieel invoegen",
+    });
+  if (AFGELEIDE_VELDEN.some((veld) => Object.hasOwn(invoer, veld)))
+    throw new DocumentFout("ONGELDIG_SCHEMA", {
+      reden: "structuurvelden zijn niet toegelaten",
+    });
+  const ouder = vereis(doc, kind.parentId);
+  const plek = ouder.kinderen.indexOf(childId);
+  if (plek < 0 || ouder.kinderen.lastIndexOf(childId) !== plek)
+    throw new DocumentFout("ONGELDIG_SCHEMA", {
+      reden: "inconsistente ouder",
+      nodeId: childId,
+    });
+  if (isAftakkingNode(kind) || isAftakkingNode(ouder))
+    throw new DocumentFout("NIET_TOEGELATEN_KIND", {
+      reden: "geen invoeging op een aftakkingsgrens",
+    });
+  controleerType(ouder, invoer);
+  controleerType(invoer, kind);
+  let controleId = "invoeg-controle";
+  while (Object.hasOwn(doc.nodes, controleId)) controleId += "-";
+  const geparsed = NodeSchema.safeParse({
+    ...invoer,
+    id: controleId,
+    parentId: ouder.id,
+    kinderen: [childId],
+  });
+  if (!geparsed.success)
+    throw new DocumentFout("ONGELDIG_SCHEMA", {
+      issues: geparsed.error.issues,
+    });
+  const nieuw = geparsed.data;
+  if (
+    !magAftakkingKind(ouder, nieuw, ouder.kinderen.length - 1) ||
+    !magAftakkingKind(nieuw, kind, 0)
+  )
+    throw new DocumentFout("NIET_TOEGELATEN_KIND", {
+      reden: "ongeldige aftakking",
+    });
+  if (nieuw.type === "differentieel" && nieuw.referentie !== undefined) {
+    const kinderen = ouder.kinderen.slice();
+    kinderen[plek] = controleId;
+    const concept: InstallatieDocument = {
+      ...doc,
+      nodes: {
+        ...doc.nodes,
+        [ouder.id]: { ...ouder, kinderen },
+        [kind.id]: { ...kind, parentId: controleId },
+        [controleId]: nieuw,
+      },
+    };
+    const voor = bepaalKringCodes(doc),
+      na = bepaalKringCodes(concept);
+    if (Object.keys(voor).some((id) => voor[id] !== na[id]))
+      throw new DocumentFout("ONGELDIG_SCHEMA", {
+        reden: "invoegen wijzigt bestaande referenties",
+      });
+  }
+  return { ouder, kind, plek, nieuw };
+}
+
+export function magInvoegenVoor(
+  doc: InstallatieDocument,
+  childId: NodeId,
+  invoer: NodeInvoer,
+): boolean {
+  try {
+    invoegVoorPlan(doc, childId, invoer);
+    return true;
+  } catch (fout) {
+    if (fout instanceof DocumentFout) return false;
+    throw fout;
+  }
+}
+
+/** Voegt alleen een leiding of differentieel voor een bestaande node in, als een undo-stap. */
+export function voegInVoor(
+  doc: InstallatieDocument,
+  childId: NodeId,
+  invoer: NodeInvoer,
+): OperatieResultaat & { id: NodeId } {
+  const { ouder, kind, plek, nieuw } = invoegVoorPlan(doc, childId, invoer);
+  const id = nieuwId();
+  return resultaat(
+    doc,
+    (draft) => {
+      draft.nodes[id] = { ...nieuw, id };
+      draft.nodes[ouder.id]!.kinderen[plek] = id;
+      draft.nodes[kind.id]!.parentId = id;
     },
     { id },
   );

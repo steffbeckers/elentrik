@@ -783,6 +783,11 @@
       "vrijeCode": "Nieuwe vrije kringcode",
       "codeOngeldig": "Gebruik een vrije code met hoofdletters A–Z.",
       "maakKopie": "Kring met deze code toevoegen"
+    },
+    "invoegenVoor": {
+      "actie": "{onderdeel} vóór {doel} invoegen",
+      "selectie": "de selectie",
+      "uitleg": "Het bestaande onderdeel en zijn vervolg blijven behouden. Controleer daarna de nieuwe eigenschappen."
     }
   },
   "bedrijf": {

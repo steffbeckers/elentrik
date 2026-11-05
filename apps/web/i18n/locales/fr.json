@@ -783,6 +783,11 @@
       "vrijeCode": "Nouveau repère disponible",
       "codeOngeldig": "Utilisez un repère disponible en majuscules A–Z.",
       "maakKopie": "Ajouter le circuit avec ce repère"
+    },
+    "invoegenVoor": {
+      "actie": "Insérer {onderdeel} avant {doel}",
+      "selectie": "la sélection",
+      "uitleg": "L’élément existant et sa suite sont conservés. Vérifiez ensuite les nouvelles propriétés."
     }
   },
   "bedrijf": {

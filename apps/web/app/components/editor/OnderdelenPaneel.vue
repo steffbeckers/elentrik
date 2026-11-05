@@ -4,6 +4,7 @@ import SymboolVoorbeeld from "~/components/editor/SymboolVoorbeeld.vue";
 import { ONDERDEEL_PER_TOETS, SYMBOLEN_TOETS } from "~/composables/sneltoetsen";
 import { useSymboolNamen } from "~/composables/useSymboolNamen";
 import { KAARTEN, voorbeeldNode, wijktAf, type Kaart } from "~/editor/symbolen";
+import { schemaKeuzes } from "~/editor/schema-navigatie";
 import { VELDEN } from "~/editor/velden";
 import { BEGIN_VOORINSTELLINGEN, useEditorStore } from "~/stores/editor";
 
@@ -20,7 +21,7 @@ const ONDERDELEN: Onderdeel[] = [
 ];
 
 const store = useEditorStore();
-const emit = defineEmits<{ sjabloon: [id: string]; lichtschakeling: []; referenties: [] }>();
+const emit = defineEmits<{ sjabloon: [id: string]; lichtschakeling: []; referenties: []; eigenschappen: [] }>();
 const { t, te } = useI18n();
 const voerUit = useDocumentFoutMelding();
 const { variantTekst } = useSymboolNamen();
@@ -51,6 +52,20 @@ const toestelsoorten = computed(() =>
     label: o.labelSleutel ? t(o.labelSleutel) : String(o.waarde),
   })),
 );
+
+const voorInvoegenZichtbaar = computed(() => store.onderdeel === "leiding" || store.onderdeel === "differentieel");
+const voorInvoegenDoel = computed(() => {
+  if (!store.document || !store.analyse || store.selectie.length !== 1) return undefined;
+  return schemaKeuzes(store.document, store.analyse, type => t(`editor.types.${type}`)).find(k => k.id === store.selectie[0])?.label;
+});
+const voorInvoegenLabel = computed(() => t("editor.invoegenVoor.actie", {
+  onderdeel: t(`editor.types.${store.onderdeel}`), doel: voorInvoegenDoel.value ?? t("editor.invoegenVoor.selectie"),
+}));
+function voegVoorIn(): void {
+  if (!store.kanVoorSelectieInvoegen) return;
+  const vorig = store.selectie[0];
+  if (voerUit(() => store.voegVoorSelectieIn()) && store.selectie[0] !== vorig) emit("eigenschappen");
+}
 
 function sjabloonNaam(id: string, naam: string): string {
   const sleutel = `editor.sjablonen.${id}`;
@@ -126,6 +141,12 @@ function voegSjabloonToe(id: string): void {
           </UFormField>
         </li>
       </ul>
+      <div v-if="voorInvoegenZichtbaar" class="mt-3 space-y-2">
+        <UButton block color="neutral" variant="outline" class="justify-start whitespace-normal text-left"
+          :label="voorInvoegenLabel" :disabled="!store.kanVoorSelectieInvoegen"
+          data-testid="invoegen-voor-selectie" @click="voegVoorIn" />
+        <p class="text-xs text-muted">{{ $t("editor.invoegenVoor.uitleg") }}</p>
+      </div>
       <UButton
         block
         color="neutral"
