@@ -62,7 +62,7 @@ export function maakAftakkingBlokken(
       if (!geldig) continue;
       const symbolen = ids.map((nodeId, i) => {
         const node = doc.nodes[nodeId]!;
-        if (node.type !== "schakelaar" && node.type !== "lichtpunt") throw new Error("Geen aftakkingssymbool");
+        if (node.type !== "schakelaar" && node.type !== "lichtpunt" && node.type !== "contactdoos" && node.type !== "toestel") throw new Error("Geen aftakkingssymbool");
         const s = tekenAftakkingSymbool(node, i === ids.length - 1);
         leden.add(nodeId);
         return s;

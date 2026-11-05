@@ -33,7 +33,7 @@ describe("vrij opbouwbare aftakkingen", () => {
     const id = a.ids[0]!;
     expect(magToevoegen(a.doc, { soort: "aftakking", nodeId: id }, "lichtpunt")).toBe(false);
     expect(magToevoegen(a.doc, { soort: "aftakking-einde", nodeId: leiding }, "lichtpunt")).toBe(false);
-    expect(magToevoegen(a.doc, { soort: "aftakking-einde", nodeId: id }, "contactdoos")).toBe(false);
+    expect(magToevoegen(a.doc, { soort: "aftakking-einde", nodeId: id }, "leiding")).toBe(false);
     expect(magToevoegen(a.doc, { soort: "kring-einde", nodeId: id }, "lichtpunt")).toBe(false);
     expect(() => voegToe(a.doc, id, { type: "lichtpunt", aantal: 1 })).toThrow();
     expect(() => wijzigEigenschappen(a.doc, id, { aftakking: undefined })).toThrow();

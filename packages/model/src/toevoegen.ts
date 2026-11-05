@@ -48,7 +48,7 @@ function nieuweNodes(
     const geldigDoel = aanknoping.soort === "aftakking"
       ? node.type === "leiding"
       : isAftakkingNode(node) && node.kinderen.length === 0;
-    if (!geldigDoel || (onderdeel !== "schakelaar" && onderdeel !== "lichtpunt")) {
+    if (!geldigDoel || !["schakelaar", "lichtpunt", "contactdoos", "toestel"].includes(onderdeel)) {
       throw nietToegelaten({ reden: "ongeldige aftakking", nodeId: node.id, onderdeel });
     }
     return [{ ...onderdeelInvoer(onderdeel, voorinstelling), aftakking: true } as NodeInvoer];

@@ -123,6 +123,7 @@ export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({
     ...basis,
     type: z.literal("contactdoos"),
+    aftakking: z.literal(true).optional(),
     aantal: positiefGeheel,
     randaarde: z.boolean(),
     kinderbeveiliging: z.boolean(),
@@ -145,6 +146,7 @@ export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({
     ...basis,
     type: z.literal("toestel"),
+    aftakking: z.literal(true).optional(),
     soort: ToestelsoortSchema,
     vermogen_W: z.number().optional(),
   }),

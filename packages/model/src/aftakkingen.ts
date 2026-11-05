@@ -1,8 +1,8 @@
 import type { Node } from "./schema";
 
-/** Alleen schakelaars en lichtpunten kunnen lid zijn van een horizontale aftakking. */
+/** Punten in één horizontale samenstelling delen één elektrische puntreferentie. */
 export function isAftakkingNode(node: { type: string; aftakking?: true }): node is Node & { aftakking: true } {
-  return (node.type === "schakelaar" || node.type === "lichtpunt") && node.aftakking === true;
+  return ["schakelaar", "lichtpunt", "contactdoos", "toestel"].includes(node.type) && node.aftakking === true;
 }
 
 /** Een gemarkeerde reeks begint aan een leiding en heeft hoogstens één opvolger per symbool. */
