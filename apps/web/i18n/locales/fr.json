@@ -964,7 +964,10 @@
         "motor": "Moteur",
         "ventilator": "Ventilateur",
         "koelkast": "Réfrigérateur",
-        "diepvriezer": "Congélateur"
+        "diepvriezer": "Congélateur",
+        "wand": "Point lumineux mural",
+        "tweepolig": "Bipolaire",
+        "deurbelMonitor": "Carillon / moniteur"
       }
     },
     "ruimteNaam": {
@@ -994,6 +997,9 @@
       "inBuis": {
         "label": "Sous conduit"
       }
+    },
+    "metBeschermingsgeleider": {
+      "label": "Avec conducteur de protection (G)"
     }
   },
   "ruimtes": {

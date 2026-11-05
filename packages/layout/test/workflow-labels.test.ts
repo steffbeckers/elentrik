@@ -64,3 +64,41 @@ test("a legacy cable description containing the same fire class is not printed t
       brandreactieklasse: "Cca",
     }),
   ).toBe("XVB Cca 3G2,5"));
+test.each([
+  [
+    {
+      kabeltype: "XVB",
+      aantalGeleiders: 4,
+      doorsnede_mm2: 10,
+      metBeschermingsgeleider: false,
+    },
+    "XVB 4x10",
+  ],
+  [
+    {
+      kabeltype: "Solar DC",
+      aantalGeleiders: 2,
+      doorsnede_mm2: 6,
+      metBeschermingsgeleider: false,
+    },
+    "Solar DC 2x6",
+  ],
+  [{ metBeschermingsgeleider: true }, "XVB 3G2,5"],
+  [{}, "XVB 3G2,5"],
+])(
+  "source cable notation preserves explicit PE presence %s",
+  (data, expected) => {
+    expect(
+      leidingLabel({
+        id: "l",
+        parentId: null,
+        kinderen: [],
+        type: "leiding",
+        kabeltype: "XVB",
+        aantalGeleiders: 3,
+        doorsnede_mm2: 2.5,
+        ...data,
+      }),
+    ).toBe(expected);
+  },
+);

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { DocumentFout, type Node, type NodeType } from "@elentrik/model";
-import { GEMEENSCHAPPELIJK, VELDEN, type Veld } from "~/editor/velden";
-import { Werkconcepten, veldWaarde } from "~/editor/werkconcept";
+import { GEMEENSCHAPPELIJK, VELDEN, veldWeergaveWaarde, type Veld } from "~/editor/velden";
+import { Werkconcepten } from "~/editor/werkconcept";
 import { useEditorStore } from "~/stores/editor";
 
 /** De waarde van een veld bij een meervoudige selectie waarin de nodes verschillen. */
@@ -43,7 +43,7 @@ const titel = computed(() => {
 });
 
 function waardeVan(veld: Veld): unknown {
-  const waarden = nodes.value.map((n) => veldWaarde(n, veld.sleutel));
+  const waarden = nodes.value.map((n) => veldWeergaveWaarde(n, veld));
   const eerste = waarden[0];
   return waarden.every((w) => w === eerste) ? eerste : VERSCHILLEND;
 }

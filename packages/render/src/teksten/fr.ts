@@ -56,6 +56,7 @@ export const FR: Teksten = {
     laadpaal: "borne de recharge",
     omvormer: "onduleur",
     pvPaneel: "panneau photovoltaïque",
+    deurbelMonitor: "carillon / moniteur",
     bel: "sonnerie",
     motor: "moteur",
     ventilator: "ventilateur",
@@ -66,8 +67,8 @@ export const FR: Teksten = {
   metadata: {"titel":"Informations du projet","verwijzing":"Voir données du projet","naam":"Nom","adres":"Adresse","straat":"Rue","nummer":"Numéro","bus":"Boîte","postcode":"Code postal","gemeente":"Commune","land":"Pays","telefoon":"Téléphone","email":"E-mail","ondernemingsnummer":"Numéro d’entreprise","keuringsorganisme":"Organisme de contrôle","paginatitel":"Titre de page"},
   schaalAfdruk: "Échelle pour impression à 100 %",
   controlebeperking: "Contrôles automatiques préliminaires et limités. Ne constitue pas une preuve de conformité au RGIE.",
-  schakelaarsoorten: {"enkel":"simple","dubbel":"bipolaire","wissel":"va-et-vient","kruis":"permutateur","dimmer":"variateur","drukknop":"bouton-poussoir"},
-  lichtpuntsoorten: {"standaard":"standard","led":"LED","tl":"fluorescent","spot":"spot","noodverlichting":"éclairage de secours"},
+  schakelaarsoorten: {"tweepolig":"bipolaire","enkel":"simple","dubbel":"double allumage","wissel":"va-et-vient","kruis":"permutateur","dimmer":"variateur","drukknop":"bouton-poussoir"},
+  lichtpuntsoorten: {"wand":"point lumineux mural","standaard":"standard","led":"LED","tl":"fluorescent","spot":"spot","noodverlichting":"éclairage de secours"},
   ruimtes: {
     hal: "Hall",
     badkamer: "Salle de bain",

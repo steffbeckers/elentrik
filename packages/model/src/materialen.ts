@@ -11,7 +11,7 @@ export type MateriaalRij = {
 };
 
 const GEEN_MATERIAALEIGENSCHAP = new Set([
-  "id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam", "naam", "aantal", "lengte_m", "plaatsing", "aanleg", "kringCode", "referentie",
+  "id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam", "naam", "aantal", "lengte_m", "plaatsing", "aanleg", "kringCode", "referentie", "metBeschermingsgeleider",
 ]);
 
 /** Afgeleid van de onderdelen, nooit van plaatsingen of afnemers: elke leiding telt één keer. */
@@ -29,6 +29,7 @@ export function materiaallijst(doc: InstallatieDocument): MateriaalRij[] {
     if (node.type === "lichtpunt") eigenschappen.soort = node.soort ?? "standaard";
     const draad = node.type === "leiding" && node.kabeltype.trim().toUpperCase() === "VOB";
     if (node.type === "leiding") eigenschappen.kabeltype = node.kabeltype.trim().toUpperCase();
+    if (node.type === "leiding") eigenschappen.metBeschermingsgeleider = node.metBeschermingsgeleider ?? true;
     // VOB wordt per losse draad verkocht; het aantal geleiders bepaalt de meters, niet de uitvoering.
     if (draad) delete eigenschappen.aantalGeleiders;
     const sleutel = JSON.stringify([node.type, eigenschappen]);

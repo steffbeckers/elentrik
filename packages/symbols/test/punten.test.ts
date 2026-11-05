@@ -42,6 +42,7 @@ const contactdozen: ReadonlyArray<[string, Node]> = AAN_UIT.flatMap((randaarde) 
 const lichtpunten: ReadonlyArray<[string, Node]> = [
   ["lichtpunt zonder soort", licht()],
   ["lichtpunt standaard", licht("standaard")],
+  ["lichtpunt wand", licht("wand")],
   ["lichtpunt led", licht("led")],
   ["lichtpunt tl", licht("tl")],
   ["lichtpunt spot", licht("spot")],
@@ -51,6 +52,7 @@ const lichtpunten: ReadonlyArray<[string, Node]> = [
 
 const schakelaars: ReadonlyArray<[string, Node]> = [
   ["schakelaar enkel", schakelaar("enkel")],
+  ["schakelaar tweepolig", schakelaar("tweepolig")],
   ["schakelaar dubbel", schakelaar("dubbel")],
   ["schakelaar wissel", schakelaar("wissel")],
   ["schakelaar kruis", schakelaar("kruis")],
@@ -619,7 +621,7 @@ describe("symbolen voor punten, leiding en onderbord", () => {
     ] as const;
 
     test("alle soorten hebben een test", () => {
-      expect([...vierkantSoorten, "boiler", "laadpaal", "bel", "motor"].sort()).toEqual([...ToestelsoortSchema.options].sort());
+      expect([...vierkantSoorten, "boiler", "laadpaal", "bel", "motor", "deurbelMonitor"].sort()).toEqual([...ToestelsoortSchema.options].sort());
     });
 
     test.each(vierkantSoorten)("%s is een vierkant van 10 × 10 in een kader van 12 × 12", (soort) => {

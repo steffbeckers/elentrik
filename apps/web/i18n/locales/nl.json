@@ -964,7 +964,10 @@
         "motor": "Motor",
         "ventilator": "Ventilator",
         "koelkast": "Koelkast",
-        "diepvriezer": "Diepvriezer"
+        "diepvriezer": "Diepvriezer",
+        "wand": "Wandlichtpunt",
+        "tweepolig": "Tweepolig",
+        "deurbelMonitor": "Deurbel / monitor"
       }
     },
     "ruimteNaam": {
@@ -994,6 +997,9 @@
       "inBuis": {
         "label": "In buis"
       }
+    },
+    "metBeschermingsgeleider": {
+      "label": "Met beschermingsgeleider (G)"
     }
   },
   "ruimtes": {

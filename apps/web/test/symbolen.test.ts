@@ -44,7 +44,7 @@ describe("kaartenbron", () => {
   });
 
   test("aantal combinaties", () => {
-    const aantallen: Partial<Record<NodeType, number>> = { contactdoos: 8, lichtpunt: 5, schakelaar: 12, toestel: 16 };
+    const aantallen: Partial<Record<NodeType, number>> = { contactdoos: 8, lichtpunt: 6, schakelaar: 14, toestel: 17 };
     for (const k of KAARTEN) expect(combinaties(k)).toHaveLength(aantallen[k.type] ?? 1);
     expect(combinaties(kaartVan("leiding"))).toEqual([{}]);
   });

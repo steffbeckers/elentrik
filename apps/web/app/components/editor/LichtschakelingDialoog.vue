@@ -6,6 +6,7 @@ import {
   type LichtschakelingOpties,
   type DifferentieelInstellingen,
 } from "@elentrik/model";
+import { VELDEN } from "~/editor/velden";
 import { useEditorStore } from "~/stores/editor";
 import {
   invoegBestemmingen,
@@ -19,6 +20,9 @@ const open = defineModel<boolean>("open", { default: false });
 const store = useEditorStore();
 const { t } = useI18n();
 const voerUit = useDocumentFoutMelding();
+const lichtsoorten = computed(() => (VELDEN.lichtpunt.find(v => v.sleutel === "soort")?.opties ?? [])
+  .map(o => ({ value: o.waarde, label: o.labelSleutel ? t(o.labelSleutel) : String(o.waarde) })));
+
 const doel = ref<LichtschakelingDoel>();
 const opties = reactive<LichtschakelingOpties>({
   schakeling: "enkel",
@@ -137,14 +141,7 @@ function voegIn() {
           <UFormField :label="$t('velden.soort.label')"
             ><USelect
               v-model="opties.lichtsoort"
-              :items="
-                ['standaard', 'led', 'tl', 'spot', 'noodverlichting'].map(
-                  (value) => ({
-                    value,
-                    label: t(`velden.soort.opties.${value}`),
-                  }),
-                )
-              "
+              :items="lichtsoorten"
               class="w-full"
               :disabled="store.alleenLezen"
           /></UFormField>

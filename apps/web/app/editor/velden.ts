@@ -11,6 +11,7 @@
 // (een import gaf "does not provide an export named 'ruimtes'"), dus die controle draait in
 // test/velden.test.ts, die elke sleutel van elk schema afloopt.
 import { NodeSchema, type NodeType } from "@elentrik/model";
+import { veldWaarde } from "./werkconcept";
 
 export type Veld = {
   sleutel: string;
@@ -20,6 +21,8 @@ export type Veld = {
   eenheid?: string;
   /** Zonder `labelSleutel` toont een optie haar waarde zelf: een getal (polen) of een symbool (curve B). */
   suggesties?: string[];
+  /** Alleen een weergavestandaard; schrijft geen attribuut naar het document. */
+  standaard?: boolean;
   opties?: { waarde: string | number; labelSleutel?: string }[];
   min?: number;
   stap?: number;
@@ -123,6 +126,7 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
     default:
       throw new Error(`velden.ts: geen veldsoort voor ${sleutel} (${schema.def.type})`);
   }
+  if (sleutel === "metBeschermingsgeleider") veld.standaard = true;
   if (sleutel === "brandreactieklasse") veld.suggesties = ["Eca", "Cca"];
   if (optioneel) veld.optioneel = true;
   return veld;
@@ -156,3 +160,9 @@ export function bouwVelden(boom?: Boom): { GEMEENSCHAPPELIJK: Veld[]; VELDEN: Re
 }
 
 export const { GEMEENSCHAPPELIJK, VELDEN } = bouwVelden();
+
+/** Verbindt de optionele veldwaarde met dezelfde standaard die de gedeelde labels gebruiken. */
+export function veldWeergaveWaarde(node: unknown, veld: Pick<Veld, "sleutel" | "standaard">): unknown {
+  const waarde = veldWaarde(node, veld.sleutel);
+  return waarde === undefined ? veld.standaard : waarde;
+}

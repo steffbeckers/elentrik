@@ -109,6 +109,7 @@ export const NL: Teksten = {
     laadpaal: "laadpaal",
     omvormer: "omvormer",
     pvPaneel: "fotovoltaïsch paneel",
+    deurbelMonitor: "deurbel / monitor",
     bel: "bel",
     motor: "motor",
     ventilator: "ventilator",
@@ -119,8 +120,8 @@ export const NL: Teksten = {
   metadata: {"titel":"Projectgegevens","verwijzing":"Zie projectgegevens","naam":"Naam","adres":"Adres","straat":"Straat","nummer":"Huisnummer","bus":"Bus","postcode":"Postcode","gemeente":"Gemeente","land":"Land","telefoon":"Telefoon","email":"E-mail","ondernemingsnummer":"Ondernemingsnummer","keuringsorganisme":"Keuringsorganisme","paginatitel":"Paginatitel"},
   schaalAfdruk: "Schaal bij afdruk op 100%",
   controlebeperking: "Voorlopige, beperkte automatische controles. Geen bewijs van AREI-conformiteit.",
-  schakelaarsoorten: {"enkel":"enkel","dubbel":"dubbel","wissel":"wissel","kruis":"kruis","dimmer":"dimmer","drukknop":"drukknop"},
-  lichtpuntsoorten: {"standaard":"standaard","led":"led","tl":"tl","spot":"spot","noodverlichting":"noodverlichting"},
+  schakelaarsoorten: {"tweepolig":"tweepolig","enkel":"enkel","dubbel":"dubbel","wissel":"wissel","kruis":"kruis","dimmer":"dimmer","drukknop":"drukknop"},
+  lichtpuntsoorten: {"wand":"wandlichtpunt","standaard":"standaard","led":"led","tl":"tl","spot":"spot","noodverlichting":"noodverlichting"},
   ruimtes: {
     hal: "Hal",
     badkamer: "Badkamer",

@@ -1,3 +1,4 @@
+import { leidingLabel } from "@elentrik/layout";
 import { analyseer } from "@elentrik/arei";
 import type {
   InstallatieDocument,
@@ -47,7 +48,7 @@ export function invoegSpecificatie(node: Node): string {
     case "automaat":
       return `${node.curve}${node.nominaal_A} / ${node.polen}P`;
     case "leiding":
-      return `${node.kabeltype} ${node.aantalGeleiders}G${String(node.doorsnede_mm2).replace(".", ",")}`;
+      return leidingLabel(node);
     case "lichtpunt":
       return `${node.aantal}`;
     default:

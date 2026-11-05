@@ -964,7 +964,10 @@
         "motor": "Motor",
         "ventilator": "Fan",
         "koelkast": "Refrigerator",
-        "diepvriezer": "Freezer"
+        "diepvriezer": "Freezer",
+        "wand": "Wall light point",
+        "tweepolig": "Double-pole",
+        "deurbelMonitor": "Doorbell / monitor"
       }
     },
     "ruimteNaam": {
@@ -994,6 +997,9 @@
       "inBuis": {
         "label": "In conduit"
       }
+    },
+    "metBeschermingsgeleider": {
+      "label": "With protective conductor (G)"
     }
   },
   "ruimtes": {

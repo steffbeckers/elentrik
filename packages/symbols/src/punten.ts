@@ -80,6 +80,7 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">, horizontaal = fal
  * toevoerleiding, zonder cirkel. De leiding loopt van `in` door het snijpunt van het kruis tot
  * `uit`; bij de projector loopt ze niet door de lamp, maar eindigt ze aan de onderkant van de
  * cirkel en begint ze weer aan de bovenkant. De soort verandert het kruis:
+ * - "wand": hetzelfde kruis met een afzonderlijke korte wandlijn;
  * - "tl": het fluorescentietoestel, een lijn dwars op de leiding met een streepje aan beide
  *   uiteinden, zonder kruis;
  * - "spot": de projector, een kruis in een cirkel (⊗) met een boog aan de kant van `in`;
@@ -139,6 +140,10 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">, horizontaal = false, 
         );
       break;
     }
+    case "wand":
+      // ACA maart 2025 p.29: kruis met een afzonderlijke korte wandlijn.
+      svg += kruis(arm) + lijn(x + arm + 1, cy - arm, x + arm + 1, cy + arm, { data: { rol: "wand" } });
+      break;
     case "led":
       // Basislijn cy + 0,6: de tekst (1,8 mm) staat rechtop naast het kruis.
       svg += kruis(arm) + tekst(horizontaal ? x : x + 3, horizontaal ? 9.8 : cy + 0.6, "LED", { anker: horizontaal ? "middle" : "start", grootte: 1.8 });
@@ -181,6 +186,7 @@ function haak(x1: number, y1: number, x2: number, y2: number): string {
  * voeding weg (hier naar rechtsboven), onder 35° met de verticale lijn. Een haak is een streepje
  * haaks op het uiteinde van de hendel. De soort bepaalt de hendels:
  * - "enkel": het algemene symbool, één hendel zonder haak;
+ * - "tweepolig": een hendel met twee dwarse poolmarkeringen;
  * - "dubbel": de eenpolige omschakelaar (dubbele aansteking), twee hendels in een V naar `uit`,
  *   elk met een haak;
  * - "wissel": de eenpolige wisselschakelaar, twee hendels in tegengestelde richting (rechtsboven
@@ -215,6 +221,15 @@ export function tekenSchakelaar(node: NodeVan<"schakelaar">, horizontaal = false
     case "enkel":
       svg += hendel(1, -1, false);
       break;
+    case "tweepolig": {
+      // ACA maart 2025 p.28: een hendel met twee dwarse poolmarkeringen.
+      svg += hendel(1, -1, false);
+      for (const afstand of [r + buiten, r + buiten - 0.9]) {
+        const ex = x + afstand * s, ey = cy - afstand * c;
+        svg += lijn(ex, ey, ex + c, ey + s, { data: { rol: "pool-markering" } });
+      }
+      break;
+    }
     case "dubbel":
       svg += hendel(-1, -1, true) + hendel(1, -1, true);
       break;
@@ -288,6 +303,10 @@ export function tekenToestel(node: NodeVan<"toestel">, horizontaal = false, eind
   switch (node.soort) {
     case "andere":
       return { maat, svg: vierkant };
+    case "deurbelMonitor":
+      // ACA maart 2025 p.26 E1, caption "Deurbel / Monitor"; geen functie afgeleid als intercom.
+      return { maat, svg: vierkant + rechthoek(2, 2, 8, 6, PICTO) +
+        [2, 4.2, 6.4, 8.6].map(cx => rechthoek(cx, 9, 1.2, 1, PICTO)).join("") };
     case "bel":
       return { maat, svg: horizontaal
         ? lijn(0, y, 4, y) + lijn(4, 2, 4, 10, PICTO) + pad("M4 2 A4 4 0 0 1 4 10", PICTO) + (einde ? "" : lijn(8, y, breedte, y))

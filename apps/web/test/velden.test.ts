@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { NodeSchema, RuimteSchema, type NodeType } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { GEMEENSCHAPPELIJK, VELDEN, bouwVelden, type Veld } from "../app/editor/velden";
+import { GEMEENSCHAPPELIJK, VELDEN, bouwVelden, veldWeergaveWaarde, type Veld } from "../app/editor/velden";
 import nl from "../i18n/locales/nl.json";
 
 type Boom = { [sleutel: string]: string | Boom };
@@ -155,3 +155,10 @@ describe("GEMEENSCHAPPELIJK", () => {
 });
 
 test("installation exposes separate optional location and conduit fields",()=>{expect(VELDEN.leiding).toContainEqual(expect.objectContaining({sleutel:"aanleg.ligging",soort:"keuze",optioneel:true}));expect(VELDEN.leiding).toContainEqual(expect.objectContaining({sleutel:"aanleg.inBuis",soort:"schakelaar",optioneel:true}));});
+test('legacy PE defaults checked for display without mutating source and explicit false stays false',()=>{
+ const veld=VELDEN.leiding.find(v=>v.sleutel==='metBeschermingsgeleider')!;
+ const legacy={type:'leiding',kabeltype:'XVB'};
+ expect(veldWeergaveWaarde(legacy,veld)).toBe(true);
+ expect(legacy).not.toHaveProperty('metBeschermingsgeleider');
+ expect(veldWeergaveWaarde({...legacy,metBeschermingsgeleider:false},veld)).toBe(false);
+});

@@ -64,6 +64,7 @@ export const ToestelsoortSchema = z.enum([
   "omvormer",
   "pvPaneel",
   "bel",
+  "deurbelMonitor",
   "motor",
   "ventilator",
   "koelkast",
@@ -115,6 +116,8 @@ export const NodeSchema = z.discriminatedUnion("type", [
     // 0 = niet ingevuld
     doorsnede_mm2: z.number().min(0),
     aantalGeleiders: positiefGeheel,
+    /** Afwezig behoudt de bestaande G-notatie; alleen expliciet false geeft x. */
+    metBeschermingsgeleider: z.boolean().optional(),
     /** Lengte van het tracé in meter; ontbrekend betekent nog niet opgemeten. */
     lengte_m: z.number().min(0).optional(),
     brandreactieklasse: z.string().max(64).optional(),
@@ -134,13 +137,13 @@ export const NodeSchema = z.discriminatedUnion("type", [
     type: z.literal("lichtpunt"),
     aftakking: z.literal(true).optional(),
     aantal: positiefGeheel,
-    soort: z.enum(["standaard", "led", "tl", "spot", "noodverlichting"]).optional(),
+    soort: z.enum(["standaard", "wand", "led", "tl", "spot", "noodverlichting"]).optional(),
   }),
   z.strictObject({
     ...basis,
     type: z.literal("schakelaar"),
     aftakking: z.literal(true).optional(),
-    soort: z.enum(["enkel", "dubbel", "wissel", "kruis", "dimmer", "drukknop"]),
+    soort: z.enum(["enkel", "tweepolig", "dubbel", "wissel", "kruis", "dimmer", "drukknop"]),
     waterdicht: z.boolean(),
   }),
   z.strictObject({

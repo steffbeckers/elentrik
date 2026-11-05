@@ -56,6 +56,7 @@ export const EN: Teksten = {
     laadpaal: "EV charger",
     omvormer: "inverter",
     pvPaneel: "photovoltaic panel",
+    deurbelMonitor: "doorbell / monitor",
     bel: "bell",
     motor: "motor",
     ventilator: "fan",
@@ -66,8 +67,8 @@ export const EN: Teksten = {
   metadata: {"titel":"Project details","verwijzing":"See project details","naam":"Name","adres":"Address","straat":"Street","nummer":"House number","bus":"Box","postcode":"Postcode","gemeente":"Town","land":"Country","telefoon":"Phone","email":"Email","ondernemingsnummer":"Company number","keuringsorganisme":"Inspection body","paginatitel":"Page title"},
   schaalAfdruk: "Scale when printed at 100%",
   controlebeperking: "Preliminary, limited automated checks. Not proof of AREI compliance.",
-  schakelaarsoorten: {"enkel":"single-pole","dubbel":"double-pole","wissel":"two-way","kruis":"intermediate","dimmer":"dimmer","drukknop":"push button"},
-  lichtpuntsoorten: {"standaard":"standard","led":"LED","tl":"fluorescent","spot":"spot","noodverlichting":"emergency lighting"},
+  schakelaarsoorten: {"tweepolig":"double-pole","enkel":"single-pole","dubbel":"double lighting","wissel":"two-way","kruis":"intermediate","dimmer":"dimmer","drukknop":"push button"},
+  lichtpuntsoorten: {"wand":"wall light point","standaard":"standard","led":"LED","tl":"fluorescent","spot":"spot","noodverlichting":"emergency lighting"},
   ruimtes: {
     hal: "Hall",
     badkamer: "Bathroom",
