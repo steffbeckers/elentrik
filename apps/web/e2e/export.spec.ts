@@ -267,10 +267,17 @@ test.describe("echte pdf-export", () => {
     for (let punt = 1; punt <= 6; punt++) expect(schemaTekst).toMatch(new RegExp(`\\bA${punt}\\b`));
     pdf.paginaTeksten.forEach(tekst => expect(tekst).toContain("230 V"));
     pdf.paginaTeksten.forEach((tekst, i) => expect(tekst).toContain(`Pagina ${i + 1} / ${pdf.aantalPaginas}`));
-    // De bijlage vermeldt de info en de situatiepagina is niet overgeslagen. "Info (5)" hangt af van het
-    // sjabloon "Kring stopcontacten" (6 contactdozen, A1 tot A6) waarvan enkel A1 op het plan staat.
-    expect(pdf.paginaTeksten.at(-1)).toContain("Info (5)");
-    expect(pdf.paginaTeksten.at(-1)).not.toContain("Overgeslagen");
+    // De bijlage vermeldt de ongeplaatste punten en de situatiepagina is niet overgeslagen. Het sjabloon
+    // "Kring stopcontacten" heeft 6 contactdozen (A1 tot A6) waarvan enkel A1 op het plan staat; sinds de
+    // dossierchecklist staan A2 tot A6 daar, niet meer als "Info (5)" bij de bevindingen.
+    const bijlageTekst = pdf.paginaTeksten.at(-1)!;
+    for (let punt = 2; punt <= 6; punt++) expect(bijlageTekst).toContain(`A${punt} — Nog niet op een situatieplan geplaatst.`);
+    expect(bijlageTekst).not.toContain("A1 — Nog niet op een situatieplan geplaatst.");
+    expect(bijlageTekst).not.toContain("Overgeslagen");
+    // Geen metingen ingevuld: de bijlage zegt "niet ingevuld", met de vaste zin en zonder beoordeling.
+    expect(bijlageTekst).toContain("Aardingsweerstand niet ingevuld.");
+    expect(bijlageTekst).toContain("Aardingsweerstand: niet ingevuld");
+    expect(bijlageTekst).toContain("Geregistreerde meetwaarden; geen beoordeling door Elentrik.");
     // Het logo staat in de cartouche van pagina 1 (het eendraadschema heeft zelf geen afbeelding): dat is
     // de enige afbeelding op die pagina. Het plan staat op de situatiepagina.
     expect(pdf.afbeeldingenPerPagina[0]).toBeGreaterThanOrEqual(1);
