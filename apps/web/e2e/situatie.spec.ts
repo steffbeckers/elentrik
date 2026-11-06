@@ -525,6 +525,26 @@ test("zeven punten doorplaatsen houdt het paneel en plananker stabiel", async ({
   await expect(planSymbolen(page)).toHaveCount(6);
 });
 
+test("op een smal scherm blijft de uitleg naast de doorgaan-chip leesbaar", async ({ page }) => {
+  test.setTimeout(120_000);
+  await maakProjectMetContactdozen(page, `${naam} chip mobiel`, 2);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const toggle = page.getByTestId("werkruimte-onderdelen");
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  await page.getByTestId("te-plaatsen-doorgaan").click();
+  await page.getByTestId("te-plaatsen-A1").click();
+  await expect(page.getByTestId("plan-modus-doorgaan")).toBeVisible();
+  // De chip en Stop drukken de uitleg niet samen tot één woord per regel: ze breekt naar een eigen
+  // regel met de volle breedte, en niets ervan valt weg.
+  const tekst = page.getByTestId("plan-hint-tekst");
+  await expect(tekst).toHaveText("Klik op het plan om A1 te plaatsen.");
+  const maat = await tekst.evaluate((el) => ({ breedte: el.clientWidth, hoogte: el.clientHeight, inhoud: el.scrollHeight }));
+  expect(maat.breedte).toBeGreaterThan(200);
+  expect(maat.inhoud).toBeLessThanOrEqual(maat.hoogte + 1);
+});
+
 test("zoeken, kringfilter en Escape stoppen de plaatskeuze", async ({ page }) => {
   test.setTimeout(120_000);
   await maakProjectMetContactdozen(page, `${naam} filters`);

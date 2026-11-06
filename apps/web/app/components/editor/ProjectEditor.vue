@@ -650,7 +650,7 @@ onBeforeUnmount(() => {
 
             <div
               v-if="hint"
-              class="absolute inset-x-3 top-12 z-10 flex min-h-9 items-center gap-2 rounded border border-default bg-default px-3 py-1 text-sm"
+              class="absolute inset-x-3 top-12 z-10 flex min-h-9 flex-wrap items-center gap-x-2 gap-y-1 rounded border border-default bg-default px-3 py-1 text-sm"
               role="status"
               data-testid="plan-hint"
             >
@@ -664,7 +664,8 @@ onBeforeUnmount(() => {
                 class="shrink-0"
                 data-testid="plan-modus-doorgaan"
               />
-              <span class="max-h-full min-w-0 flex-1 overflow-auto">{{ hint }}</span>
+              <!-- Op een smal scherm breekt de uitleg naast de doorgaan-chip naar een eigen regel. -->
+              <span class="max-h-full min-w-0 flex-1 basis-48 overflow-auto" data-testid="plan-hint-tekst">{{ hint }}</span>
               <UButton
                 v-if="hint"
                 :color="doorplaatsenActief && !meetSchaal ? 'primary' : 'neutral'"

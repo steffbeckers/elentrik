@@ -231,6 +231,10 @@ test("? toont de sneltoetsen en Ctrl+D dupliceert een kring met de volgende vrij
   const dialoog = page.getByRole("dialog", { name: "Sneltoetsen" });
   await expect(dialoog).toBeVisible();
   await expect(dialoog.getByText("De geselecteerde kring dupliceren met de eerste vrije letter")).toBeVisible();
+  // De sluitknop staat niet over de uitleg in de kop (de lange zin liep er eerst onder door).
+  const uitleg = await dialoog.getByText(/^De toetsen werken als de focus/).boundingBox();
+  const sluiten = await dialoog.getByRole("button").first().boundingBox();
+  expect(uitleg!.x + uitleg!.width).toBeLessThanOrEqual(sluiten!.x);
   // In een open dialoog doen ? en Ctrl+D niets.
   await page.keyboard.press("Control+d");
   await expect(schemaTekst(page, "C1")).toHaveCount(0);

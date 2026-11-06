@@ -49,7 +49,7 @@ const groepen = computed(() => {
 </script>
 
 <template>
-  <UModal v-model:open="store.sneltoetsenOpen" :title="$t('editor.sneltoetsen.titel')" :description="$t('editor.sneltoetsen.beschrijving')" :ui="{ content: 'sm:max-w-2xl' }">
+  <UModal v-model:open="store.sneltoetsenOpen" :title="$t('editor.sneltoetsen.titel')" :description="$t('editor.sneltoetsen.beschrijving')" :ui="{ content: 'sm:max-w-2xl', wrapper: 'pe-10' }">
     <template #body>
       <div class="space-y-6" data-testid="sneltoetsen-dialoog">
         <section v-for="groep in groepen" :key="groep.context" :aria-labelledby="`sneltoetsen-${groep.context}`">
