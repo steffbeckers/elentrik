@@ -1,6 +1,8 @@
 import type { Analyse } from "@elentrik/arei";
-import type { InstallatieDocument } from "@elentrik/model";
+import type { InstallatieDocument, NodeId } from "@elentrik/model";
+import { nodeLabel } from "./situatie-items";
 import { tePlaatsen } from "./te-plaatsen";
+import type { Teksten } from "./teksten/index";
 
 /** Completeness includes all placeable components, including infrastructure. This is separate
  * from electrical point findings: an unplaced meter is incomplete, not an electrical violation.
@@ -21,4 +23,23 @@ export function dossierStatus(doc: InstallatieDocument | null, analyse: Analyse 
   const ongeplaatst = ongeplaatsteIds.length;
   return { ontbreekt, plannen, zonderPlan, ongeplaatst, ongeplaatsteIds,
     volledig: !!doc && !!analyse && !ontbreekt.length && plannen > 0 && !zonderPlan && !ongeplaatst };
+}
+
+/** Het label van het onderwerp van een node: het puntlabel, "Kring A" voor een kringbeveiliging, anders `nodeLabel`. */
+export function onderwerpLabel(doc: InstallatieDocument, analyse: Analyse, nodeId: NodeId, teksten: Teksten): string {
+  const punt = analyse.puntLabels[nodeId];
+  if (punt) return punt;
+  const kring = analyse.kringen.find((k) => k.beveiligingId === nodeId);
+  if (kring) return `${teksten.kolommen.kring} ${kring.label}`;
+  return nodeLabel(doc, analyse, nodeId, (type) => teksten.types[type]);
+}
+
+/** Hoe een ongeplaatst onderdeel genoemd wordt in de dossierchecklist en in de bijlage van de pdf: label, naam en omschrijving, zonder dubbels. */
+export function ongeplaatstNaam(doc: InstallatieDocument, analyse: Analyse, nodeId: NodeId, teksten: Teksten): string {
+  const node = doc.nodes[nodeId];
+  if (!node) return "";
+  const naam = node.type === "toestel" ? `${teksten.types.toestel} (${teksten.toestelsoorten[node.soort]})` : onderwerpLabel(doc, analyse, nodeId, teksten);
+  const omschrijving = node.label?.trim();
+  const label = analyse.puntLabels[nodeId];
+  return [...new Set([label, naam, omschrijving].filter(Boolean))].join(" — ");
 }

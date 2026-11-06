@@ -1494,6 +1494,7 @@
       "schema": "Draw the first circuit",
       "plan": "Add a floor plan | Add {aantal} missing plans",
       "plaatsen": "1 component still needs placing on the plan | {aantal} components still need placing on the plan",
+      "kiesOnderdeel": "Select {naam} in the diagram",
       "aardingsweerstand": "Enter the earth resistance",
       "isolatieweerstand": "Enter the insulation resistance",
       "conceptUitleg": "Some dossier information is missing. You can export a draft now and finish it later.",

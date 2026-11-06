@@ -1494,6 +1494,7 @@
       "schema": "Eerste kring tekenen",
       "plan": "Een grondplan toevoegen | {aantal} ontbrekende plannen aanvullen",
       "plaatsen": "Nog 1 onderdeel op het plan plaatsen | Nog {aantal} onderdelen op het plan plaatsen",
+      "kiesOnderdeel": "Selecteer {naam} in het schema",
       "aardingsweerstand": "Aardingsweerstand invullen",
       "isolatieweerstand": "Isolatieweerstand invullen",
       "conceptUitleg": "Er ontbreken nog dossieronderdelen. Je kunt nu een concept exporteren en later verder afwerken.",

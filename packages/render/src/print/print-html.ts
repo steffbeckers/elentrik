@@ -6,10 +6,10 @@ import type { Adres, InstallatieDocument, NodeId, NodeType, Partij, SituatiePagi
 import { escapeXml, getal } from "@elentrik/symbols";
 import { kringenlijst, type KringenlijstRij } from "../kringenlijst";
 import { schemaPaginaSvg } from "../schema-svg";
-import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
+import { situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
 import { situatieAfdekkingenSvg } from "../situatie-afdekkingen";
-import { dossierStatus } from "../dossierstatus";
+import { dossierStatus, onderwerpLabel as onderwerpLabelGedeeld, ongeplaatstNaam } from "../dossierstatus";
 import { LOCALES, TEKSTEN, type Taal, type Teksten } from "../teksten/index";
 import { leesbareSchemaOpmaak } from "./leesbaar";
 import { cartouche, cartoucheHoogte, formatteerDatum, formatteerGetal, meetwaardeTekst, metingVelden } from "./cartouche";
@@ -226,11 +226,7 @@ function artikelVan(doc: InstallatieDocument, regelId: string): string {
 
 /** Het label van het onderwerp van een bevinding: het puntlabel, "Kring A" voor een kringbeveiliging, anders `nodeLabel`. */
 function onderwerpLabel(c: Context, nodeId: NodeId): string {
-  const punt = c.analyse.puntLabels[nodeId];
-  if (punt) return punt;
-  const kring = c.analyse.kringen.find((k) => k.beveiligingId === nodeId);
-  if (kring) return `${c.teksten.kolommen.kring} ${kring.label}`;
-  return nodeLabel(c.doc, c.analyse, nodeId, c.terugval);
+  return onderwerpLabelGedeeld(c.doc, c.analyse, nodeId, c.teksten);
 }
 
 /**
@@ -354,11 +350,7 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
       tekst(`${pagina.titel} — ${d.zonderPlan}`, "bericht", volleBreedte);
     }
     for (const id of dossier.ongeplaatsteIds) {
-      const node = c.doc.nodes[id]!;
-      const naam = node.type === "toestel" ? `${t.types.toestel} (${t.toestelsoorten[node.soort]})` : onderwerpLabel(c, id);
-      const omschrijving = node.label?.trim();
-      const label = c.analyse.puntLabels[id];
-      const onderwerp = [...new Set([label, naam, omschrijving].filter(Boolean))].join(" — ");
+      const onderwerp = ongeplaatstNaam(c.doc, c.analyse, id, c.teksten);
       tekst(`${onderwerp} — ${d.ongeplaatst}`, "bericht", volleBreedte);
     }
   }

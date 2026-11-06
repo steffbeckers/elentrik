@@ -1494,6 +1494,7 @@
       "schema": "Dessiner le premier circuit",
       "plan": "Ajouter un plan | Ajouter les {aantal} plans manquants",
       "plaatsen": "Encore 1 élément à placer sur le plan | Encore {aantal} éléments à placer sur le plan",
+      "kiesOnderdeel": "Sélectionner {naam} dans le schéma",
       "aardingsweerstand": "Indiquer la résistance de dispersion",
       "isolatieweerstand": "Indiquer la résistance d’isolement",
       "conceptUitleg": "Des éléments du dossier manquent encore. Vous pouvez exporter un brouillon et le compléter plus tard.",
