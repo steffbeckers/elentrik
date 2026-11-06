@@ -12,6 +12,13 @@ describe("symboolGrootte", () => {
 });
 
 describe("draai", () => {
+  test("kwartslagen behouden een bestaande schuine hoek en normaliseren", () => {
+    expect(draai(0, 1, 90)).toBe(90);
+    expect(draai(0, -1, 90)).toBe(270);
+    expect(draai(315, 1, 90)).toBe(45);
+    expect(draai(15, -1, 90)).toBe(285);
+  });
+
   test("draait in stappen van 15 graden", () => {
     expect(draai(0, 1)).toBe(15);
     expect(draai(15, -1)).toBe(0);

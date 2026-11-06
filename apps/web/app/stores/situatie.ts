@@ -207,9 +207,9 @@ export const useSituatieStore = defineStore("situatie", () => {
     if (resultaten.length > 0) editor.pasToe(samengevoegd(doc, resultaten));
   }
 
-  /** Draait de geselecteerde, geplaatste nodes één stap van 15 graden. */
-  function draaiSelectie(richting: 1 | -1): void {
-    wijzigGeselecteerde((p) => ({ x: p.x, y: p.y, rotatie: draai(p.rotatie, richting) }));
+  /** Draait de geplaatste selectie om de eigen posities, samen in één undo-stap. */
+  function draaiSelectie(richting: 1 | -1, stap: 15 | 90 = 15): void {
+    wijzigGeselecteerde((p) => ({ x: p.x, y: p.y, rotatie: draai(p.rotatie, richting, stap) }));
   }
 
   /** Verschuift de geselecteerde, geplaatste nodes binnen het raster van hun pagina. */

@@ -492,8 +492,9 @@ const markeringen = computed(() => {
           size="sm"
           :disabled="!heeftSelectie || modus !== 'normaal'"
           icon="i-lucide-rotate-ccw"
+          label="90°"
           :aria-label="$t('editor.situatie.canvas.draaiLinks')"
-          @click="voerUit(() => situatie.draaiSelectie(-1))"
+          @click="voerUit(() => situatie.draaiSelectie(-1, 90))"
         />
       </UTooltip>
       <UTooltip :text="$t('editor.situatie.canvas.draaiRechts')">
@@ -503,8 +504,9 @@ const markeringen = computed(() => {
           size="sm"
           :disabled="!heeftSelectie || modus !== 'normaal'"
           icon="i-lucide-rotate-cw"
+          label="90°"
           :aria-label="$t('editor.situatie.canvas.draaiRechts')"
-          @click="voerUit(() => situatie.draaiSelectie(1))"
+          @click="voerUit(() => situatie.draaiSelectie(1, 90))"
         />
       </UTooltip>
       <UButton

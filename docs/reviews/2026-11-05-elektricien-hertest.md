@@ -111,3 +111,7 @@ De volledige logs en reviewrapporten worden lokaal bewaard onder `out/hertest/ve
 | Exacte bronacceptatie open houden bij ontbrekende objecten/gegevens | Aanvullend productwerk nodig voordat een exacte reconstructie kan worden geaccepteerd. |
 
 **Definitieve lokale oplevering:** branch `users/s.beckers/elektricien-verbeteringen`, app op http://127.0.0.1:3200. De laatste proefexport is [source-full-concept-fixed.pdf](../../out/hertest/source-full-concept-fixed.pdf). De codewijzigingen en documentatie zijn lokaal gecommit. De strikte bronacceptatie en deskundige toetsing blijven open zoals hierboven beschreven.
+
+## Vervolg op 6 november 2026 — kwartslagen
+
+Punt 6 is opgelost: de bestaande draaiknoppen draaien 90° per klik; R/Shift+R blijven 15° draaien. Meerdere geselecteerde punten draaien om hun eigen positie met één undo-stap. De geometrie, labels en andere pagina’s blijven behouden. Verificatie: 91 gerichte tests, volledige typecontrole en een browsertest op desktop en mobiel met opslag/herladen en undo/redo geslaagd. Onafhankelijke code-review vond geen problemen. Dit sluit de overige bronverschillen niet af.

@@ -3,14 +3,11 @@
 // De symboolgrootte is gedeeld met de pdf-export en staat daarom in render.
 export { symboolGrootte } from "@elentrik/render";
 
-/** Een draaistap in graden. */
-const DRAAISTAP = 15;
-
 type Raster = { breedte_px: number; hoogte_px: number };
 
-/** Draait één stap van 15 graden; het resultaat ligt in [0, 360). */
-export function draai(rotatie: number, richting: 1 | -1): number {
-  return (((rotatie + richting * DRAAISTAP) % 360) + 360) % 360;
+/** Draait fijn (15°) of een kwartslag (90°); het resultaat ligt in [0, 360). */
+export function draai(rotatie: number, richting: 1 | -1, stap: 15 | 90 = 15): number {
+  return (((rotatie + richting * stap) % 360) + 360) % 360;
 }
 
 /** Verschuift een positie met `dx` en `dy` en houdt die binnen het raster. */

@@ -13,7 +13,7 @@ const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const PLAN_PDF = fileURLToPath(new URL("./fixtures/plan-2p.pdf", import.meta.url));
 const ONBEKEND_ID = "00000000-0000-0000-0000-000000000000";
 
-type Plaatsing = { nodeId: string; x: number; y: number };
+type Plaatsing = { nodeId: string; x: number; y: number; rotatie: number };
 type Pagina = {
   id: string;
   titel: string;
@@ -137,6 +137,44 @@ async function planAfbeeldingGeladen(page: Page): Promise<number> {
     return afbeelding.naturalWidth;
   });
 }
+
+test("kwartslag in één klik, fijn draaien, undo en herladen op desktop en mobiel", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  const projectId = await maakProjectMetContactdozen(page, `${naam} kwartslag`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await planAfbeeldingGeladen(page);
+  const canvas = page.getByTestId("plan-canvas");
+  await page.getByTestId("te-plaatsen-A1").click();
+  await canvas.click({ position: { x: 180, y: 180 } });
+  const punt = await symboolPunt(page);
+  await page.mouse.click(punt.x, punt.y);
+  const rechts = page.getByRole("button", { name: "Draai 90° rechtsom", exact: true });
+  const links = page.getByRole("button", { name: "Draai 90° linksom", exact: true });
+  const rotatie = () => haalProject(request, projectId).then(p => p.document.situatie.paginas[0]?.plaatsingen[0]?.rotatie);
+  await rechts.click();
+  await expect.poll(rotatie).toBe(90);
+  await canvas.focus();
+  await page.keyboard.press("r");
+  await expect.poll(rotatie).toBe(105);
+  await page.keyboard.press("Shift+r");
+  await expect.poll(rotatie).toBe(90);
+  await links.click();
+  await expect.poll(rotatie).toBe(0);
+  await page.keyboard.press("Control+z");
+  await expect.poll(rotatie).toBe(90);
+  await page.keyboard.press("Control+y");
+  await expect.poll(rotatie).toBe(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(rechts).toBeInViewport();
+  await expect(links).toBeInViewport();
+  await rechts.click();
+  await expect.poll(rotatie).toBe(90);
+  await page.reload();
+  await page.getByTestId("tab-situatieschema").click();
+  await expect(planLabel(page, "A1")).toHaveCount(1);
+  await expect.poll(rotatie).toBe(90);
+});
 
 test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend plan", async ({ page, request }) => {
   test.setTimeout(120_000);

@@ -56,6 +56,40 @@ describe("tabblad", () => {
 });
 
 describe("pagina's", () => {
+  test("kwartslag draait de actieve selectie samen met behoud van posities en één undo-stap", () => {
+    const { editor, situatie } = opzet();
+    const eerste = situatie.voegPlanPaginaToe("Eerste", ACHTERGROND);
+    const [a, b, c] = punten(editor) as [NodeId, NodeId, NodeId];
+    situatie.plaatsNode(a, 100, 200);
+    situatie.plaatsNode(b, 300, 400);
+    editor.selectie = [b];
+    situatie.draaiSelectie(1);
+    situatie.zetLabelOffset(eerste, a, { x: -12, y: 34 });
+    const tweede = situatie.voegPlanPaginaToe("Tweede", ACHTERGROND);
+    situatie.plaatsNode(c, 500, 600);
+    situatie.actievePaginaId = eerste;
+    editor.selectie = [a, b, c];
+    const voor = JSON.parse(JSON.stringify(doc(editor)));
+    const stappen = editor.terug.length;
+
+    situatie.draaiSelectie(1, 90);
+    expect(plaatsingen(editor, eerste)).toEqual([
+      { nodeId: a, x: 100, y: 200, rotatie: 90, labelOffset: { x: -12, y: 34 } },
+      { nodeId: b, x: 300, y: 400, rotatie: 105 },
+    ]);
+    expect(plaatsingen(editor, tweede)[0]).toMatchObject({ rotatie: 0 });
+    expect(editor.terug).toHaveLength(stappen + 1);
+    const na = JSON.parse(JSON.stringify(doc(editor)));
+    editor.ongedaanMaken();
+    expect(doc(editor)).toEqual(voor);
+    editor.opnieuw();
+    expect(doc(editor)).toEqual(na);
+    editor.zetAlleenLezen(true);
+    situatie.draaiSelectie(-1, 90);
+    expect(doc(editor)).toEqual(na);
+    expect(editor.terug).toHaveLength(stappen + 1);
+  });
+
   test("opmaak blijft behouden bij verplaatsen, draaien, undo, redo en opnieuw laden", () => {
     const { editor, situatie } = opzet();
     const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
