@@ -1,6 +1,7 @@
 // Puur en zonder imports uit vue of Nuxt (ruling E1): `situatieSneltoets` vertaalt een
 // toetsaanslag op het plan naar een actie; `PlanCanvas` voert die uit. Het filter op widgets,
 // dialogen en IME (`moetNegeren`) gebeurt vooraf, net als in het eendraadschema.
+import { OVERZICHT_TOETS } from "../composables/sneltoetsen";
 
 /** Pijltjes verschuiven zoveel rasterpixels, met Shift `FIJNE_STAP`. */
 const STAP_PX = 10;
@@ -48,7 +49,7 @@ export function situatieSneltoets(toets: SituatieToets): SituatieActie | null {
   }
   if (toets.doelIsInvoer) return null;
   if (toets.doelIsKnop && (key === "Enter" || key === " ")) return null;
-  if (key === "?") return { soort: "sneltoetsen" };
+  if (key === OVERZICHT_TOETS) return { soort: "sneltoetsen" };
 
   if (toets.alleenLezen) return key === "Escape" ? { soort: "annuleer" } : null;
 

@@ -154,7 +154,8 @@ function toetsIngedrukt(event: KeyboardEvent): void {
 
   switch (actie.soort) {
     case "kies":
-      kies(actie.onderdeel);
+      if (actie.alleenKiezen) store.onderdeel = actie.onderdeel;
+      else kies(actie.onderdeel);
       break;
     case "toevoegen":
       if (toevoegenOpen.value) voegViaToetsenbordToe();

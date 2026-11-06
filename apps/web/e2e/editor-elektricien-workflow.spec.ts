@@ -122,7 +122,7 @@ test("bronparameters en aarding via de UI blijven na herladen behouden", async (
   await expect(page.locator('button[draggable="true"]', { hasText: "Aardingsonderbreker" })).toHaveCount(1);
 });
 
-test("template requires a valid destination, reuses F and adds a new RCD only on explicit board insertion", async ({
+test("template defaults to the board for the main RCD, reuses F and adds a new RCD only on board insertion", async ({
   page,
   request,
 }) => {

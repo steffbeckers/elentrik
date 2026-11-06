@@ -121,8 +121,18 @@ describe("sneltoets", () => {
       ["Enter", toets("Enter", { herhaald: true })],
       ["Delete", toets("Delete", { herhaald: true })],
       ["Shift+Backspace", toets("Backspace", { shiftKey: true, herhaald: true })],
+      ["Ctrl+D (geen reeks kopieën)", toets("d", { ctrlKey: true, herhaald: true })],
+      ["Cmd+D", toets("d", { metaKey: true, herhaald: true })],
     ])("geeft %s null", (_naam, invoer) => {
       expect(sneltoets(invoer)).toBeNull();
+    });
+
+    test.each<[string, Toets, Actie]>([
+      ["c", toets("c", { herhaald: true }), { soort: "kies", onderdeel: "contactdoos", alleenKiezen: true }],
+      ["l", toets("l", { herhaald: true }), { soort: "kies", onderdeel: "lichtpunt", alleenKiezen: true }],
+      ["d", toets("d", { herhaald: true }), { soort: "kies", onderdeel: "differentieel", alleenKiezen: true }],
+    ])("een ingehouden %s kiest alleen het onderdeel en voegt niets toe", (_naam, invoer, verwacht) => {
+      expect(sneltoets(invoer)).toEqual(verwacht);
     });
 
     test("navigatie en ongedaan blijven herhalen", () => {

@@ -5,7 +5,8 @@ import type { Onderdeel } from "@elentrik/model";
 export type Richting = "op" | "neer" | "links" | "rechts";
 
 export type Actie =
-  | { soort: "kies"; onderdeel: Onderdeel }
+  /** `alleenKiezen`: een ingehouden toets (auto-repeat) kiest het onderdeel maar voegt niets snel toe. */
+  | { soort: "kies"; onderdeel: Onderdeel; alleenKiezen?: true }
   | { soort: "toevoegen" }
   | { soort: "verwijder"; heleTak: boolean }
   | { soort: "ongedaan" }
@@ -28,7 +29,7 @@ export type Toets = {
   doelIsInvoer: boolean;
   /** Het doel van de toetsaanslag is een knop: Enter en spatie blijven dan bij de knop, de rest werkt gewoon. */
   doelIsKnop?: boolean;
-  /** De toets blijft ingedrukt (`event.repeat`): verwijderen en toevoegen gebeuren dan niet nog eens. */
+  /** De toets blijft ingedrukt (`event.repeat`): verwijderen, toevoegen en dupliceren gebeuren dan niet nog eens. */
   herhaald?: boolean;
   /**
    * De editor is alleen-lezen (geen abonnement): alles wat het document wijzigt (toevoegen,
@@ -120,7 +121,7 @@ export function sneltoets(toets: Toets): Actie | null {
     if (key === "z") return toets.shiftKey ? { soort: "opnieuw" } : { soort: "ongedaan" };
     if (key === "y" && !toets.shiftKey) return { soort: "opnieuw" };
     // Tijdens typen blijft Ctrl+D bij de browser.
-    if (key === "d" && !toets.shiftKey && !toets.doelIsInvoer) return { soort: "dupliceer" };
+    if (key === "d" && !toets.shiftKey && !toets.doelIsInvoer) return toets.herhaald ? null : { soort: "dupliceer" };
     return null;
   }
   if (toets.doelIsInvoer) return null;
@@ -138,5 +139,6 @@ export function sneltoets(toets: Toets): Actie | null {
   if (key === SYMBOLEN_TOETS) return { soort: "symbolen" };
 
   const onderdeel = ONDERDEEL_PER_TOETS[key];
-  return onderdeel ? { soort: "kies", onderdeel } : null;
+  if (!onderdeel) return null;
+  return toets.herhaald ? { soort: "kies", onderdeel, alleenKiezen: true } : { soort: "kies", onderdeel };
 }

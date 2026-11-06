@@ -330,7 +330,7 @@ export const useEditorStore = defineStore("editor", () => {
     voegToe({ soort: "aftakking", nodeId: selectie.value[0]! });
   }
 
-  /** Expliciet doel uit de bevestigingsdialoog; geen automatische bordkeuze. */
+  /** Het doel uit de bevestigingsdialoog; die stelt een standaard voor (`kringBestemming`), de gebruiker bevestigt. */
   function voegSjabloonToe(sjabloonId: string, doel?: SjabloonDoel, instellingen?: DifferentieelInstellingen): void {
     if (alleenLezen.value) return;
     if (!doel) throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "kies een sjabloonbestemming" });
