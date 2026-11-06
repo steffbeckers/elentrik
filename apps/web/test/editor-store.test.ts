@@ -553,6 +553,15 @@ describe("voegSjabloonToe", () => {
     expect(store.terug).toHaveLength(1);
   });
 
+  test("de soort ruimte uit de dialoog gaat naar de nieuwe punten, in één undo-stap", () => {
+    const store = laadNieuw();
+    const bordId = eersteVan(store, "verdeelbord");
+    store.voegSjabloonToe("badkamer", { soort: "nieuw-op-bord", nodeId: bordId }, undefined, "wasplaats");
+    const contactdozen = Object.values(doc(store).nodes).filter((n) => n.type === "contactdoos");
+    expect(contactdozen.map((n) => n.ruimte)).toEqual(["wasplaats", "wasplaats"]);
+    expect(store.terug).toHaveLength(1);
+  });
+
   test("met een geselecteerd differentieel komt het sjabloon op diens rail", () => {
     const store = laadNieuw();
     store.voegSjabloonToe("badkamer", {

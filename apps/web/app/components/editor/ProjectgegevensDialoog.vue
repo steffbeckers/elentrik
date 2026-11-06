@@ -2,6 +2,7 @@
 import { StroomtypeSchema } from "@elentrik/model";
 import AdresVelden from "~/components/editor/AdresVelden.vue";
 import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
+import GenummerdeSectie from "~/components/editor/GenummerdeSectie.vue";
 import MetingenVelden from "~/components/editor/MetingenVelden.vue";
 import { leegAdresFormulier } from "~/editor/adres";
 import {
@@ -25,6 +26,12 @@ const stroomtypes = computed(() =>
   StroomtypeSchema.options.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
 );
 
+/**
+ * De keuzelijsten van dit formulier schermen de rest van de dialoog niet af: anders sloot de eerste
+ * klik op Bewaren (of een ander veld) alleen de open keuzelijst, en ging de klik verloren.
+ */
+const KEUZELIJST = { disableOutsidePointerEvents: false } as const;
+
 /** De talen van het dossier, elk in haar eigen taal ("Français"), zoals de taalkiezer en het exportvenster. */
 const dossierTalen = TALEN.map((value) => ({ value, label: TAALNAMEN[value] }));
 
@@ -34,6 +41,7 @@ const formulier = reactive<ProjectFormulier>({
   stroomtype: "2x230V",
   klant: leegAdresFormulier(),
   werf: leegAdresFormulier(),
+  werfZelfdeAlsKlant: true,
   ean: "",
   datum: "",
   dossierTaal: "nl",
@@ -70,57 +78,58 @@ function bewaar(): void {
         :state="formulier"
         :validate="valideer"
         :disabled="store.alleenLezen"
-        class="space-y-6"
+        class="space-y-8"
         @submit="bewaar"
       >
-        <div class="space-y-4">
-          <UFormField name="naam" :label="$t('editor.projectgegevens.naam')" required>
-            <UInput v-model="formulier.naam" class="w-full" autofocus />
+        <GenummerdeSectie :nummer="1" :titel="$t('editor.projectgegevens.klant.titel')" :uitleg="$t('editor.projectgegevens.klant.adresHulp')">
+          <UFormField name="klantNaam" :label="$t('editor.projectgegevens.klant.naam')">
+            <UInput v-model="formulier.klantNaam" class="w-full" autofocus data-testid="klant-naam" />
           </UFormField>
+          <AdresVelden v-model="formulier.klant" naam="klant" />
+        </GenummerdeSectie>
+
+        <GenummerdeSectie :nummer="2" :titel="$t('editor.projectgegevens.werf.titel')">
+          <UCheckbox
+            v-model="formulier.werfZelfdeAlsKlant"
+            :label="$t('editor.projectgegevens.werf.zelfdeAlsKlant')"
+            data-testid="werf-zelfde-als-klant"
+          />
+          <AdresVelden v-if="!formulier.werfZelfdeAlsKlant" v-model="formulier.werf" naam="werf" />
+          <UFormField name="ean" :label="$t('editor.projectgegevens.werf.ean')">
+            <UInput v-model="formulier.ean" class="w-full" inputmode="numeric" data-testid="werf-ean" />
+          </UFormField>
+        </GenummerdeSectie>
+
+        <GenummerdeSectie :nummer="3" :titel="$t('editor.projectgegevens.installatie.titel')">
           <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
-            <USelect v-model="formulier.stroomtype" :items="stroomtypes" class="w-full" />
+            <USelect v-model="formulier.stroomtype" :items="stroomtypes" :content="KEUZELIJST" class="w-full" />
           </UFormField>
           <UFormField name="frequentie_Hz" :label="$t('editor.projectgegevens.frequentie')">
             <UInput v-model="formulier.frequentie_Hz" type="number" min="0.01" step="any" class="w-full" />
           </UFormField>
           <UFormField name="installatieContext" :label="$t('editor.projectgegevens.context.label')" :help="$t('editor.projectgegevens.context.hulp')">
-            <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext"
+            <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext" :content="KEUZELIJST"
               :items="['onbekend', 'nieuw', 'bestaand'].map(value => ({ value, label: $t(`editor.projectgegevens.context.${value}`) }))" />
+          </UFormField>
+        </GenummerdeSectie>
+
+        <MetingenVelden v-model="formulier.metingen" :nummer="4" />
+
+        <GenummerdeSectie :nummer="5" :titel="$t('editor.projectgegevens.dossier.titel')">
+          <UFormField name="naam" :label="$t('editor.projectgegevens.naam')" required>
+            <UInput v-model="formulier.naam" class="w-full" data-testid="project-naam" />
+          </UFormField>
+          <UFormField name="datum" :label="$t('editor.projectgegevens.datum.label')" required>
+            <UInput v-model="formulier.datum" type="date" class="w-full" data-testid="projectdatum" />
           </UFormField>
           <UFormField
             name="dossierTaal"
             :label="$t('editor.projectgegevens.dossierTaal.label')"
             :help="$t('editor.projectgegevens.dossierTaal.hulp')"
           >
-            <USelect v-model="formulier.dossierTaal" :items="dossierTalen" class="w-full" data-testid="dossiertaal" />
+            <USelect v-model="formulier.dossierTaal" :items="dossierTalen" :content="KEUZELIJST" class="w-full" data-testid="dossiertaal" />
           </UFormField>
-        </div>
-
-        <section class="space-y-4">
-          <h3 class="font-semibold">{{ $t("editor.projectgegevens.klant.titel") }}</h3>
-          <UFormField name="klantNaam" :label="$t('editor.projectgegevens.klant.naam')">
-            <UInput v-model="formulier.klantNaam" class="w-full" />
-          </UFormField>
-          <p class="text-sm text-muted">{{ $t("editor.projectgegevens.klant.adresHulp") }}</p>
-          <AdresVelden v-model="formulier.klant" naam="klant" />
-        </section>
-
-        <section class="space-y-4">
-          <h3 class="font-semibold">{{ $t("editor.projectgegevens.werf.titel") }}</h3>
-          <AdresVelden v-model="formulier.werf" naam="werf" />
-          <UFormField name="ean" :label="$t('editor.projectgegevens.werf.ean')">
-            <UInput v-model="formulier.ean" class="w-full" inputmode="numeric" data-testid="werf-ean" />
-          </UFormField>
-        </section>
-
-        <section class="space-y-4">
-          <h3 class="font-semibold">{{ $t("editor.projectgegevens.datum.titel") }}</h3>
-          <UFormField name="datum" :label="$t('editor.projectgegevens.datum.label')" required>
-            <UInput v-model="formulier.datum" type="date" class="w-full" data-testid="projectdatum" />
-          </UFormField>
-        </section>
-
-        <MetingenVelden v-model="formulier.metingen" />
+        </GenummerdeSectie>
       </UForm>
     </template>
     <template #footer>

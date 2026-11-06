@@ -37,6 +37,7 @@ import {
   type OperatieResultaat,
   type Onderdeel,
   type Patch,
+  type Ruimte,
   type ProjectWijziging,
   type Stroomtype,
   type Toestelsoort,
@@ -331,11 +332,12 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   /** Het doel uit de bevestigingsdialoog; die stelt een standaard voor (`kringBestemming`), de gebruiker bevestigt. */
-  function voegSjabloonToe(sjabloonId: string, doel?: SjabloonDoel, instellingen?: DifferentieelInstellingen): void {
+  /** `ruimte`: de soort ruimte voor de nieuwe punten; weggelaten de suggestie van het sjabloon, `null` voor geen. */
+  function voegSjabloonToe(sjabloonId: string, doel?: SjabloonDoel, instellingen?: DifferentieelInstellingen, ruimte?: Ruimte | null): void {
     if (alleenLezen.value) return;
     if (!doel) throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "kies een sjabloonbestemming" });
     const doc = vereisDocument();
-    const r = voegSjabloonToeAanDoc(doc, doel, sjabloonId, instellingen);
+    const r = voegSjabloonToeAanDoc(doc, doel, sjabloonId, instellingen, ruimte);
     pasToeMetBehoud(r); selectie.value = [r.id];
     if (doel.soort === "bestaande-differentieel") onthoudDifferentieel(doc, doel.nodeId);
   }

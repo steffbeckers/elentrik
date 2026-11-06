@@ -206,6 +206,7 @@ export const SJABLONEN: readonly Sjabloon[] = [
   {
     id: "badkamer",
     naam: "Badkamer",
+    ruimte: "badkamer",
     boom: keten(
       STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 16, curve: "B", polen: 2 },

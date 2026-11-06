@@ -565,6 +565,29 @@ describe("voegSjabloonToe", () => {
     );
   });
 
+  test("het Badkamer-sjabloon suggereert de badkamer; de gekozen ruimte gaat naar de nieuwe punten", () => {
+    expect(sjabloonVoor("badkamer", "2x230V").ruimte).toBe("badkamer");
+    expect(SJABLONEN.filter((s) => s.ruimte !== undefined).map((s) => s.id)).toEqual(["badkamer"]);
+    const { doc, bordId } = start();
+    const nieuw = (r: { doc: InstallatieDocument }) => Object.values(r.doc.nodes).filter((n) => !Object.hasOwn(doc.nodes, n.id));
+    const punten = (r: { doc: InstallatieDocument }) => nieuw(r).filter((n) => n.type === "contactdoos");
+    const doel = { soort: "nieuw-op-bord" as const, nodeId: bordId };
+
+    // Zonder keuze: de suggestie van het sjabloon, alleen op de punten.
+    const standaard = voegSjabloonToe(doc, doel, "badkamer");
+    expect(punten(standaard).map((n) => n.ruimte)).toEqual(["badkamer", "badkamer"]);
+    expect(nieuw(standaard).filter((n) => n.type !== "contactdoos").every((n) => n.ruimte === undefined)).toBe(true);
+    expect(valideerStructuur(standaard.doc)).toEqual([]);
+
+    // Gewijzigd of leeggemaakt.
+    expect(punten(voegSjabloonToe(doc, doel, "badkamer", undefined, "wasplaats")).map((n) => n.ruimte)).toEqual(["wasplaats", "wasplaats"]);
+    expect(punten(voegSjabloonToe(doc, doel, "badkamer", undefined, null)).every((n) => !Object.hasOwn(n, "ruimte"))).toBe(true);
+    // Een sjabloon zonder suggestie kan toch een ruimte krijgen.
+    const keuken = voegSjabloonToe(doc, doel, "kring-stopcontacten", undefined, "keuken");
+    expect(punten(keuken).every((n) => n.ruimte === "keuken")).toBe(true);
+    expect(punten(voegSjabloonToe(doc, doel, "kring-stopcontacten")).every((n) => !Object.hasOwn(n, "ruimte"))).toBe(true);
+  });
+
   test("de sjablonen zijn onveranderd na gebruik", () => {
     const voor: Sjabloon[] = kloon([...SJABLONEN]);
     const { doc, bordId } = start();

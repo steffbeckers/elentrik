@@ -4,8 +4,10 @@ import type { Adres, InstallatieDocument, Metingen, Stroomtype, Taal } from "@el
 import {
   adresFormulierUitAdres,
   adresUitFormulier,
+  heeftAdres,
   ontbrekendeAdresvelden,
   volledigAdresUitFormulier,
+  zelfdeAdres,
   type AdresFormulier,
 } from "./adres";
 
@@ -29,6 +31,11 @@ export type ProjectFormulier = {
   frequentie_Hz?: number | string;
   klant: AdresFormulier;
   werf: AdresFormulier;
+  /**
+   * "Zelfde als klantadres": bij opslaan wordt het klantadres het werfadres en tellen de werfvelden
+   * niet mee. Standaard aan als het werfadres leeg is (of gelijk aan het klantadres).
+   */
+  werfZelfdeAlsKlant: boolean;
   ean: string;
   /** `JJJJ-MM-DD`, zoals een datumveld ze geeft. */
   datum: string;
@@ -97,6 +104,13 @@ function metingenUitFormulier(f: MetingenFormulier): Metingen {
   return metingen;
 }
 
+/** Aan bij een leeg werfadres, of een werfadres dat al gelijk is aan het klantadres. */
+function zelfdeAlsKlantBijOpenen(doc: InstallatieDocument): boolean {
+  const werf = adresFormulierUitAdres(doc.meta.werfadres);
+  if (!heeftAdres(werf)) return true;
+  return zelfdeAdres(volledigAdresUitFormulier(werf), adresUitFormulier(adresFormulierUitAdres(doc.meta.klant.adres)));
+}
+
 export function formulierUitProject(naam: string, doc: InstallatieDocument): ProjectFormulier {
   return {
     naam,
@@ -105,6 +119,7 @@ export function formulierUitProject(naam: string, doc: InstallatieDocument): Pro
     frequentie_Hz: doc.voeding.frequentie_Hz ?? "",
     klant: adresFormulierUitAdres(doc.meta.klant.adres),
     werf: adresFormulierUitAdres(doc.meta.werfadres),
+    werfZelfdeAlsKlant: zelfdeAlsKlantBijOpenen(doc),
     ean: doc.meta.ean ?? "",
     datum: doc.meta.datum,
     dossierTaal: doc.meta.dossierTaal ?? "nl",
@@ -118,7 +133,7 @@ export function valideerProjectFormulier(f: ProjectFormulier): ProjectFormulierF
   if (f.naam.trim() === "") fouten.push({ name: "naam", fout: "naamVerplicht" });
   // Werf- en klantadres zijn optioneel, maar een gedeeltelijk adres vraagt de rest. Bestaande projecten
   // hebben een leeg werfadres: dat mag hernoemen of de klant wijzigen niet blokkeren.
-  for (const veld of ontbrekendeAdresvelden(f.werf)) {
+  for (const veld of f.werfZelfdeAlsKlant ? [] : ontbrekendeAdresvelden(f.werf)) {
     fouten.push({ name: `werf.${veld}`, fout: "adresVerplicht" });
   }
   for (const veld of ontbrekendeAdresvelden(f.klant)) {
@@ -135,6 +150,7 @@ export function valideerProjectFormulier(f: ProjectFormulier): ProjectFormulierF
  * Verwacht een geldig formulier (zie `valideerProjectFormulier`). Een leeg klantadres wordt `null`;
  * een leeg werfadres is het lege adres van een nieuw project (het document kent geen "geen werfadres"),
  * zodat leegmaken het oude werfadres echt wist. Een document dat al leeg was, blijft zonder wijziging.
+ * Met "Zelfde als klantadres" wordt het klantadres (ook leeg) het werfadres.
  */
 export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijziging {
   return {
@@ -143,7 +159,7 @@ export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijzig
     stroomtype: f.stroomtype,
     frequentie_Hz: f.frequentie_Hz === "" || f.frequentie_Hz == null ? null : Number(f.frequentie_Hz),
     klantAdres: adresUitFormulier(f.klant) ?? null,
-    werfadres: volledigAdresUitFormulier(f.werf),
+    werfadres: volledigAdresUitFormulier(f.werfZelfdeAlsKlant ? f.klant : f.werf),
     ean: f.ean.trim(),
     datum: f.datum.trim(),
     dossierTaal: f.dossierTaal,

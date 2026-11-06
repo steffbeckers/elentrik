@@ -83,6 +83,8 @@ test("bronparameters en aarding via de UI blijven na herladen behouden", async (
   await expect.poll(async () => (await haal(request, x.id)).document.nodes[teller.id]).toMatchObject({ nominaal_A: 40 });
 
   await paneel("werkruimte-onderdelen");
+  // Aarding staat bij de minder gebruikte onderdelen, achter "Meer…".
+  await page.getByTestId("onderdelen-meer").click();
   await page.getByTestId("onderdeel-aardingsonderbreker").click();
   await page.getByRole("button", { name: "Passend maken" }).click();
   await page.getByTestId(`plus-rail-einde-${x.bord}`).click();

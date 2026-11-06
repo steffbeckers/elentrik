@@ -223,6 +223,7 @@ test.describe("echte pdf-export", () => {
     // 3. Het werfadres.
     await page.getByTestId("projectnaam").click();
     const gegevens = page.getByRole("dialog");
+    await gegevens.getByTestId("werf-zelfde-als-klant").click();
     await gegevens.getByTestId("werf-straat").fill("Dorpsstraat");
     await gegevens.getByTestId("werf-nummer").fill("3");
     await gegevens.getByTestId("werf-postcode").fill("9000");

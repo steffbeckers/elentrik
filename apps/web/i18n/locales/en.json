@@ -323,8 +323,14 @@
     "onderdelenPaneel": {
       "titel": "Components",
       "toestelsoort": "Appliance type",
-      "sjablonen": "Templates",
-      "geenSneltoets": "—"
+      "sjablonen": "Templates and references",
+      "geenSneltoets": "—",
+      "groepen": {
+        "kring": "Circuit and protection",
+        "eindpunten": "End points"
+      },
+      "meer": "More…",
+      "minder": "Less"
     },
     "symbolen": {
       "openen": "All symbols",
@@ -382,7 +388,11 @@
     },
     "eigenschappen": {
       "groepen": {
-        "test": "Test"
+        "test": "Test",
+        "elektrisch": "Electrical",
+        "uitvoering": "Construction",
+        "benaming": "Name and plan",
+        "ruimte": "Room"
       },
       "titel": "Properties",
       "leeg": "Select a component on the diagram.",
@@ -435,7 +445,7 @@
     "projectgegevens": {
       "frequentie": "Supply frequency (Hz)",
       "titel": "Project details",
-      "naam": "Name",
+      "naam": "Project name",
       "stroomtype": "Current type",
       "dossierTaal": {
         "label": "Dossier language",
@@ -448,11 +458,11 @@
         "adresHulp": "The customer's address is optional."
       },
       "werf": {
-        "titel": "Site",
-        "ean": "EAN code"
+        "titel": "Site address",
+        "ean": "EAN code",
+        "zelfdeAlsKlant": "Same as customer address"
       },
       "datum": {
-        "titel": "Date",
         "label": "Project date"
       },
       "adres": {
@@ -484,6 +494,12 @@
         "nieuw": "New / altered part — current requirements",
         "bestaand": "Existing part — check transitional provisions",
         "onbekend": "To be determined"
+      },
+      "installatie": {
+        "titel": "Installation"
+      },
+      "dossier": {
+        "titel": "Dossier details"
       }
     },
     "concept": {
@@ -816,6 +832,7 @@
       "hergebruik": "Keep existing RCD:",
       "nieuweDifferentieel": "New RCD (preset values)",
       "voorinstellingen": "These are preset values. Check the protection and cable for this installation. Room classification remains blank.",
+      "voorinstellingenMetRuimte": "These are preset values. Check the protection and cable for this installation.",
       "onderdelen": "Added components",
       "ongeldigeWaarden": "Check the destination and entered values.",
       "toevoegen": "Add",
@@ -832,7 +849,11 @@
         "wissel": "Two two-way switches + light point",
         "kruis": "Two two-way switches + intermediate switch + light point"
       },
-      "annuleren": "Cancel"
+      "annuleren": "Cancel",
+      "ruimte": {
+        "label": "Room type",
+        "hulp": "Applies to the new points of this template."
+      }
     },
     "referenties": {
       "titel": "Circuit references",
@@ -1227,7 +1248,8 @@
     "naam": {
       "veld": "Company name",
       "bewaren": "Save name",
-      "bewaard": "The name has been saved."
+      "bewaard": "The name has been saved.",
+      "dossierHulp": "Set the name and logo on your dossiers in {link}."
     },
     "leden": {
       "titel": "Members",
@@ -1474,7 +1496,6 @@
     "bewaren": "Saving company details…",
     "gewijzigd": "Unsaved changes",
     "geenWijzigingen": "No unsaved changes",
-    "organisatieNaam": "This name identifies your organisation in the app. Manage the company name shown on PDFs under Company details.",
     "rolTitel": "Confirm role change",
     "rolVraag": "Give {naam} the {rol} role?",
     "eigenaarGevolg": "An owner manages company details, members, invitations and the subscription, and can edit projects.",

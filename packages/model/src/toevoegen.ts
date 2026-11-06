@@ -7,7 +7,7 @@ import {
   type NodeInvoer,
   type OperatieResultaat,
 } from "./operaties";
-import { NodeSchema, type InstallatieDocument, type NodeId } from "./schema";
+import { NodeSchema, type InstallatieDocument, type NodeId, type Ruimte } from "./schema";
 import { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
 import {
   NIEUWE_KRING_AUTOMAAT,
@@ -263,17 +263,37 @@ function boomVoorDoel(
         kinderen: [kring],
       } as SjabloonNode);
 }
+/** De punten van een sjabloon: de nodes die een soort ruimte krijgen. */
+const PUNT_TYPES: ReadonlySet<string> = new Set(["contactdoos", "lichtpunt", "schakelaar", "toestel"]);
+
+/** De boom met `ruimte` op elk punt, of zonder `ruimte` op de punten bij `null`. */
+function boomMetRuimte(boom: SjabloonNode, ruimte: Ruimte | null): SjabloonNode {
+  const { kinderen, ...eigen } = boom;
+  let node = eigen as SjabloonNode;
+  if (PUNT_TYPES.has(node.type)) {
+    const { ruimte: _oud, ...zonder } = node as SjabloonNode & { ruimte?: Ruimte };
+    node = (ruimte === null ? zonder : { ...zonder, ruimte }) as SjabloonNode;
+  }
+  return kinderen ? ({ ...node, kinderen: kinderen.map((kind) => boomMetRuimte(kind, ruimte)) } as SjabloonNode) : node;
+}
+
+/**
+ * `ruimte` is de soort ruimte voor de nieuwe punten: weggelaten de suggestie van het sjabloon
+ * (`Sjabloon.ruimte`, zoals de badkamer), `null` voor geen.
+ */
 export function voegSjabloonToe(
   doc: InstallatieDocument,
   doel: SjabloonDoel,
   sjabloonId: string,
   instellingen?: DifferentieelInstellingen,
+  ruimte?: Ruimte | null,
 ): OperatieResultaat & { id: NodeId } {
   controleerSjabloonDoel(doc, doel);
   const origineel = sjabloonVoor(sjabloonId, doc.voeding.stroomtype);
+  const gekozen = ruimte === undefined ? (origineel.ruimte ?? null) : ruimte;
   return pasSjabloonToe(doc, doel.nodeId, {
     ...origineel,
-    boom: boomVoorDoel(origineel.boom, doel, instellingen),
+    boom: boomMetRuimte(boomVoorDoel(origineel.boom, doel, instellingen), gekozen),
   });
 }
 export type LichtschakelingOpties = {

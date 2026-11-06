@@ -28,9 +28,13 @@ export type Veld = {
   stap?: number;
   /** Het veld mag leeg; leegmaken stuurt `undefined`, wat de eigenschap verwijdert. */
   optioneel?: boolean;
-  /** Een groep met een eigen kop in het paneel (`editor.eigenschappen.groepen.<groep>`). */
-  groep?: "test";
+  /** De groep met een eigen kop in het paneel (`editor.eigenschappen.groepen.<groep>`). */
+  groep: VeldGroep;
 };
+
+/** De groepen van het paneel, in de volgorde waarin het ze toont. */
+export const VELDGROEPEN = ["elektrisch", "uitvoering", "benaming", "ruimte", "test"] as const;
+export type VeldGroep = (typeof VELDGROEPEN)[number];
 
 /** Een deelboom van een vertaalbestand. */
 type Boom = { [sleutel: string]: string | Boom };
@@ -52,8 +56,32 @@ const EENHEDEN: Readonly<Record<string, string>> = {
   uitschakeltijd_ms: "ms",
 };
 
-/** Sleutels die in een eigen groep van het paneel staan; geregistreerd, nooit beoordeeld. */
-const GROEPEN: Readonly<Record<string, NonNullable<Veld["groep"]>>> = {
+/**
+ * De groep per sleutel. Elektrisch: de beveiliging en de leiding (In, polen, curve, Icn, gevoeligheid...).
+ * Benaming en plan: hoe het onderdeel heet en op het plan staat. Ruimte: de soort ruimte. Test: de
+ * geregistreerde differentieeltest, nooit beoordeeld. Al de rest valt onder Uitvoering.
+ */
+const GROEPEN: Readonly<Record<string, VeldGroep>> = {
+  gevoeligheid_mA: "elektrisch",
+  nominaal_A: "elektrisch",
+  polen: "elektrisch",
+  klasse: "elektrisch",
+  curve: "elektrisch",
+  kortsluitvermogen_kA: "elektrisch",
+  kabeltype: "elektrisch",
+  doorsnede_mm2: "elektrisch",
+  aantalGeleiders: "elektrisch",
+  metBeschermingsgeleider: "elektrisch",
+  vermogen_W: "elektrisch",
+  schijnbaarVermogen_kVA: "elektrisch",
+  dcDetectie_mA: "elektrisch",
+  label: "benaming",
+  ruimteNaam: "benaming",
+  kringCode: "benaming",
+  referentie: "benaming",
+  naam: "benaming",
+  puntReferentie: "benaming",
+  ruimte: "ruimte",
   testResultaat: "test",
   uitschakeltijd_ms: "test",
 };
@@ -108,7 +136,12 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
     optioneel = true;
     schema = schema.def.innerType;
   }
-  const veld: Veld = { sleutel, labelSleutel: vereis(boom, `velden.${sleutel}.label`), soort: "tekst" };
+  const veld: Veld = {
+    sleutel,
+    labelSleutel: vereis(boom, `velden.${sleutel}.label`),
+    soort: "tekst",
+    groep: GROEPEN[sleutel] ?? "uitvoering",
+  };
   const eenheid = EENHEDEN[sleutel];
   if (eenheid !== undefined) veld.eenheid = eenheid;
 
@@ -141,8 +174,6 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
   if (sleutel === "puntReferentie") veld.standaard = "automatisch";
   if (sleutel === "brandreactieklasse") veld.suggesties = ["Eca", "Cca"];
   if (optioneel) veld.optioneel = true;
-  const groep = GROEPEN[sleutel];
-  if (groep !== undefined) veld.groep = groep;
   return veld;
 }
 
@@ -179,4 +210,11 @@ export const { GEMEENSCHAPPELIJK, VELDEN } = bouwVelden();
 export function veldWeergaveWaarde(node: unknown, veld: Pick<Veld, "sleutel" | "standaard">): unknown {
   const waarde = veldWaarde(node, veld.sleutel);
   return waarde === undefined ? veld.standaard : waarde;
+}
+
+/** De velden per groep, in de volgorde van `VELDGROEPEN`; binnen een groep in de volgorde van `velden`. Lege groepen vallen weg. */
+export function veldGroepen(velden: readonly Veld[]): { groep: VeldGroep; velden: Veld[] }[] {
+  return VELDGROEPEN.map((groep) => ({ groep, velden: velden.filter((v) => v.groep === groep) })).filter(
+    (g) => g.velden.length > 0,
+  );
 }

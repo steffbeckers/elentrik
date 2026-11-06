@@ -323,8 +323,14 @@
     "onderdelenPaneel": {
       "titel": "Éléments",
       "toestelsoort": "Type d'appareil",
-      "sjablonen": "Modèles",
-      "geenSneltoets": "—"
+      "sjablonen": "Modèles et références",
+      "geenSneltoets": "—",
+      "groepen": {
+        "kring": "Circuit et protection",
+        "eindpunten": "Points d’utilisation"
+      },
+      "meer": "Plus…",
+      "minder": "Moins"
     },
     "symbolen": {
       "openen": "Tous les symboles",
@@ -382,7 +388,11 @@
     },
     "eigenschappen": {
       "groepen": {
-        "test": "Test"
+        "test": "Test",
+        "elektrisch": "Électrique",
+        "uitvoering": "Exécution",
+        "benaming": "Désignation et plan",
+        "ruimte": "Local"
       },
       "titel": "Propriétés",
       "leeg": "Sélectionnez un élément sur le schéma.",
@@ -435,7 +445,7 @@
     "projectgegevens": {
       "frequentie": "Fréquence de l’alimentation (Hz)",
       "titel": "Données du projet",
-      "naam": "Nom",
+      "naam": "Nom du projet",
       "stroomtype": "Type de courant",
       "dossierTaal": {
         "label": "Langue du dossier",
@@ -448,11 +458,11 @@
         "adresHulp": "L'adresse du client est facultative."
       },
       "werf": {
-        "titel": "Chantier",
-        "ean": "Code EAN"
+        "titel": "Adresse du chantier",
+        "ean": "Code EAN",
+        "zelfdeAlsKlant": "Identique à l’adresse du client"
       },
       "datum": {
-        "titel": "Date",
         "label": "Date du projet"
       },
       "adres": {
@@ -484,6 +494,12 @@
         "nieuw": "Partie nouvelle / modifiée — prescriptions actuelles",
         "bestaand": "Partie existante — vérifier les dispositions transitoires",
         "onbekend": "À déterminer"
+      },
+      "installatie": {
+        "titel": "Installation"
+      },
+      "dossier": {
+        "titel": "Dossier"
       }
     },
     "concept": {
@@ -816,6 +832,7 @@
       "hergebruik": "Différentiel existant conservé :",
       "nieuweDifferentieel": "Nouveau différentiel (valeurs prédéfinies)",
       "voorinstellingen": "Ces valeurs sont prédéfinies. Vérifiez la protection et la canalisation pour cette installation. La classification du local reste vide.",
+      "voorinstellingenMetRuimte": "Ces valeurs sont prédéfinies. Vérifiez la protection et la canalisation pour cette installation.",
       "onderdelen": "Éléments ajoutés",
       "ongeldigeWaarden": "Vérifiez la destination et les valeurs saisies.",
       "toevoegen": "Ajouter",
@@ -832,7 +849,11 @@
         "wissel": "Deux interrupteurs va-et-vient + point lumineux",
         "kruis": "Deux va-et-vient + permutateur + point lumineux"
       },
-      "annuleren": "Annuler"
+      "annuleren": "Annuler",
+      "ruimte": {
+        "label": "Type de local",
+        "hulp": "S’applique aux nouveaux points de ce modèle."
+      }
     },
     "referenties": {
       "titel": "Repères des circuits",
@@ -1227,7 +1248,8 @@
     "naam": {
       "veld": "Nom de l'entreprise",
       "bewaren": "Enregistrer le nom",
-      "bewaard": "Le nom a été enregistré."
+      "bewaard": "Le nom a été enregistré.",
+      "dossierHulp": "Le nom et le logo de vos dossiers se règlent dans {link}."
     },
     "leden": {
       "titel": "Membres",
@@ -1474,7 +1496,6 @@
     "bewaren": "Enregistrement des coordonnées…",
     "gewijzigd": "Modifications non enregistrées",
     "geenWijzigingen": "Aucune modification non enregistrée",
-    "organisatieNaam": "Ce nom identifie votre organisation dans l’application. Le nom de l’entreprise sur le PDF se modifie dans les coordonnées de l’entreprise.",
     "rolTitel": "Confirmer le changement de rôle",
     "rolVraag": "Attribuer le rôle {rol} à {naam} ?",
     "eigenaarGevolg": "Un propriétaire gère les coordonnées de l’entreprise, les membres, les invitations et l’abonnement, et peut modifier les projets.",

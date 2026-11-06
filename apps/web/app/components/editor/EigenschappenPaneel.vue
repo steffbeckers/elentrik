@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DocumentFout, type Node, type NodeType } from "@elentrik/model";
-import { GEMEENSCHAPPELIJK, VELDEN, veldWeergaveWaarde, type Veld } from "~/editor/velden";
+import { GEMEENSCHAPPELIJK, VELDEN, veldGroepen, veldWeergaveWaarde, type Veld } from "~/editor/velden";
 import { Werkconcepten } from "~/editor/werkconcept";
 import { useEditorStore } from "~/stores/editor";
 
@@ -27,7 +27,8 @@ const type = computed<NodeType | null>(() => {
   return nodes.value.every((n) => n.type === eerste.type) ? eerste.type : null;
 });
 
-const velden = computed<Veld[]>(() => (type.value ? [...GEMEENSCHAPPELIJK, ...VELDEN[type.value]] : []));
+/** De velden van het type, in groepen met een kop: Elektrisch, Uitvoering, Benaming en plan, Ruimte, Test. */
+const groepen = computed(() => (type.value ? veldGroepen([...GEMEENSCHAPPELIJK, ...VELDEN[type.value]]) : []));
 
 /** Het puntlabel (bv. "A4"), het kringlabel van een beveiliging, of het eigen label. */
 const titel = computed(() => {
@@ -175,71 +176,73 @@ function plaatshouder(veld: Veld): string | undefined {
     <template v-else>
       <p class="mb-3 font-semibold" data-testid="eigenschappen-titel">{{ titel }}</p>
       <div class="flex flex-col gap-3">
-        <template v-for="(veld, index) in velden" :key="veld.sleutel">
+        <template v-for="(groep, groepIndex) in groepen" :key="groep.groep">
           <h3
-            v-if="veld.groep && veld.groep !== velden[index - 1]?.groep"
-            class="mt-2 border-t border-default pt-3 text-xs font-semibold uppercase tracking-wide text-muted"
-            :data-testid="`eigenschappen-groep-${veld.groep}`"
+            class="text-xs font-semibold uppercase tracking-wide text-muted"
+            :class="groepIndex > 0 ? 'mt-2 border-t border-default pt-3' : ''"
+            :data-testid="`eigenschappen-groep-${groep.groep}`"
           >
-            {{ $t(`editor.eigenschappen.groepen.${veld.groep}`) }}
+            {{ $t(`editor.eigenschappen.groepen.${groep.groep}`) }}
           </h3>
-          <UFormField
-            v-if="veld.soort === 'tekst' || veld.soort === 'getal'"
-            :label="$t(veld.labelSleutel)"
-            :error="ongeldig[veld.sleutel] ? $t('editor.eigenschappen.ongeldig') : undefined"
-            size="sm"
-          >
-            <UInput
-              :model-value="tekstWaarde(veld)"
-              :type="veld.soort === 'getal' ? 'number' : 'text'"
-              :min="veld.min"
-              :step="veld.soort === 'getal' ? (veld.stap ?? 'any') : undefined"
-              :placeholder="plaatshouder(veld)"
-              :disabled="store.alleenLezen"
-              :data-testid="`veld-${veld.sleutel}`"
-              :list="veld.suggesties ? `suggesties-${veld.sleutel}` : undefined"
-              class="w-full"
-              :ui="veld.eenheid ? { trailing: 'pointer-events-none' } : undefined"
-              @update:model-value="(w: string | number) => invoer(veld, w)"
-              @blur="verlaat(veld)"
-              @keydown.esc.stop.prevent="concepten.herstel(veld.sleutel); store.sluitGroep()"
-            >
-              <template v-if="veld.eenheid" #trailing>
-                <span class="text-xs text-muted">{{ veld.eenheid }}</span>
-              </template>
-            </UInput>
-            <datalist v-if="veld.suggesties" :id="`suggesties-${veld.sleutel}`">
-              <option v-for="suggestie in veld.suggesties" :key="suggestie" :value="suggestie" />
-            </datalist>
-          </UFormField>
-
-          <UFormField v-else-if="veld.soort === 'keuze'" :label="$t(veld.labelSleutel)" size="sm">
-            <USelect
-              :model-value="keuzeWaarde(veld)"
-              :items="keuzeItems(veld)"
-              :placeholder="plaatshouder(veld)"
-              :disabled="store.alleenLezen"
-              :data-testid="`veld-${veld.sleutel}`"
-              class="w-full"
-              @update:model-value="(w: unknown) => kies(veld, w)"
-              @blur="store.sluitGroep()"
-            />
-          </UFormField>
-
-          <div v-else class="flex items-center justify-between gap-2">
-            <USwitch
-              :model-value="waardeVan(veld) === true"
+          <template v-for="veld in groep.velden" :key="veld.sleutel">
+            <UFormField
+              v-if="veld.soort === 'tekst' || veld.soort === 'getal'"
               :label="$t(veld.labelSleutel)"
-              :disabled="store.alleenLezen"
-              :data-testid="`veld-${veld.sleutel}`"
+              :error="ongeldig[veld.sleutel] ? $t('editor.eigenschappen.ongeldig') : undefined"
               size="sm"
-              @update:model-value="(w: boolean) => kies(veld, w)"
-              @blur="store.sluitGroep()"
-            />
-            <span v-if="waardeVan(veld) === VERSCHILLEND" class="text-sm text-muted">
-              {{ $t("editor.eigenschappen.verschillend") }}
-            </span>
-          </div>
+            >
+              <UInput
+                :model-value="tekstWaarde(veld)"
+                :type="veld.soort === 'getal' ? 'number' : 'text'"
+                :min="veld.min"
+                :step="veld.soort === 'getal' ? (veld.stap ?? 'any') : undefined"
+                :placeholder="plaatshouder(veld)"
+                :disabled="store.alleenLezen"
+                :data-testid="`veld-${veld.sleutel}`"
+                :list="veld.suggesties ? `suggesties-${veld.sleutel}` : undefined"
+                class="w-full"
+                :ui="veld.eenheid ? { trailing: 'pointer-events-none' } : undefined"
+                @update:model-value="(w: string | number) => invoer(veld, w)"
+                @blur="verlaat(veld)"
+                @keydown.esc.stop.prevent="concepten.herstel(veld.sleutel); store.sluitGroep()"
+              >
+                <template v-if="veld.eenheid" #trailing>
+                  <span class="text-xs text-muted">{{ veld.eenheid }}</span>
+                </template>
+              </UInput>
+              <datalist v-if="veld.suggesties" :id="`suggesties-${veld.sleutel}`">
+                <option v-for="suggestie in veld.suggesties" :key="suggestie" :value="suggestie" />
+              </datalist>
+            </UFormField>
+
+            <UFormField v-else-if="veld.soort === 'keuze'" :label="$t(veld.labelSleutel)" size="sm">
+              <USelect
+                :model-value="keuzeWaarde(veld)"
+                :items="keuzeItems(veld)"
+                :placeholder="plaatshouder(veld)"
+                :disabled="store.alleenLezen"
+                :data-testid="`veld-${veld.sleutel}`"
+                class="w-full"
+                @update:model-value="(w: unknown) => kies(veld, w)"
+                @blur="store.sluitGroep()"
+              />
+            </UFormField>
+
+            <div v-else class="flex items-center justify-between gap-2">
+              <USwitch
+                :model-value="waardeVan(veld) === true"
+                :label="$t(veld.labelSleutel)"
+                :disabled="store.alleenLezen"
+                :data-testid="`veld-${veld.sleutel}`"
+                size="sm"
+                @update:model-value="(w: boolean) => kies(veld, w)"
+                @blur="store.sluitGroep()"
+              />
+              <span v-if="waardeVan(veld) === VERSCHILLEND" class="text-sm text-muted">
+                {{ $t("editor.eigenschappen.verschillend") }}
+              </span>
+            </div>
+          </template>
         </template>
       </div>
     </template>

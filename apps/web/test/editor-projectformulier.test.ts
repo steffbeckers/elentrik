@@ -37,7 +37,7 @@ function startFormulier(wijziging: Partial<ProjectFormulier> = {}): ProjectFormu
 }
 
 function metWerf(f: ProjectFormulier): ProjectFormulier {
-  return { ...f, werf: { ...f.werf, straat: "Dorpsstraat", nummer: "3", postcode: "9000", gemeente: "Gent" } };
+  return { ...f, werfZelfdeAlsKlant: false, werf: { ...f.werf, straat: "Dorpsstraat", nummer: "3", postcode: "9000", gemeente: "Gent" } };
 }
 
 describe("formulierUitProject", () => {
@@ -82,7 +82,7 @@ describe("valideerProjectFormulier", () => {
   });
 
   test("een gedeeltelijk werfadres vraagt de rest, zoals het klantadres", () => {
-    const f = startFormulier();
+    const f = startFormulier({ werfZelfdeAlsKlant: false });
     expect(valideerProjectFormulier({ ...f, werf: { ...f.werf, straat: "D" } })).toEqual([
       { name: "werf.nummer", fout: "adresVerplicht" },
       { name: "werf.postcode", fout: "adresVerplicht" },
@@ -198,5 +198,45 @@ describe("metingen", () => {
     expect(store.gewijzigdSindsOpslaan).toBe(stappen);
     store.ongedaanMaken();
     expect(store.document?.meta.metingen).toBeUndefined();
+  });
+});
+
+describe("zelfde als klantadres", () => {
+  const klant = { straat: "Kerkstraat", nummer: "12", bus: "", postcode: "2000", gemeente: "Antwerpen", land: "België" };
+
+  test("staat standaard aan bij een leeg werfadres, uit bij een eigen werfadres", () => {
+    expect(startFormulier().werfZelfdeAlsKlant).toBe(true);
+    const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    expect(formulierUitProject("Woning", wijzigProject(doc, { werfadres: adres }).doc).werfZelfdeAlsKlant).toBe(false);
+  });
+
+  test("aan: het klantadres gaat als werfadres mee bij opslaan, en de werfvelden worden niet gevalideerd", () => {
+    const f = startFormulier({ klant, werfZelfdeAlsKlant: true });
+    f.werf = { ...f.werf, straat: "Halve straat" };
+    expect(valideerProjectFormulier(f)).toEqual([]);
+    const gegevens = gegevensUitFormulier(f);
+    expect(gegevens.werfadres).toEqual(adres);
+    expect(gegevens.klantAdres).toEqual(adres);
+  });
+
+  test("uit: een leeg werfadres blijft leeg, ook met een klantadres", () => {
+    const f = startFormulier({ klant, werfZelfdeAlsKlant: false });
+    expect(gegevensUitFormulier(f).werfadres).toEqual({ straat: "", nummer: "", postcode: "", gemeente: "", land: "België" });
+  });
+
+  test("aan zonder klantadres: het werfadres blijft leeg, zonder wijziging aan het document", () => {
+    const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    const store = useEditorStore();
+    store.laad({ id: "p1", naam: "Woning", versie: 1, document: doc });
+    const f = formulierUitProject("Woning", doc);
+    expect(f.werfZelfdeAlsKlant).toBe(true);
+    store.wijzigProjectgegevens(gegevensUitFormulier(f));
+    expect(store.gewijzigdSindsOpslaan).toBe(0);
+  });
+
+  test("een werfadres gelijk aan het klantadres opent met het vakje aan", () => {
+    const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    const r = wijzigProject(doc, { klantAdres: adres, werfadres: adres });
+    expect(formulierUitProject("Woning", r.doc).werfZelfdeAlsKlant).toBe(true);
   });
 });

@@ -323,8 +323,14 @@
     "onderdelenPaneel": {
       "titel": "Onderdelen",
       "toestelsoort": "Soort toestel",
-      "sjablonen": "Sjablonen",
-      "geenSneltoets": "—"
+      "sjablonen": "Sjablonen en referenties",
+      "geenSneltoets": "—",
+      "groepen": {
+        "kring": "Kring en beveiliging",
+        "eindpunten": "Eindpunten"
+      },
+      "meer": "Meer…",
+      "minder": "Minder"
     },
     "symbolen": {
       "openen": "Alle symbolen",
@@ -382,7 +388,11 @@
     },
     "eigenschappen": {
       "groepen": {
-        "test": "Test"
+        "test": "Test",
+        "elektrisch": "Elektrisch",
+        "uitvoering": "Uitvoering",
+        "benaming": "Benaming en plan",
+        "ruimte": "Ruimte"
       },
       "titel": "Eigenschappen",
       "leeg": "Selecteer een onderdeel op het schema.",
@@ -435,7 +445,7 @@
     "projectgegevens": {
       "frequentie": "Voedingsfrequentie (Hz)",
       "titel": "Projectgegevens",
-      "naam": "Naam",
+      "naam": "Projectnaam",
       "stroomtype": "Stroomtype",
       "dossierTaal": {
         "label": "Dossiertaal",
@@ -448,11 +458,11 @@
         "adresHulp": "Het adres van de klant is optioneel."
       },
       "werf": {
-        "titel": "Werf",
-        "ean": "EAN-code"
+        "titel": "Werfadres",
+        "ean": "EAN-code",
+        "zelfdeAlsKlant": "Zelfde als klantadres"
       },
       "datum": {
-        "titel": "Datum",
         "label": "Datum van het project"
       },
       "adres": {
@@ -484,6 +494,12 @@
         "nieuw": "Nieuw / gewijzigd deel — huidige voorschriften",
         "bestaand": "Bestaand deel — overgangsbepalingen nakijken",
         "onbekend": "Nog te bepalen"
+      },
+      "installatie": {
+        "titel": "Installatie"
+      },
+      "dossier": {
+        "titel": "Dossier"
       }
     },
     "concept": {
@@ -816,6 +832,7 @@
       "hergebruik": "Bestaande differentieel behouden:",
       "nieuweDifferentieel": "Nieuwe differentieel (voorinstelling)",
       "voorinstellingen": "Dit zijn voorinstellingen. Controleer de beveiliging en leiding voor deze installatie. De ruimteclassificatie blijft leeg.",
+      "voorinstellingenMetRuimte": "Dit zijn voorinstellingen. Controleer de beveiliging en leiding voor deze installatie.",
       "onderdelen": "Toegevoegde onderdelen",
       "ongeldigeWaarden": "Controleer de bestemming en de ingevoerde waarden.",
       "toevoegen": "Toevoegen",
@@ -832,7 +849,11 @@
         "wissel": "Twee wisselschakelaars + lichtpunt",
         "kruis": "Twee wisselschakelaars + kruisschakelaar + lichtpunt"
       },
-      "annuleren": "Annuleren"
+      "annuleren": "Annuleren",
+      "ruimte": {
+        "label": "Soort ruimte",
+        "hulp": "Geldt voor de nieuwe punten van dit sjabloon."
+      }
     },
     "referenties": {
       "titel": "Kringreferenties",
@@ -1227,7 +1248,8 @@
     "naam": {
       "veld": "Naam van het bedrijf",
       "bewaren": "Naam bewaren",
-      "bewaard": "De naam is bewaard."
+      "bewaard": "De naam is bewaard.",
+      "dossierHulp": "De naam en het logo op je dossiers stel je in bij {link}."
     },
     "leden": {
       "titel": "Leden",
@@ -1470,11 +1492,10 @@
     "wachtwoordTonen": "Wachtwoord tonen",
     "wachtwoordVerbergen": "Wachtwoord verbergen",
     "verlaten": "Je bedrijfsgegevens zijn nog niet opgeslagen. Wil je deze pagina verlaten en je wijzigingen verliezen?",
-    "logoDirect": "Het logo wordt meteen opgeslagen. Bewaar de andere bedrijfsgegevens met de knop onderaan.",
+    "logoDirect": "Het logo wordt meteen bewaard. De andere bedrijfsgegevens bewaar je met de knop onderaan.",
     "bewaren": "Bedrijfsgegevens opslaan…",
     "gewijzigd": "Niet-opgeslagen wijzigingen",
     "geenWijzigingen": "Geen niet-opgeslagen wijzigingen",
-    "organisatieNaam": "Deze organisatienaam herken je in de app. De bedrijfsnaam op je PDF beheer je bij Bedrijfsgegevens.",
     "rolTitel": "Rolwijziging bevestigen",
     "rolVraag": "Wil je {naam} de rol {rol} geven?",
     "eigenaarGevolg": "Een eigenaar beheert bedrijfsgegevens, leden, uitnodigingen en het abonnement, en kan projecten bewerken.",

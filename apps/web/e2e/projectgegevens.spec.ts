@@ -22,13 +22,19 @@ test("klant- en werfgegevens invullen, bewaren, ongedaan maken en herladen", asy
   await expect(dialoog.getByTestId("projectdatum")).not.toHaveValue("");
 
   // Een leeg werfadres blokkeert niets: hernoemen lukt zonder werfadres.
-  await dialoog.getByLabel("Naam").first().fill(`${naam} hernoemd`);
+  // Genummerde secties: Klant, Werfadres, Installatie, Metingen en Dossier.
+  await expect(dialoog.getByRole("heading", { level: 3 })).toHaveText(["1 Klant", "2 Werfadres", "3 Installatie", "4 Metingen", "5 Dossier"]);
+  // "Zelfde als klantadres" staat aan bij een leeg werfadres: de werfvelden zijn verborgen.
+  await expect(dialoog.getByTestId("werf-zelfde-als-klant")).toBeChecked();
+  await expect(dialoog.getByTestId("werf-straat")).toHaveCount(0);
+  await dialoog.getByLabel("Projectnaam").fill(`${naam} hernoemd`);
   await dialoog.getByRole("button", { name: "Bewaren" }).click();
   await expect(dialoog).toHaveCount(0);
   await expect(page.getByTestId("projectnaam")).toContainText("hernoemd");
 
   // Een gedeeltelijk werfadres vraagt de rest, zoals het klantadres.
   await page.getByTestId("projectnaam").click();
+  await dialoog.getByTestId("werf-zelfde-als-klant").click();
   await dialoog.getByTestId("werf-straat").fill("Dorpsstraat");
   await dialoog.getByRole("button", { name: "Bewaren" }).click();
   await expect(dialoog.getByText("Verplicht voor een adres.")).toHaveCount(3);
@@ -53,7 +59,7 @@ test("klant- en werfgegevens invullen, bewaren, ongedaan maken en herladen", asy
   // Ongedaan maken zet het hele pakket in één stap terug.
   await page.getByTestId("ongedaan-maken").click();
   await page.getByTestId("projectnaam").click();
-  await expect(dialoog.getByTestId("werf-straat")).toHaveValue("");
+  await expect(dialoog.getByTestId("werf-zelfde-als-klant")).toBeChecked();
   await expect(dialoog.getByTestId("klant-straat")).toHaveValue("");
   await expect(dialoog.getByTestId("werf-ean")).toHaveValue("");
   await expect(dialoog.getByTestId("projectdatum")).not.toHaveValue("2026-11-02");
@@ -64,6 +70,7 @@ test("klant- en werfgegevens invullen, bewaren, ongedaan maken en herladen", asy
   await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
   await page.reload();
   await page.getByTestId("projectnaam").click();
+  await expect(dialoog.getByTestId("werf-zelfde-als-klant")).not.toBeChecked();
   await expect(dialoog.getByTestId("werf-straat")).toHaveValue("Dorpsstraat");
   await expect(dialoog.getByTestId("werf-gemeente")).toHaveValue("Gent");
   await expect(dialoog.getByTestId("klant-gemeente")).toHaveValue("Antwerpen");
@@ -111,4 +118,35 @@ test("metingen invullen in Projectgegevens, bewaren en na herladen terugzien", a
   await expect(dialoog.getByTestId("meting-isolatieweerstand")).toHaveValue("250");
   await expect(dialoog.getByTestId("meting-meettoestel")).toHaveValue("Fluke 1664 FC");
   await expect(dialoog.getByTestId("meting-opmerking")).toHaveValue("Gemeten met open hoofdschakelaar");
+});
+
+test("een open keuzelijst sluit niet alleen: één klik op Bewaren bewaart", async ({ page }) => {
+  const keuzeNaam = `${naam} keuzelijst`;
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Nieuw project" }).click();
+  const nieuw = page.getByRole("dialog");
+  await nieuw.getByLabel("Naam").fill(keuzeNaam);
+  await nieuw.getByRole("button", { name: "Aanmaken" }).click();
+  await page.getByRole("row").filter({ hasText: keuzeNaam }).getByRole("link", { name: "Openen" }).click();
+  await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
+
+  await page.getByTestId("projectnaam").click();
+  const dialoog = page.getByRole("dialog");
+  await dialoog.getByTestId("werf-ean").fill("541448800000000002");
+  // Een keuzelijst openen en zonder keuze meteen op Bewaren klikken: één echte muisklik volstaat.
+  // Bewust een muisklik op de plek van de knop, zoals een gebruiker: een modale keuzelijst zou de
+  // rest van de dialoog voor muis en toegankelijkheidsboom afschermen, en dan sloot de eerste klik
+  // alleen de keuzelijst.
+  const bewaren = await dialoog.getByRole("button", { name: "Bewaren" }).boundingBox();
+  await dialoog.getByTestId("installatiecontext").click();
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await page.mouse.click(bewaren!.x + bewaren!.width / 2, bewaren!.y + bewaren!.height / 2);
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(page.locator("#projectgegevens-formulier")).toHaveCount(0);
+
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
+  await page.reload();
+  await page.getByTestId("projectnaam").click();
+  await expect(dialoog.getByTestId("werf-ean")).toHaveValue("541448800000000002");
 });

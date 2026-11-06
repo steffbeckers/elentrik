@@ -93,7 +93,7 @@ test("gelijke differentiëlen hebben verschillende herkenbare labels binnen hun 
   doc = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: diffs[0]!.id }, "lichtpunt").doc;
   const keuzes = schemaInvoegKeuzes(doc, analyseer(doc), diffs.map(d => ({ soort: "rail-einde" as const, nodeId: d.id })).reverse(), type => type, tekst);
   expect(keuzes.map(k => k.nodeId)).toEqual(diffs.map(d => d.id));
-  expect(keuzes[0]?.label).toMatch(/^differentieel 1 · \d+ A \/ \d+ mA/);
+  expect(keuzes[0]?.label).toMatch(/^differentieel 1 · \d+ mA · \d+ A/);
   expect(keuzes[0]?.label).toContain("voorKringen:A");
   expect(keuzes[1]?.label).toMatch(/^differentieel 2 ·/);
   expect(keuzes.every(k => k.bordId === bord.id)).toBe(true);
@@ -164,4 +164,25 @@ test('template and lighting targets distinguish equal boards and unnamed differe
     expect(keuzes.find(item => item.value === `nieuw-op-bord:${k.nodeId}`)!.label).toContain(k.bord);
   }
   expect(JSON.stringify(doc)).toBe(before);
+});
+
+test("keuzelijsten tonen een differentieel als 'Differentieel B · 30 mA', zonder referentie met zijn plaats", () => {
+  let doc = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
+  const bord = Object.values(doc.nodes).find(n => n.type === "verdeelbord")!;
+  for (let i = 0; i < 2; i++) doc = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bord.id }, "differentieel").doc;
+  const [eerste, tweede] = Object.values(doc.nodes).filter(n => n.type === "differentieel" && n.parentId === bord.id);
+  doc = wijzigEigenschappen(doc, eerste!.id, { referentie: "B", gevoeligheid_mA: 30 }).doc;
+  doc = wijzigEigenschappen(doc, tweede!.id, { gevoeligheid_mA: 300 }).doc;
+  const analyse = analyseer(doc);
+  const typeNaam = (type: string) => (type === "differentieel" ? "Differentieel" : type);
+  const keuzes = schemaKeuzes(doc, analyse, typeNaam);
+  expect(keuzes.find(k => k.id === eerste!.id)!.label).toBe("Differentieel B · 30 mA");
+  expect(keuzes.find(k => k.id === tweede!.id)!.label).toBe("Differentieel 2 · 300 mA");
+  const doelen = invoegDoelKeuzes(doc, analyse, [{ soort: "bestaande-differentieel", nodeId: eerste!.id }], typeNaam, soort => soort);
+  expect(doelen[0]!.label).toMatch(/^Differentieel B · 30 mA/);
+  const navigatie = schemaInvoegKeuzes(doc, analyse, [{ soort: "rail-einde", nodeId: eerste!.id }, { soort: "rail-einde", nodeId: tweede!.id }], typeNaam, tekst);
+  expect(navigatie.map(k => k.label)).toEqual([
+    expect.stringMatching(/^Differentieel B · 30 mA · \d+ A · \dP · \w+$/),
+    expect.stringMatching(/^Differentieel 2 · 300 mA · \d+ A · \dP · \w+$/),
+  ]);
 });

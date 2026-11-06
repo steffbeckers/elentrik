@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { NodeSchema, RuimteSchema, type NodeType } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { GEMEENSCHAPPELIJK, VELDEN, bouwVelden, veldWeergaveWaarde, type Veld } from "../app/editor/velden";
+import { GEMEENSCHAPPELIJK, VELDEN, bouwVelden, veldGroepen, veldWeergaveWaarde, type Veld } from "../app/editor/velden";
 import nl from "../i18n/locales/nl.json";
 
 type Boom = { [sleutel: string]: string | Boom };
@@ -15,6 +15,11 @@ function tekst(sleutel: string): string | undefined {
     huidig = huidig[deel];
   }
   return typeof huidig === "string" ? huidig : undefined;
+}
+
+/** De groepen van het paneel voor een nodetype, met de sleutels erin. */
+function groepenVan(type: NodeType): { groep: string; sleutels: string[] }[] {
+  return veldGroepen([...GEMEENSCHAPPELIJK, ...VELDEN[type]]).map((g) => ({ groep: g.groep, sleutels: g.velden.map((v) => v.sleutel) }));
 }
 
 /** Alle bladeren van een deelboom van nl.json. */
@@ -147,9 +152,33 @@ describe("VELDEN", () => {
     ] });
     expect(test[1]).toMatchObject({ soort: "getal", eenheid: "ms", min: 0, optioneel: true });
     expect(tekst("editor.eigenschappen.groepen.test")).toBe("Test");
-    // De groep komt na de gewone velden, zodat het paneel er één kop boven zet.
-    expect(differentieel.slice(-2).map((v) => v.sleutel)).toEqual(["testResultaat", "uitschakeltijd_ms"]);
-    expect(differentieel.filter((v) => v.groep === undefined).length).toBe(differentieel.length - 2);
+    // De groep komt na de andere groepen, zodat het paneel er één kop boven zet.
+    expect(groepenVan("differentieel").at(-1)).toEqual({ groep: "test", sleutels: ["testResultaat", "uitschakeltijd_ms"] });
+  });
+
+  test("het paneel groepeert in Elektrisch, Uitvoering, Benaming en plan, Ruimte en Test, zonder velden te verliezen", () => {
+    expect(groepenVan("automaat")).toEqual([
+      { groep: "elektrisch", sleutels: ["nominaal_A", "polen", "curve", "kortsluitvermogen_kA"] },
+      { groep: "benaming", sleutels: ["label", "ruimteNaam", "kringCode"] },
+      { groep: "ruimte", sleutels: ["ruimte"] },
+    ]);
+    expect(groepenVan("differentieel")).toEqual([
+      { groep: "elektrisch", sleutels: ["gevoeligheid_mA", "nominaal_A", "polen", "klasse"] },
+      { groep: "benaming", sleutels: ["label", "ruimteNaam", "referentie"] },
+      { groep: "ruimte", sleutels: ["ruimte"] },
+      { groep: "test", sleutels: ["testResultaat", "uitschakeltijd_ms"] },
+    ]);
+    expect(groepenVan("contactdoos").map((g) => g.groep)).toEqual(["uitvoering", "benaming", "ruimte"]);
+    for (const groep of ["elektrisch", "uitvoering", "benaming", "ruimte", "test"]) {
+      expect(tekst(`editor.eigenschappen.groepen.${groep}`)).toBeTruthy();
+    }
+    // Elk nodetype houdt precies dezelfde velden, alleen in groepen.
+    for (const type of Object.keys(VELDEN) as NodeType[]) {
+      const alle = [...GEMEENSCHAPPELIJK, ...VELDEN[type]];
+      const gegroepeerd = veldGroepen(alle);
+      expect(gegroepeerd.flatMap((g) => g.velden).map((v) => v.sleutel).sort()).toEqual(alle.map((v) => v.sleutel).sort());
+      expect(gegroepeerd.every((g) => g.velden.length > 0)).toBe(true);
+    }
   });
 
   test("gehele getallen krijgen stap 1 en het minimum uit het schema", () => {

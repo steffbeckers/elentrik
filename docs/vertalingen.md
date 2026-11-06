@@ -224,6 +224,13 @@ Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groe
 | sjabloon | modèle | template |
 | concept (lokaal) | brouillon | draft |
 | eigenschappen | propriétés | properties |
+| Elektrisch / Uitvoering / Benaming en plan / Ruimte (groepen van het paneel Eigenschappen) | Électrique / Exécution / Désignation et plan / Local | Electrical / Construction / Name and plan / Room |
+| Kring en beveiliging / Eindpunten / Sjablonen en referenties (groepen van het paneel Onderdelen) | Circuit et protection / Points d’utilisation / Modèles et références | Circuit and protection / End points / Templates and references |
+| Meer… / Minder | Plus… / Moins | More… / Less |
+| projectnaam | nom du projet | project name |
+| werfadres | adresse du chantier | site address |
+| zelfde als klantadres | identique à l’adresse du client | same as customer address |
+| soort ruimte (sjabloon) | type de local | room type |
 | alleen lezen | lecture seule | read-only |
 | inloggen / uitloggen | se connecter / se déconnecter | sign in / sign out |
 | registreren | s'inscrire | sign up |
