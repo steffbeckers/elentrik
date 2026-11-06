@@ -819,6 +819,11 @@
       "nee": "Nee",
       "stuks": "stuk | stuks",
       "m": "m",
+      "csvKop": {
+        "materiaal": "Materiaal",
+        "uitvoering": "Uitvoering",
+        "eenheid": "Eenheid"
+      },
       "csvDownloaden": "CSV downloaden"
     },
     "aftakkingen": {

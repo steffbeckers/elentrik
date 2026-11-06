@@ -58,7 +58,8 @@ function rijElementen(): HTMLElement[] {
 /** Het bord of de beveiliging waarvan de omschrijving in deze rij staat; alleen op de eerste rij van een kring. */
 function beveiligingVan(rij: KringenlijstRij, index: number): string | null {
   if (!eersteInKring(index)) return null;
-  return store.analyse?.kringen.find((k) => k.label === rij.kring)?.beveiligingId ?? null;
+  const kringId = store.analyse?.kringVanNode[rij.nodeId];
+  return store.analyse?.kringen.find((k) => k.id === kringId)?.beveiligingId ?? null;
 }
 function bewerkbaar(rij: KringenlijstRij, index: number, kolom: Kolom): boolean {
   return kolom === "kringOmschrijving" && !store.alleenLezen && beveiligingVan(rij, index) !== null;

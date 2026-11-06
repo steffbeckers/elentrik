@@ -819,6 +819,11 @@
       "nee": "Non",
       "stuks": "pièce | pièces",
       "m": "m",
+      "csvKop": {
+        "materiaal": "Matériel",
+        "uitvoering": "Exécution",
+        "eenheid": "Unité"
+      },
       "csvDownloaden": "Télécharger le CSV"
     },
     "aftakkingen": {

@@ -35,6 +35,7 @@ De vertalingen zijn eigen werk (clean room). Ze nemen geen tekst of terminologie
 | bevinding | constat | finding |
 | afwijking | dérogation | deviation |
 | eigenaar / lid | propriétaire / membre | owner / member |
+| materiaallijst | liste du matériel | materials list |
 | proefperiode | période d'essai | free trial |
 
 In lopende zinnen mag het Engels "RCD" schrijven nadat de term eenmaal voluit is gebruikt, en in een smalle tabelkop of een korte AREI-melding. In het Frans blijft het "interrupteur différentiel" (de korte vorm "différentiel" alleen in een smalle kolomkop).

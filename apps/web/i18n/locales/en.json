@@ -819,6 +819,11 @@
       "nee": "No",
       "stuks": "pc | pcs",
       "m": "m",
+      "csvKop": {
+        "materiaal": "Material",
+        "uitvoering": "Specification",
+        "eenheid": "Unit"
+      },
       "csvDownloaden": "Download CSV"
     },
     "aftakkingen": {

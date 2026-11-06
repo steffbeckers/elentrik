@@ -4,38 +4,48 @@ import type { MateriaalRij } from "@elentrik/model";
 // tussen aanhalingstekens (RFC 4180, met "" als ontsnapping).
 // Het type heet `MateriaalRij` in @elentrik/model (niet `MateriaalRegel`).
 
-type Taal = "nl" | "fr" | "en";
-// Bewust hier en niet uit de vertaalbestanden: die worden voor de browser tot berichtfuncties gecompileerd.
-const TEKSTEN: Record<Taal, { kop: [string, string, string, string]; stuk: string; stuks: string; meter: string }> = {
-  nl: { kop: ["Materiaal", "Uitvoering", "Hoeveelheid", "Eenheid"], stuk: "stuk", stuks: "stuks", meter: "m" },
-  fr: { kop: ["Matériel", "Exécution", "Quantité", "Unité"], stuk: "pièce", stuks: "pièces", meter: "m" },
-  en: { kop: ["Material", "Specification", "Quantity", "Unit"], stuk: "pc", stuks: "pcs", meter: "m" },
+/** Alle tekst komt uit de vertaalbestanden, aangereikt door de aanroeper: de util blijft puur. */
+export type MateriaalCsvTeksten = {
+  kop: { materiaal: string; uitvoering: string; hoeveelheid: string; eenheid: string };
+  stuk: string;
+  stuks: string;
+  meter: string;
+  /** Bij een leiding waarvan een deel van de lengtes ontbreekt. */
+  lengteOntbreekt: string;
 };
-const DECIMAAL: Record<Taal, string> = { nl: ",", fr: ",", en: "." };
 
 export type MateriaalCsvOpties = {
+  teksten: MateriaalCsvTeksten;
   /** De leesbare uitvoering van een rij; zonder dit staan de eigenschappen als veld=waarde. */
   uitvoering?: (rij: MateriaalRij) => string;
   /** De vertaalde naam van het soort; zonder dit staat het soort zelf in de cel. */
   materiaal?: (rij: MateriaalRij) => string;
 };
 
+/** Excel voert cellen die met = + - @ (of tab/CR) beginnen uit als formule: een `'` ervoor houdt ze tekst. */
 function veld(waarde: string): string {
-  return /[;"\r\n]/.test(waarde) ? `"${waarde.replaceAll('"', '""')}"` : waarde;
+  const veilig = /^[=+\-@\t\r]/.test(waarde) ? `'${waarde}` : waarde;
+  return /[;"\r\n]/.test(veilig) ? `"${veilig.replaceAll('"', '""')}"` : veilig;
 }
 
-export function materiaalCsv(regels: MateriaalRij[], taal: string, opties: MateriaalCsvOpties = {}): string {
-  const t: Taal = taal === "fr" || taal === "en" ? taal : "nl";
-  const tekst = TEKSTEN[t];
-  const decimaal = DECIMAAL[t];
+/**
+ * De CSV voor een Belgische Excel: `;`, UTF-8 BOM, CRLF en de decimale komma in elke taal (het
+ * scheidingsteken `;` richt zich al op een Belgische Excel). `_taal` houdt de handtekening gelijk aan
+ * die van de lijst; de teksten zijn al vertaald.
+ */
+export function materiaalCsv(regels: MateriaalRij[], _taal: string, opties: MateriaalCsvOpties): string {
+  const { teksten } = opties;
   const uitvoering = opties.uitvoering
     ?? ((r: MateriaalRij) => Object.entries(r.eigenschappen).map(([k, w]) => `${k}=${String(w)}`).join(" · "));
-  const lijnen = [tekst.kop.map(veld).join(";")];
+  const kop = [teksten.kop.materiaal, teksten.kop.uitvoering, teksten.kop.hoeveelheid, teksten.kop.eenheid];
+  const lijnen = [kop.map(veld).join(";")];
   for (const r of regels) {
-    const onbekend = r.eenheid === "m" && r.ontbrekendeLengtes === r.nodeIds.length;
-    const aantal = onbekend ? "" : String(Math.round(r.hoeveelheid * 1000) / 1000).replace(".", decimaal);
-    const eenheid = r.eenheid === "m" ? tekst.meter : r.hoeveelheid === 1 ? tekst.stuk : tekst.stuks;
-    lijnen.push([(opties.materiaal ?? ((x: MateriaalRij) => x.type))(r), uitvoering(r), aantal, eenheid].map(veld).join(";"));
+    const alleOntbreken = r.eenheid === "m" && r.ontbrekendeLengtes === r.nodeIds.length;
+    const aantal = alleOntbreken ? "" : String(Math.round(r.hoeveelheid * 1000) / 1000).replace(".", ",");
+    const eenheid = r.eenheid === "m" ? teksten.meter : r.hoeveelheid === 1 ? teksten.stuk : teksten.stuks;
+    const deel = r.ontbrekendeLengtes > 0 && !alleOntbreken;
+    const uitv = [uitvoering(r), deel ? teksten.lengteOntbreekt : ""].filter(Boolean).join(" · ");
+    lijnen.push([(opties.materiaal ?? ((x: MateriaalRij) => x.type))(r), uitv, aantal, eenheid].map(veld).join(";"));
   }
   return `\uFEFF${lijnen.join("\r\n")}\r\n`;
 }

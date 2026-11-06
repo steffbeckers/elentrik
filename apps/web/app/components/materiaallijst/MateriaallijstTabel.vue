@@ -29,7 +29,18 @@ function uitvoering(rij: MateriaalRij): string {
 
 /** De CSV volgt de lijst: dezelfde volgorde, uitvoering en taal; gedownload via een Blob, zonder server. */
 function downloadCsv(): void {
-  const csv = materiaalCsv(rijen.value, taal.value, { uitvoering, materiaal: (rij) => t(`editor.types.${rij.type}`) });
+  const csv = materiaalCsv(rijen.value, taal.value, {
+    uitvoering,
+    materiaal: (rij) => t(`editor.types.${rij.type}`),
+    teksten: {
+      kop: {
+        materiaal: t("editor.materiaallijst.csvKop.materiaal"), uitvoering: t("editor.materiaallijst.csvKop.uitvoering"),
+        hoeveelheid: t("editor.materiaallijst.hoeveelheid"), eenheid: t("editor.materiaallijst.csvKop.eenheid"),
+      },
+      stuk: t("editor.materiaallijst.stuks", 1), stuks: t("editor.materiaallijst.stuks", 2), meter: t("editor.materiaallijst.m"),
+      lengteOntbreekt: t("editor.materiaallijst.onvolledig"),
+    },
+  });
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
