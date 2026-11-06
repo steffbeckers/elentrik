@@ -1,6 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import type { Mij } from "../shared/mij";
+import type { InstallatieDocument } from "@elentrik/model";
 import { zetProefEinde } from "./hulp/database";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
@@ -12,6 +13,61 @@ const naam = `Test Situatie ${Date.now()}`;
 const PLAN_PNG = fileURLToPath(new URL("./fixtures/plan.png", import.meta.url));
 const PLAN_PDF = fileURLToPath(new URL("./fixtures/plan-2p.pdf", import.meta.url));
 const ONBEKEND_ID = "00000000-0000-0000-0000-000000000000";
+
+test("opmaak aanpassen in het echte afdrukvoorbeeld bewaart labeloffset zonder bronpositie te veranderen", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  const id = await maakProjectMetContactdozen(page, `${naam} afdrukopmaak`, 1);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await page.getByRole("button", { name: "Teller", exact: true }).click();
+  await page.getByTestId("plan-canvas").click({ position: { x: 350, y: 250 } });
+  const voor = (await wachtOpPlaatsingen(request, id, 1)).document.situatie.paginas[0]!.plaatsingen[0]!;
+  await voegPlanToe(page, PLAN_PNG);
+  await expect.poll(async () => (await haalProject(request, id)).document.situatie.paginas.length).toBe(2);
+  const tweedePagina = (await haalProject(request, id)).document.situatie.paginas[1]!.id;
+  await page.getByTestId("pagina-tab-0").click();
+  await page.getByTestId("werkruimte-opmaak").click();
+  await page.getByTestId("plan-afdruk-opmaken").click();
+  const dialoog = page.getByRole("dialog", { name: "Afdrukvoorbeeld", exact: true });
+  await expect(dialoog).toBeVisible();
+  await dialoog.getByTestId("afdruk-punt").selectOption(voor.nodeId);
+  const frame = page.frameLocator('[data-testid="afdrukvoorbeeld"]');
+  const label = frame.locator(`g[data-node-id="${voor.nodeId}"] > text`).first();
+  await expect(label).toHaveText("Teller");
+  const x = Number(await label.getAttribute("x"));
+  const offset = dialoog.getByTestId("plan-label-offset-x");
+  await offset.fill("70");
+  await offset.blur();
+  await expect.poll(async () => Number(await label.getAttribute("x"))).toBeCloseTo(x + 70, 1);
+  await expect.poll(async () => {
+    const p = await (await request.get(`/api/projecten/${id}`)).json() as { document: InstallatieDocument };
+    return p.document.situatie.paginas[0]!.plaatsingen[0];
+  }).toMatchObject({ ...voor, labelOffset: { x: 70, y: 0 } });
+  await dialoog.getByTestId("afdruk-instellingen-open").click();
+  const instellingen = page.getByRole("dialog", { name: "Afdrukinstellingen", exact: true });
+  await instellingen.getByRole("radio", { name: "A3", exact: true }).click();
+  await instellingen.getByRole("button", { name: "Instellingen bewaren" }).click();
+  await expect.poll(async () => frame.locator('.pagina').first().evaluate(el => parseFloat(getComputedStyle(el).width))).toBeGreaterThan(1500);
+  await dialoog.getByTestId("afdruk-pagina").selectOption(tweedePagina);
+  await expect.poll(() => frame.locator(`[data-situatie-pagina-id="${tweedePagina}"]`).evaluate(el => {
+    const rect = el.closest('section')!.getBoundingClientRect();
+    return rect.top >= -1 && rect.bottom <= el.ownerDocument.defaultView!.innerHeight + 1;
+  })).toBe(true);
+  await dialoog.getByTestId("afdruk-pagina").selectOption((await haalProject(request, id)).document.situatie.paginas[0]!.id);
+  await dialoog.getByTestId("afdruk-punt").selectOption(voor.nodeId);
+  await page.screenshot({ path: 'test-results/afdruk-opmaak-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(offset).toBeVisible();
+  await expect.poll(() => dialoog.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: 'test-results/afdruk-opmaak-mobiel.png' });
+  await dialoog.getByRole("button", { name: "Sluiten", exact: true }).click();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
+  await page.reload();
+  await page.getByTestId("tab-situatieschema").click();
+  const bewaard = await (await request.get(`/api/projecten/${id}`)).json() as { document: InstallatieDocument };
+  expect(bewaard.document.situatie.paginas[0]!.plaatsingen[0]).toMatchObject({ ...voor, labelOffset: { x: 70, y: 0 } });
+});
 
 type Plaatsing = { nodeId: string; x: number; y: number; rotatie: number };
 type Pagina = {

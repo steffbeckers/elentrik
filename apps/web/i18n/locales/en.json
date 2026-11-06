@@ -627,6 +627,12 @@
         "hint": "Click to draw walls. Escape ends the wall. Select a wall to adjust its dimensions."
       },
       "opmaak": {
+        "afdrukBewerken": "Adjust the printed layout",
+        "afdrukHint": "View and move labels at the size they will have on paper.",
+        "afdrukPagina": "Plan page",
+        "afdrukPunt": "Point on printed plan",
+        "afdrukBewaren": "Layout changes are saved to the project automatically. The version above applies to this preview; use the same version and print settings when exporting.",
+        "opnieuwLaden": "Reload preview",
         "titel": "Plan appearance",
         "symbolen": "Symbol size",
         "labels": "Label size",

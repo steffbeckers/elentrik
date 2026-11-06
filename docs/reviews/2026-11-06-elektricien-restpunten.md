@@ -2,6 +2,41 @@
 
 Vervolg op de [praktijkreview van 5 november](2026-11-05-elektricien-hertest.md). De gebruiker vroeg op 6 november alle zes resterende productpunten op te lossen. Dit verslag onderscheidt de werking van de app van de volledigheid en elektrische juistheid van het bronvoorbeeld.
 
+## Latere afwerking van het proefproject op 6 november
+
+Na de implementatie vroeg de gebruiker het proefproject af te werken, brongetrouw te houden en onzekerheden te vermelden. Deze aanvulling vervangt de eerdere status dat slechts één oude bronglyph was afgedekt. Beide ACA-plannen zijn via de zichtbare browser opgeschoond met in totaal 53 verwijderbare afdekkingen: 33 op het gelijkvloers en 20 op de verdieping. Labels bij muren en schakelaarclusters zijn via Planopmaak verplaatst. Een vergelijking van de opgeslagen documenten bevestigt dat alle 108 modelonderdelen en alle 66 bestaande posities en rotaties behouden zijn: 35 plaatsingen op het gelijkvloers en 31 op de verdieping.
+
+Het losse blad Test is als afbeelding bewaard onder **Test - referentie (buiten ACA-bron)** en uitgesloten van de export. Het oude blad had geen plaatsingen. Ook zijn de oorspronkelijke Test-afdruk en het oorspronkelijke raster lokaal bewaard. De oude kalibratie is niet overgenomen naar het nieuwe, uitsluitend als referentie bedoelde beeldblad.
+
+De werkelijk via de app gemaakte export **ACA brongetrouw - afdrukcontrole** bevat acht pagina's: twee A3-eendraadschema's, het gelijkvloers op A3, de verdieping op A4, drie A3-kringenlijsten en een A3-bijlage. Alle acht pagina's zijn gerenderd en visueel bekeken. Het gelijkvloers gebruikt A3 om de teller en dicht bij elkaar gelegen labels meer ruimte te geven. De afdrukken zijn passend op papier, zonder een onbewezen fysieke schaal te kalibreren. Eigen PDF-tekst is minimaal circa 2,498 mm; tekst in de rasterbron valt buiten die meting. Bewijsbestanden staan in `out/proefproject-afwerking/elentrik-aca-opgeschoond.pdf`, `project-final.json` en `final-audit.json`.
+
+### Bewust behouden brononzekerheden
+
+- I3, de PV-array en de aardingsonderbreker hebben geen eenduidig afleesbare situatiepositie in de gebruikte bron. Ze blijven ongeplaatst; hun locatie is niet verzonnen.
+- H3 blijft een onbekend driebladig bronsymbool met vraagteken, zonder onbewezen toestelidentiteit.
+- De installatiecontext blijft **onbekend**. Het [ACA-voorbeeld, figuren 13 en 14 op pagina's 26 en 27](https://www.acavzw.be/app/uploads/2025/01/Praktische-gids-huishoudelijke-installaties-versie-maart-2025.pdf) stelt niet vast of deze installatie nieuw of bestaand is. De revisiedatum 01/06/2023 bewijst geen aanleg- of ingebruiknamedatum.
+
+Dit is daarmee een afgewerkte bronreconstructie binnen de beschikbare informatie, met een concept-export; geen volledig vastgesteld uitvoerings- of keuringsdossier.
+
+### Productfeedback uit de afwerking — inmiddels opgelost
+
+1. **De exportbijlage neemt de dossierchecklist niet volledig over.** De dialoog meldt drie ongeplaatste onderdelen en een onbekende installatiecontext. De PDF-bijlage vermeldt alleen I3 en de PV-array als `Toestel — Punt ?`; de aardingsonderbreker en installatiecontext ontbreken. Neem de checklist volledig en met herkenbare namen over in de export.
+2. **Editor en afdruk tonen niet dezelfde fysieke minimumgrootte.** De teller en tekst worden voor de afdruk leesbaar gehouden, waardoor een in de editor ruim genoeg ogende plaatsing in de PDF krapper kan zijn. A3 verbetert het gelijkvloers, maar het tellerkader blijft zeer dicht bij de muur. Toon de effectieve afdrukgrootte in het afdrukvoorbeeld bij de opmaak; verplaats een bronpositie niet stilzwijgend.
+
+Bij het opschonen van het proefproject zelf is geen applicatiecode gewijzigd. Op het vervolgvraagstuk 'Los de resterende punten ook op' zijn beide bovenstaande punten daarna wel in de app opgelost:
+
+- De editorchecklist en de PDF gebruiken dezelfde dossierstatus. De bijlage bevat nu ontbrekende metadata, installatiecontext, plannen en alle ongeplaatste onderdelen, inclusief infrastructuur. De ongenummerde PV krijgt een herkenbare toestelnaam en bronomschrijving, zonder een verzonnen puntnummer. Elektrische bevindingen blijven apart; gewone dubbele plaatsmeldingen vervallen, gemotiveerde afwijkingen blijven zichtbaar. Dit is in Nederlands, Frans en Engels getest.
+- Via **Situatieschema → Planopmaak → Opmaak in afdruk bekijken** staan de bestaande opmaakvelden naast het echte afdrukvoorbeeld. Pagina, punt, labelpositie, symboolgrootte, labelgrootte en afdrukinstellingen kunnen zo met de werkelijke afdrukweergave worden beoordeeld. Opmaak wordt automatisch opgeslagen. De versie geldt voor het voorbeeld; de interface vermeldt dat dezelfde versie en instellingen bij export moeten worden gekozen.
+- De onafhankelijke review vond een volgordeprobleem bij wisselen tussen A3 en A4: de oude scrollpositie kon de gekozen pagina overschrijven. Dit is gereproduceerd, hersteld en opnieuw beoordeeld. De browserregressie controleert nu ook deze paginawissel.
+
+De nieuwe werkelijke UI-export **ACA dossier - volledige checklist** telt opnieuw acht pagina's. De bijlage noemt nu expliciet I3, de PV-array, de aardingsonderbreker en de onbekende installatiecontext. Beide situatiebladen en de bijgewerkte bijlage zijn visueel gecontroleerd. Een volledige documentvergelijking bevestigt dat het proefproject door deze reparaties niet is veranderd. Bewijs: `out/proefproject-afwerking/elentrik-aca-checklist.pdf` en `checklist-audit.json`.
+
+De volledige functionele suite slaagt met **206 bestanden / 3.816 tests**, de seriële prestatietests met **5/5**. De volledige typecontrole en de web-typecontrole na de laatste previewcorrectie slagen. De brede testuitvoering is met twee workers herhaald nadat een onbeperkte run naast de devservers tegen een native geheugenlimiet aanliep.
+
+De drie browserregressies slagen samen: PDF-export/download, het bestaande afdrukvoorbeeld en opmaak bewerken met A3/A4-paginawissel, desktop/mobiel en opslag/herladen. De test wacht vóór herladen op **Opgeslagen**. Desktop en mobiele screenshots zijn visueel bekeken; het opmaakpaneel blijft op mobiel afzonderlijk scrollbaar boven het afdrukvoorbeeld.
+
+De onderstaande implementatie- en testresultaten beschrijven de eerdere, al gepushte fase.
+
 ## Wat veranderde
 
 | Eerder probleem | Nieuwe werking |

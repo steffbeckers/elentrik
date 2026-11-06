@@ -627,6 +627,12 @@
         "hint": "Cliquez pour dessiner les murs. Échap termine le mur. Sélectionnez un mur pour modifier ses dimensions."
       },
       "opmaak": {
+        "afdrukBewerken": "Ajuster la mise en page imprimée",
+        "afdrukHint": "Visualisez et déplacez les libellés à leur taille sur papier.",
+        "afdrukPagina": "Page du plan",
+        "afdrukPunt": "Point sur le plan imprimé",
+        "afdrukBewaren": "Les modifications de mise en page sont enregistrées automatiquement. La version ci-dessus s’applique à cet aperçu ; utilisez la même version et les mêmes paramètres à l’exportation.",
+        "opnieuwLaden": "Recharger l’aperçu",
         "titel": "Mise en forme du plan",
         "symbolen": "Taille des symboles",
         "labels": "Taille des libellés",

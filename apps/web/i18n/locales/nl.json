@@ -627,6 +627,12 @@
         "hint": "Klik om muren te tekenen. Escape stopt de muur. Selecteer een muur om de afmetingen aan te passen."
       },
       "opmaak": {
+        "afdrukBewerken": "Opmaak in afdruk bekijken",
+        "afdrukHint": "Bekijk en verschuif labels met de grootte die ze op papier krijgen.",
+        "afdrukPagina": "Planpagina",
+        "afdrukPunt": "Punt op afdruk",
+        "afdrukBewaren": "Opmaakwijzigingen worden automatisch in het project opgeslagen. De versie hierboven geldt voor dit voorbeeld; gebruik bij export dezelfde versie en afdrukinstellingen.",
+        "opnieuwLaden": "Voorbeeld opnieuw laden",
         "titel": "Planopmaak",
         "symbolen": "Symboolgrootte",
         "labels": "Labelgrootte",

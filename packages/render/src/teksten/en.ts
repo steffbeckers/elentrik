@@ -87,6 +87,7 @@ export const EN: Teksten = {
     andere: "Other",
   },
   bijlage: {
+    dossier: { titel: "Complete the dossier", uitleg: "Missing dossier items, separate from the electrical checks.", klant: "The customer name is missing.", werfadres: "The site address is incomplete.", context: "Installation context unknown: new or existing has not been established.", schema: "The single-line diagram has no circuits yet.", plan: "The layout plan is missing.", zonderPlan: "The background plan is missing", ongeplaatst: "Not yet placed on a layout plan." },
     fouten: "Errors",
     waarschuwingen: "Warnings",
     info: "Info",

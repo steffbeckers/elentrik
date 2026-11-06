@@ -87,6 +87,7 @@ export const FR: Teksten = {
     andere: "Autre",
   },
   bijlage: {
+    dossier: { titel: "Compléter le dossier", uitleg: "Éléments manquants du dossier, distincts des contrôles électriques.", klant: "Le nom du client est manquant.", werfadres: "L’adresse du chantier est incomplète.", context: "Contexte de l’installation inconnu : installation neuve ou existante à préciser.", schema: "Le schéma unifilaire ne contient pas encore de circuits.", plan: "Le plan de position est manquant.", zonderPlan: "Le plan de fond est manquant", ongeplaatst: "Pas encore placé sur un plan de position." },
     fouten: "Erreurs",
     waarschuwingen: "Avertissements",
     info: "Info",

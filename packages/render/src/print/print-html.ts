@@ -9,6 +9,7 @@ import { schemaPaginaSvg } from "../schema-svg";
 import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
 import { situatieAfdekkingenSvg } from "../situatie-afdekkingen";
+import { dossierStatus } from "../dossierstatus";
 import { LOCALES, TEKSTEN, type Taal, type Teksten } from "../teksten/index";
 import { leesbareSchemaOpmaak } from "./leesbaar";
 import { cartouche, cartoucheHoogte, formatteerDatum } from "./cartouche";
@@ -135,7 +136,7 @@ function situatiePaginas(c: Context, pagina: SituatiePagina, bestand: string): P
     const tegel = kolommen * rijen > 1 ? ` (${kolom + 1}/${kolommen}, ${rij + 1}/${rijen})` : "";
     resultaat.push({ titel: `${c.teksten.paginatitels.situatieschema} — ${pagina.titel}${tegel}`, papier: c.papier, inhoud:
       `<div class="schaal" data-schaalmodus="${gekalibreerd ? "gekalibreerd" : "passend"}" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)}">${escapeXml(bijschrift + tegel)}</div>` +
-      `<div class="kader" data-plan-breedte-mm="${getal(breedte)}" style="left:${mm(links)};top:${mm(boven)};width:${mm(tegelBreedte)};height:${mm(tegelHoogte)}">` +
+      `<div class="kader" data-situatie-pagina-id="${escapeXml(pagina.id)}" data-plan-breedte-mm="${getal(breedte)}" style="left:${mm(links)};top:${mm(boven)};width:${mm(tegelBreedte)};height:${mm(tegelHoogte)}">` +
       `<div style="position:absolute;left:${mm(-kolom * c.ruimte.breedte)};top:${mm(-rij * planHoogte)};width:${mm(breedte)};height:${mm(hoogte)}">` +
       `<img class="plan" src="${escapeXml(bestand)}" style="position:absolute;width:100%;height:100%" alt="">` +
       `<svg class="laag" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${getal(breedte_px)} ${getal(hoogte_px)}" style="position:absolute;width:100%;height:100%" preserveAspectRatio="none">${laag}</svg></div></div>` });
@@ -263,9 +264,28 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
     }
   };
 
+  const dossier = dossierStatus(c.doc, c.analyse);
+  if (!dossier.volledig) {
+    const d = t.bijlage.dossier;
+    kop(d.titel);
+    tekst(d.uitleg, "bericht", volleBreedte);
+    for (const veld of dossier.ontbreekt) tekst(d[veld], "bericht", volleBreedte);
+    if (!dossier.plannen) tekst(d.plan, "bericht", volleBreedte);
+    for (const pagina of c.doc.situatie.paginas.filter(p => !p.referentie && !p.achtergrond)) {
+      tekst(`${pagina.titel} — ${d.zonderPlan}`, "bericht", volleBreedte);
+    }
+    for (const id of dossier.ongeplaatsteIds) {
+      const node = c.doc.nodes[id]!;
+      const naam = node.type === "toestel" ? `${t.types.toestel} (${t.toestelsoorten[node.soort]})` : onderwerpLabel(c, id);
+      const omschrijving = node.label?.trim();
+      const label = c.analyse.puntLabels[id];
+      const onderwerp = [...new Set([label, naam, omschrijving].filter(Boolean))].join(" — ");
+      tekst(`${onderwerp} — ${d.ongeplaatst}`, "bericht", volleBreedte);
+    }
+  }
   const titels = { fout: t.bijlage.fouten, waarschuwing: t.bijlage.waarschuwingen, info: t.bijlage.info } as const;
   for (const ernst of ERNSTEN) {
-    const lijst = bevindingen.filter((b) => b.ernst === ernst);
+    const lijst = bevindingen.filter((b) => b.ernst === ernst && (b.regelId !== "arei.situatie.niet-geplaatst" || b.afgeweken));
     if (lijst.length === 0) continue;
     kop(`${titels[ernst]} (${lijst.length})`);
     for (const b of lijst) {

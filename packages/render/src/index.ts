@@ -1,4 +1,6 @@
 export const PAKKET = "@elentrik/render";
+export { dossierStatus } from "./dossierstatus";
+export { tePlaatsen, GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, GROEP_INSTALLATIE, type TePlaatsenGroep } from "./te-plaatsen";
 
 export { schemaPaginaSvg, schemaStripSvg } from "./schema-svg";
 export { situatieLaagSvg, type SituatieItem } from "./situatie-svg";

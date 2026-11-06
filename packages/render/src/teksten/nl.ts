@@ -37,6 +37,7 @@ export type Teksten = {
   schaalAfdruk: string;
   metadata: { titel: string; verwijzing: string; naam: string; adres: string; straat: string; nummer: string; bus: string; postcode: string; gemeente: string; land: string; telefoon: string; email: string; ondernemingsnummer: string; keuringsorganisme: string; paginatitel: string };
   bijlage: {
+    dossier: { titel: string; uitleg: string; klant: string; werfadres: string; context: string; schema: string; plan: string; zonderPlan: string; ongeplaatst: string };
     fouten: string;
     waarschuwingen: string;
     info: string;
@@ -140,6 +141,7 @@ export const NL: Teksten = {
     andere: "Andere",
   },
   bijlage: {
+    dossier: { titel: "Dossier afwerken", uitleg: "Ontbrekende dossieronderdelen, los van de elektrische controles.", klant: "Klantnaam ontbreekt.", werfadres: "Werfadres is onvolledig.", context: "Installatiecontext onbekend: nieuw of bestaand is nog niet vastgesteld.", schema: "Eendraadschema bevat nog geen kringen.", plan: "Situatieplan ontbreekt.", zonderPlan: "Achtergrondplan ontbreekt", ongeplaatst: "Nog niet op een situatieplan geplaatst." },
     fouten: "Fouten",
     waarschuwingen: "Waarschuwingen",
     info: "Info",

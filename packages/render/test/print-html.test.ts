@@ -7,7 +7,7 @@ import {
   referentieWoning,
 } from "@elentrik/arei/testing";
 import { bruikbaar, papierMaat, STANDAARD_PAPIER_A4, tekstBreedte } from "@elentrik/layout";
-import type { InstallatieDocument, Partij } from "@elentrik/model";
+import { PLAATSBARE_TYPES, type InstallatieDocument, type Partij } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
 import { formatteerDatum, LOCALES, NL, overgeslagenPaginas, printHtml, TEKSTEN, type PrintOpties } from "../src/index";
 import { cartouche } from "../src/print/cartouche";
@@ -515,14 +515,15 @@ describe("printHtml", () => {
     const teksten = regels(uit.html).map((r) => r.tekst);
     const aantal = (ernst: string) => bevindingen.filter((b) => b.ernst === ernst).length;
     expect(teksten).toContain(`${NL.bijlage.fouten} (${aantal("fout")})`);
-    expect(teksten).toContain(`${NL.bijlage.info} (${aantal("info")})`);
+    expect(teksten).toContain(NL.bijlage.dossier.titel);
+    expect(teksten).not.toContain(`${NL.bijlage.info} (${aantal("info")})`);
     expect(teksten).not.toContain(expect.stringMatching(new RegExp(`^${NL.bijlage.waarschuwingen}`)));
     expect(teksten).toContain(`${NL.kolommen.kring} A — ${formatteerBericht(fout, "nl")}`);
-    expect(teksten).toContain(`A1 — ${formatteerBericht(bevindingen.find((b) => b.parameters["label"] === "A1")!, "nl")}`);
+    expect(teksten).toContain(`A1 — ${NL.bijlage.dossier.ongeplaatst}`);
     // Interne regel-id's horen niet in de pdf.
     expect(uit.html).not.toContain("arei.");
-    expect(teksten.indexOf(`${NL.bijlage.fouten} (${aantal("fout")})`)).toBeLessThan(
-      teksten.indexOf(`${NL.bijlage.info} (${aantal("info")})`),
+    expect(teksten.indexOf(NL.bijlage.dossier.titel)).toBeLessThan(
+      teksten.indexOf(`${NL.bijlage.fouten} (${aantal("fout")})`),
     );
   });
 
@@ -603,7 +604,11 @@ describe("printHtml", () => {
   });
 
   test("bijlage zonder inhoud vermeldt dat er geen bevindingen zijn", () => {
-    const doc = metGegevens(referentieAppartement());
+    const doc = metSituatie(metGegevens(referentieAppartement()));
+    doc.meta.installatieContext = "nieuw";
+    doc.situatie.paginas[0]!.plaatsingen = Object.values(doc.nodes)
+      .filter(n => (PLAATSBARE_TYPES as readonly string[]).includes(n.type))
+      .map(n => ({ nodeId: n.id, x: 100, y: 100, rotatie: 0 }));
     const { html } = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("bijlage") }));
     expect(html).toContain(`>${NL.bijlage.geenBevindingen}</div>`);
   });
