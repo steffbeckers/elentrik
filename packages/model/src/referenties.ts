@@ -190,7 +190,13 @@ export function dupliceerKring(
       kinderen: _kinderen,
       ...rest
     } = doc.nodes[id]!;
-    return { ...rest, kinderen: [] } as SjabloonNode;
+    const kopie = { ...rest, kinderen: [] } as SjabloonNode;
+    // A copy has never been tested: the RCD test data stays with the original.
+    if (kopie.type === "differentieel") {
+      delete kopie.testResultaat;
+      delete kopie.uitschakeltijd_ms;
+    }
+    return kopie;
   };
   const boom = maak(nodeId);
   if (boom.type === "automaat" || boom.type === "zekering")

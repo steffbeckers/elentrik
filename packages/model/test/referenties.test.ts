@@ -258,3 +258,24 @@ test("behoudKringCodes: onderborden houden hun eigen reeks", () => {
   expect(codes[x.a]).toBe("A");
   expect(codes[x.b]).toBe("B");
 });
+test("duplicating a circuit does not copy RCD test data onto the never-tested copy", () => {
+  const x = basis();
+  const kring = Object.values(x.doc.nodes).find((n) => n.type === "automaat")!;
+  const d = m.voegToe(x.doc, kring.id, m.STANDAARD.differentieel, 0);
+  const getest = m.wijzigEigenschappen(d.doc, d.id, {
+    testResultaat: "ok",
+    uitschakeltijd_ms: 18.5,
+  }).doc;
+  const kopie = m.dupliceerKring(getest, kring.id, "Z");
+  const kopieen = Object.values(kopie.doc.nodes).filter(
+    (n) => n.type === "differentieel" && !(n.id in getest.nodes),
+  );
+  expect(kopieen).toHaveLength(1);
+  const k = kopieen[0]!;
+  if (k.type !== "differentieel") throw new Error("verwacht een differentieel");
+  expect(k.testResultaat).toBeUndefined();
+  expect(k.uitschakeltijd_ms).toBeUndefined();
+  // The original keeps its measurement.
+  const orig = kopie.doc.nodes[d.id]!;
+  expect(orig.type === "differentieel" && orig.testResultaat).toBe("ok");
+});

@@ -2,13 +2,14 @@
 // pagina is een <section> met een vaste maat in mm, met een cartouche onderaan.
 import { formatteerBericht, REGELSETS, type Analyse, type Bevinding, type Ernst } from "@elentrik/arei";
 import { bruikbaar, opmaak, papierMaat, STANDAARD_PAPIER_A4, type Papier } from "@elentrik/layout";
-import type { Adres, InstallatieDocument, NodeId, NodeType, Partij, SituatiePagina } from "@elentrik/model";
+import type { Adres, InstallatieDocument, NodeId, NodeType, NodeVan, Partij, SituatiePagina } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import { kringenlijst, type KringenlijstRij } from "../kringenlijst";
 import { schemaPaginaSvg } from "../schema-svg";
 import { situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
 import { situatieAfdekkingenSvg } from "../situatie-afdekkingen";
+import { bordVanNode, differentieelNaam, differentieelPlaatsen } from "../differentieelnaam";
 import { dossierStatus, onderwerpLabel as onderwerpLabelGedeeld, ongeplaatstNaam } from "../dossierstatus";
 import { LOCALES, TEKSTEN, type Taal, type Teksten } from "../teksten/index";
 import { leesbareSchemaOpmaak } from "./leesbaar";
@@ -244,12 +245,12 @@ function bevindingTekst(c: Context, b: Bevinding): string {
 type Blok = { html: string; hoogte: number; kop: boolean };
 
 /** De kolommen van de tabel met differentieeltests, als aandeel van de tabelbreedte. */
-const MEETTABEL_AANDELEN = [0.25, 0.25, 0.25, 0.25];
+const MEETTABEL_AANDELEN = [0.37, 0.21, 0.21, 0.21];
 /** De tabel met differentieeltests is hooguit zo breed, in mm: smaller blijft ze leesbaar. */
-const MEETTABEL_MAX_MM = 160;
+const MEETTABEL_MAX_MM = 190;
 
 /** De differentiëlen in de volgorde van het eendraadschema (diepte eerst vanaf de aansluiting). */
-function differentiëlenInVolgorde(doc: InstallatieDocument): NodeId[] {
+function differentiëlenInVolgorde(doc: InstallatieDocument, type: NodeType = "differentieel"): NodeId[] {
   const uit: NodeId[] = [];
   const bezocht = new Set<NodeId>();
   const stapel: NodeId[] = [doc.rootId];
@@ -258,7 +259,7 @@ function differentiëlenInVolgorde(doc: InstallatieDocument): NodeId[] {
     if (bezocht.has(id) || !Object.hasOwn(doc.nodes, id)) continue;
     bezocht.add(id);
     const node = doc.nodes[id]!;
-    if (node.type === "differentieel") uit.push(id);
+    if (node.type === type) uit.push(id);
     for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push(node.kinderen[i]!);
   }
   return uit;
@@ -307,11 +308,28 @@ function metingBlokken(c: Context): Blok[] {
     kop(m.differentieeltests);
     // De kolomkop blijft bij de eerste rij (`kop: true`).
     blokken.push({ ...rij([m.referentie, m.gevoeligheid, m.resultaat, m.tijd], "kolomkop", ' data-tabel="differentieeltests"'), kop: true });
+    const plaatsen = differentieelPlaatsen(c.doc, ids);
+    const borden = differentiëlenInVolgorde(c.doc, "verdeelbord");
+    const namen = new Map(ids.map(id => [id, differentieelNaam(c.doc.nodes[id] as NodeVan<"differentieel">, plaatsen.get(id) ?? 1, type => t.types[type])]));
+    const aantalPerNaam = new Map<string, number>();
+    for (const naam of namen.values()) aantalPerNaam.set(naam, (aantalPerNaam.get(naam) ?? 0) + 1);
+    // De plaats telt per bord: alleen als twee namen anders gelijk zijn, komt de herkomst (bord of bovenliggend onderdeel) erbij.
+    const herkomst = (id: NodeId): string | undefined => {
+      if (aantalPerNaam.get(namen.get(id)!)! < 2) return undefined;
+      const bord = bordVanNode(c.doc, id);
+      if (bord !== undefined) {
+        const node = c.doc.nodes[bord]!;
+        return node.type === "verdeelbord" && node.naam?.trim() ? node.naam.trim() : `${t.types.verdeelbord} ${borden.indexOf(bord) + 1}`;
+      }
+      const ouder = c.doc.nodes[id]?.parentId;
+      return ouder != null && Object.hasOwn(c.doc.nodes, ouder) ? t.types[c.doc.nodes[ouder]!.type] : undefined;
+    };
     for (const id of ids) {
       const node = c.doc.nodes[id]!;
       if (node.type !== "differentieel") continue;
+      // Dezelfde naam als in de editor.
       blokken.push({ ...rij([
-        node.referentie ?? "—",
+        [namen.get(id), herkomst(id)].filter(Boolean).join(" · "),
         `${formatteerGetal(node.gevoeligheid_mA, c.taal)} mA`,
         node.testResultaat ? m.resultaten[node.testResultaat] : m.nietIngevuld,
         meetwaardeTekst(node.uitschakeltijd_ms, "ms", t, c.taal),

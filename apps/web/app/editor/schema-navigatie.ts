@@ -1,3 +1,4 @@
+import { bordVanNode, differentieelNaam, differentieelPlaatsen } from "@elentrik/render";
 import type { Analyse } from "@elentrik/arei";
 import type { Aanknoping, InstallatieDocument, NodeType, NodeVan, LichtschakelingDoel } from "@elentrik/model";
 
@@ -10,28 +11,6 @@ export function invoegpuntBijSelectie<T extends Aanknoping>(analyse: Analyse, pu
   if (aftakking) return aftakking;
   const kring = analyse.kringVanNode[id] ?? analyse.kringen.find(k => k.beveiligingId === id)?.id;
   return kring ? punten.find(p => p.soort === "kring-einde" && analyse.kringVanNode[p.nodeId] === kring) : undefined;
-}
-
-/**
- * De naam van een differentieel in een keuzelijst: "Differentieel B · 30 mA". Zonder referentie
- * staat er zijn plaats in het bord ("Differentieel 2 · 30 mA"), met dezelfde gevoeligheid erbij.
- */
-export function differentieelNaam(node: NodeVan<"differentieel">, plaats: number, typeNaam: (type: NodeType) => string): string {
-  return `${typeNaam("differentieel")} ${node.referentie || plaats} · ${node.gevoeligheid_mA} mA`;
-}
-
-/** Per differentieel zijn plaats (vanaf 1) onder de differentiëlen van hetzelfde bord, in de volgorde van `ids`. */
-function differentieelPlaatsen(doc: InstallatieDocument, ids: readonly string[]): Map<string, number> {
-  const perBord = new Map<string, number>();
-  const plaatsen = new Map<string, number>();
-  for (const id of ids) {
-    if (doc.nodes[id]?.type !== "differentieel") continue;
-    const bord = bordVanNode(doc, id) ?? "";
-    const plaats = (perBord.get(bord) ?? 0) + 1;
-    perBord.set(bord, plaats);
-    plaatsen.set(id, plaats);
-  }
-  return plaatsen;
 }
 
 /** De volledige elektrische structuur, ook nodes zonder puntlabel of eigen symboolvak. */
@@ -75,18 +54,6 @@ function uniekeKeuzeLabels<T extends { label: string }>(keuzes: T[]): T[] {
     bezet.add(label);
     return { ...keuze, label };
   });
-}
-
-/** Nearest board context is shared by the canvas insertion chooser and assembly dialogs. */
-export function bordVanNode(doc: InstallatieDocument, id: string): string | undefined {
-  const gezien = new Set<string>();
-  let node = Object.hasOwn(doc.nodes, id) ? doc.nodes[id] : undefined;
-  while (node && !gezien.has(node.id)) {
-    gezien.add(node.id);
-    if (node.type === "verdeelbord") return node.id;
-    node = node.parentId !== null && Object.hasOwn(doc.nodes, node.parentId) ? doc.nodes[node.parentId] : undefined;
-  }
-  return undefined;
 }
 
 function bordKeuzeLabels(doc: InstallatieDocument, structuur: {id: string; label: string}[], typeNaam: (type: NodeType) => string): Map<string, string> {
@@ -178,3 +145,5 @@ export function schemaInvoegKeuzes(
     return differentielen.indexOf(a.nodeId) - differentielen.indexOf(b.nodeId);
   });
 }
+
+export { bordVanNode, differentieelNaam };

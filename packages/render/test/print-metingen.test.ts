@@ -1,7 +1,7 @@
 import { analyseer } from "@elentrik/arei";
 import { wijzigEigenschappen, wijzigProject, type InstallatieDocument } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { printHtml, type PrintOpties } from "../src/index";
+import { printHtml, TEKSTEN, type PrintOpties } from "../src/index";
 import { compactSchemaFixture } from "./fixtures/compact-schema";
 import { kloon } from "./hulp";
 
@@ -65,6 +65,7 @@ const VERWACHT = {
 
 describe.each(["nl", "fr", "en"] as const)("metingen in de pdf (%s)", (taal) => {
   const v = VERWACHT[taal];
+  const rcd = TEKSTEN[taal].types.differentieel;
 
   test("de bijlage toont de ingevulde metingen met de vaste zin; de cartouche blijft ongewijzigd", () => {
     const doc = metMetingen();
@@ -84,13 +85,24 @@ describe.each(["nl", "fr", "en"] as const)("metingen in de pdf (%s)", (taal) => 
     const rijen = [...tabel.matchAll(/<div class="meetrij[^"]*"[^>]*>(.*?)<\/div><\/div>(?=<div class="meetrij|<div class="t|<\/div>)/g)].map(m => tekstVan(m[0]).split("\n"));
     expect(tekstVan(html)).toContain(v.tabel[0]);
     expect(rijen[0]).toEqual(v.tabel.slice(1));
-    // Een rij per differentieel, in de volgorde van het schema.
-    expect(rijen.slice(1)).toEqual([
-      ["A", "300 mA", v.ok, v.tijd],
-      ["—", "30 mA", v.leeg, v.leeg],
-      ["F", "30 mA", v.nietOk, v.leeg],
-      ["L", "30 mA", v.nietGetest, v.leeg],
+    // Een rij per differentieel, in de volgorde van het schema; een lange naam mag over regels lopen.
+    expect(rijen.slice(1).map(r => r.join(" "))).toEqual([
+      `${rcd} A · 300 mA 300 mA ${v.ok} ${v.tijd}`,
+      `${rcd} 1 · 30 mA 30 mA ${v.leeg} ${v.leeg}`,
+      `${rcd} F · 30 mA 30 mA ${v.nietOk} ${v.leeg}`,
+      `${rcd} L · 30 mA 30 mA ${v.nietGetest} ${v.leeg}`,
     ]);
+  });
+
+  test("twee differentiëlen zonder referentie en met dezelfde gevoeligheid zijn in de tabel te onderscheiden", () => {
+    let doc = compactSchemaFixture();
+    for (const n of differentiëlen(doc)) doc = wijzigEigenschappen(doc, n.id, { referentie: undefined, gevoeligheid_mA: 30 }).doc;
+    const { html } = printHtml(doc, analyseer(doc), [], { ...opties, taal });
+    const tabel = html.slice(html.lastIndexOf("<div", html.indexOf('data-tabel="differentieeltests"')));
+    const rijen = [...tabel.matchAll(/<div class="meetrij[^"]*"[^>]*>(.*?)<\/div><\/div>(?=<div class="meetrij|<div class="t|<\/div>)/g)].map(m => tekstVan(m[0]).split("\n").join(" "));
+    const data = rijen.slice(1);
+    expect(data.length).toBe(differentiëlen(doc).length);
+    expect(new Set(data).size).toBe(data.length);
   });
 
   test("lege of gedeeltelijke metingen tonen 'niet ingevuld', nooit 0 of een lege waarde", () => {
