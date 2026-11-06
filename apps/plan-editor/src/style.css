@@ -1,9 +1,26 @@
 @import 'tailwindcss';
 @source '../vendor/openplan3d/components';
-:root { font-family: system-ui, sans-serif; color: #172033; background: #fff; color-scheme: light; }
+:root {
+  /* De plan-editor is bewust licht, als papier: ze volgt het donkere thema van de app niet. */
+  --plan-papier: #fff;
+  --plan-inkt: #172033;
+  --plan-inkt-zacht: #475569;
+  --plan-vlak: #f8fafc;
+  --plan-rand: #d1d5db;
+  --plan-rand-invoer: #94a3b8;
+  --plan-hover: #f3f4f6;
+  --plan-accent: #047857;
+  --plan-accent-zacht: #ecfdf5;
+  --plan-accent-inkt: #065f46;
+  --plan-selectie: #bbf7d0;
+  --plan-fout-inkt: #991b1b;
+  --plan-fout-vlak: #fef2f2;
+  --plan-tekst-klein: 0.8125rem;
+  font-family: system-ui, sans-serif; color: var(--plan-inkt); background: var(--plan-papier); color-scheme: light;
+}
 html, body, #app { margin: 0; width: 100%; height: 100%; overflow: hidden; }
 button, input { font: inherit; }
 button { cursor: pointer; }
 button:disabled { opacity: .45; cursor: not-allowed; }
-button:focus-visible, input:focus-visible { outline: 2px solid #047857; outline-offset: 2px; }
-::selection { background: #bbf7d0; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--plan-accent); outline-offset: 2px; }
+::selection { background: var(--plan-selectie); }

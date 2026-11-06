@@ -103,14 +103,14 @@
 {/if}
 <style>
   main { height: 100%; display: flex; flex-direction: column; }
-  .tools { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px; border-bottom: 1px solid #d1d5db; }
+  .tools { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--plan-rand); }
   .tools button { border: 1px solid transparent; border-radius: 6px; padding: 6px 10px; font-size: 14px; }
-  .tools button:hover { background: #f3f4f6; }
-  .tools button[aria-pressed=true] { background: #ecfdf5; color: #065f46; border-color: #047857; }
-  .divider { border-left: 1px solid #d1d5db; margin: 2px 6px; }
-  .properties { min-height: 44px; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; background: #f8fafc; }
-  .properties p { margin: 0; color: #475569; }
-  input { width: 88px; border: 1px solid #94a3b8; border-radius: 4px; padding: 2px 6px; background: white; }
+  .tools button:hover { background: var(--plan-hover); }
+  .tools button[aria-pressed=true] { background: var(--plan-accent-zacht); color: var(--plan-accent-inkt); border-color: var(--plan-accent); }
+  .divider { border-left: 1px solid var(--plan-rand); margin: 2px 6px; }
+  .properties { min-height: 44px; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 16px; font-size: var(--plan-tekst-klein); background: var(--plan-vlak); }
+  .properties p { margin: 0; color: var(--plan-inkt-zacht); }
+  input { width: 88px; border: 1px solid var(--plan-rand-invoer); border-radius: 4px; padding: 2px 6px; background: var(--plan-papier); }
   .canvas { flex: 1; position: relative; min-height: 0; }
-  .error { margin: 0; padding: 12px; color: #991b1b; background: #fef2f2; }
+  .error { margin: 0; padding: 12px; color: var(--plan-fout-inkt); background: var(--plan-fout-vlak); }
 </style>

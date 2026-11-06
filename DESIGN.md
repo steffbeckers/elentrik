@@ -184,6 +184,20 @@ Admin navigation uses medium-weight compact text and a transparent bottom rule a
 
 Admin tables use muted medium-weight headers, thin horizontal rules, regular small body text, tabular numbers, and blue linked row identities. Row hover applies a half-opacity elevated fill. Cells wrap long content while the table container can scroll. Pagination and result totals remain beneath the table.
 
+## Plan-editor
+
+The embedded plan editor (`apps/plan-editor`, shown in an iframe) is deliberately light, like paper, in every app theme. It does not follow the dark theme: a floor plan is drawn on, and printed as, a white sheet.
+
+Its colours and small text size are CSS variables defined once in `apps/plan-editor/src/style.css`; `App.svelte` uses only these tokens, never raw hex values:
+
+- Surfaces and ink: `--plan-papier`, `--plan-vlak`, `--plan-inkt`, `--plan-inkt-zacht`.
+- Lines and states: `--plan-rand`, `--plan-rand-invoer`, `--plan-hover`.
+- Accent (active tool, focus, selection): `--plan-accent`, `--plan-accent-zacht`, `--plan-accent-inkt`, `--plan-selectie`.
+- Errors: `--plan-fout-inkt`, `--plan-fout-vlak`.
+- Small text: `--plan-tekst-klein` (0.8125rem).
+
+The vendored OpenPlan3D canvas in `apps/plan-editor/vendor` is not edited, so its own styling (including the house icon in the empty canvas state) stays as upstream ships it.
+
 ## Do's and Don'ts
 
 ### Do:
