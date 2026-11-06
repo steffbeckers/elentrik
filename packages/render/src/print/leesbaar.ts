@@ -63,9 +63,8 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
     const heel = einde - yVan > hoogte && einde - band.van <= ruimte.hoogte;
     if (heel) yVan = band.van;
     const marge = heel ? (ruimte.hoogte - (einde - yVan)) / 2 : 4;
-    const tegelLimiet = heel ? einde - yVan : hoogte;
     while (yVan < einde) {
-      let yTot = Math.min(einde, yVan + tegelLimiet);
+      let yTot = heel ? einde : Math.min(einde, yVan + hoogte);
       if (yTot < einde) {
         for (let n = 0; n <= bereiken.length; n++) {
           const doorsneden = bereiken.filter(b => b.van < yTot && b.tot > yTot);

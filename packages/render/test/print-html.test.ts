@@ -1172,3 +1172,14 @@ describe("cartouche: lange waarden blijven binnen hun cel", () => {
     }
   });
 });
+
+test.each(["A4", "A3"] as const)("een klein schema (voeding, 1 differentieel, 3 kringen) met gewone gegevens: één eendraadschemablad zonder vervolgverwijzingen op %s", papier => {
+  const doc = metGegevens(installatie().verdeelbord(b => b.differentieel(30, d => {
+    for (let i = 0; i < 3; i++) d.kring(k => k.automaat(16).leiding(2.5).contactdozen(1).contactdozen(1).contactdozen(1).contactdozen(1));
+  })).bouw().doc);
+  const { html } = printHtml(doc, analyseer(doc), [], opties({ papier, onderdelen: alleenOnderdeel("eendraadschema") }));
+  const bladen = paginas(html);
+  expect(bladen).toHaveLength(1);
+  expect(bladen[0]).toContain("2 × 230 V ~");
+  expect(bladen[0]).not.toMatch(/>p\. \d/);
+});
