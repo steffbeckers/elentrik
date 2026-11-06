@@ -1,4 +1,4 @@
-// Maakt de PNG-iconen in public/ uit public/icoon.svg (de eigen getekende bliksemschicht). Eén keer
+// Maakt de PNG-iconen in public/ uit public/icoon.svg (de blauwe Lucide Zap-bliksemschicht). Eén keer
 // draaien na een wijziging van het icoon; de PNG's worden gecommit.
 //   node apps/web/scripts/maak-iconen.mjs
 // De maskable variant en het apple-touch-icon krijgen een volle witte achtergrond (iOS vult
