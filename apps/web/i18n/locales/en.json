@@ -288,7 +288,10 @@
     },
     "kringenlijst": {
       "titel": "Circuit list",
-      "toetsenbord": "Points grouped by circuit. Up and down arrows move focus; Enter selects the point. Scroll horizontally to see all specifications."
+      "toetsenbord": "Points grouped by circuit. Up and down arrows move focus; Enter selects the point. Scroll horizontally to see all specifications.",
+      "omschrijvingBewerken": "Edit the description of circuit {kring}",
+      "omschrijvingHint": "Click a circuit description or press F2 to edit it; Enter saves, Escape cancels.",
+      "omschrijvingVeld": "Description of circuit {kring}"
     },
     "status": {
       "opgeslagen": "Saved",
@@ -815,7 +818,8 @@
       "ja": "Yes",
       "nee": "No",
       "stuks": "pc | pcs",
-      "m": "m"
+      "m": "m",
+      "csvDownloaden": "Download CSV"
     },
     "aftakkingen": {
       "titel": "Branches",

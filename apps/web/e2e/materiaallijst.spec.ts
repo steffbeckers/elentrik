@@ -44,3 +44,21 @@ test("materiaallijst telt kabel en draad en bewaart aanpasbare lengtes", async (
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("materiaallijst-mobile.png"), fullPage: true });
 });
+
+test("de materiaallijst is te downloaden als CSV voor Excel", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", {
+    data: { naam: "Test CSV: lijst", klantnaam: "", stroomtype: "2x230V" },
+  });
+  const { id } = await antwoord.json();
+  await page.goto(`/projecten/${id}`);
+  await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
+  await page.getByTestId("tab-materiaallijst").click();
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByTestId("materiaallijst-csv").click()]);
+  expect(download.suggestedFilename()).toBe("Test CSV lijst-materiaallijst.csv");
+  const bytes = await (await import("node:fs/promises")).readFile((await download.path())!);
+  expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+  const regels = bytes.toString("utf8").slice(1).split("\r\n");
+  expect(regels[0]).toBe("Materiaal;Uitvoering;Hoeveelheid;Eenheid");
+  expect(regels.some((r) => r.startsWith("Contactdoos;"))).toBe(true);
+});

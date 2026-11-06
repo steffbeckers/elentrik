@@ -148,3 +148,46 @@ test("een selectie elders scrolt een rij boven het beeld onder de vaste kop vand
   await expect(eerste).toBeInViewport();
   await expect.poll(async () => (await eerste.boundingBox())!.y - (await kopOnderrand())).toBeGreaterThanOrEqual(-0.5);
 });
+
+test("de omschrijving van een kring is inline te bewerken, met undo en redo", async ({ page, request }) => {
+  await page.goto(`/projecten/${await nieuwProject(request, "bewerken")}`);
+  await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
+  await page.getByTestId("tab-kringenlijst").click();
+
+  const tabel = page.getByTestId("kringenlijst");
+  const rijen = tabel.locator('tbody tr[data-testid^="kringenlijst-rij-"]');
+  const knop = tabel.locator('[data-testid^="kringenlijst-omschrijving-"]').first();
+  const invoer = tabel.getByTestId("kringenlijst-omschrijving-invoer");
+  const voor = (await knop.textContent())?.trim() ?? "";
+
+  // Escape annuleert.
+  await knop.click();
+  await invoer.fill("Wordt geannuleerd");
+  await page.keyboard.press("Escape");
+  await expect(invoer).toHaveCount(0);
+  await expect(knop).toHaveText(voor);
+  await expect(rijen.first()).toBeFocused();
+
+  // Enter bewaart; ongedaan maken en opnieuw zijn één stap.
+  await knop.click();
+  await invoer.fill("Keuken; \"stopcontacten\"");
+  await page.keyboard.press("Enter");
+  await expect(knop).toHaveText('Keuken; "stopcontacten"');
+  await expect(rijen.first()).toBeFocused();
+  await page.getByTestId("ongedaan-maken").click();
+  await expect(knop).toHaveText(voor);
+  await page.getByTestId("opnieuw").click();
+  await expect(knop).toHaveText('Keuken; "stopcontacten"');
+
+  // F2 start de bewerking vanaf het toetsenbord; blur bewaart; pijlen werken daarna weer.
+  await rijen.first().focus();
+  await page.keyboard.press("F2");
+  await expect(invoer).toBeFocused();
+  await invoer.fill("Via blur");
+  await rijen.nth(1).click();
+  await expect(knop).toHaveText("Via blur");
+  await rijen.first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(rijen.nth(1)).toBeFocused();
+});

@@ -288,7 +288,10 @@
     },
     "kringenlijst": {
       "titel": "Liste des circuits",
-      "toetsenbord": "Points par circuit. Les flèches haut et bas déplacent le focus ; Entrée sélectionne le point. Faites défiler horizontalement pour voir toutes les caractéristiques."
+      "toetsenbord": "Points par circuit. Les flèches haut et bas déplacent le focus ; Entrée sélectionne le point. Faites défiler horizontalement pour voir toutes les caractéristiques.",
+      "omschrijvingBewerken": "Modifier la description du circuit {kring}",
+      "omschrijvingHint": "Cliquez sur la description d'un circuit ou appuyez sur F2 pour la modifier ; Entrée enregistre, Échap annule.",
+      "omschrijvingVeld": "Description du circuit {kring}"
     },
     "status": {
       "opgeslagen": "Enregistré",
@@ -815,7 +818,8 @@
       "ja": "Oui",
       "nee": "Non",
       "stuks": "pièce | pièces",
-      "m": "m"
+      "m": "m",
+      "csvDownloaden": "Télécharger le CSV"
     },
     "aftakkingen": {
       "titel": "Dérivations",

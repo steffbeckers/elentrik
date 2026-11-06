@@ -52,5 +52,5 @@ test("legacy and explicit G group together while cable without PE stays distinct
   expect(wires[0]).not.toHaveProperty("metBeschermingsgeleider");
   const rows = materiaallijst(loaded).filter((r) => r.type === "leiding");
   expect(rows).toHaveLength(2);
-  expect(rows.map((r) => r.hoeveelheid)).toEqual([10, 5]);
+  expect(rows.map((r) => r.hoeveelheid)).toEqual([5, 10]);
 });

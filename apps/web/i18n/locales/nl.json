@@ -288,7 +288,10 @@
     },
     "kringenlijst": {
       "titel": "Kringenlijst",
-      "toetsenbord": "Punten per kring. Pijl omhoog en omlaag verplaatsen de focus; Enter selecteert het punt. Scroll horizontaal voor alle specificaties."
+      "toetsenbord": "Punten per kring. Pijl omhoog en omlaag verplaatsen de focus; Enter selecteert het punt. Scroll horizontaal voor alle specificaties.",
+      "omschrijvingBewerken": "Omschrijving van kring {kring} bewerken",
+      "omschrijvingHint": "Klik op de omschrijving van een kring of druk op F2 om ze te bewerken; Enter bewaart, Escape annuleert.",
+      "omschrijvingVeld": "Omschrijving van kring {kring}"
     },
     "status": {
       "opgeslagen": "Opgeslagen",
@@ -815,7 +818,8 @@
       "ja": "Ja",
       "nee": "Nee",
       "stuks": "stuk | stuks",
-      "m": "m"
+      "m": "m",
+      "csvDownloaden": "CSV downloaden"
     },
     "aftakkingen": {
       "titel": "Aftakkingen",

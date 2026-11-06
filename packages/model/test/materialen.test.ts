@@ -28,6 +28,20 @@ function installatie(
 }
 
 describe("materiaallijst", () => {
+  test("sorteert op soort en dan op specificatie, zodat 30 mA en 300 mA naast elkaar staan", () => {
+    let doc = model.nieuwDocument();
+    const teller = doc.nodes[doc.rootId]!.kinderen[0]!;
+    const bord = model.voegToe(doc, teller, { type: "verdeelbord" });
+    doc = bord.doc;
+    for (const mA of [300, 30, 300, 100]) {
+      doc = model.voegToe(doc, bord.id, { ...model.STANDAARD.differentieel, gevoeligheid_mA: mA } as NodeInvoer).doc;
+    }
+    const rijen = model.materiaallijst(doc).filter((r) => r.type === "differentieel");
+    expect(rijen.map((r) => r.eigenschappen.gevoeligheid_mA)).toEqual([30, 100, 300]);
+    const types = model.materiaallijst(doc).map((r) => r.type);
+    expect(types).toEqual([...types].sort());
+  });
+
   test("groepeert identieke schakelaars en lampen samen ongeacht de aftakkingsindeling", () => {
     const doc = installatie([
       model.STANDAARD.schakelaar,
@@ -40,8 +54,8 @@ describe("materiaallijst", () => {
       .filter((r) => r.type === "schakelaar" || r.type === "lichtpunt");
     expect(rijen.map((r) => [r.type, r.hoeveelheid, r.nodeIds.length])).toEqual(
       [
-        ["schakelaar", 2, 2],
         ["lichtpunt", 5, 2],
+        ["schakelaar", 2, 2],
       ],
     );
     expect(rijen.every((r) => !("aftakking" in r.eigenschappen))).toBe(true);
@@ -93,7 +107,7 @@ describe("materiaallijst", () => {
       { ...model.STANDAARD.leiding, doorsnede_mm2: 1.5, lengte_m: 4 },
     ]);
     const rijen = model.materiaallijst(doc).filter((r) => r.type === "leiding");
-    expect(rijen.map((r) => r.hoeveelheid)).toEqual([12.5, 40, 4]);
+    expect(rijen.map((r) => r.hoeveelheid)).toEqual([4, 12.5, 40]);
     expect(rijen.every((r) => r.eenheid === "m")).toBe(true);
   });
 

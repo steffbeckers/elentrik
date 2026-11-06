@@ -14,6 +14,30 @@ const GEEN_MATERIAALEIGENSCHAP = new Set([
   "id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam", "naam", "aantal", "aantalPanelen", "puntReferentie", "lengte_m", "plaatsing", "aanleg", "kringCode", "referentie", "metBeschermingsgeleider",
 ]);
 
+/** Natuurlijk vergelijken zonder taalafhankelijkheid: cijferreeksen numeriek, de rest op tekencode. */
+function vergelijkNatuurlijk(a: string, b: string): number {
+  const delenA = a.match(/\d+(?:\.\d+)?|\D+/g) ?? [];
+  const delenB = b.match(/\d+(?:\.\d+)?|\D+/g) ?? [];
+  for (let i = 0; i < Math.min(delenA.length, delenB.length); i++) {
+    const x = delenA[i]!;
+    const y = delenB[i]!;
+    const getallen = /^\d/.test(x) && /^\d/.test(y);
+    const verschil = getallen ? Number(x) - Number(y) : x < y ? -1 : x > y ? 1 : 0;
+    if (verschil !== 0) return verschil;
+  }
+  return delenA.length - delenB.length;
+}
+
+/** Specificatie als tekst: sleutels staan al alfabetisch, getallen vergelijken numeriek (30 vóór 300). */
+function specificatie(rij: MateriaalRij): string {
+  return Object.entries(rij.eigenschappen).map(([veld, waarde]) => `${veld}=${String(waarde)}`).join(";");
+}
+
+/** Op soort, dan op specificatie; de sleutel maakt de volgorde volledig bepaald. */
+function vergelijkRijen(a: MateriaalRij, b: MateriaalRij): number {
+  return vergelijkNatuurlijk(a.type, b.type) || vergelijkNatuurlijk(specificatie(a), specificatie(b)) || (a.sleutel < b.sleutel ? -1 : a.sleutel > b.sleutel ? 1 : 0);
+}
+
 /** Afgeleid van de onderdelen, nooit van plaatsingen of afnemers: elke leiding telt één keer. */
 export function materiaallijst(doc: InstallatieDocument): MateriaalRij[] {
   const groepen = new Map<string, MateriaalRij>();
@@ -47,5 +71,5 @@ export function materiaallijst(doc: InstallatieDocument): MateriaalRij[] {
       rij.hoeveelheid += node.type === "contactdoos" || node.type === "lichtpunt" ? node.aantal : node.type === "toestel" && node.soort === "pvPaneel" ? node.aantalPanelen ?? 1 : 1;
     }
   }
-  return [...groepen.values()];
+  return [...groepen.values()].sort(vergelijkRijen);
 }

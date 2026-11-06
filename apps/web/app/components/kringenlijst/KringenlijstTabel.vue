@@ -4,7 +4,8 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { volgendeRij } from "~/editor/rijnavigatie";
 import { useEditorStore } from "~/stores/editor";
 
-// Alleen-lezen: dezelfde rijen en kolomkoppen als de kringenlijst in de PDF.
+// Alleen de omschrijving van de kring is bewerkbaar (Escape annuleert, Enter of verlaten bewaart, via
+// dezelfde store-operatie als het Eigenschappenpaneel: één undo-stap). Dezelfde rijen en kolomkoppen als de kringenlijst in de PDF.
 // De kolomkoppen, "Geen kringen" en de celteksten komen bewust uit `TEKSTEN` van @elentrik/render en
 // niet uit de vertaalbestanden: het tabblad moet woord voor woord de formulering van de PDF tonen
 // (ruling plan 5). De taal is die van de interface (plan 8), zoals de bevindingen: geen scherm met
@@ -54,7 +55,62 @@ function rijElementen(): HTMLElement[] {
   return Array.from(container.value?.querySelectorAll<HTMLElement>("[data-rij-node]") ?? []);
 }
 
+/** Het bord of de beveiliging waarvan de omschrijving in deze rij staat; alleen op de eerste rij van een kring. */
+function beveiligingVan(rij: KringenlijstRij, index: number): string | null {
+  if (!eersteInKring(index)) return null;
+  return store.analyse?.kringen.find((k) => k.label === rij.kring)?.beveiligingId ?? null;
+}
+function bewerkbaar(rij: KringenlijstRij, index: number, kolom: Kolom): boolean {
+  return kolom === "kringOmschrijving" && !store.alleenLezen && beveiligingVan(rij, index) !== null;
+}
+
+const bewerkt = ref<{ nodeId: string; waarde: string } | null>(null);
+const invoerVeld = ref<HTMLInputElement[] | HTMLInputElement | null>(null);
+
+async function startBewerken(rij: KringenlijstRij, index: number): Promise<void> {
+  if (!bewerkbaar(rij, index, "kringOmschrijving")) return;
+  kies(rij);
+  bewerkt.value = { nodeId: rij.nodeId, waarde: rij.kringOmschrijving };
+  await nextTick();
+  const veld = [invoerVeld.value].flat()[0];
+  veld?.focus();
+  veld?.select();
+}
+function bewaarBewerking(rij: KringenlijstRij, index: number): void {
+  const huidig = bewerkt.value;
+  const id = beveiligingVan(rij, index);
+  bewerkt.value = null;
+  if (!huidig || huidig.nodeId !== rij.nodeId || !id) return;
+  const waarde = huidig.waarde.trim();
+  if (waarde === rij.kringOmschrijving) return;
+  store.wijzigVeld([id], "label", waarde === "" ? undefined : waarde);
+  store.sluitGroep();
+}
+function annuleerBewerking(rij: KringenlijstRij): void {
+  bewerkt.value = null;
+  // De focus terug naar de rij, zodat de pijltoetsen weer werken.
+  rijElementen().find((r) => r.dataset.rijNode === rij.nodeId)?.focus();
+}
+function bijInvoerToets(event: KeyboardEvent, rij: KringenlijstRij, index: number): void {
+  // Niets uit het invoerveld bereikt de rijnavigatie.
+  event.stopPropagation();
+  if (event.key === "Enter") {
+    event.preventDefault();
+    bewaarBewerking(rij, index);
+    rijElementen().find((r) => r.dataset.rijNode === rij.nodeId)?.focus();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    annuleerBewerking(rij);
+  }
+}
+
 function bijToets(event: KeyboardEvent, rij: KringenlijstRij, index: number): void {
+  if (event.target !== event.currentTarget) return;
+  if (event.key === "F2") {
+    event.preventDefault();
+    void startBewerken(rij, index);
+    return;
+  }
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
     kies(rij);
@@ -99,7 +155,7 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
       {{ teksten.geenKringen }}
     </p>
     <table v-else role="grid" class="w-full min-w-[72rem] table-fixed border-separate border-spacing-0 text-left text-sm">
-      <caption class="sr-only">{{ $t('editor.kringenlijst.toetsenbord') }}</caption>
+      <caption class="sr-only">{{ $t('editor.kringenlijst.toetsenbord') }} {{ $t('editor.kringenlijst.omschrijvingHint') }}</caption>
       <colgroup>
         <col v-for="kolom in KOLOMMEN" :key="kolom" :style="{ width: BREEDTES[kolom] }">
       </colgroup>
@@ -137,7 +193,28 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
               kolom === 'kring' || kolom === 'punt' ? 'font-medium' : '',
             ]"
           >
-            <span :class="herhaaldeOmschrijving(index, kolom) ? 'sr-only' : ''">{{ rij[kolom] }}</span>
+            <input
+              v-if="bewerkt?.nodeId === rij.nodeId && kolom === 'kringOmschrijving'"
+              ref="invoerVeld"
+              v-model="bewerkt.waarde"
+              type="text"
+              class="w-full rounded border border-default bg-default px-1 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              :aria-label="$t('editor.kringenlijst.omschrijvingVeld', { kring: rij.kring })"
+              data-testid="kringenlijst-omschrijving-invoer"
+              @click.stop
+              @keydown="bijInvoerToets($event, rij, index)"
+              @blur="bewerkt && bewaarBewerking(rij, index)"
+            >
+            <button
+              v-else-if="bewerkbaar(rij, index, kolom)"
+              type="button"
+              tabindex="-1"
+              class="block min-h-6 w-full cursor-text rounded text-left hover:bg-accented"
+              :title="$t('editor.kringenlijst.omschrijvingBewerken', { kring: rij.kring })"
+              :data-testid="`kringenlijst-omschrijving-${rij.kring}`"
+              @click.stop="startBewerken(rij, index)"
+            >{{ rij[kolom] }}</button>
+            <span v-else :class="herhaaldeOmschrijving(index, kolom) ? 'sr-only' : ''">{{ rij[kolom] }}</span>
           </td>
         </tr>
       </tbody>
