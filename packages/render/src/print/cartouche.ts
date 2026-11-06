@@ -15,6 +15,11 @@ const TITEL_MM = 3.5;
 /** Breedte van het logo en de ruimte tussen logo en tekst in mm. */
 const LOGO_BREEDTE_MM = 18;
 const LOGO_TUSSENRUIMTE_MM = 2;
+/**
+ * Speling onder de laatste regel van het hoogste vak: de browser rondt elke regel af op hele pixels,
+ * en één pixel is 0,53 mm in het afdrukvoorbeeld op 50 %. Zo wordt de laatste regel nooit afgesneden.
+ */
+const SPELING_MM = 0.6;
 
 /**
  * De vakken van links naar rechts, als aandeel van de breedte van de cartouche: installateur,
@@ -103,7 +108,7 @@ function vakken(g: CartoucheGegevens): VakInhoud[] {
     const tekstBreedte = vakBreedte - 2 * VAK_MARGE_MM - 2 * RAND_MM - inspringing;
     let hoogte = 0;
     const regels = velden.map(([tekst, klasse = "", grootte = TEKST_MM]) =>
-      breekRegels(tekst, vloer(tekstBreedte), grootte, 1.35).map(regel => {
+      breekRegels(tekst, vloer(tekstBreedte), grootte, 1.35, { smalleCijfers: true, koppeltekens: true }).map(regel => {
         hoogte += grootte * REGELHOOGTE;
         return tekstRegel(regel, tekstBreedte, grootte, klasse);
       }).join("")
@@ -125,15 +130,19 @@ function vakken(g: CartoucheGegevens): VakInhoud[] {
   ];
 }
 
+function hoogteVoor(papier: Papier, inhoud: VakInhoud[]): number {
+  return Math.max(papier.cartoucheHoogte_mm, Math.ceil(Math.max(...inhoud.map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM + SPELING_MM));
+}
+
 /** Reserve sufficient height for complete metadata before paginating the drawing/table. */
 export function cartoucheHoogte(g: CartoucheGegevens): number {
-  return Math.max(g.papier.cartoucheHoogte_mm, Math.ceil(Math.max(...vakken(g).map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM));
+  return hoogteVoor(g.papier, vakken(g));
 }
 
 /** Complete escaped, multiline metadata; the same measurement is used by print pagination. */
 export function cartouche(g: CartoucheGegevens): string {
   const inhoud = vakken(g);
-  const hoogte = Math.max(g.papier.cartoucheHoogte_mm, Math.ceil(Math.max(...inhoud.map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM));
+  const hoogte = hoogteVoor(g.papier, inhoud);
   const boven = papierMaat(g.papier.formaat, g.papier.orientatie).hoogte - g.papier.marge_mm - hoogte;
   let links = g.papier.marge_mm;
   return '<div class="cartouche">' + inhoud.map((vak, i) => {

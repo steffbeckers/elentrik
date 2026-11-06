@@ -35,31 +35,63 @@ export function afkorten(tekst: string, breedte_mm: number, grootte_mm: number):
   return knip(tekst, n - WEGLATING.length).trimEnd() + WEGLATING;
 }
 
+export type BreekOpties = {
+  /**
+   * Cijfers tellen op de gewone schatting van `tekstBreedte` (0,6 em; het breedste cijfer in Noto Sans
+   * en Arial is 0,572 em) in plaats van met `factor`: een EAN of telefoonnummer blijft zo vaker heel.
+   */
+  smalleCijfers?: boolean;
+  /** Een woord mag ook na een koppelteken breken ("Sint-" / "Truiden"), vóór het hard gebroken wordt. */
+  koppeltekens?: boolean;
+};
+
 /**
  * Breekt de tekst greedy op woorden in regels die elk in `breedte_mm` passen. Witruimte wordt
  * samengevoegd, een regeleinde blijft een regeleinde, een woord dat langer is dan een regel wordt
  * hard gebroken. Een lege tekst geeft geen regels. Gooit een `RangeError` als er geen teken past.
  * `factor` vermenigvuldigt de geschatte tekenbreedte: groter dan 1 is voorzichtiger (minder tekens per regel).
  */
-export function breekRegels(tekst: string, breedte_mm: number, grootte_mm: number, factor = 1): string[] {
+export function breekRegels(tekst: string, breedte_mm: number, grootte_mm: number, factor = 1, opties: BreekOpties = {}): string[] {
   const max = tekensPerRegel(breedte_mm / factor, grootte_mm);
   if (max < 1) throw new RangeError(`Geen teken past in ${breedte_mm} mm bij ${grootte_mm} mm`);
+  // Zonder smalle cijfers telt elk teken voor één: dan is dit exact het aantal tekens per regel.
+  const ruimte = opties.smalleCijfers ? breedte_mm / factor / tekstBreedte("x", grootte_mm) + 1e-9 : max;
+  const gewicht = (code: number) => (opties.smalleCijfers && code >= 48 && code <= 57 ? 1 / factor : 1);
+  const past = (regel: string) => {
+    if (!opties.smalleCijfers) return regel.length <= ruimte;
+    let n = 0;
+    for (let i = 0; i < regel.length; i++) n += gewicht(regel.charCodeAt(i));
+    return n <= ruimte;
+  };
+  /** Het langste begin van `woord` dat op een regel past. */
+  const passendBegin = (woord: string) => {
+    let n = 0;
+    let i = 0;
+    while (i < woord.length && n + gewicht(woord.charCodeAt(i)) <= ruimte) n += gewicht(woord.charCodeAt(i++));
+    // Bij één teken per regel kan een surrogaatpaar niet geknipt worden; het gaat dan heel mee.
+    return knip(woord, i) || woord.slice(0, 2);
+  };
   const regels: string[] = [];
   for (const alinea of tekst.split("\n")) {
     let regel = "";
-    for (let woord of alinea.split(WITRUIMTE).filter((w) => w !== "")) {
-      if (regel !== "" && regel.length + 1 + woord.length <= max) {
-        regel += ` ${woord}`;
-        continue;
+    for (const woord of alinea.split(WITRUIMTE).filter((w) => w !== "")) {
+      // Na een koppelteken volgt het volgende deel zonder spatie.
+      const delen = opties.koppeltekens ? woord.split(/(?<=-)(?=[^-])/) : [woord];
+      for (const [i, origineel] of delen.entries()) {
+        let deel = origineel;
+        const verbinding = i === 0 ? " " : "";
+        if (regel !== "" && past(regel + verbinding + deel)) {
+          regel += verbinding + deel;
+          continue;
+        }
+        if (regel !== "") regels.push(regel);
+        while (!past(deel)) {
+          const stuk = passendBegin(deel);
+          regels.push(stuk);
+          deel = deel.slice(stuk.length);
+        }
+        regel = deel;
       }
-      if (regel !== "") regels.push(regel);
-      while (woord.length > max) {
-        // Bij één teken per regel kan een surrogaatpaar niet geknipt worden; het gaat dan heel mee.
-        const stuk = knip(woord, max) || woord.slice(0, 2);
-        regels.push(stuk);
-        woord = woord.slice(stuk.length);
-      }
-      regel = woord;
     }
     if (regel !== "") regels.push(regel);
   }

@@ -980,6 +980,21 @@ describe("breekRegels", () => {
     expect(() => breekRegels("abc", 1, 2.5)).toThrow(RangeError);
   });
 
+  test("met koppeltekens breekt een te lang woord na een koppelteken, niet erin", () => {
+    expect(breekRegels("Sint-Truidersteenweg-Noord 1088", tekstBreedte("x", 2.5) * 17, 2.5, 1, { koppeltekens: true }))
+      .toEqual(["Sint-", "Truidersteenweg-", "Noord 1088"]);
+    // Zonder de optie blijft het oude gedrag: hard breken op de regelbreedte.
+    expect(breekRegels("Sint-Truidersteenweg-Noord", tekstBreedte("x", 2.5) * 17, 2.5)).toEqual(["Sint-Truidersteen", "weg-Noord"]);
+  });
+
+  test("met smalle cijfers tellen cijfers zonder de factor: een EAN blijft heel", () => {
+    const breedte = tekstBreedte("x", 2.5) * 18;
+    expect(breekRegels("541448820000000000", breedte, 2.5, 1.35)).toHaveLength(2);
+    expect(breekRegels("541448820000000000", breedte, 2.5, 1.35, { smalleCijfers: true })).toEqual(["541448820000000000"]);
+    // Letters houden de voorzichtige factor.
+    expect(breekRegels("x".repeat(18), breedte, 2.5, 1.35, { smalleCijfers: true })).toHaveLength(2);
+  });
+
   test("een factor maakt de geschatte tekenbreedte groter: minder tekens per regel", () => {
     expect(breekRegels("x".repeat(20), 15, 2.5, 2)).toEqual(["x".repeat(5), "x".repeat(5), "x".repeat(5), "x".repeat(5)]);
     expect(breekRegels("x".repeat(20), 15, 2.5, 1)).toEqual(breekRegels("x".repeat(20), 15, 2.5));
@@ -1100,4 +1115,60 @@ test("zes seriestopcontacten met hoofd- en bijkomende differentieel behouden all
  expect(labels).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);
  const secties = paginas(uit.html);
  for (const sectie of secties) expect(sectie).toContain("2 × 230 V ~");
+});
+
+describe("cartouche: lange waarden blijven binnen hun cel", () => {
+  /** Elk cartouchevak met zijn afmetingen in mm en zijn tekstregels. */
+  const vakken = (html: string) => [...html.matchAll(/<div class="vak ([^"]+)" style="left:[\d.]+mm;top:[\d.]+mm;width:([\d.]+)mm;height:([\d.]+)mm;padding:([\d.]+)mm">(.*?)(?=<div class="vak |<\/div><\/div>(?:<div class="controlebeperking|<\/section>|<div class="watermerk))/g)]
+    .map(m => ({ soort: m[1]!, breedte: Number(m[2]), hoogte: Number(m[3]), marge: Number(m[4]), regels: regels(m[5]!) }));
+  const doc = () => {
+    const d = metSituatie(metGegevens(referentieAppartement()));
+    d.meta.klant = {
+      naam: "Familie Vandenbroucke-Janssens",
+      adres: { straat: "Burgemeester Van Gansbergelaan", nummer: "128", bus: "12", postcode: "9220", gemeente: "Hamme-Oost-Vlaanderen", land: "BE" },
+    };
+    d.meta.werfadres = { straat: "Sint-Truidersteenweg-Noord", nummer: "1088", postcode: "3500", gemeente: "Hasselt", land: "BE" };
+    d.meta.ean = "541448820000000000";
+    d.situatie.paginas[0]!.afdruk = { papier: "A4", orientatie: "staand", schaalmodus: "passend" };
+    return d;
+  };
+
+  test.each(["A4", "A3"] as const)("een EAN van 18 cijfers en een lang adres op %s, ook op een staand situatieblad", papier => {
+    const d = doc();
+    const { html } = printHtml(d, analyseer(d), [], opties({ papier, onderdelen: { eendraadschema: true, situatieschema: true, kringenlijst: false, bijlage: true }, afbeeldingen: { "raster-1": "plan.png" } }));
+    const alle = vakken(html);
+    expect(alle.filter(v => v.soort === "werf").length).toBeGreaterThanOrEqual(3);
+    // De cartouche breekt met een voorzichtige breedte: letters × 1,35, cijfers op de gewone schatting (0,6 em;
+    // het breedste cijfer in Noto Sans en Arial is 0,572 em). Een regel valt nooit buiten de binnenrand.
+    const voorzichtig = (tekst: string, grootte: number) =>
+      [...tekst].reduce((som, teken) => som + tekstBreedte(teken, grootte) * (/[0-9]/.test(teken) ? 1 : 1.35), 0);
+    for (const vak of alle) {
+      const binnen = vak.breedte - 2 * vak.marge - 2 * 0.25;
+      let inhoud = 0;
+      for (const r of vak.regels) {
+        expect(r.breedte, `${vak.soort}: ${r.tekst}`).toBeLessThanOrEqual(binnen + 1e-9);
+        expect(voorzichtig(r.tekst, r.grootte), `${vak.soort}: ${r.tekst}`).toBeLessThanOrEqual(r.breedte + 1e-9);
+        expect(r.tekst.endsWith("…"), r.tekst).toBe(false);
+        inhoud += r.grootte * 1.3;
+      }
+      // Een pixel speling (0,53 mm bij 50 % in het afdrukvoorbeeld): de laatste regel wordt nooit afgesneden.
+      expect(inhoud + 2 * vak.marge + 2 * 0.25 + 0.53, vak.soort).toBeLessThanOrEqual(vak.hoogte);
+    }
+    for (const werf of alle.filter(v => v.soort === "werf")) {
+      // Het EAN-nummer staat in zijn geheel op één regel.
+      expect(werf.regels.some(r => r.tekst.split(" ").includes("541448820000000000")), JSON.stringify(werf.regels.map(r => r.tekst))).toBe(true);
+    }
+    // Woorden breken op een spatie of na een koppelteken: een deel dat op een regel past, blijft heel.
+    for (const vak of alle.filter(v => v.soort === "klant" || v.soort === "werf")) {
+      const tekst = vak.regels.map(r => r.tekst);
+      const delen = vak.soort === "klant"
+        ? ["Familie", "Vandenbroucke-", "Janssens", "Burgemeester", "Gansbergelaan", "Hamme-", "Oost-", "Vlaanderen"]
+        : ["Sint-", "Truidersteenweg-", "Noord", "Hasselt"];
+      for (const deel of delen) {
+        const grootte = vak.regels[1]!.grootte;
+        if (voorzichtig(deel, grootte) > vak.regels[1]!.breedte) continue;
+        expect(tekst.some(r => r.includes(deel)), `${vak.soort}: ${deel} in ${JSON.stringify(tekst)}`).toBe(true);
+      }
+    }
+  });
 });

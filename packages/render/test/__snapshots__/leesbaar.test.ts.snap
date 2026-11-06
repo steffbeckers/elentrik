@@ -1,0 +1,112 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`een schema dat werkelijk niet op het blad past, splitst nog op dezelfde plaats 1`] = `
+[
+  {
+    "symbolen": 25,
+    "verwijzingen": [
+      "p. 1 #1",
+      "p. 1 #1",
+    ],
+    "xVan": 0,
+    "yVan": 4.5,
+  },
+]
+`;
+
+exports[`een schema dat werkelijk niet op het blad past, splitst nog op dezelfde plaats 2`] = `
+[
+  {
+    "symbolen": 21,
+    "verwijzingen": [
+      "p. 2 #1",
+      "p. 2 #2",
+    ],
+    "xVan": 0,
+    "yVan": -0.5,
+  },
+  {
+    "symbolen": 22,
+    "verwijzingen": [
+      "rechts p. 4 #8",
+      "rechts p. 4 #9",
+      "p. 1 #2",
+      "p. 1 #1",
+    ],
+    "xVan": 0,
+    "yVan": 95,
+  },
+  {
+    "symbolen": 27,
+    "verwijzingen": [
+      "p. 4 #3",
+      "p. 4 #4",
+      "p. 4 #5",
+      "p. 4 #6",
+      "p. 4 #7",
+    ],
+    "xVan": 252,
+    "yVan": 13.5,
+  },
+  {
+    "symbolen": 6,
+    "verwijzingen": [
+      "links p. 2 #8",
+      "rechts p. 5 #10",
+      "links p. 2 #9",
+      "rechts p. 5 #11",
+      "p. 3 #3",
+      "p. 3 #4",
+      "p. 3 #5",
+      "p. 3 #6",
+      "p. 3 #7",
+    ],
+    "xVan": 252,
+    "yVan": 127,
+  },
+  {
+    "symbolen": 26,
+    "verwijzingen": [
+      "links p. 4 #10",
+      "links p. 4 #11",
+    ],
+    "xVan": 467,
+    "yVan": 69.5,
+  },
+]
+`;
+
+exports[`een schema dat werkelijk niet op het blad past, splitst nog op dezelfde plaats 3`] = `
+[
+  {
+    "symbolen": 63,
+    "verwijzingen": [
+      "p. 1 #1",
+      "p. 1 #2",
+      "p. 1 #1",
+      "p. 1 #3",
+      "p. 1 #2",
+      "p. 1 #4",
+      "p. 1 #3",
+      "p. 1 #5",
+      "p. 1 #4",
+      "p. 2 #6",
+      "p. 1 #5",
+    ],
+    "xVan": 0,
+    "yVan": 4.5,
+  },
+  {
+    "symbolen": 22,
+    "verwijzingen": [
+      "p. 2 #7",
+      "p. 1 #6",
+      "p. 2 #8",
+      "p. 2 #7",
+      "p. 2 #8",
+    ],
+    "xVan": 0,
+    "yVan": 886,
+  },
+]
+`;

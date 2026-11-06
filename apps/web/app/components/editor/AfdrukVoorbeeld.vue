@@ -14,6 +14,7 @@ const bedrijf = ref<Partij>();
 const fout = ref(false);
 const zoom = ref(100);
 const frame = useTemplateRef<HTMLIFrameElement>('frame');
+const colorMode = useColorMode();
 let scroll = { x: 0, y: 0 };
 let geladenPagina: string | undefined;
 async function laadBedrijf() {
@@ -26,6 +27,17 @@ watch(open, waarde => {
  scroll = { x: 0, y: 0 }; geladenPagina = undefined;
  void laadBedrijf();
 });
+/**
+ * De tafel achter de bladen en hun rand volgen de semantische Nuxt UI-kleuren van de app (ook in dark mode).
+ * Het voorbeeld is een los document in een iframe: daar bestaan die variabelen niet, dus geef hun waarde mee.
+ * Het blad zelf blijft wit, zoals op papier.
+ */
+function tafelVariabelen(): string {
+ void colorMode.value;
+ const stijl = import.meta.client ? getComputedStyle(document.documentElement) : undefined;
+ const kleur = (naam: string) => stijl?.getPropertyValue(naam).trim().replace(/[<>;{}]/g, '') || 'color-mix(in srgb, CanvasText 15%, Canvas)';
+ return `--afdruk-tafel:${kleur('--ui-bg-accented')};--afdruk-bladrand:${kleur('--ui-border-accented')}`;
+}
 const html = computed(() => {
  const doc = editor.document;
  if (!open.value || !doc || !editor.analyse || !bedrijf.value) return '';
@@ -35,7 +47,7 @@ const html = computed(() => {
    papier: props.papier, onderdelen: props.onderdelen, versieLabel: props.versie, datum: doc.meta.datum || new Date().toISOString().slice(0, 10), taal: doc.meta.dossierTaal ?? 'nl', installateur: bedrijf.value, afbeeldingen,
    ...(bedrijf.value.logoBestandId ? { logo: `/api/bestanden/${bedrijf.value.logoBestandId}` } : {}),
   });
-  return r.html.replace('</style>', `@media screen{body{zoom:${zoom.value / 100};background:#e2e8f0}.pagina{background:white;margin:12px;outline:1px solid #64748b}}</style>`);
+  return r.html.replace('</style>', `@media screen{:root{${tafelVariabelen()}}body{zoom:${zoom.value / 100};background:var(--afdruk-tafel)}.pagina{background:white;margin:12px;outline:1px solid var(--afdruk-bladrand)}}</style>`);
  } catch { return ''; }
 });
 // A srcdoc refresh follows every saved layout edit. Keep the view on the same part of the plan.

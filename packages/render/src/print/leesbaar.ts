@@ -36,9 +36,11 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
     ];
   });
   const basis = pagineer(strook, papier, 1);
-  const hoogte = bruikbaar(papier).hoogte - 8;
+  const ruimte = bruikbaar(papier);
+  // A tile normally keeps 4mm above and below its content, room for the "p. N" references at a cut.
+  const hoogte = ruimte.hoogte - 8;
   const paginas: SchemaOpmaak['paginas'] = [];
-  const bronnen: { horizontaal: number; yVan: number; yTot: number }[] = [];
+  const bronnen: { horizontaal: number; yVan: number; yTot: number; marge: number }[] = [];
   const verticaleLinks: { index: number; vorig: boolean; x: number; y: number; verbinding: string }[] = [];
   for (const horizontaal of basis.paginas) {
     if (!horizontaal.elementen.length) continue;
@@ -56,8 +58,14 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
     // A short circuit on the right must not inherit the empty space above it from a tall left circuit.
     let yVan = banden.length === 1 && strook.hoogte <= hoogte ? 0 : band.van;
     const einde = band.tot;
+    // A band that fits the sheet at full scale stays whole: it is never cut for the sake of its margins.
+    // Without a cut it needs no reference room, so its margin shrinks to what the sheet leaves.
+    const heel = einde - yVan > hoogte && einde - band.van <= ruimte.hoogte;
+    if (heel) yVan = band.van;
+    const marge = heel ? (ruimte.hoogte - (einde - yVan)) / 2 : 4;
+    const tegelLimiet = heel ? einde - yVan : hoogte;
     while (yVan < einde) {
-      let yTot = Math.min(einde, yVan + hoogte);
+      let yTot = Math.min(einde, yVan + tegelLimiet);
       if (yTot < einde) {
         for (let n = 0; n <= bereiken.length; n++) {
           const doorsneden = bereiken.filter(b => b.van < yTot && b.tot > yTot);
@@ -81,8 +89,8 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
         } else if (e.soort === 'symbool' ? e.y + e.symbool.maat.hoogte > yVan && e.y < yTot : e.y >= yVan && e.y < yTot) elementen.push({ ...e });
       }
       if (elementen.length) {
-        paginas.push({ ...horizontaal, index, yVan: yVan - 4, elementen });
-        bronnen.push({ horizontaal: horizontaal.index, yVan, yTot });
+        paginas.push({ ...horizontaal, index, yVan: yVan - marge, elementen });
+        bronnen.push({ horizontaal: horizontaal.index, yVan, yTot, marge });
       }
       if (yTot >= einde) break;
       yVan = yTot;
@@ -112,7 +120,6 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
   type Rij = { tegels: { index: number; x: number }[]; hoogte: number; breedte: number };
   const indeling: { rijen: Rij[]; pagina: SchemaOpmaak['paginas'][number] }[] = [];
   const plaatsingen: { pagina: number; dx: number; dy: number }[] = [];
-  const ruimte = bruikbaar(papier);
   const tussenruimte = 4;
   const gebruikteHoogte = (rijen: Rij[]) => rijen.reduce((som, rij) => som + rij.hoogte, 0) + Math.max(0, rijen.length - 1) * tussenruimte;
   // Reserve 0.96em per character (also used by the print appendix), including wide glyphs.
@@ -129,7 +136,7 @@ export function leesbareSchemaOpmaak(doc: InstallatieDocument, papier: Papier, a
   };
   for (const tegel of paginas) {
     const bron = bronnen[tegel.index]!;
-    const tegelHoogte = bron.yTot - bron.yVan + 8;
+    const tegelHoogte = bron.yTot - bron.yVan + 2 * bron.marge;
     const verticaleRanden = verticaleLinks.filter(link => link.index === tegel.index).map(link => link.x + paginaLabelBreedte + 1.5 + paarLabelBreedte);
     const tegelBreedte = Math.max(...tegel.elementen.map(rechterrand), ...verticaleRanden) - tegel.xVan;
     let rij: Rij | undefined;

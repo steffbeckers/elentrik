@@ -3,6 +3,7 @@ import { wijzigEigenschappen, wijzigProject, type InstallatieDocument } from "@e
 import { describe, expect, test } from "vitest";
 import { printHtml, type PrintOpties } from "../src/index";
 import { compactSchemaFixture } from "./fixtures/compact-schema";
+import { kloon } from "./hulp";
 
 const opties: PrintOpties = {
   papier: "A4",
@@ -152,7 +153,7 @@ describe("metingen zonder bijlage", () => {
   });
 
   test("ook bij een te hoge cartouche (projectgegevenspagina) staan de metingen er één keer", () => {
-    const doc = structuredClone(metMetingen());
+    const doc = kloon(metMetingen());
     doc.meta.klant.naam = "Klant ".repeat(400);
     for (const onderdelen of [opties.onderdelen, zonderBijlage.onderdelen]) {
       const { html } = printHtml(doc, analyseer(doc), [], { ...opties, onderdelen });

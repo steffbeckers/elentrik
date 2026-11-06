@@ -155,3 +155,44 @@ test.each(["A4", "A3"] as const)("horizontale railverwijzingen wijzen wederzijds
  }
  expect(gecontroleerd).toBeGreaterThan(0);
 });
+
+/** Het eendraadschema in de pdf: A4 liggend met de cartouche (30 mm) en de controlebeperking (9 mm). */
+const AFDRUK_A4 = { ...STANDAARD_PAPIER_A4, cartoucheHoogte_mm: 39 };
+const kleinSchema = (punten: number) => installatie().verdeelbord(b => b.differentieel(30, d => {
+ for (let i = 0; i < 3; i++) d.kring(k => { let keten = k.automaat(16).leiding(2.5); for (let j = 0; j < punten; j++) keten = keten.contactdozen(1); return keten; });
+})).bouw().doc;
+const verwijzingen = (r: ReturnType<typeof leesbareSchemaOpmaak>) => r.paginas.flatMap(p => p.elementen.filter(e => e.soort === "vervolg" || (e.soort === "tekst" && e.tekst.startsWith("p. "))));
+
+test.each([1, 2, 3, 4])("een klein schema (voeding, 1 differentieel, 3 kringen van %i punten) blijft heel op één blad", punten => {
+ const doc = kleinSchema(punten);
+ const r = leesbareSchemaOpmaak(doc, AFDRUK_A4, analyseer(doc));
+ expect(r.paginas).toHaveLength(1);
+ expect(verwijzingen(r)).toEqual([]);
+ // Heel: de tekening is enkel verschoven, niet in stukken herschikt (de voeding blijft onder de teller).
+ const strook = new Map(r.strook.elementen.flatMap(e => e.soort === "symbool" ? [[e.nodeId, e] as const] : []));
+ const pagina = r.paginas[0]!;
+ const verschuiving = new Set(pagina.elementen.flatMap(e => e.soort === "symbool" ? [`${e.x - strook.get(e.nodeId)!.x}:${e.y - strook.get(e.nodeId)!.y}`] : []));
+ expect(verschuiving.size).toBe(1);
+ expect(pagina.elementen.some(e => e.soort === "tekst" && e.tekst === "2 × 230 V ~")).toBe(true);
+ const h = bruikbaar(AFDRUK_A4).hoogte;
+ for (const e of pagina.elementen) {
+  const van = e.soort === "lijn" ? Math.min(e.y1, e.y2) : e.soort === "tekst" ? e.y - e.grootte : e.y;
+  const tot = e.soort === "lijn" ? Math.max(e.y1, e.y2) : e.soort === "symbool" ? e.y + e.symbool.maat.hoogte : e.soort === "tekst" ? e.y + e.grootte * .35 : e.y;
+  expect(van).toBeGreaterThanOrEqual(pagina.yVan ?? 0);
+  expect(tot).toBeLessThanOrEqual((pagina.yVan ?? 0) + h);
+ }
+});
+
+test("een schema dat werkelijk niet op het blad past, splitst nog op dezelfde plaats", () => {
+ const vorm = (r: ReturnType<typeof leesbareSchemaOpmaak>) => r.paginas.map(p => ({
+  yVan: p.yVan, xVan: p.xVan,
+  symbolen: p.elementen.filter(e => e.soort === "symbool").length,
+  verwijzingen: p.elementen.flatMap(e => e.soort === "vervolg" ? [`${e.richting} p. ${e.paginaNummer} #${e.verbindingsnummer}`] : e.soort === "tekst" && e.tekst.startsWith("p. ") ? [e.tekst] : []),
+ }));
+ const groot = kleinSchema(5);
+ expect(vorm(leesbareSchemaOpmaak(groot, AFDRUK_A4, analyseer(groot)))).toMatchSnapshot();
+ const aca = compactSchemaFixture();
+ expect(vorm(leesbareSchemaOpmaak(aca, AFDRUK_A4, analyseer(aca)))).toMatchSnapshot();
+ const lang = installatie().verdeelbord(b => b.kring(k => { let keten = k.automaat(16).leiding(2.5); for (let i = 0; i < 80; i++) keten = keten.contactdozen(1); return keten; })).bouw().doc;
+ expect(vorm(leesbareSchemaOpmaak(lang, STANDAARD_PAPIER_A4, analyseer(lang)))).toMatchSnapshot();
+});
