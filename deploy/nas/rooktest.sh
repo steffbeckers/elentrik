@@ -15,11 +15,13 @@
 #   4. controleert staging naast productie (stap 9 tot en met 15): beide web-diensten tegen een
 #      Postgres en een Gotenberg, gescheiden databases en rollen, de eigen Mailpit van de stack,
 #      het watermerk in de PDF, noindex en de balk, de grendels en bijwerken.sh;
-#   5. ruimt alles op: containers, netwerk, volume, test-images en de tijdelijke map.
+#   5. controleert de proxy (stap 16): doorsturen op hostnaam, een upload en een export erdoor, het
+#      onderhoudsantwoord alleen als de app weg is, en dat bijwerken.sh de proxy ongemoeid laat;
+#   6. ruimt alles op: containers, netwerk, volume, test-images en de tijdelijke map.
 #
 # Raakt nooit de lokale infra (postgres 5432, gotenberg 3001): alleen Mailpit wordt gelezen (8025) en
 # gebruikt als SMTP-host (1025). Staging gebruikt de eigen Mailpit van de stack (tijdelijk op
-# 127.0.0.1:38025). Zet ROOKTEST_BEHOUD=1 om na afloop niets op te ruimen.
+# 127.0.0.1:38025) en de proxy tijdelijk op 127.0.0.1:3397. Zet ROOKTEST_BEHOUD=1 om na afloop niets op te ruimen.
 set -Eeuo pipefail
 
 # Git Bash op Windows zet argumenten als /backups om in C:/Program Files/Git/backups; voor docker
@@ -28,11 +30,13 @@ docker() { MSYS_NO_PATHCONV=1 command docker "$@"; }
 
 POORT=3399
 POORT_STAGING=3398
+POORT_PROXY=3397
 POORT_MAILPIT_STAGING=38025
 MAILPIT=http://127.0.0.1:8025
 MAILPIT_STAGING="http://127.0.0.1:${POORT_MAILPIT_STAGING}"
 BASIS="http://127.0.0.1:${POORT}"
 BASIS_STAGING="http://127.0.0.1:${POORT_STAGING}"
+PROXY="http://127.0.0.1:${POORT_PROXY}"
 PG_IMAGE=postgres:16.14-alpine
 
 # Padden die native programma's (docker, curl) begrijpen: C:/... in plaats van /c/... op Windows.
@@ -107,7 +111,7 @@ opruimen() {
   set +e
   if [ "$code" -ne 0 ] && [ "$COMPOSE_GESTART" = 1 ]; then
     printf '\n--- logs van web (laatste 60 regels) ---\n' >&2
-    compose logs --no-color --tail 60 web web-staging >&2
+    compose logs --no-color --tail 60 web web-staging proxy >&2
   fi
   if [ "${ROOKTEST_BEHOUD:-}" = 1 ]; then
     printf '\nROOKTEST_BEHOUD=1: project %s, map %s en image %s blijven staan.\n' "$PROJECT" "$TMP" "$IMAGE" >&2
@@ -135,7 +139,8 @@ curl -s --max-time 3 -o /dev/null "${MAILPIT}/api/v1/info" || faal "Mailpit is n
 if curl -s --max-time 2 -o /dev/null "${BASIS}/"; then faal "poort ${POORT} is al in gebruik"; fi
 if curl -s --max-time 2 -o /dev/null "${BASIS_STAGING}/"; then faal "poort ${POORT_STAGING} is al in gebruik"; fi
 if curl -s --max-time 2 -o /dev/null "${MAILPIT_STAGING}/"; then faal "poort ${POORT_MAILPIT_STAGING} is al in gebruik"; fi
-goed "Docker, Mailpit en de poorten ${POORT}, ${POORT_STAGING} en ${POORT_MAILPIT_STAGING} zijn in orde"
+if curl -s --max-time 2 -o /dev/null "${PROXY}/"; then faal "poort ${POORT_PROXY} is al in gebruik"; fi
+goed "Docker, Mailpit en de poorten ${POORT}, ${POORT_STAGING}, ${POORT_MAILPIT_STAGING} en ${POORT_PROXY} zijn in orde"
 
 # De NAS-compose zelf, met het voorbeeldbestand: geldig, geen enkele gepubliceerde poort, het vaste
 # netwerk, en elke variabele die compose gebruikt staat in .env.voorbeeld.
@@ -151,7 +156,7 @@ printf '%s' "$NAS_CONFIG" | node -e '
     for (const [naam, d] of Object.entries(c.services)) {
       if (d.ports && d.ports.length) fouten.push(naam + " publiceert een poort");
     }
-    for (const naam of ["web", "web-staging", "postgres", "gotenberg", "mailpit", "backup"]) {
+    for (const naam of ["web", "web-staging", "postgres", "gotenberg", "mailpit", "backup", "proxy"]) {
       if (!c.services[naam]) fouten.push("dienst " + naam + " ontbreekt");
     }
     const n = c.networks && c.networks.elentrik;
@@ -185,6 +190,17 @@ printf '%s' "$NAS_CONFIG" | node -e '
     for (const dienst of ["postgres", "gotenberg", "mailpit"]) {
       if (!st.depends_on || !st.depends_on[dienst]) fouten.push("web-staging hangt niet af van " + dienst);
     }
+    // De proxy: vaste containernaam, geen depends_on (hij moet antwoorden als web er niet is), een exacte
+    // versie van het image en de configuratie read-only gekoppeld.
+    const px = c.services.proxy;
+    if (px.container_name !== "elentrik-proxy") fouten.push("proxy: containernaam klopt niet");
+    if (px.depends_on && Object.keys(px.depends_on).length) fouten.push("proxy heeft een depends_on");
+    if (!/^caddy:\d+\.\d+\.\d+(-[a-z0-9.]+)?$/.test(px.image)) fouten.push("proxy: het image heeft geen exacte versie: " + px.image);
+    for (const doel of ["/etc/caddy/Caddyfile", "/srv/onderhoud.html"]) {
+      const v = (px.volumes || []).find((x) => x.target === doel);
+      if (!v || !v.read_only) fouten.push("proxy: " + doel + " ontbreekt of is niet read-only");
+    }
+    if (!px.healthcheck) fouten.push("proxy heeft geen healthcheck");
     if (fouten.length) {
       console.error(fouten.join("\n"));
       process.exit(1);
@@ -226,6 +242,11 @@ services:
       - "127.0.0.1:${POORT_STAGING}:3000"
     environment:
       BETTER_AUTH_URL: ${BASIS_STAGING}
+  # De proxy, alleen hier gepubliceerd zodat het script erdoor kan praten (zoals de tunnel dat in productie doet).
+  proxy:
+    container_name: ${ROOK_NAAM}-proxy
+    ports:
+      - "127.0.0.1:${POORT_PROXY}:8080"
   # De Mailpit van de stack, alleen hier gepubliceerd zodat het script de mail kan lezen.
   mailpit:
     container_name: ${ROOK_NAAM}-mailpit
@@ -738,10 +759,257 @@ grep -q 'pull web)' "${TMP}/bijwerken-productie.log" || faal "bijwerken.sh produ
 [ "$(docker inspect "${PROJECT}-web" --format '{{.State.Health.Status}}')" = healthy ] || faal "web is na bijwerken niet healthy"
 goed "bijwerken.sh productie: eerst een back-up, dan web; web-staging onaangeroerd"
 
+# ---------------------------------------------------------------- 16. de proxy
+stap "16. De proxy: doorsturen op hostnaam, het onderhoudsantwoord alleen als de app weg is"
+# Een verzoek via de proxy met de Host die Cloudflare meestuurt. Zet P_STATUS, P_KOP (de koppen) en P_BODY.
+via_proxy() { # $1 = host, rest = curl-argumenten (met het adres)
+  local host="$1"
+  shift
+  : >"${TMP}/p-kop.txt"
+  : >"${TMP}/p-body.txt"
+  P_STATUS="$(curl -s --max-time 30 -D "${TMP}/p-kop.txt" -o "${TMP}/p-body.txt" -w '%{http_code}' -H "Host: ${host}" "$@" || true)"
+  P_KOP="$(tr -d '\r' <"${TMP}/p-kop.txt")"
+  P_BODY="$(cat "${TMP}/p-body.txt")"
+}
+# De waarde van een kop uit het laatste proxyantwoord (leeg als hij ontbreekt).
+p_kop() { printf '%s\n' "$P_KOP" | grep -i "^$1:" | head -1 | cut -d: -f2- | sed 's/^ *//' || true; }
+# Wacht (hoogstens $1 seconden) tot de dienst $2 (host $3) via de proxy /api/gezondheid 200 geeft.
+wacht_via_proxy() {
+  local i
+  for ((i = 0; i < $1; i += 2)); do
+    via_proxy "$3" "${PROXY}/api/gezondheid"
+    [ "$P_STATUS" = 200 ] && return 0
+    sleep 2
+  done
+  faal "$2 antwoordt na ${1} s nog niet via de proxy (laatste status: ${P_STATUS})"
+}
+
+# curl zoekt cookies op bij de naam uit een eigen Host-kop (niet bij 127.0.0.1): de sessiecookie uit het bestand gaat daarom
+# als kop mee.
+cookie_van() { awk -F'\t' '/^#HttpOnly_/ || !/^#/ { if (NF >= 7) { printf "%s%s=%s", sep, $6, $7; sep = "; " } }' "$1"; }
+COOKIE_P="Cookie: $(cookie_van "$JAR")"
+grep -q 'session_token' <<<"$COOKIE_P" || faal "geen sessiecookie voor de proxy gevonden"
+
+PROXY_GEZONDHEID=""
+for _ in $(seq 1 30); do
+  PROXY_GEZONDHEID="$(docker inspect "${PROJECT}-proxy" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}geen{{end}}')"
+  [ "$PROXY_GEZONDHEID" = healthy ] && break
+  sleep 2
+done
+[ "$PROXY_GEZONDHEID" = healthy ] || faal "de healthcheck van de proxy werd niet healthy (status: ${PROXY_GEZONDHEID})"
+# Geen limiet op de grootte van een verzoek en geen time-out op een antwoord (de bestanden van de uitvoerbare
+# configuratie; de uitleg in de Caddyfile zelf staat in commentaar en telt niet mee).
+if grep -qE '^[[:space:]]*(request_body|max_size|read_timeout|write_timeout|response_header_timeout)\b' "${ROOT}/deploy/nas/proxy/Caddyfile"; then
+  faal "de Caddyfile zet een limiet op de grootte van een verzoek of een time-out"
+fi
+goed "de healthcheck van de proxy meldt healthy en de Caddyfile heeft geen limiet of time-out"
+
+# --- 1. de juiste dienst per host
+via_proxy elentrik.app "${PROXY}/inloggen"
+[ "$P_STATUS" = 200 ] || faal "elentrik.app /inloggen via de proxy gaf ${P_STATUS}"
+[ -z "$(p_kop x-robots-tag)" ] || faal "elentrik.app (productie) heeft een X-Robots-Tag: de proxy stuurde naar de verkeerde dienst"
+printf '%s' "$P_BODY" | grep -q 'data-testid="staging-balk"' && faal "elentrik.app toont de staging-balk: de proxy stuurde naar web-staging"
+via_proxy staging.elentrik.app "${PROXY}/inloggen"
+[ "$P_STATUS" = 200 ] || faal "staging.elentrik.app /inloggen via de proxy gaf ${P_STATUS}"
+[ "$(p_kop x-robots-tag)" = "noindex, nofollow" ] || faal "staging.elentrik.app heeft geen X-Robots-Tag noindex: de proxy stuurde niet naar web-staging"
+printf '%s' "$P_BODY" | grep -q 'data-testid="staging-balk"' || faal "staging.elentrik.app toont de staging-balk niet"
+goed "Host elentrik.app gaat naar web (geen X-Robots-Tag), Host staging.elentrik.app naar web-staging (noindex en de balk)"
+
+# --- 2. een andere host: een eigen 404, zonder door te sturen
+for ANDERE in onbekend.example www.elentrik.app staging.elentrik.app.example 127.0.0.1; do
+  via_proxy "$ANDERE" "${PROXY}/inloggen"
+  [ "$P_STATUS" = 404 ] || faal "Host ${ANDERE} gaf ${P_STATUS}, verwacht 404"
+  [ -z "$(p_kop x-robots-tag)" ] && [ -z "$(p_kop set-cookie)" ] || faal "Host ${ANDERE}: het antwoord lijkt van een app te komen"
+  [ "$P_BODY" = "Niet gevonden" ] || faal "Host ${ANDERE}: het lichaam van de 404 is niet van de proxy: '${P_BODY}'"
+  via_proxy "$ANDERE" "${PROXY}/__proxy/gezond"
+  [ "$P_STATUS" = 200 ] || faal "Host ${ANDERE}: /__proxy/gezond gaf ${P_STATUS}, verwacht 200"
+done
+via_proxy elentrik.app "${PROXY}/__proxy/gezond"
+[ "$P_STATUS" = 200 ] && [ "$P_BODY" = ok ] || faal "elentrik.app: /__proxy/gezond gaf '${P_STATUS} ${P_BODY}'"
+goed "een andere host geeft een 404 van de proxy; /__proxy/gezond geeft op elke host 200 zonder door te sturen"
+
+# --- 3. een upload van 2 MB, een project en een PDF-export via de proxy
+# Een plan van ruim 2 MB (een PDF begint met %PDF-; de server kijkt naar de eerste bytes). Een proxy met de
+# standaardlimiet van 1 MB zou dit afkappen of weigeren (413).
+PLAN="${TMP}/plan-2mb.pdf"
+{ printf '%%PDF-1.4\n'; head -c 2097152 /dev/urandom; } >"$PLAN"
+via_proxy elentrik.app -H "$COOKIE_P" -X POST -H "origin: ${BASIS}" -F "soort=plan-origineel" -F "bestand=@${PLAN};type=application/pdf" \
+  "${PROXY}/api/projecten/${PROJECT_ID}/bestanden"
+[ "$P_STATUS" = 201 ] || faal "een upload van 2 MB via de proxy gaf ${P_STATUS}: ${P_BODY}"
+PLAN_ID="$(printf '%s' "$P_BODY" | jget id)"
+[ "$(printf '%s' "$P_BODY" | jget grootte)" = "$(wc -c <"$PLAN" | tr -d ' ')" ] || faal "de server bewaarde niet de hele upload: ${P_BODY}"
+curl -s -H "$COOKIE_P" -H "Host: elentrik.app" -o "${TMP}/plan-terug.pdf" "${PROXY}/api/bestanden/${PLAN_ID}"
+cmp -s "$PLAN" "${TMP}/plan-terug.pdf" || faal "het geuploade plan komt via de proxy niet byte voor byte terug"
+goed "een plan van $(wc -c <"$PLAN" | tr -d ' ') bytes uploaden en terughalen via de proxy lukt, byte voor byte gelijk"
+
+via_proxy elentrik.app -H "$COOKIE_P" -X POST -H 'content-type: application/json' -H "origin: ${BASIS}" \
+  --data '{"naam":"Rooktest proxy","klantnaam":"","stroomtype":"2x230V"}' "${PROXY}/api/projecten"
+[ "$P_STATUS" = 201 ] || faal "een project aanmaken via de proxy gaf ${P_STATUS}: ${P_BODY}"
+PROXY_PROJECT_ID="$(printf '%s' "$P_BODY" | jget id)"
+PROXY_PROJECT_VERSIE="$(printf '%s' "$P_BODY" | jget versie)"
+EXPORT_BODY='{"onderdelen":{"eendraadschema":true,"situatieschema":false,"kringenlijst":true,"bijlage":false},"papier":"A4","versieLabel":"V1"}'
+via_proxy elentrik.app -H "$COOKIE_P" -X POST -H 'content-type: application/json' -H "origin: ${BASIS}" -H "if-match: ${PROXY_PROJECT_VERSIE}" \
+  --data "$EXPORT_BODY" "${PROXY}/api/projecten/${PROXY_PROJECT_ID}/exports"
+[ "$P_STATUS" = 200 ] || [ "$P_STATUS" = 201 ] || faal "een export via de proxy gaf ${P_STATUS}: ${P_BODY}"
+PROXY_BESTAND_ID="$(printf '%s' "$P_BODY" | jget bestandId)"
+[ -n "$PROXY_BESTAND_ID" ] || faal "export via de proxy: geen bestandId in ${P_BODY}"
+curl -s -H "$COOKIE_P" -H "Host: elentrik.app" -o "${TMP}/export-proxy.pdf" "${PROXY}/api/bestanden/${PROXY_BESTAND_ID}"
+[ "$(head -c 5 "${TMP}/export-proxy.pdf")" = "%PDF-" ] || faal "de export via de proxy is geen PDF"
+curl -s -b "$JAR" -o "${TMP}/export-direct.pdf" "${BASIS}/api/bestanden/${PROXY_BESTAND_ID}"
+cmp -s "${TMP}/export-proxy.pdf" "${TMP}/export-direct.pdf" || faal "de export via de proxy verschilt van dezelfde export rechtstreeks"
+goed "een project aanmaken en een PDF-export maken en ophalen via de proxy lukt ($(wc -c <"${TMP}/export-proxy.pdf" | tr -d ' ') bytes, gelijk aan rechtstreeks)"
+
+# --- 4. een eigen antwoord van de app gaat ongewijzigd door, ook een 4xx en een 5xx
+ONBEKEND_ID="00000000-0000-4000-8000-000000000000"
+# Rechtstreeks met dezelfde Host en X-Forwarded-Proto als de proxy (TLS eindigt bij Cloudflare, dus de proxy
+# zet `X-Forwarded-Proto: https`), want het antwoord van de app noemt beide in `url`.
+DIRECT_STATUS="$(curl -s -o "${TMP}/direct-body.txt" -w '%{http_code}' -H "$COOKIE_P" -H "Host: elentrik.app" -H "X-Forwarded-Proto: https" "${BASIS}/api/projecten/${ONBEKEND_ID}")"
+via_proxy elentrik.app -H "$COOKIE_P" "${PROXY}/api/projecten/${ONBEKEND_ID}"
+[ "$DIRECT_STATUS" = 404 ] || faal "rechtstreeks gaf /api/projecten/<onbekend> ${DIRECT_STATUS}, verwacht 404"
+[ "$P_STATUS" = 404 ] || faal "via de proxy gaf /api/projecten/<onbekend> ${P_STATUS}, verwacht de 404 van de app"
+[ "$P_BODY" = "$(cat "${TMP}/direct-body.txt")" ] || faal "de 404 van de app komt via de proxy anders terug: ${P_BODY}"
+printf '%s' "$P_BODY" | grep -q '"url": "https://elentrik.app/' || faal "de app ziet via de proxy geen https (X-Forwarded-Proto): ${P_BODY}"
+[ -z "$(p_kop retry-after)" ] || faal "de proxy zette Retry-After op een antwoord van de app"
+via_proxy elentrik.app "${PROXY}/api/gezondheid"
+[ "$P_STATUS" = 200 ] && [ "$(printf '%s' "$P_BODY" | jget ok)" = true ] || faal "/api/gezondheid via de proxy: '${P_STATUS} ${P_BODY}'"
+goed "de eigen 404 van de app (/api/projecten/<onbekend>) en zijn 200 op /api/gezondheid komen ongewijzigd door"
+
+# Een eigen 5xx van de app: Gotenberg weg, dan antwoordt de app zelf met 502 (ONBEREIKBAAR). Dat mag de proxy
+# niet vervangen door de onderhoudspagina (503).
+via_proxy elentrik.app -H "$COOKIE_P" -X POST -H 'content-type: application/json' -H "origin: ${BASIS}" \
+  --data '{"naam":"Rooktest proxy 502","klantnaam":"","stroomtype":"2x230V"}' "${PROXY}/api/projecten"
+P502_ID="$(printf '%s' "$P_BODY" | jget id)"
+P502_VERSIE="$(printf '%s' "$P_BODY" | jget versie)"
+[ -n "$P502_ID" ] || faal "een project aanmaken voor de 502-controle mislukte: ${P_BODY}"
+compose stop -t 5 gotenberg >/dev/null || faal "gotenberg stoppen mislukte"
+via_proxy elentrik.app -H "$COOKIE_P" -X POST -H 'content-type: application/json' -H "origin: ${BASIS}" -H "if-match: ${P502_VERSIE}" \
+  --data "$EXPORT_BODY" "${PROXY}/api/projecten/${P502_ID}/exports"
+P502_STATUS="$P_STATUS"
+P502_BODY="$P_BODY"
+P502_CODE="$(printf '%s' "$P_BODY" | jget data.code)"
+P502_RETRY="$(p_kop retry-after)"
+compose start gotenberg >/dev/null || faal "gotenberg starten mislukte"
+GOTENBERG_GEZOND=""
+for _ in $(seq 1 30); do
+  GOTENBERG_GEZOND="$(docker inspect "$(compose ps -q gotenberg)" --format '{{.State.Health.Status}}')"
+  [ "$GOTENBERG_GEZOND" = healthy ] && break
+  sleep 2
+done
+[ "$GOTENBERG_GEZOND" = healthy ] || faal "gotenberg werd na het starten niet meer healthy"
+[ "$P502_STATUS" = 502 ] || faal "met Gotenberg gestopt gaf de export via de proxy ${P502_STATUS}, verwacht de eigen 502 van de app: ${P502_BODY}"
+[ "$P502_CODE" = ONBEREIKBAAR ] || faal "de 502 van de export is niet die van de app (data.code '${P502_CODE}'): ${P502_BODY}"
+[ -z "$P502_RETRY" ] || faal "de proxy zette Retry-After op de eigen 502 van de app"
+if printf '%s' "$P502_BODY" | grep -q 'Elentrik wordt bijgewerkt'; then faal "de proxy verving de eigen 502 van de app door de onderhoudspagina"; fi
+goed "de eigen 502 van de app (Gotenberg weg, ONBEREIKBAAR) komt ongewijzigd door, zonder onderhoudspagina of Retry-After"
+
+# --- 5. met web gestopt: het onderhoudsantwoord, en web-staging blijft gewoon antwoorden
+compose stop -t 5 web >/dev/null || faal "web stoppen mislukte"
+via_proxy elentrik.app -H 'Accept: text/html,application/xhtml+xml,*/*;q=0.8' "${PROXY}/inloggen"
+[ "$P_STATUS" = 503 ] || faal "met web gestopt gaf een navigatie ${P_STATUS}, verwacht 503"
+printf '%s' "$P_BODY" | grep -q 'Elentrik wordt bijgewerkt' || faal "de 503 voor een navigatie bevat de tekst van onderhoud.html niet"
+cmp -s "${TMP}/p-body.txt" "${ROOT}/deploy/nas/proxy/onderhoud.html" || faal "de 503 voor een navigatie is niet precies onderhoud.html"
+[ "$(p_kop cache-control)" = no-store ] || faal "de 503 voor een navigatie heeft geen Cache-Control: no-store (maar '$(p_kop cache-control)')"
+[ "$(p_kop retry-after)" = 10 ] || faal "de 503 voor een navigatie heeft geen Retry-After: 10 (maar '$(p_kop retry-after)')"
+case "$(p_kop content-type)" in text/html*) ;; *) faal "de onderhoudspagina heeft content-type '$(p_kop content-type)'" ;; esac
+via_proxy elentrik.app -H 'Accept: text/html' "${PROXY}/projecten/een-diep-pad"
+[ "$P_STATUS" = 503 ] && printf '%s' "$P_BODY" | grep -q 'Elentrik wordt bijgewerkt' || faal "een navigatie naar een diep pad gaf niet de onderhoudspagina: ${P_STATUS}"
+goed "met web gestopt: een navigatie geeft 503 met onderhoud.html, Cache-Control: no-store en Retry-After: 10"
+
+via_proxy elentrik.app "${PROXY}/api/gezondheid"
+[ "$P_STATUS" = 503 ] || faal "met web gestopt gaf /api/gezondheid ${P_STATUS}, verwacht 503"
+[ "$P_BODY" = '{"ok":false}' ] || faal "met web gestopt is het lichaam van /api/gezondheid '${P_BODY}', verwacht {\"ok\":false}"
+case "$(p_kop content-type)" in application/json*) ;; *) faal "/api/gezondheid heeft content-type '$(p_kop content-type)'" ;; esac
+[ "$(p_kop cache-control)" = no-store ] && [ "$(p_kop retry-after)" = 10 ] || faal "de 503 van /api/gezondheid mist no-store of Retry-After: 10"
+# Een /api-verzoek is nooit een navigatie, ook niet met Accept: text/html (R5): altijd JSON.
+via_proxy elentrik.app -H 'Accept: text/html,application/xhtml+xml,*/*;q=0.8' "${PROXY}/api/gezondheid"
+[ "$P_STATUS" = 503 ] && [ "$P_BODY" = '{"ok":false}' ] || faal "GET /api/gezondheid met Accept: text/html gaf niet het JSON-antwoord: '${P_STATUS} ${P_BODY}'"
+case "$(p_kop content-type)" in application/json*) ;; *) faal "GET /api/gezondheid met Accept: text/html heeft content-type '$(p_kop content-type)'" ;; esac
+via_proxy elentrik.app -X POST -H 'Accept: application/json' -H "origin: ${BASIS}" "${PROXY}/api/projecten"
+[ "$P_STATUS" = 503 ] && [ "$P_BODY" = '{"ok":false}' ] || faal "een POST naar /api gaf niet het JSON-antwoord: '${P_STATUS} ${P_BODY}'"
+via_proxy elentrik.app "${PROXY}/api/projecten"
+[ "$P_STATUS" = 503 ] && [ "$P_BODY" = '{"ok":false}' ] || faal "een GET naar /api gaf niet het JSON-antwoord: '${P_STATUS} ${P_BODY}'"
+goed "met web gestopt: /api/gezondheid (en elk /api-verzoek) geeft 503 met {\"ok\":false}"
+
+via_proxy elentrik.app "${PROXY}/_nuxt/bestaat-niet.js"
+[ "$P_STATUS" = 503 ] || faal "met web gestopt gaf een bestand onder /_nuxt ${P_STATUS}, verwacht 503"
+if printf '%s' "$P_BODY" | grep -qi '<html'; then faal "een bestand onder /_nuxt kreeg de onderhoudspagina als lichaam"; fi
+[ "$(p_kop retry-after)" = 10 ] && [ "$(p_kop cache-control)" = no-store ] || faal "de 503 voor een bestand mist no-store of Retry-After: 10"
+via_proxy elentrik.app -X POST -H 'Accept: text/html' -H "origin: ${BASIS}" "${PROXY}/inloggen"
+[ "$P_STATUS" = 503 ] || faal "met web gestopt gaf een POST ${P_STATUS}, verwacht 503"
+if printf '%s' "$P_BODY" | grep -qi '<html'; then faal "een POST (geen navigatie) kreeg de onderhoudspagina als lichaam"; fi
+goed "met web gestopt: een bestand en een POST krijgen 503 met een kort tekstlichaam, zonder de pagina"
+
+via_proxy staging.elentrik.app "${PROXY}/api/gezondheid"
+[ "$P_STATUS" = 200 ] || faal "web-staging antwoordde niet via de proxy terwijl alleen web gestopt was: ${P_STATUS}"
+via_proxy onbekend.example "${PROXY}/__proxy/gezond"
+[ "$P_STATUS" = 200 ] || faal "/__proxy/gezond gaf ${P_STATUS} met web gestopt"
+goed "met web gestopt antwoordt staging gewoon en de proxy zelf blijft gezond (/__proxy/gezond)"
+
+compose start web >/dev/null || faal "web starten mislukte"
+wacht_via_proxy 180 web elentrik.app
+via_proxy elentrik.app "${PROXY}/inloggen"
+[ "$P_STATUS" = 200 ] || faal "na het starten van web gaf /inloggen via de proxy ${P_STATUS}"
+[ "$(docker inspect "${PROJECT}-proxy" --format '{{.State.Health.Status}}')" = healthy ] || faal "de proxy is ongezond geworden"
+goed "web weer gestart: de proxy stuurt weer door (200), zonder zelf herstart te zijn"
+
+# --- 6. CF-Connecting-IP komt aan bij de app: de limiet voor inlogpogingen telt per IP van de bezoeker
+# Better Auth beperkt /sign-in/email tot een paar pogingen per tijdvenster, per IP. De app geeft de header
+# door aan die limiet als het verzoek uit het vertrouwde subnet komt (de proxy zit erin). Bereikt de header de
+# app niet, dan delen beide bezoekers het IP van de proxy en loopt ook B tegen de limiet aan.
+inlog_via_proxy() { # $1 = IP van de bezoeker; geeft de statuscode
+  curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Host: elentrik.app" -H 'content-type: application/json' \
+    -H "origin: ${BASIS}" -H "CF-Connecting-IP: $1" \
+    --data '{"email":"bestaat-niet@rooktest.elentrik.test","password":"fout-wachtwoord-1234"}' "${PROXY}/api/auth/sign-in/email" || true
+}
+IP_A=203.0.113.7
+IP_B=203.0.113.8
+STATUSSEN_A=""
+GEBLOKKEERD=0
+for _ in $(seq 1 12); do
+  CODE="$(inlog_via_proxy "$IP_A")"
+  STATUSSEN_A="${STATUSSEN_A}${CODE} "
+  if [ "$CODE" = 429 ]; then GEBLOKKEERD=1; break; fi
+done
+[ "$GEBLOKKEERD" = 1 ] || faal "IP ${IP_A} werd na 12 mislukte inlogpogingen niet geblokkeerd (statussen: ${STATUSSEN_A})"
+[ "$(inlog_via_proxy "$IP_A")" = 429 ] || faal "IP ${IP_A} is niet meer geblokkeerd direct na de 429"
+CODE_B="$(inlog_via_proxy "$IP_B")"
+[ "$CODE_B" != 429 ] || faal "IP ${IP_B} is ook geblokkeerd: CF-Connecting-IP komt niet bij de app aan (beide bezoekers delen het IP van de proxy)"
+case "$CODE_B" in 4*) ;; *) faal "IP ${IP_B}: een mislukte inlogpoging gaf ${CODE_B}, verwacht een 4xx van Better Auth" ;; esac
+goed "CF-Connecting-IP komt aan: ${IP_A} werd geblokkeerd (${STATUSSEN_A% }), ${IP_B} niet (${CODE_B})"
+
+# --- 7. bijwerken.sh staging laat de proxy ongemoeid, en de proxy antwoordt zolang web-staging herstart
+PROXY_VOOR="$(docker inspect "${PROJECT}-proxy" --format '{{.Id}} {{.State.StartedAt}}')"
+ID_STAGING_VOOR="$(docker inspect "${PROJECT}-web-staging" --format '{{.Id}}')"
+printf 'FROM %s\nLABEL org.opencontainers.image.revision=%s\n' "$IMAGE" "rooktest-proxy-${ID}" | docker build -q -t "$IMAGE_STAGING" - >/dev/null \
+  || faal "het nieuwe staging-image bouwen mislukte"
+# Een bezoeker die tijdens de update navigeert (elke 0,3 s).
+(
+  while :; do
+    curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 -H 'Host: staging.elentrik.app' -H 'Accept: text/html' "${PROXY}/inloggen" || echo 000
+    sleep 0.3
+  done
+) >"${TMP}/bezoeker-tijdens-update.log" 2>/dev/null &
+BEZOEKER_PID=$!
+if ! bijwerken staging >"${TMP}/bijwerken-staging-2.log" 2>&1; then
+  kill "$BEZOEKER_PID" 2>/dev/null || true
+  cat "${TMP}/bijwerken-staging-2.log" >&2
+  faal "bijwerken.sh staging mislukte"
+fi
+kill "$BEZOEKER_PID" 2>/dev/null || true
+wait "$BEZOEKER_PID" 2>/dev/null || true
+[ "$(docker inspect "${PROJECT}-web-staging" --format '{{.Id}}')" != "$ID_STAGING_VOOR" ] || faal "bijwerken.sh staging maakte web-staging niet opnieuw aan"
+[ "$(docker inspect "${PROJECT}-proxy" --format '{{.Id}} {{.State.StartedAt}}')" = "$PROXY_VOOR" ] || faal "bijwerken.sh staging raakte de proxy aan (ander container-ID of een herstart)"
+ONGELDIG="$(grep -vE '^(200|503)$' "${TMP}/bezoeker-tijdens-update.log" | sort | uniq -c | tr '\n' ' ' || true)"
+[ -z "$ONGELDIG" ] || faal "tijdens de update kreeg een bezoeker iets anders dan 200 of 503: ${ONGELDIG}"
+AANTAL_503="$(grep -c '^503$' "${TMP}/bezoeker-tijdens-update.log" || true)"
+AANTAL_200="$(grep -c '^200$' "${TMP}/bezoeker-tijdens-update.log" || true)"
+[ "${AANTAL_200:-0}" -gt 0 ] || faal "de bezoeker tijdens de update kreeg nooit een 200"
+goed "bijwerken.sh staging: de proxy is dezelfde container (ID en starttijd gelijk); een bezoeker kreeg ${AANTAL_200} keer 200 en ${AANTAL_503} keer 503, nooit een 502 of een time-out"
+
 # Een laatste controle over alle logs van de hele rooktest: geen van de drie wachtwoorden in een log.
-for DIENST in web web-staging mailpit postgres gotenberg backup; do
+for DIENST in web web-staging proxy mailpit postgres gotenberg backup; do
   geen_lek "$(compose logs --no-color "$DIENST" 2>&1)" "de log van $DIENST"
 done
-goed "de logs van web, web-staging, mailpit, postgres, gotenberg en backup bevatten na alle stappen geen wachtwoord"
+goed "de logs van web, web-staging, proxy, mailpit, postgres, gotenberg en backup bevatten na alle stappen geen wachtwoord"
 
 stap "Klaar"

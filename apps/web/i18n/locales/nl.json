@@ -191,6 +191,11 @@
   "omgeving": {
     "staging": "Staging: testomgeving, geen echte gegevens"
   },
+  "versie": {
+    "nieuw": "Er is een nieuwe versie van Elentrik",
+    "herladen": "Herladen",
+    "vereist": "Elentrik is bijgewerkt. Herlaad de app om verder te werken. Je werk in de editor blijft bewaard."
+  },
   "algemeen": {
     "annuleren": "Annuleren"
   },
@@ -452,7 +457,8 @@
       "beschrijving": "Op dit toestel staat een concept van dit project met wijzigingen die nog niet op de server staan ({tijd}).",
       "laden": "Concept laden",
       "later": "Later",
-      "verwerpen": "Verwerpen"
+      "verwerpen": "Verwerpen",
+      "herstelMislukt": "Het lokaal bewaarde werk kon niet geladen worden. Het blijft bewaard."
     },
     "verlaten": {
       "bevestiging": "Je wijzigingen staan nog niet op de server. Wil je de editor toch verlaten?"
@@ -1305,6 +1311,7 @@
     "TE_VEEL_UITNODIGINGEN": "Te veel uitnodigingen. Probeer het straks opnieuw.",
     "TE_VEEL_POGINGEN": "Te veel pogingen. Wacht even en probeer het opnieuw.",
     "INLOGLINK_MISLUKT": "Inloggen met de link is niet gelukt. Vraag een nieuwe link aan.",
+    "NIEUWE_VERSIE_VEREIST": "Elentrik is bijgewerkt. Herlaad de app om verder te werken.",
     "INVALID_EMAIL_OR_PASSWORD": "Het e-mailadres of het wachtwoord klopt niet.",
     "EMAIL_NOT_VERIFIED": "Je e-mailadres is nog niet bevestigd.",
     "INVALID_TOKEN": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",

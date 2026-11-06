@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Elentrik wordt bijgewerkt</title>
+    <style>
+      /* Zelfstandig: de proxy serveert dit bestand zelf, voor elk pad. Geen externe bronnen, geen
+         lettertypes van buiten. Kleuren van de app: Nuxt UI met blue (primair), slate (neutraal)
+         en yellow (waarschuwing, de balk van staging). */
+      :root {
+        --achtergrond: #ffffff;
+        --tekst: #0f172a;
+        --tekst-zacht: #475569;
+        --rand: #e2e8f0;
+        --primair: #3b82f6;
+        --primair-hover: #2563eb;
+        --primair-tekst: #ffffff;
+        --balk: #eab308;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --achtergrond: #020617;
+          --tekst: #f1f5f9;
+          --tekst-zacht: #94a3b8;
+          --rand: #1e293b;
+          --primair: #60a5fa;
+          --primair-hover: #93c5fd;
+          --primair-tekst: #020617;
+          --balk: #facc15;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        background: var(--achtergrond);
+        color: var(--tekst);
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+          sans-serif;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      .balk {
+        padding: 0.375rem 0.75rem;
+        background: var(--balk);
+        color: #000000;
+        text-align: center;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      .balk[hidden] {
+        display: none;
+      }
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        text-align: center;
+      }
+      .bliksem {
+        width: 3.5rem;
+        height: 3.5rem;
+        margin-bottom: 1.5rem;
+        fill: var(--primair);
+        animation: puls 2s ease-in-out infinite;
+      }
+      @keyframes puls {
+        50% {
+          opacity: 0.45;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .bliksem {
+          animation: none;
+        }
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      p {
+        max-width: 28rem;
+        margin: 0 0 1.75rem;
+        color: var(--tekst-zacht);
+        font-size: 1.0625rem;
+      }
+      button {
+        padding: 0.625rem 1.25rem;
+        border: 0;
+        border-radius: 0.5rem;
+        background: var(--primair);
+        color: var(--primair-tekst);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--primair-hover);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--primair);
+        outline-offset: 2px;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="balk" role="note" data-testid="staging-balk" hidden></div>
+    <main>
+      <!-- Een eigen getekende bliksemschicht, dezelfde als het icoon van de app. -->
+      <svg class="bliksem" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M14.2 1.5 4.5 13.6h6.1L8.9 22.5l10.6-13h-6.4z" />
+      </svg>
+      <h1 data-testid="onderhoud-titel">Elentrik wordt bijgewerkt</h1>
+      <p data-testid="onderhoud-tekst">
+        Even geduld: de app is zo terug. Deze pagina laadt vanzelf opnieuw.
+      </p>
+      <button type="button" data-testid="onderhoud-opnieuw">Nu opnieuw proberen</button>
+    </main>
+    <script>
+      (function () {
+        var STAGING_HOST = "staging.elentrik.app";
+        var CONTROLE_MS = 5000;
+        var LANG_MS = 10 * 60 * 1000;
+        var CONTROLE_TIMEOUT_MS = 10000;
+
+        // De teksten per taal. De staging-balk is de tekst van `omgeving.staging` in de app.
+        var TEKSTEN = {
+          nl: {
+            titel: "Elentrik wordt bijgewerkt",
+            tekst: "Even geduld: de app is zo terug. Deze pagina laadt vanzelf opnieuw.",
+            lang: "Dit duurt langer dan verwacht. Probeer het later opnieuw.",
+            knop: "Nu opnieuw proberen",
+            staging: "Staging: testomgeving, geen echte gegevens",
+          },
+          fr: {
+            titel: "Elentrik est en cours de mise à jour",
+            tekst:
+              "Un instant : l’application sera bientôt de retour. Cette page se recharge d’elle-même.",
+            lang: "Cela prend plus de temps que prévu. Veuillez réessayer plus tard.",
+            knop: "Réessayer maintenant",
+            staging: "Staging : environnement de test, aucune donnée réelle",
+          },
+          en: {
+            titel: "Elentrik is being updated",
+            tekst: "Just a moment: the app will be back shortly. This page reloads by itself.",
+            lang: "This is taking longer than expected. Please try again later.",
+            knop: "Try again now",
+            staging: "Staging: test environment, no real data",
+          },
+        };
+
+        // De eerste taal van de browser die we kennen; nl als terugval.
+        function kiesTaal() {
+          var talen = navigator.languages && navigator.languages.length
+            ? navigator.languages
+            : [navigator.language];
+          for (var i = 0; i < talen.length; i++) {
+            var code = String(talen[i] || "").toLowerCase().split("-")[0];
+            if (Object.prototype.hasOwnProperty.call(TEKSTEN, code)) return code;
+          }
+          return "nl";
+        }
+
+        var taal = kiesTaal();
+        var t = TEKSTEN[taal];
+        var staging = location.hostname === STAGING_HOST;
+        var titel = document.querySelector('[data-testid="onderhoud-titel"]');
+        var tekst = document.querySelector('[data-testid="onderhoud-tekst"]');
+        var knop = document.querySelector('[data-testid="onderhoud-opnieuw"]');
+        var balk = document.querySelector('[data-testid="staging-balk"]');
+
+        document.documentElement.lang = taal;
+        document.title = (staging ? "[Staging] " : "") + t.titel;
+        titel.textContent = t.titel;
+        tekst.textContent = t.tekst;
+        knop.textContent = t.knop;
+        if (staging) {
+          balk.textContent = t.staging;
+          balk.hidden = false;
+        }
+
+        // Een nieuwe controle start pas als de vorige klaar is. Een controle die niet antwoordt,
+        // wordt na CONTROLE_TIMEOUT_MS afgebroken, zodat hij het controleren nooit blokkeert. De knop blijft
+        // altijd bruikbaar (uitzetten bij elke automatische controle liet het toetsenbordfocus verliezen);
+        // een klik tijdens een lopende controle doet niets door `bezig`.
+        var bezig = false;
+        function controleer() {
+          if (bezig) return;
+          bezig = true;
+          var afbreker = new AbortController();
+          var timer = setTimeout(function () {
+            afbreker.abort();
+          }, CONTROLE_TIMEOUT_MS);
+          fetch("/api/gezondheid", { cache: "no-store", signal: afbreker.signal })
+            .then(function (antwoord) {
+              return antwoord.ok ? antwoord.json() : null;
+            })
+            .then(function (gegevens) {
+              if (gegevens && gegevens.ok === true) location.reload();
+            })
+            .catch(function () {
+              // Niet bereikbaar of geen geldig antwoord: de volgende controle volgt vanzelf.
+            })
+            .then(function () {
+              clearTimeout(timer);
+              bezig = false;
+            });
+        }
+
+        setInterval(controleer, CONTROLE_MS);
+        knop.addEventListener("click", controleer);
+        setTimeout(function () {
+          tekst.textContent = t.lang;
+        }, LANG_MS);
+      })();
+    </script>
+  </body>
+</html>

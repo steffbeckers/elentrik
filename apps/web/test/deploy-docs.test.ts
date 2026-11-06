@@ -59,6 +59,35 @@ describe("docs/online.md en deploy/nas/.env.voorbeeld", () => {
     expect(compose).toMatch(/^name: elentrik$/m);
   });
 
+  test("compose.yaml heeft een proxy zonder poorten en zonder depends_on op de web-diensten", () => {
+    const compose = lees("deploy", "nas", "compose.yaml");
+    // Het blok van de dienst: van `  proxy:` tot de volgende dienst (twee spaties inspringing).
+    const blok = /^ {2}proxy:\r?\n(?:(?: {4}.*)?\r?\n)+/m.exec(compose)?.[0] ?? "";
+    expect(blok, "geen dienst proxy in compose.yaml").not.toBe("");
+    expect(blok).toMatch(/^ {4}container_name: elentrik-proxy$/m);
+    expect(blok).not.toMatch(/^ {4}ports:/m);
+    expect(blok).not.toMatch(/^ {4}depends_on:/m);
+    // Een exacte versie: major.minor.patch, desnoods met een achtervoegsel als -alpine; nooit latest of alleen een hoofdversie.
+    const image = /^ {4}image: (\S+)$/m.exec(blok)?.[1] ?? "";
+    expect(image, "de proxy heeft geen image").not.toBe("");
+    expect(image).not.toMatch(/:latest$/);
+    expect(image).toMatch(/^caddy:\d+\.\d+\.\d+(-[a-z0-9.]+)?$/);
+  });
+
+  test("de Caddyfile stuurt door naar de dienstnamen web en web-staging", () => {
+    const caddyfile = lees("deploy", "nas", "proxy", "Caddyfile");
+    expect(caddyfile).toContain("web:3000");
+    expect(caddyfile).toContain("web-staging:3000");
+    expect(caddyfile).not.toContain("elentrik-web");
+  });
+
+  test("de handleiding wijst de tunnel naar elentrik-proxy:8080", () => {
+    expect(handleiding).toContain("elentrik-proxy:8080");
+    // De containernaam van web komt alleen nog voor in de uitleg van de interne doorsturing.
+    const regels = handleiding.split(/\r?\n/).filter((r) => /elentrik-web(-staging)?:3000/.test(r));
+    for (const regel of regels) expect(regel, "de tunnel hoort niet meer naar een web-container te wijzen").toMatch(/[Ii]ntern/);
+  });
+
   test("de hulpfuncties herkennen de vormen", () => {
     expect(variabelenUitVoorbeeld("A_B=1\n# C_D=2\n#E=3\n# gewone tekst: x=1\nfoo=bar\n")).toEqual(["A_B", "C_D", "E"]);
     expect(vermeldingenMetGelijkteken("`ABC_DEF=1` en x=2 en p=none en AB=3 en v=DMARC1")).toEqual(["ABC_DEF"]);

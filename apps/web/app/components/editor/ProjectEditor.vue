@@ -42,10 +42,12 @@ import {
   vertrekBevestiging,
   type SessieControle,
 } from "~/editor/aanmelding";
+import { herstelDocument } from "~/editor/concept-herstel";
 import { vertaalFout } from "~/fouten";
 import { useEditorStore } from "~/stores/editor";
 import { useSessieStore } from "~/stores/sessie";
 import { useSituatieStore } from "~/stores/situatie";
+import { useVersieStore } from "~/stores/versie";
 
 // Zonder ingelogde gebruiker start de editor niet (concepten en bewaren horen bij een gebruiker).
 const props = defineProps<{ context: EditorContext }>();
@@ -60,6 +62,7 @@ const id = context.projectId;
 const store = useEditorStore();
 const situatie = useSituatieStore();
 const sessie = useSessieStore();
+const versieStore = useVersieStore();
 const herstelSessie = useSessieHerstel();
 const behandelSchrijfweigering = useAlleenLezen();
 
@@ -206,7 +209,14 @@ async function laadConcept(): Promise<void> {
   // Intussen alleen-lezen geworden: het concept blijft staan voor later.
   if (!aangeboden || store.projectId !== id || store.alleenLezen) return;
   const c = aangeboden.concept;
-  store.laad({ id, naam: c.naam, versie: c.versie, document: c.document });
+  // Een concept van voor een update kan een oudere schemaversie hebben: eerst migreren. Lukt dat niet,
+  // dan laden we niets en wissen we niets: het concept blijft bewaard.
+  const document = herstelDocument(c.document);
+  if (document === null) {
+    toast.add({ title: t("editor.concept.herstelMislukt"), color: "error" });
+    return;
+  }
+  store.laad({ id, naam: c.naam, versie: c.versie, document });
   // Het concept staat nog niet op de server: als wijziging tellen, zodat de autosave het bewaart.
   // Is de server intussen verder dan `c.versie`, dan volgt een conflict.
   store.markeerGewijzigd();
@@ -321,6 +331,8 @@ async function navigeerDossier(doel: "gegevens" | "schema" | "situatie"): Promis
 function toonBevindingen(): void { werkruimte.value?.toonBevindingen(); }
 
 function bijVerlaten(event: BeforeUnloadEvent): void {
+  // Een bedoelde herlading met het werk in het concept (een nieuwe versie): niets vragen.
+  if (versieStore.zonderWaarschuwing) return;
   if (waarschuwBijVerlaten(autosave.status.value)) event.preventDefault();
 }
 
@@ -534,6 +546,8 @@ function downloadLokaal() {
 onMounted(() => {
   if (support) supportTimer = setInterval(() => support.controleer(sessie.gebruiker?.id ?? null), 1000);
   afmeldenVoorVertrek = sessie.registreerVoorVertrek(voorVertrek, vertrekAfgebroken);
+  // Een herlading voor een nieuwe versie wacht tot het werk van dit venster in het concept staat.
+  versieStore.zetVoorHerladen(() => autosave.wachtOpConcept());
   window.addEventListener("beforeunload", bijVerlaten);
   window.addEventListener("focus", bijFocus);
   window.addEventListener("dragover", bestandBuitenDropzone);
@@ -543,6 +557,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   clearInterval(supportTimer);
   afmeldenVoorVertrek?.();
+  versieStore.zetVoorHerladen(null);
   window.removeEventListener("beforeunload", bijVerlaten);
   window.removeEventListener("focus", bijFocus);
   window.removeEventListener("dragover", bestandBuitenDropzone);

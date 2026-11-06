@@ -191,6 +191,11 @@
   "omgeving": {
     "staging": "Staging : environnement de test, aucune donnée réelle"
   },
+  "versie": {
+    "nieuw": "Une nouvelle version d'Elentrik est disponible",
+    "herladen": "Recharger",
+    "vereist": "Elentrik a été mis à jour. Rechargez l'application pour continuer. Votre travail dans l'éditeur est conservé."
+  },
   "algemeen": {
     "annuleren": "Annuler"
   },
@@ -452,7 +457,8 @@
       "beschrijving": "Cet appareil contient un brouillon de ce projet avec des modifications qui ne sont pas encore sur le serveur ({tijd}).",
       "laden": "Charger le brouillon",
       "later": "Plus tard",
-      "verwerpen": "Ignorer"
+      "verwerpen": "Ignorer",
+      "herstelMislukt": "Le travail enregistré localement n'a pas pu être chargé. Il reste conservé."
     },
     "verlaten": {
       "bevestiging": "Vos modifications ne sont pas encore sur le serveur. Voulez-vous quand même quitter l'éditeur ?"
@@ -1305,6 +1311,7 @@
     "TE_VEEL_UITNODIGINGEN": "Trop d'invitations. Réessayez plus tard.",
     "TE_VEEL_POGINGEN": "Trop de tentatives. Patientez un instant et réessayez.",
     "INLOGLINK_MISLUKT": "La connexion avec le lien n'a pas abouti. Demandez un nouveau lien.",
+    "NIEUWE_VERSIE_VEREIST": "Elentrik a été mis à jour. Rechargez l'application pour continuer.",
     "INVALID_EMAIL_OR_PASSWORD": "L'adresse e-mail ou le mot de passe est incorrect.",
     "EMAIL_NOT_VERIFIED": "Votre adresse e-mail n'est pas encore confirmée.",
     "INVALID_TOKEN": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
