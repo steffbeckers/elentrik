@@ -544,10 +544,10 @@
         "kiesPuntLeeg": "Choose a point",
         "tekenvlak": "Layout plan: keyboard controls",
         "toetsenbord": "Choose a point. Arrows move it; Shift adjusts by 1 px. R rotates, Delete removes it from the plan. Tab leaves the drawing area.",
-        "plaatsToetsenbord": "Arrows move the crosshair; Shift adjusts by 1 px. Enter confirms, Escape cancels.",
+        "plaatsToetsenbord": "Click on the plan to place the point. Escape cancels.",
+        "meetToetsenbord": "Arrows move the crosshair; Shift adjusts by 1 px. Enter confirms, Escape cancels.",
         "cursorPositie": "Position: x {x}, y {y} px",
-        "bevestigMeetpunt": "Confirm measurement point",
-        "bevestigPlaats": "Place here"
+        "bevestigMeetpunt": "Confirm measurement point"
       },
       "toevoegen": {
         "titel": "Add plan",

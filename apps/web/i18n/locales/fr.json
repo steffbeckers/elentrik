@@ -544,10 +544,10 @@
         "kiesPuntLeeg": "Choisissez un point",
         "tekenvlak": "Plan de position : commandes au clavier",
         "toetsenbord": "Choisissez un point. Les flèches le déplacent ; Maj affine à 1 px. R fait pivoter, Suppr retire du plan. Tab quitte la zone de dessin.",
-        "plaatsToetsenbord": "Les flèches déplacent la croix ; Maj affine à 1 px. Entrée confirme, Échap annule.",
+        "plaatsToetsenbord": "Cliquez sur le plan pour placer le point. Échap annule.",
+        "meetToetsenbord": "Les flèches déplacent la croix ; Maj affine à 1 px. Entrée confirme, Échap annule.",
         "cursorPositie": "Position : x {x}, y {y} px",
-        "bevestigMeetpunt": "Confirmer le point de mesure",
-        "bevestigPlaats": "Placer ici"
+        "bevestigMeetpunt": "Confirmer le point de mesure"
       },
       "toevoegen": {
         "titel": "Ajouter un plan",

@@ -55,6 +55,9 @@ const puntKeuzeId = useId();
 const modus = computed<"normaal" | "plaats" | "meet">(() =>
   props.meetSchaal ? "meet" : props.teplaatsen !== null ? "plaats" : "normaal",
 );
+const bedieningsHulp = computed(() => t(`editor.situatie.canvas.${
+  modus.value === "meet" ? "meetToetsenbord" : modus.value === "plaats" ? "plaatsToetsenbord" : "toetsenbord"
+}`));
 
 // --- Plan ------------------------------------------------------------------
 
@@ -249,7 +252,7 @@ function plaatsOp(nodeId: NodeId, punt: Positie): void {
   emit("geplaatst", nodeId, uitkomst.van);
 }
 
-// Een focusbare planruimte en puntkeuze bieden dezelfde bediening zonder aanwijzer.
+// De meetcursor dient alleen voor schaalmeting; onderdelen worden op de klikpositie geplaatst.
 const cursor = ref<Positie>({ x: 0, y: 0 });
 const heeftSelectie = computed(() => items.value.some(item => editor.selectie.includes(item.nodeId)));
 const geselecteerdPunt = computed(() => items.value.find(item => editor.selectie.includes(item.nodeId))?.nodeId ?? "");
@@ -271,13 +274,12 @@ async function kiesPlanPunt(event: Event): Promise<void> {
 }
 
 function bevestigCursor(): void {
-  if (alleenLezen.value || planOntbreekt.value) return;
-  if (modus.value === "meet") meetKlik(cursor.value);
-  else if (props.teplaatsen) plaatsOp(props.teplaatsen, cursor.value);
+  if (alleenLezen.value || planOntbreekt.value || modus.value !== "meet") return;
+  meetKlik(cursor.value);
 }
 
 function cursorToets(event: KeyboardEvent): void {
-  if (modus.value === "normaal" || planOntbreekt.value || event.isComposing || event.altKey) return;
+  if (modus.value !== "meet" || planOntbreekt.value || event.isComposing || event.altKey) return;
   const actie = planCursorToets({ key: event.key, shiftKey: event.shiftKey,
     ctrlKey: event.ctrlKey, metaKey: event.metaKey, alleenLezen: alleenLezen.value });
   if (!actie) return;
@@ -395,6 +397,11 @@ function toetsIngedrukt(event: KeyboardEvent): void {
     alleenLezen: alleenLezen.value,
   });
   if (!actie) return;
+  // Tijdens het kiezen van een nieuwe plaats blijven eerder geselecteerde punten staan.
+  if (modus.value === "plaats" && (actie.soort === "draai" || actie.soort === "schuif" || actie.soort === "haalVanPlan")) {
+    event.preventDefault();
+    return;
+  }
   // Zonder zichtbaar plan wijzigt niets de plaatsingen; ongedaan maken en opnieuw blijven werken.
   if (planOntbreekt.value && (actie.soort === "draai" || actie.soort === "schuif" || actie.soort === "haalVanPlan")) {
     return;
@@ -513,10 +520,10 @@ const markeringen = computed(() => {
       />
     </div>
 
-      <p :id="hulpId" data-testid="plan-keyboard-help" class="sr-only">{{ $t(modus === 'normaal' ? 'editor.situatie.canvas.toetsenbord' : 'editor.situatie.canvas.plaatsToetsenbord') }}</p>
-      <div v-if="modus !== 'normaal'" class="absolute bottom-14 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded border border-default bg-default px-2 py-1">
+      <p :id="hulpId" data-testid="plan-keyboard-help" class="sr-only">{{ bedieningsHulp }}</p>
+      <div v-if="modus === 'meet'" class="absolute bottom-14 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded border border-default bg-default px-2 py-1">
         <output aria-live="polite" class="text-xs tabular-nums">{{ $t('editor.situatie.canvas.cursorPositie', { x: Math.round(cursor.x), y: Math.round(cursor.y) }) }}</output>
-        <UButton :disabled="alleenLezen" :label="$t(modus === 'meet' ? 'editor.situatie.canvas.bevestigMeetpunt' : 'editor.situatie.canvas.bevestigPlaats')" @click="bevestigCursor" />
+        <UButton :disabled="alleenLezen" :label="$t('editor.situatie.canvas.bevestigMeetpunt')" @click="bevestigCursor" />
       </div>
     </div>
     <div
@@ -528,7 +535,7 @@ const markeringen = computed(() => {
       :aria-describedby="hulpId"
       class="relative min-h-0 min-w-0 flex-1 touch-none select-none overflow-hidden bg-neutral-100 text-neutral-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
       :class="
-        sleept || verschuift ? 'cursor-grabbing' : ruimteIngedrukt ? 'cursor-grab' : modus !== 'normaal' ? 'cursor-crosshair' : ''
+        sleept || verschuift ? 'cursor-grabbing' : ruimteIngedrukt ? 'cursor-grab' : modus === 'meet' ? 'cursor-crosshair' : ''
       "
       @wheel.prevent="zoomOpWiel"
       @pointerdown="pointerDown"
@@ -556,7 +563,7 @@ const markeringen = computed(() => {
         <!-- v-html is hier veilig: `situatieLaagSvg` escapet alle documenttekst. -->
         <g class="laag" :class="{ verschuifbaar: modus === 'normaal' && !alleenLezen }" v-html="laagSvg" />
         <g class="pointer-events-none">
-          <g v-if="modus !== 'normaal'" data-testid="plan-toetscursor" :transform="`translate(${cursor.x},${cursor.y})`" fill="none" style="stroke: var(--ui-primary)" stroke-width="2">
+          <g v-if="modus === 'meet'" data-testid="plan-toetscursor" :transform="`translate(${cursor.x},${cursor.y})`" fill="none" style="stroke: var(--ui-primary)" stroke-width="2">
             <circle :r="symbool / 2" vector-effect="non-scaling-stroke" />
             <path :d="`M${-symbool},0 H${symbool} M0,${-symbool} V${symbool}`" vector-effect="non-scaling-stroke" />
           </g>
@@ -604,7 +611,7 @@ const markeringen = computed(() => {
           />
         </g>
       </svg>
-      <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="selectieKaders.length > 0" :hulp="$t(modus === 'normaal' ? 'editor.situatie.canvas.toetsenbord' : 'editor.situatie.canvas.plaatsToetsenbord')" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
+      <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="selectieKaders.length > 0" :hulp="bedieningsHulp" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 
 
