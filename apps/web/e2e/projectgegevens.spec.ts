@@ -14,7 +14,6 @@ test("klant- en werfgegevens invullen, bewaren, ongedaan maken en herladen", asy
   const nieuw = page.getByRole("dialog");
   await nieuw.getByLabel("Naam").fill(naam);
   await nieuw.getByRole("button", { name: "Aanmaken" }).click();
-  await page.getByRole("row").filter({ hasText: naam }).getByRole("link", { name: "Openen" }).click();
   await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
 
   await page.getByTestId("projectnaam").click();
@@ -86,7 +85,6 @@ test("metingen invullen in Projectgegevens, bewaren en na herladen terugzien", a
   const nieuw = page.getByRole("dialog");
   await nieuw.getByLabel("Naam").fill(metingNaam);
   await nieuw.getByRole("button", { name: "Aanmaken" }).click();
-  await page.getByRole("row").filter({ hasText: metingNaam }).getByRole("link", { name: "Openen" }).click();
   await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
 
   await page.getByTestId("projectnaam").click();
@@ -128,7 +126,6 @@ test("een open keuzelijst sluit niet alleen: één klik op Bewaren bewaart", asy
   const nieuw = page.getByRole("dialog");
   await nieuw.getByLabel("Naam").fill(keuzeNaam);
   await nieuw.getByRole("button", { name: "Aanmaken" }).click();
-  await page.getByRole("row").filter({ hasText: keuzeNaam }).getByRole("link", { name: "Openen" }).click();
   await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
 
   await page.getByTestId("projectnaam").click();

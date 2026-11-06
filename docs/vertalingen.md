@@ -223,6 +223,11 @@ Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groe
 | onderdeel (in de editor) | élément | component |
 | sjabloon | modèle | template |
 | concept (lokaal) | brouillon | draft |
+| concept (status in de projectlijst: nog niet geëxporteerd) | brouillon | draft |
+| geëxporteerd (status in de projectlijst) | exporté | exported |
+| werf (kolom in de projectlijst: de gemeente) | chantier | site |
+| status | statut | status |
+| zojuist | à l’instant | just now |
 | eigenschappen | propriétés | properties |
 | Elektrisch / Uitvoering / Benaming en plan / Ruimte (groepen van het paneel Eigenschappen) | Électrique / Exécution / Désignation et plan / Local | Electrical / Construction / Name and plan / Room |
 | Kring en beveiliging / Eindpunten / Sjablonen en referenties (groepen van het paneel Onderdelen) | Circuit et protection / Points d’utilisation / Modèles et références | Circuit and protection / End points / Templates and references |

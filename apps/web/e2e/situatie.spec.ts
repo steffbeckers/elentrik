@@ -107,9 +107,6 @@ async function maakProjectMetContactdozen(page: Page, projectNaam: string, aanta
   const nieuw = page.getByRole("dialog");
   await nieuw.getByLabel("Naam").fill(projectNaam);
   await nieuw.getByRole("button", { name: "Aanmaken" }).click();
-  const rij = page.getByRole("row").filter({ hasText: projectNaam });
-  await expect(rij).toHaveCount(1);
-  await rij.getByRole("link", { name: "Openen" }).click();
   await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
   const projectId = new URL(page.url()).pathname.split("/").pop()!;
 

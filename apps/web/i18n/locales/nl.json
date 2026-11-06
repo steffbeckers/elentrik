@@ -960,9 +960,20 @@
     "titel": "Projecten",
     "nieuw": "Nieuw project",
     "leeg": "Nog geen projecten. Maak je eerste project aan.",
+    "leegStappen": {
+      "klant": "Vul de klant en de werf in.",
+      "schema": "Bouw het eendraadschema op.",
+      "plan": "Plaats de punten op het situatieschema.",
+      "export": "Kijk de bevindingen na en exporteer het dossier als PDF."
+    },
+    "zojuist": "zojuist",
+    "status": {
+      "concept": "Concept",
+      "geexporteerd": "Geëxporteerd"
+    },
     "zoeken": {
       "label": "Projecten zoeken",
-      "placeholder": "Zoek op projectnaam of klant…",
+      "placeholder": "Zoek op projectnaam, klant of gemeente…",
       "wissen": "Zoekopdracht wissen",
       "geenResultaten": "Geen projecten gevonden. Pas je zoekopdracht aan."
     },
@@ -976,6 +987,8 @@
     "kolommen": {
       "naam": "Naam",
       "klant": "Klant",
+      "werf": "Werf",
+      "status": "Status",
       "gewijzigd": "Gewijzigd",
       "acties": "Acties"
     },

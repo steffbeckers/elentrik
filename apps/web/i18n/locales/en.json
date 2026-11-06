@@ -960,9 +960,20 @@
     "titel": "Projects",
     "nieuw": "New project",
     "leeg": "No projects yet. Create your first project.",
+    "leegStappen": {
+      "klant": "Enter the customer and site details.",
+      "schema": "Build the single-line diagram.",
+      "plan": "Place the points on the layout plan.",
+      "export": "Review the findings and export the dossier as a PDF."
+    },
+    "zojuist": "just now",
+    "status": {
+      "concept": "Draft",
+      "geexporteerd": "Exported"
+    },
     "zoeken": {
       "label": "Search projects",
-      "placeholder": "Search by project name or customer…",
+      "placeholder": "Search by project name, customer or town…",
       "wissen": "Clear search",
       "geenResultaten": "No projects found. Try a different search."
     },
@@ -976,6 +987,8 @@
     "kolommen": {
       "naam": "Name",
       "klant": "Customer",
+      "werf": "Site",
+      "status": "Status",
       "gewijzigd": "Modified",
       "acties": "Actions"
     },

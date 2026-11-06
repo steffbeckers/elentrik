@@ -960,9 +960,20 @@
     "titel": "Projets",
     "nieuw": "Nouveau projet",
     "leeg": "Pas encore de projet. Créez votre premier projet.",
+    "leegStappen": {
+      "klant": "Complétez le client et le chantier.",
+      "schema": "Construisez le schéma unifilaire.",
+      "plan": "Placez les points sur le plan de position.",
+      "export": "Vérifiez les constats et exportez le dossier en PDF."
+    },
+    "zojuist": "à l’instant",
+    "status": {
+      "concept": "Brouillon",
+      "geexporteerd": "Exporté"
+    },
     "zoeken": {
       "label": "Rechercher des projets",
-      "placeholder": "Rechercher par nom de projet ou client…",
+      "placeholder": "Rechercher par nom de projet, client ou commune…",
       "wissen": "Effacer la recherche",
       "geenResultaten": "Aucun projet trouvé. Modifiez votre recherche."
     },
@@ -976,6 +987,8 @@
     "kolommen": {
       "naam": "Nom",
       "klant": "Client",
+      "werf": "Chantier",
+      "status": "Statut",
       "gewijzigd": "Modifié",
       "acties": "Actions"
     },

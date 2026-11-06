@@ -20,11 +20,11 @@ import {
   isNull,
   sql,
 } from "drizzle-orm";
-import type { Project, ProjectSamenvatting } from "../../shared/projecten";
+import type { Project, ProjectInLijst, ProjectSamenvatting } from "../../shared/projecten";
 import type { Db, Tx } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { controleerOpslagruimte } from "../bestanden/opslagruimte";
-import { bestanden, projecten } from "../db/schema";
+import { bestanden, exports, projecten } from "../db/schema";
 import {
   controleerPlanverwijzingen,
   nieuwePlanIds,
@@ -46,7 +46,7 @@ export class ProjectFout extends Error {
   }
 }
 
-export type { Project, ProjectSamenvatting };
+export type { Project, ProjectInLijst, ProjectSamenvatting };
 
 const leeft = isNull(projecten.verwijderd);
 
@@ -74,24 +74,52 @@ export async function projectOrganisatie(
   return rij?.organisatieId ?? null;
 }
 
-/** De projecten van één organisatie, het laatst gewijzigde eerst. */
+/**
+ * De gemeente van de werf, anders die van de klant, rechtstreeks uit het jsonb-document: een lege
+ * of witte gemeente telt als ontbrekend. Zo laadt de lijst het document niet naar de server.
+ */
+const werfGemeente = sql<string | null>`coalesce(
+  nullif(btrim(${projecten.document} #>> '{meta,werfadres,gemeente}'), ''),
+  nullif(btrim(${projecten.document} #>> '{meta,klant,adres,gemeente}'), '')
+)`;
+
+/**
+ * De projecten van één organisatie, het laatst gewijzigde eerst, met de gemeente van de werf en
+ * het tijdstip van de laatste export. Eén query: de exports komen uit een gegroepeerde subquery
+ * over de projecten van dezelfde organisatie, geen query per project.
+ */
 export async function lijstProjecten(
   db: Db,
   organisatieId: string,
-): Promise<ProjectSamenvatting[]> {
+): Promise<ProjectInLijst[]> {
+  const laatsteExports = db
+    .select({
+      projectId: exports.projectId,
+      // Als ISO-tekst in UTC uit Postgres, zodat de vorm niet van de databasedriver afhangt.
+      laatste: sql<string>`to_char(max(${exports.aangemaakt}) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`.as("laatste"),
+    })
+    .from(exports)
+    .innerJoin(projecten, eq(projecten.id, exports.projectId))
+    .where(eq(projecten.organisatieId, organisatieId))
+    .groupBy(exports.projectId)
+    .as("laatste_exports");
   const rijen = await db
     .select({
       id: projecten.id,
       naam: projecten.naam,
       klantnaam: projecten.klantnaam,
       gewijzigd: projecten.gewijzigd,
+      werfGemeente,
+      laatsteExport: laatsteExports.laatste,
     })
     .from(projecten)
+    .leftJoin(laatsteExports, eq(laatsteExports.projectId, projecten.id))
     .where(and(eq(projecten.organisatieId, organisatieId), leeft))
     .orderBy(desc(projecten.gewijzigd));
   return rijen.map((rij) => ({
     ...rij,
     gewijzigd: rij.gewijzigd.toISOString(),
+    laatsteExport: rij.laatsteExport ?? null,
   }));
 }
 
