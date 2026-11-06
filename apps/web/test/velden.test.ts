@@ -136,6 +136,22 @@ describe("VELDEN", () => {
     expect(bouwVelden(nl as Boom)).toEqual({ GEMEENSCHAPPELIJK, VELDEN });
   });
 
+  test("de differentieeltest staat in een groep Test: resultaat en uitschakeltijd, zonder beoordeling", () => {
+    const differentieel = VELDEN.differentieel;
+    const test = differentieel.filter((v) => v.groep === "test");
+    expect(test.map((v) => v.sleutel)).toEqual(["testResultaat", "uitschakeltijd_ms"]);
+    expect(test[0]).toMatchObject({ soort: "keuze", optioneel: true, opties: [
+      { waarde: "ok", labelSleutel: "velden.testResultaat.opties.ok" },
+      { waarde: "niet_ok", labelSleutel: "velden.testResultaat.opties.niet_ok" },
+      { waarde: "niet_getest", labelSleutel: "velden.testResultaat.opties.niet_getest" },
+    ] });
+    expect(test[1]).toMatchObject({ soort: "getal", eenheid: "ms", min: 0, optioneel: true });
+    expect(tekst("editor.eigenschappen.groepen.test")).toBe("Test");
+    // De groep komt na de gewone velden, zodat het paneel er één kop boven zet.
+    expect(differentieel.slice(-2).map((v) => v.sleutel)).toEqual(["testResultaat", "uitschakeltijd_ms"]);
+    expect(differentieel.filter((v) => v.groep === undefined).length).toBe(differentieel.length - 2);
+  });
+
   test("gehele getallen krijgen stap 1 en het minimum uit het schema", () => {
     expect(VELDEN.contactdoos.find((v) => v.sleutel === "aantal")).toMatchObject({ min: 1, stap: 1 });
     expect(VELDEN.leiding.find((v) => v.sleutel === "doorsnede_mm2")).toMatchObject({ min: 0 });

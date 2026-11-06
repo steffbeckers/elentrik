@@ -606,6 +606,7 @@ describe("printHtml", () => {
   test("bijlage zonder inhoud vermeldt dat er geen bevindingen zijn", () => {
     const doc = metSituatie(metGegevens(referentieAppartement()));
     doc.meta.installatieContext = "nieuw";
+    doc.meta.metingen = { aardingsweerstand_ohm: 30, isolatieweerstand_MOhm: 250 };
     doc.situatie.paginas[0]!.plaatsingen = Object.values(doc.nodes)
       .filter(n => (PLAATSBARE_TYPES as readonly string[]).includes(n.type))
       .map(n => ({ nodeId: n.id, x: 100, y: 100, rotatie: 0 }));
@@ -747,7 +748,10 @@ describe("printHtml: geometrie uit de gegenereerde HTML en CSS", () => {
       for (const sectie of secties) {
         const hoogte = cssMm(sectie, /<div class="bijlage" style="[^"]*height:([\d.]+)mm"/);
         const inhoud = sectie.slice(0, sectie.indexOf('<div class="cartouche">'));
-        const som = regels(inhoud).reduce((s, r) => s + r.grootte * regelhoogte + (r.klasse === "kop" ? kopMarge : 0), 0);
+        // Een rij van de tabel met differentieeltests telt één keer, met haar opgegeven hoogte.
+        const meetrij = /<div class="meetrij[^"]*"[^>]*style="height:([\d.]+)mm">(?:<div style="width:[\d.]+mm">(?:<div class="t[^"]*" style="[^"]*">[^<]*<\/div>)*<\/div>)*<\/div>/g;
+        const rijen = [...inhoud.matchAll(meetrij)].reduce((s, m) => s + Number(m[1]), 0);
+        const som = rijen + regels(inhoud.replace(meetrij, "")).reduce((s, r) => s + r.grootte * regelhoogte + (r.klasse === "kop" ? kopMarge : 0), 0);
         expect(som).toBeLessThanOrEqual(hoogte);
       }
     });

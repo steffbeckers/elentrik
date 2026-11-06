@@ -175,7 +175,14 @@ function plaatshouder(veld: Veld): string | undefined {
     <template v-else>
       <p class="mb-3 font-semibold" data-testid="eigenschappen-titel">{{ titel }}</p>
       <div class="flex flex-col gap-3">
-        <template v-for="veld in velden" :key="veld.sleutel">
+        <template v-for="(veld, index) in velden" :key="veld.sleutel">
+          <h3
+            v-if="veld.groep && veld.groep !== velden[index - 1]?.groep"
+            class="mt-2 border-t border-default pt-3 text-xs font-semibold uppercase tracking-wide text-muted"
+            :data-testid="`eigenschappen-groep-${veld.groep}`"
+          >
+            {{ $t(`editor.eigenschappen.groepen.${veld.groep}`) }}
+          </h3>
           <UFormField
             v-if="veld.soort === 'tekst' || veld.soort === 'getal'"
             :label="$t(veld.labelSleutel)"

@@ -30,6 +30,7 @@ import {
   type Aanknoping,
   type Adres,
   type InstallatieDocument,
+  type Metingen,
   type Node,
   type NodeId,
   type OperatieResultaat,
@@ -494,6 +495,8 @@ export const useEditorStore = defineStore("editor", () => {
     /** De taal van het dossier (PDF); dezelfde taal opnieuw (of nl zonder taal) maakt geen stap. */
     dossierTaal?: Taal;
     installatieContext?: "nieuw" | "bestaand" | "onbekend";
+    /** Vervangt alle metingen; dezelfde metingen opnieuw maken geen stap (`wijzigProject`). */
+    metingen?: Metingen | null;
   }): void {
     if (alleenLezen.value) return;
     const doc = vereisDocument();
@@ -514,6 +517,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (gegevens.datum !== undefined) wijziging.datum = gegevens.datum;
     if (gegevens.dossierTaal !== undefined) wijziging.dossierTaal = gegevens.dossierTaal;
     if (gegevens.installatieContext !== undefined) wijziging.installatieContext = gegevens.installatieContext;
+    if (gegevens.metingen !== undefined) wijziging.metingen = gegevens.metingen;
     // Eerst de operatie: gooit die, dan blijft ook de naam ongewijzigd.
     const r = wijzigProject(doc, wijziging);
     if (gegevens.naam !== undefined && gegevens.naam !== naam.value) {

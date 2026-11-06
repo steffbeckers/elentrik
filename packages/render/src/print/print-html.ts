@@ -12,7 +12,7 @@ import { situatieAfdekkingenSvg } from "../situatie-afdekkingen";
 import { dossierStatus } from "../dossierstatus";
 import { LOCALES, TEKSTEN, type Taal, type Teksten } from "../teksten/index";
 import { leesbareSchemaOpmaak } from "./leesbaar";
-import { cartouche, cartoucheHoogte, formatteerDatum } from "./cartouche";
+import { cartouche, cartoucheHoogte, formatteerDatum, formatteerGetal, meetwaardeTekst, metingVelden } from "./cartouche";
 import { CEL_MARGE_MM, INSPRINGING_MM, KOP_MARGE_MM, KRINGENLIJST_RIJ_MM, RAND_MM, REGELHOOGTE, stijl } from "./stijl";
 import { breekRegels, tekstRegel, vloer } from "./tekst";
 
@@ -247,6 +247,85 @@ function bevindingTekst(c: Context, b: Bevinding): string {
 /** Eén blok van de bijlage: een kop of een tekstregel, met zijn hoogte in mm. */
 type Blok = { html: string; hoogte: number; kop: boolean };
 
+/** De kolommen van de tabel met differentieeltests, als aandeel van de tabelbreedte. */
+const MEETTABEL_AANDELEN = [0.25, 0.25, 0.25, 0.25];
+/** De tabel met differentieeltests is hooguit zo breed, in mm: smaller blijft ze leesbaar. */
+const MEETTABEL_MAX_MM = 160;
+
+/** De differentiëlen in de volgorde van het eendraadschema (diepte eerst vanaf de aansluiting). */
+function differentiëlenInVolgorde(doc: InstallatieDocument): NodeId[] {
+  const uit: NodeId[] = [];
+  const bezocht = new Set<NodeId>();
+  const stapel: NodeId[] = [doc.rootId];
+  while (stapel.length) {
+    const id = stapel.pop()!;
+    if (bezocht.has(id) || !Object.hasOwn(doc.nodes, id)) continue;
+    bezocht.add(id);
+    const node = doc.nodes[id]!;
+    if (node.type === "differentieel") uit.push(id);
+    for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push(node.kinderen[i]!);
+  }
+  return uit;
+}
+
+/**
+ * De geregistreerde metingen en de differentieeltests. Een ontbrekende waarde is "niet ingevuld";
+ * er is geen grenswaarde en geen beoordeling, alleen de vaste zin die dat zegt.
+ */
+function metingBlokken(c: Context): Blok[] {
+  const t = c.teksten;
+  const m = t.metingen;
+  const metingen = c.doc.meta.metingen;
+  const breedte = c.ruimte.breedte;
+  const regelHoogte = BIJLAGE_TEKST_MM * REGELHOOGTE;
+  const blokken: Blok[] = [];
+  const kop = (tekst: string) => blokken.push({
+    html: tekstRegel(tekst, breedte, BIJLAGE_KOP_TEKST_MM, "kop"),
+    hoogte: KOP_MARGE_MM + BIJLAGE_KOP_TEKST_MM * REGELHOOGTE,
+    kop: true,
+  });
+  const tekst = (inhoud: string, klasse: string) => {
+    for (const regel of breekRegels(inhoud, vloer(breedte), BIJLAGE_TEKST_MM, BIJLAGE_BREEDTE_FACTOR)) {
+      blokken.push({ html: tekstRegel(regel, breedte, BIJLAGE_TEKST_MM, klasse), hoogte: regelHoogte, kop: false });
+    }
+  };
+  kop(m.titel);
+  for (const [label, waarde] of metingVelden(metingen, t, c.taal)) tekst(`${label}: ${waarde}`, "meting");
+  if (metingen?.meettoestel) tekst(`${m.meettoestel}: ${metingen.meettoestel}`, "meting");
+  if (metingen?.opmerking) tekst(`${m.opmerking}: ${metingen.opmerking}`, "meting");
+
+  const ids = differentiëlenInVolgorde(c.doc);
+  if (ids.length) {
+    const tabelBreedte = Math.min(breedte, MEETTABEL_MAX_MM);
+    const breedtes = MEETTABEL_AANDELEN.map(a => tabelBreedte * a);
+    const rij = (cellen: string[], klasse: string, extra = "") => {
+      const regels = cellen.map((cel, i) => breekRegels(cel, vloer(breedtes[i]! - CEL_MARGE_MM), BIJLAGE_TEKST_MM, BIJLAGE_BREEDTE_FACTOR));
+      const hoogte = Math.max(1, ...regels.map(r => r.length)) * regelHoogte;
+      return {
+        html: `<div class="meetrij${klasse === "kolomkop" ? " kopregel" : ""}"${extra} style="height:${mm(hoogte)}">` +
+          regels.map((r, i) => `<div style="width:${mm(breedtes[i]!)}">${r.map(regel => tekstRegel(regel, breedtes[i]! - CEL_MARGE_MM, BIJLAGE_TEKST_MM, klasse)).join("")}</div>`).join("") +
+          "</div>",
+        hoogte,
+      };
+    };
+    kop(m.differentieeltests);
+    // De kolomkop blijft bij de eerste rij (`kop: true`).
+    blokken.push({ ...rij([m.referentie, m.gevoeligheid, m.resultaat, m.tijd], "kolomkop", ' data-tabel="differentieeltests"'), kop: true });
+    for (const id of ids) {
+      const node = c.doc.nodes[id]!;
+      if (node.type !== "differentieel") continue;
+      blokken.push({ ...rij([
+        node.referentie ?? "—",
+        `${formatteerGetal(node.gevoeligheid_mA, c.taal)} mA`,
+        node.testResultaat ? m.resultaten[node.testResultaat] : m.nietIngevuld,
+        meetwaardeTekst(node.uitschakeltijd_ms, "ms", t, c.taal),
+      ], "cel"), kop: false });
+    }
+  }
+  tekst(m.geenBeoordeling, "bericht");
+  return blokken;
+}
+
 function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgeslagen: readonly string[]): Blok[] {
   const t = c.teksten;
   const volleBreedte = c.ruimte.breedte;
@@ -283,6 +362,8 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
       tekst(`${onderwerp} — ${d.ongeplaatst}`, "bericht", volleBreedte);
     }
   }
+  blokken.push(...metingBlokken(c));
+  const voorBevindingen = blokken.length;
   const titels = { fout: t.bijlage.fouten, waarschuwing: t.bijlage.waarschuwingen, info: t.bijlage.info } as const;
   for (const ernst of ERNSTEN) {
     const lijst = bevindingen.filter((b) => b.ernst === ernst && (b.regelId !== "arei.situatie.niet-geplaatst" || b.afgeweken));
@@ -308,7 +389,7 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
     kop(`${t.bijlage.overgeslagenPaginas} (${overgeslagen.length})`);
     for (const titel of overgeslagen) tekst(titel, "overgeslagen", volleBreedte);
   }
-  if (blokken.length === 0) tekst(t.bijlage.geenBevindingen, "leeg", volleBreedte);
+  if (dossier.volledig && blokken.length === voorBevindingen) tekst(t.bijlage.geenBevindingen, "leeg", volleBreedte);
   return blokken;
 }
 
@@ -374,6 +455,7 @@ function metadataPaginas(c: Context, opties: PrintOpties, titels: readonly strin
   kop(t.cartouche.werf);
   adres(c.doc.meta.werfadres);
   veld(t.cartouche.ean, c.doc.meta.ean);
+  for (const [label, waarde] of metingVelden(c.doc.meta.metingen, t, c.taal)) veld(label, waarde);
   veld(t.cartouche.datum, formatteerDatum(opties.datum, c.taal));
   veld(t.cartouche.versie, opties.versieLabel);
   for (const titel of new Set(titels)) veld(t.metadata.paginatitel, titel);

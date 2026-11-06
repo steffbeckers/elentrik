@@ -22,6 +22,7 @@ const LOGO_TUSSENRUIMTE_MM = 2;
  */
 const AANDELEN = [0.25, 0.16, 0.16, 0.21, 0.11, 0.11];
 const DATUM_FORMATTEERDERS = new Map<Taal, Intl.DateTimeFormat>();
+const GETAL_FORMATTEERDERS = new Map<Taal, Intl.NumberFormat>();
 
 export type CartoucheGegevens = {
   papier: Papier;
@@ -62,6 +63,31 @@ export function formatteerDatum(datum: string, taal: Taal): string {
     DATUM_FORMATTEERDERS.set(taal, formatter);
   }
   return formatter.format(moment);
+}
+
+/** Een meetwaarde in de locale van `taal` (`28,5`), tot drie decimalen. */
+export function formatteerGetal(waarde: number, taal: Taal): string {
+  let formatter = GETAL_FORMATTEERDERS.get(taal);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALES[taal], { maximumFractionDigits: 3 });
+    GETAL_FORMATTEERDERS.set(taal, formatter);
+  }
+  return formatter.format(waarde);
+}
+
+/** Een meetwaarde met haar eenheid, of "niet ingevuld": nooit 0 of leeg voor een ontbrekende waarde. */
+export function meetwaardeTekst(waarde: number | undefined, eenheid: string, t: Teksten, taal: Taal): string {
+  return waarde === undefined ? t.metingen.nietIngevuld : `${formatteerGetal(waarde, taal)} ${eenheid}`;
+}
+
+/** Meetdatum, aardingsweerstand en isolatieweerstand als [label, waarde], zonder beoordeling. */
+export function metingVelden(metingen: InstallatieDocument["meta"]["metingen"], t: Teksten, taal: Taal): [string, string][] {
+  const m = t.metingen;
+  return [
+    [m.datum, metingen?.datum ? formatteerDatum(metingen.datum, taal) : m.nietIngevuld],
+    [m.aardingsweerstand, meetwaardeTekst(metingen?.aardingsweerstand_ohm, "Ω", t, taal)],
+    [m.isolatieweerstand, meetwaardeTekst(metingen?.isolatieweerstand_MOhm, "MΩ", t, taal)],
+  ];
 }
 
 type VakInhoud = { soort: string; breedte: number; html: string; hoogte: number };

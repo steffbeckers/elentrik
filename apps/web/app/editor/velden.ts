@@ -28,6 +28,8 @@ export type Veld = {
   stap?: number;
   /** Het veld mag leeg; leegmaken stuurt `undefined`, wat de eigenschap verwijdert. */
   optioneel?: boolean;
+  /** Een groep met een eigen kop in het paneel (`editor.eigenschappen.groepen.<groep>`). */
+  groep?: "test";
 };
 
 /** Een deelboom van een vertaalbestand. */
@@ -47,6 +49,13 @@ const EENHEDEN: Readonly<Record<string, string>> = {
   schijnbaarVermogen_kVA: "kVA",
   dcDetectie_mA: "mA DC",
   lengte_m: "m",
+  uitschakeltijd_ms: "ms",
+};
+
+/** Sleutels die in een eigen groep van het paneel staan; geregistreerd, nooit beoordeeld. */
+const GROEPEN: Readonly<Record<string, NonNullable<Veld["groep"]>>> = {
+  testResultaat: "test",
+  uitschakeltijd_ms: "test",
 };
 
 /** Keuzes waarvan de waarde een technisch symbool is dat in elke taal hetzelfde blijft (type AC, curve B). */
@@ -132,6 +141,8 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
   if (sleutel === "puntReferentie") veld.standaard = "automatisch";
   if (sleutel === "brandreactieklasse") veld.suggesties = ["Eca", "Cca"];
   if (optioneel) veld.optioneel = true;
+  const groep = GROEPEN[sleutel];
+  if (groep !== undefined) veld.groep = groep;
   return veld;
 }
 

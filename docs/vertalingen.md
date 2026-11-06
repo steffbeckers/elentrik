@@ -172,6 +172,26 @@ De veldnamen en keuzes van het paneel Eigenschappen (`velden.*` in de vertaalbes
 
 De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term: de kolom van de kringenlijst is te smal voor "interrupteur différentiel" op A4. De cel zelf toont `30 mA type A`.
 
+## Metingen
+
+Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groep Test van een differentieel) en de bijlage van de pdf. Elentrik beoordeelt ze niet: er staan geen grenswaarden bij. De eenheden `Ω`, `MΩ` en `ms` blijven in elke taal dezelfde.
+
+| NL | FR | EN |
+|---|---|---|
+| metingen | mesures | measurements |
+| meetdatum | date de mesure | measurement date |
+| aardingsweerstand | résistance de dispersion | earth resistance |
+| isolatieweerstand | résistance d’isolement | insulation resistance |
+| meettoestel | appareil de mesure | measuring instrument |
+| opmerking | remarque | note |
+| niet ingevuld | non renseigné | not entered |
+| differentieeltests | tests des différentiels | RCD tests |
+| testresultaat | résultat du test | test result |
+| OK / niet OK / niet getest | OK / pas OK / non testé | OK / not OK / not tested |
+| uitschakeltijd | temps de déclenchement | tripping time |
+| test (groep) | test | test |
+| Geregistreerde meetwaarden; geen beoordeling door Elentrik. | Valeurs mesurées enregistrées ; aucune évaluation par Elentrik. | Recorded measured values; not assessed by Elentrik. |
+
 ## Gebruikers en abonnement
 
 | NL | FR | EN |

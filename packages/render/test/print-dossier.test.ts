@@ -47,6 +47,7 @@ test.each([
 test("volledig dossier heeft geen open checklist en referentiebladen verbergen geen ontbrekend plan", () => {
   const { doc, ontbrekend } = fixture();
   doc.meta.installatieContext = "nieuw";
+  doc.meta.metingen = { aardingsweerstand_ohm: 30, isolatieweerstand_MOhm: 250 };
   doc.situatie.paginas[0]!.plaatsingen.push(...ontbrekend.map(nodeId => ({ nodeId, x: 200, y: 200, rotatie: 0 })));
   const compleet = printHtml(doc, analyseer(doc), [], opties);
   expect(compleet.html).not.toContain("Dossier afwerken");

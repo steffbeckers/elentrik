@@ -1,6 +1,6 @@
 // Het formulier van de projectgegevens en zijn omzetting van en naar de gegevens voor de store.
 // Puur en zonder I/O; expliciete imports (ruling E1).
-import type { Adres, InstallatieDocument, Stroomtype, Taal } from "@elentrik/model";
+import type { Adres, InstallatieDocument, Metingen, Stroomtype, Taal } from "@elentrik/model";
 import {
   adresFormulierUitAdres,
   adresUitFormulier,
@@ -8,6 +8,19 @@ import {
   volledigAdresUitFormulier,
   type AdresFormulier,
 } from "./adres";
+
+/** De metingen zoals het formulier ze toont: een leeg veld is "niet ingevuld". */
+export type MetingenFormulier = {
+  /** `JJJJ-MM-DD` of leeg. */
+  datum: string;
+  /** Zoals het getalveld ze geeft: tekst, ook met een decimale komma (`28,5`). */
+  aardingsweerstand_ohm: string;
+  isolatieweerstand_MOhm: string;
+  meettoestel: string;
+  opmerking: string;
+};
+
+const MEETWAARDEN = ["aardingsweerstand_ohm", "isolatieweerstand_MOhm"] as const;
 
 export type ProjectFormulier = {
   naam: string;
@@ -22,12 +35,13 @@ export type ProjectFormulier = {
   /** De taal van het dossier (PDF); een document zonder taal toont `nl`. */
   dossierTaal: Taal;
   installatieContext?: "nieuw" | "bestaand" | "onbekend";
+  metingen: MetingenFormulier;
 };
 
 export type ProjectFormulierFout = {
   /** Veldnaam voor `UFormField`; adresvelden als `klant.straat` of `werf.straat`. */
   name: string;
-  fout: "naamVerplicht" | "adresVerplicht" | "datumVerplicht";
+  fout: "naamVerplicht" | "adresVerplicht" | "datumVerplicht" | "meetwaardeOngeldig";
 };
 
 /** De gegevens voor `wijzigProjectgegevens`. */
@@ -43,7 +57,45 @@ export type ProjectgegevensWijziging = {
   datum: string;
   dossierTaal: Taal;
   installatieContext: "nieuw" | "bestaand" | "onbekend";
+  /** Alleen de ingevulde metingen; leeg wist ze. */
+  metingen: Metingen;
 };
+
+export function leegMetingenFormulier(): MetingenFormulier {
+  return { datum: "", aardingsweerstand_ohm: "", isolatieweerstand_MOhm: "", meettoestel: "", opmerking: "" };
+}
+
+function metingenFormulierUit(m: Metingen | undefined): MetingenFormulier {
+  return {
+    datum: m?.datum ?? "",
+    aardingsweerstand_ohm: m?.aardingsweerstand_ohm === undefined ? "" : String(m.aardingsweerstand_ohm),
+    isolatieweerstand_MOhm: m?.isolatieweerstand_MOhm === undefined ? "" : String(m.isolatieweerstand_MOhm),
+    meettoestel: m?.meettoestel ?? "",
+    opmerking: m?.opmerking ?? "",
+  };
+}
+
+/** Een leeg veld is `undefined`; anders het getal (ook 0), of `NaN` als het geen getal ≥ 0 is. */
+function meetwaarde(waarde: number | string | null | undefined): number | undefined {
+  if (waarde === null || waarde === undefined || String(waarde).trim() === "") return undefined;
+  const getal = typeof waarde === "number" ? waarde : Number(waarde.trim().replace(",", "."));
+  return Number.isFinite(getal) && getal >= 0 ? getal : Number.NaN;
+}
+
+function metingenUitFormulier(f: MetingenFormulier): Metingen {
+  const metingen: Metingen = {};
+  const datum = f.datum.trim();
+  if (datum !== "") metingen.datum = datum;
+  for (const veld of MEETWAARDEN) {
+    const waarde = meetwaarde(f[veld]);
+    if (waarde !== undefined) metingen[veld] = waarde;
+  }
+  const meettoestel = f.meettoestel.trim();
+  if (meettoestel !== "") metingen.meettoestel = meettoestel;
+  const opmerking = f.opmerking.trim();
+  if (opmerking !== "") metingen.opmerking = opmerking;
+  return metingen;
+}
 
 export function formulierUitProject(naam: string, doc: InstallatieDocument): ProjectFormulier {
   return {
@@ -57,6 +109,7 @@ export function formulierUitProject(naam: string, doc: InstallatieDocument): Pro
     datum: doc.meta.datum,
     dossierTaal: doc.meta.dossierTaal ?? "nl",
     installatieContext: doc.meta.installatieContext ?? "onbekend",
+    metingen: metingenFormulierUit(doc.meta.metingen),
   };
 }
 
@@ -72,6 +125,9 @@ export function valideerProjectFormulier(f: ProjectFormulier): ProjectFormulierF
     fouten.push({ name: `klant.${veld}`, fout: "adresVerplicht" });
   }
   if (f.datum.trim() === "") fouten.push({ name: "datum", fout: "datumVerplicht" });
+  for (const veld of MEETWAARDEN) {
+    if (Number.isNaN(meetwaarde(f.metingen[veld]))) fouten.push({ name: `metingen.${veld}`, fout: "meetwaardeOngeldig" });
+  }
   return fouten;
 }
 
@@ -92,5 +148,6 @@ export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijzig
     datum: f.datum.trim(),
     dossierTaal: f.dossierTaal,
     installatieContext: f.installatieContext ?? "onbekend",
+    metingen: metingenUitFormulier(f.metingen),
   };
 }

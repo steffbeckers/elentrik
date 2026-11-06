@@ -374,6 +374,9 @@
       "badkamer": "Salle de bain"
     },
     "eigenschappen": {
+      "groepen": {
+        "test": "Test"
+      },
       "titel": "Propriétés",
       "leeg": "Sélectionnez un élément sur le schéma.",
       "gemengd": "{aantal} éléments sélectionnés",
@@ -449,7 +452,17 @@
       "fouten": {
         "naamVerplicht": "Donnez un nom au projet.",
         "adresVerplicht": "Obligatoire pour une adresse.",
-        "datumVerplicht": "Choisissez une date."
+        "datumVerplicht": "Choisissez une date.",
+        "meetwaardeOngeldig": "Indiquez un nombre égal ou supérieur à 0, ou laissez le champ vide."
+      },
+      "metingen": {
+        "titel": "Mesures",
+        "uitleg": "Valeurs mesurées enregistrées ; aucune évaluation par Elentrik.",
+        "datum": "Date de mesure",
+        "aardingsweerstand": "Résistance de dispersion",
+        "isolatieweerstand": "Résistance d’isolement",
+        "meettoestel": "Appareil de mesure",
+        "opmerking": "Remarque"
       },
       "context": {
         "label": "Contexte de l’installation",
@@ -917,6 +930,8 @@
     "schijnbaarVermogen_kVA": {"label": "Puissance apparente"},
     "dcDetectie_mA": {"label": "Détection de courant résiduel DC"},
     "puntReferentie": {"label": "Référence du point", "opties": {"automatisch": "Numéro automatique", "geen": "Sans numéro propre (choix de source)"}},
+    "testResultaat": {"label": "Résultat du test", "opties": {"ok": "OK", "niet_ok": "Pas OK", "niet_getest": "Non testé"}},
+    "uitschakeltijd_ms": {"label": "Temps de déclenchement"},
     "label": {
       "label": "Libellé"
     },
@@ -1378,6 +1393,8 @@
       "schema": "Dessiner le premier circuit",
       "plan": "Ajouter un plan | Ajouter les {aantal} plans manquants",
       "plaatsen": "Encore 1 élément à placer sur le plan | Encore {aantal} éléments à placer sur le plan",
+      "aardingsweerstand": "Indiquer la résistance de dispersion",
+      "isolatieweerstand": "Indiquer la résistance d’isolement",
       "conceptUitleg": "Des éléments du dossier manquent encore. Vous pouvez exporter un brouillon et le compléter plus tard.",
       "conceptExport": "Créer un PDF brouillon"
     },

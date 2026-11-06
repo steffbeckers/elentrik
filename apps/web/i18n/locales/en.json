@@ -374,6 +374,9 @@
       "badkamer": "Bathroom"
     },
     "eigenschappen": {
+      "groepen": {
+        "test": "Test"
+      },
       "titel": "Properties",
       "leeg": "Select a component on the diagram.",
       "gemengd": "{aantal} components selected",
@@ -449,7 +452,17 @@
       "fouten": {
         "naamVerplicht": "Give the project a name.",
         "adresVerplicht": "Required for an address.",
-        "datumVerplicht": "Choose a date."
+        "datumVerplicht": "Choose a date.",
+        "meetwaardeOngeldig": "Enter a number of 0 or more, or leave the field empty."
+      },
+      "metingen": {
+        "titel": "Measurements",
+        "uitleg": "Recorded measured values; not assessed by Elentrik.",
+        "datum": "Measurement date",
+        "aardingsweerstand": "Earth resistance",
+        "isolatieweerstand": "Insulation resistance",
+        "meettoestel": "Measuring instrument",
+        "opmerking": "Note"
       },
       "context": {
         "label": "Installation context",
@@ -917,6 +930,8 @@
     "schijnbaarVermogen_kVA": {"label": "Apparent power"},
     "dcDetectie_mA": {"label": "DC residual current detection"},
     "puntReferentie": {"label": "Point reference", "opties": {"automatisch": "Automatic number", "geen": "No individual number (source choice)"}},
+    "testResultaat": {"label": "Test result", "opties": {"ok": "OK", "niet_ok": "Not OK", "niet_getest": "Not tested"}},
+    "uitschakeltijd_ms": {"label": "Tripping time"},
     "label": {
       "label": "Label"
     },
@@ -1378,6 +1393,8 @@
       "schema": "Draw the first circuit",
       "plan": "Add a floor plan | Add {aantal} missing plans",
       "plaatsen": "1 component still needs placing on the plan | {aantal} components still need placing on the plan",
+      "aardingsweerstand": "Enter the earth resistance",
+      "isolatieweerstand": "Enter the insulation resistance",
       "conceptUitleg": "Some dossier information is missing. You can export a draft now and finish it later.",
       "conceptExport": "Create draft PDF"
     },

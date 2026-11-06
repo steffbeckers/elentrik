@@ -121,6 +121,7 @@ describe("gegevensUitFormulier", () => {
       datum: "2026-10-18",
       dossierTaal: "nl",
       installatieContext: "onbekend",
+      metingen: {},
     });
   });
 
@@ -159,5 +160,43 @@ describe("gegevensUitFormulier", () => {
     const f = metWerf(startFormulier());
     f.klant = { ...f.klant, straat: "Kerkstraat", nummer: "12", postcode: "2000", gemeente: "Antwerpen" };
     expect(gegevensUitFormulier(f).klantAdres).toEqual(adres);
+  });
+});
+
+describe("metingen", () => {
+  test("een document zonder metingen geeft lege velden, en die geven lege metingen", () => {
+    const f = startFormulier();
+    expect(f.metingen).toEqual({ datum: "", aardingsweerstand_ohm: "", isolatieweerstand_MOhm: "", meettoestel: "", opmerking: "" });
+    expect(gegevensUitFormulier(f).metingen).toEqual({});
+  });
+
+  test("ingevulde velden worden getrimd en omgezet; 0 is een waarde, geen leeg veld", () => {
+    const f = startFormulier({ metingen: { datum: "2026-11-05", aardingsweerstand_ohm: "28.5", isolatieweerstand_MOhm: "0", meettoestel: " Fluke 1664 ", opmerking: "  " } });
+    expect(valideerProjectFormulier(f)).toEqual([]);
+    expect(gegevensUitFormulier(f).metingen).toEqual({ datum: "2026-11-05", aardingsweerstand_ohm: 28.5, isolatieweerstand_MOhm: 0, meettoestel: "Fluke 1664" });
+  });
+
+  test("een negatieve of onleesbare meetwaarde is een fout bij het veld", () => {
+    const f = startFormulier();
+    expect(valideerProjectFormulier({ ...f, metingen: { ...f.metingen, aardingsweerstand_ohm: "-1", isolatieweerstand_MOhm: "abc" } })).toEqual([
+      { name: "metingen.aardingsweerstand_ohm", fout: "meetwaardeOngeldig" },
+      { name: "metingen.isolatieweerstand_MOhm", fout: "meetwaardeOngeldig" },
+    ]);
+  });
+
+  test("bewaren, terughalen in het formulier, ongedaan maken en ongewijzigd bewaren", () => {
+    const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    const store = useEditorStore();
+    store.laad({ id: "p1", naam: "Woning", versie: 1, document: doc });
+    const f = formulierUitProject("Woning", doc);
+    store.wijzigProjectgegevens(gegevensUitFormulier({ ...f, metingen: { ...f.metingen, aardingsweerstand_ohm: "30", isolatieweerstand_MOhm: "250", datum: "2026-11-05" } }));
+    expect(store.document?.meta.metingen).toEqual({ datum: "2026-11-05", aardingsweerstand_ohm: 30, isolatieweerstand_MOhm: 250 });
+    const terug = formulierUitProject("Woning", store.document!);
+    expect(terug.metingen).toMatchObject({ aardingsweerstand_ohm: "30", isolatieweerstand_MOhm: "250", datum: "2026-11-05" });
+    const stappen = store.gewijzigdSindsOpslaan;
+    store.wijzigProjectgegevens(gegevensUitFormulier(terug));
+    expect(store.gewijzigdSindsOpslaan).toBe(stappen);
+    store.ongedaanMaken();
+    expect(store.document?.meta.metingen).toBeUndefined();
   });
 });

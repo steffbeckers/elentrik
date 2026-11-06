@@ -1,4 +1,4 @@
-import type { NodeType, NodeVan, Ruimte, Toestelsoort } from "@elentrik/model";
+import type { NodeType, NodeVan, Ruimte, TestResultaat, Toestelsoort } from "@elentrik/model";
 
 /** Alle vaste teksten van de pdf. `nl.ts` is het Nederlands; `fr.ts` en `en.ts` hebben exact dezelfde structuur. De termen volgen `docs/vertalingen.md`. */
 export type Teksten = {
@@ -37,7 +37,7 @@ export type Teksten = {
   schaalAfdruk: string;
   metadata: { titel: string; verwijzing: string; naam: string; adres: string; straat: string; nummer: string; bus: string; postcode: string; gemeente: string; land: string; telefoon: string; email: string; ondernemingsnummer: string; keuringsorganisme: string; paginatitel: string };
   bijlage: {
-    dossier: { titel: string; uitleg: string; klant: string; werfadres: string; context: string; schema: string; plan: string; zonderPlan: string; ongeplaatst: string };
+    dossier: { titel: string; uitleg: string; klant: string; werfadres: string; context: string; schema: string; aardingsweerstand: string; isolatieweerstand: string; plan: string; zonderPlan: string; ongeplaatst: string };
     fouten: string;
     waarschuwingen: string;
     info: string;
@@ -50,6 +50,25 @@ export type Teksten = {
     motivatie: string;
     door: string;
     geenBevindingen: string;
+  };
+  /** Geregistreerde meetwaarden: Elentrik toont ze, maar beoordeelt ze niet. */
+  metingen: {
+    titel: string;
+    datum: string;
+    aardingsweerstand: string;
+    isolatieweerstand: string;
+    meettoestel: string;
+    opmerking: string;
+    /** Een meting zonder waarde; nooit 0 of een lege cel. */
+    nietIngevuld: string;
+    /** De vaste zin bij de metingen. */
+    geenBeoordeling: string;
+    differentieeltests: string;
+    referentie: string;
+    gevoeligheid: string;
+    resultaat: string;
+    tijd: string;
+    resultaten: Record<TestResultaat, string>;
   };
   geenKringen: string;
   /** Het watermerk op de pdf van staging: de titel groot, de ondertitel in de taal van het dossier. */
@@ -141,7 +160,7 @@ export const NL: Teksten = {
     andere: "Andere",
   },
   bijlage: {
-    dossier: { titel: "Dossier afwerken", uitleg: "Ontbrekende dossieronderdelen, los van de elektrische controles.", klant: "Klantnaam ontbreekt.", werfadres: "Werfadres is onvolledig.", context: "Installatiecontext onbekend: nieuw of bestaand is nog niet vastgesteld.", schema: "Eendraadschema bevat nog geen kringen.", plan: "Situatieplan ontbreekt.", zonderPlan: "Achtergrondplan ontbreekt", ongeplaatst: "Nog niet op een situatieplan geplaatst." },
+    dossier: { titel: "Dossier afwerken", uitleg: "Ontbrekende dossieronderdelen, los van de elektrische controles.", klant: "Klantnaam ontbreekt.", werfadres: "Werfadres is onvolledig.", context: "Installatiecontext onbekend: nieuw of bestaand is nog niet vastgesteld.", schema: "Eendraadschema bevat nog geen kringen.", aardingsweerstand: "Aardingsweerstand niet ingevuld.", isolatieweerstand: "Isolatieweerstand niet ingevuld.", plan: "Situatieplan ontbreekt.", zonderPlan: "Achtergrondplan ontbreekt", ongeplaatst: "Nog niet op een situatieplan geplaatst." },
     fouten: "Fouten",
     waarschuwingen: "Waarschuwingen",
     info: "Info",
@@ -152,6 +171,22 @@ export const NL: Teksten = {
     motivatie: "Motivatie",
     door: "Door",
     geenBevindingen: "Geen bevindingen",
+  },
+  metingen: {
+    titel: "Metingen",
+    datum: "Meetdatum",
+    aardingsweerstand: "Aardingsweerstand",
+    isolatieweerstand: "Isolatieweerstand",
+    meettoestel: "Meettoestel",
+    opmerking: "Opmerking",
+    nietIngevuld: "niet ingevuld",
+    geenBeoordeling: "Geregistreerde meetwaarden; geen beoordeling door Elentrik.",
+    differentieeltests: "Differentieeltests",
+    referentie: "Referentie",
+    gevoeligheid: "Gevoeligheid",
+    resultaat: "Resultaat",
+    tijd: "Tijd",
+    resultaten: { ok: "OK", niet_ok: "Niet OK", niet_getest: "Niet getest" },
   },
   geenKringen: "Geen kringen",
   watermerk: { titel: "STAGING", ondertitel: "Geen geldig document" },

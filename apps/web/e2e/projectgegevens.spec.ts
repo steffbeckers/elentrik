@@ -70,3 +70,45 @@ test("klant- en werfgegevens invullen, bewaren, ongedaan maken en herladen", asy
   await expect(dialoog.getByTestId("werf-ean")).toHaveValue("541448800000000001");
   await expect(dialoog.getByTestId("projectdatum")).toHaveValue("2026-11-02");
 });
+
+test("metingen invullen in Projectgegevens, bewaren en na herladen terugzien", async ({ page }) => {
+  const metingNaam = `${naam} metingen`;
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Nieuw project" }).click();
+  const nieuw = page.getByRole("dialog");
+  await nieuw.getByLabel("Naam").fill(metingNaam);
+  await nieuw.getByRole("button", { name: "Aanmaken" }).click();
+  await page.getByRole("row").filter({ hasText: metingNaam }).getByRole("link", { name: "Openen" }).click();
+  await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
+
+  await page.getByTestId("projectnaam").click();
+  const dialoog = page.getByRole("dialog");
+  const metingen = dialoog.getByTestId("metingen");
+  await expect(metingen.getByRole("heading", { name: "Metingen" })).toBeVisible();
+  await expect(metingen.getByText("Geregistreerde meetwaarden; geen beoordeling door Elentrik.")).toBeVisible();
+  await expect(dialoog.getByTestId("meting-aardingsweerstand")).toHaveValue("");
+
+  // Een negatieve waarde wordt geweigerd bij het veld, zonder te bewaren.
+  await dialoog.getByTestId("meting-aardingsweerstand").fill("-1");
+  await dialoog.getByRole("button", { name: "Bewaren" }).click();
+  await expect(dialoog.getByText("Geef een getal van 0 of meer, of laat het veld leeg.")).toBeVisible();
+  await expect(dialoog).toBeVisible();
+
+  await dialoog.getByTestId("meting-datum").fill("2026-11-05");
+  await dialoog.getByTestId("meting-aardingsweerstand").fill("28.5");
+  await dialoog.getByTestId("meting-isolatieweerstand").fill("250");
+  await dialoog.getByTestId("meting-meettoestel").fill("Fluke 1664 FC");
+  await dialoog.getByTestId("meting-opmerking").fill("Gemeten met open hoofdschakelaar");
+  await dialoog.getByRole("button", { name: "Bewaren" }).click();
+  await expect(dialoog).toHaveCount(0);
+
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
+  await page.reload();
+  await page.getByTestId("projectnaam").click();
+  await expect(dialoog.getByTestId("meting-datum")).toHaveValue("2026-11-05");
+  await expect(dialoog.getByTestId("meting-aardingsweerstand")).toHaveValue("28.5");
+  await expect(dialoog.getByTestId("meting-isolatieweerstand")).toHaveValue("250");
+  await expect(dialoog.getByTestId("meting-meettoestel")).toHaveValue("Fluke 1664 FC");
+  await expect(dialoog.getByTestId("meting-opmerking")).toHaveValue("Gemeten met open hoofdschakelaar");
+});

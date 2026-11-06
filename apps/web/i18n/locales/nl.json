@@ -374,6 +374,9 @@
       "badkamer": "Badkamer"
     },
     "eigenschappen": {
+      "groepen": {
+        "test": "Test"
+      },
       "titel": "Eigenschappen",
       "leeg": "Selecteer een onderdeel op het schema.",
       "gemengd": "{aantal} onderdelen geselecteerd",
@@ -449,7 +452,17 @@
       "fouten": {
         "naamVerplicht": "Geef het project een naam.",
         "adresVerplicht": "Verplicht voor een adres.",
-        "datumVerplicht": "Kies een datum."
+        "datumVerplicht": "Kies een datum.",
+        "meetwaardeOngeldig": "Geef een getal van 0 of meer, of laat het veld leeg."
+      },
+      "metingen": {
+        "titel": "Metingen",
+        "uitleg": "Geregistreerde meetwaarden; geen beoordeling door Elentrik.",
+        "datum": "Meetdatum",
+        "aardingsweerstand": "Aardingsweerstand",
+        "isolatieweerstand": "Isolatieweerstand",
+        "meettoestel": "Meettoestel",
+        "opmerking": "Opmerking"
       },
       "context": {
         "label": "Installatiecontext",
@@ -917,6 +930,8 @@
     "schijnbaarVermogen_kVA": {"label": "Schijnbaar vermogen"},
     "dcDetectie_mA": {"label": "DC-foutstroomdetectie"},
     "puntReferentie": {"label": "Puntreferentie", "opties": {"automatisch": "Automatisch nummer", "geen": "Geen eigen nummer (bronkeuze)"}},
+    "testResultaat": {"label": "Testresultaat", "opties": {"ok": "OK", "niet_ok": "Niet OK", "niet_getest": "Niet getest"}},
+    "uitschakeltijd_ms": {"label": "Uitschakeltijd"},
     "label": {
       "label": "Label"
     },
@@ -1378,6 +1393,8 @@
       "schema": "Eerste kring tekenen",
       "plan": "Een grondplan toevoegen | {aantal} ontbrekende plannen aanvullen",
       "plaatsen": "Nog 1 onderdeel op het plan plaatsen | Nog {aantal} onderdelen op het plan plaatsen",
+      "aardingsweerstand": "Aardingsweerstand invullen",
+      "isolatieweerstand": "Isolatieweerstand invullen",
       "conceptUitleg": "Er ontbreken nog dossieronderdelen. Je kunt nu een concept exporteren en later verder afwerken.",
       "conceptExport": "Concept-PDF maken"
     },

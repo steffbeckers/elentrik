@@ -2,10 +2,12 @@
 import { StroomtypeSchema } from "@elentrik/model";
 import AdresVelden from "~/components/editor/AdresVelden.vue";
 import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
+import MetingenVelden from "~/components/editor/MetingenVelden.vue";
 import { leegAdresFormulier } from "~/editor/adres";
 import {
   formulierUitProject,
   gegevensUitFormulier,
+  leegMetingenFormulier,
   valideerProjectFormulier,
   type ProjectFormulier,
 } from "~/editor/projectformulier";
@@ -36,6 +38,7 @@ const formulier = reactive<ProjectFormulier>({
   datum: "",
   dossierTaal: "nl",
   installatieContext: "onbekend",
+  metingen: leegMetingenFormulier(),
 });
 
 watch(open, (nuOpen) => {
@@ -116,6 +119,8 @@ function bewaar(): void {
             <UInput v-model="formulier.datum" type="date" class="w-full" data-testid="projectdatum" />
           </UFormField>
         </section>
+
+        <MetingenVelden v-model="formulier.metingen" />
       </UForm>
     </template>
     <template #footer>
