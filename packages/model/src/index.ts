@@ -43,6 +43,8 @@ export {
   NIEUWE_KRING_AUTOMAAT,
   SJABLONEN,
   STANDAARD,
+  doorsnedeVoorKring,
+  kringLeiding,
   VISUELE_VELDEN,
   nieuwProjectDocument,
   sjabloonVoor,

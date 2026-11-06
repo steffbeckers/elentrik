@@ -7,6 +7,7 @@
   import { projectSettings } from '$lib/stores/settings';
   import { exportPlan, type Previous } from './export';
   import { locale } from '$lib/i18n';
+  import { zetMaatTaal } from './settings';
 
   let ready = $state(false);
   let session = '';
@@ -55,7 +56,8 @@
           const project = m.project ? readProject(JSON.parse(m.project)) : createDefaultProject(m.title);
           if (!m.project) project.floors[0].name = m.title;
           projectSettings.reset();
-          locale.set(m.language === 'nl' || m.language === 'fr' ? m.language : 'en');
+          const taal = m.language === 'nl' || m.language === 'fr' ? m.language : 'en';
+          locale.set(taal); zetMaatTaal(taal === 'en' ? 'en-GB' : `${taal}-BE`);
           loadProject(project); choose('wall'); ready = true;
           unsubscribe = currentProject.subscribe(() => { if (ready) post('elentrik:changed'); });
         } catch { error = labels.loadError; post('elentrik:error'); }

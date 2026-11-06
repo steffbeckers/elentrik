@@ -562,17 +562,18 @@
         "afdekKlaar": "Klaar",
         "afdekInvoeren": "Afmetingen invoeren",
         "afdekToevoegen": "Afdekking toevoegen",
-        "afdekVeld": { "x": "Links (px)", "y": "Boven (px)", "breedte": "Breedte (px)", "hoogte": "Hoogte (px)" },
+        "afdekVeld": { "x": "Links (beeldpunten van het plan)", "y": "Boven (beeldpunten van het plan)", "breedte": "Breedte (beeldpunten van het plan)", "hoogte": "Hoogte (beeldpunten van het plan)" },
+        "afdekVeldCm": { "x": "Links (cm)", "y": "Boven (cm)", "breedte": "Breedte (cm)", "hoogte": "Hoogte (cm)" },
         "draaiLinks": "Draai 90° linksom",
         "draaiRechts": "Draai 90° rechtsom",
         "vanPlanHalen": "Van plan halen",
         "kiesPunt": "Punt op plan",
         "kiesPuntLeeg": "Kies een punt",
         "tekenvlak": "Situatieplan: toetsenbordbediening",
-        "toetsenbord": "Kies een punt. Pijlen verplaatsen; Shift verfijnt naar 1 px. R draait 15° rechtsom, Shift+R 15° linksom. De draaiknoppen draaien 90°. Delete haalt van het plan. Tab verlaat het tekenvlak.",
+        "toetsenbord": "Kies een punt. Pijlen verplaatsen; Shift verfijnt naar 1 beeldpunt van het plan. R draait 15° rechtsom, Shift+R 15° linksom. De draaiknoppen draaien 90°. Delete haalt van het plan. Tab verlaat het tekenvlak.",
         "plaatsToetsenbord": "Klik op het plan om het punt te plaatsen. Escape annuleert.",
-        "meetToetsenbord": "Pijlen verplaatsen het kruis; Shift verfijnt naar 1 px. Enter bevestigt, Escape annuleert.",
-        "cursorPositie": "Positie: x {x}, y {y} px",
+        "meetToetsenbord": "Pijlen verplaatsen het kruis; Shift verfijnt naar 1 beeldpunt van het plan. Enter bevestigt, Escape annuleert.",
+        "cursorPositie": "Positie: x {x}, y {y} (beeldpunten van het plan)",
         "bevestigMeetpunt": "Meetpunt bevestigen"
       },
       "toevoegen": {
@@ -906,7 +907,7 @@
       "aanmaken": "Aanmaken"
     },
     "stroomtypes": {
-      "2x230V": "2 × 230 V (één fase)",
+      "2x230V": "2 × 230 V (eenfasig)",
       "3x230V": "3 × 230 V (drie fasen)",
       "3N400V": "3N × 400 V (drie fasen en nul)"
     }
@@ -938,7 +939,7 @@
       "label": "Curve"
     },
     "kortsluitvermogen_kA": {
-      "label": "Kortsluitvermogen"
+      "label": "Onderbrekingsvermogen (Icn)"
     },
     "naam": {
       "label": "Naam"

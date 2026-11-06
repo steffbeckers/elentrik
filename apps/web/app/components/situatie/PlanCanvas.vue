@@ -56,6 +56,24 @@ const opschonen = ref(false);
 const afdekStart = ref<{ x: number; y: number } | null>(null);
 const gekozenAfdekking = ref("");
 const afdekFormulier = reactive({ x: 0, y: 0, breedte: 20, hoogte: 20 });
+/** Centimeter per rasterpixel als het plan gekalibreerd is; anders blijven de afdekvelden in beeldpunten. */
+const cmPerPx = computed(() => {
+  const mm = achtergrond.value?.schaal?.mmPerPx;
+  return mm !== undefined && mm > 0 ? mm / 10 : undefined;
+});
+const afrond = (waarde: number): number => Math.round(waarde * 10000) / 10000;
+type AfdekVeld = "x" | "y" | "breedte" | "hoogte";
+function afdekWaarde(veld: AfdekVeld): number {
+  return cmPerPx.value ? afrond(afdekFormulier[veld] * cmPerPx.value) : afdekFormulier[veld];
+}
+function zetAfdekWaarde(veld: AfdekVeld, event: Event): void {
+  const waarde = (event.target as HTMLInputElement).valueAsNumber;
+  afdekFormulier[veld] = cmPerPx.value ? waarde / cmPerPx.value : waarde;
+}
+function afdekGrens(veld: AfdekVeld): number | undefined {
+  const px = veld === "x" || veld === "breedte" ? achtergrond.value?.breedte_px : achtergrond.value?.hoogte_px;
+  return px !== undefined && cmPerPx.value ? afrond(px * cmPerPx.value) : px;
+}
 const modus = computed<"normaal" | "plaats" | "meet" | "afdek">(() =>
   props.meetSchaal ? "meet" : props.teplaatsen !== null ? "plaats" : opschonen.value ? "afdek" : "normaal",
 );
@@ -609,8 +627,8 @@ const markeringen = computed(() => {
           <summary class="cursor-pointer text-muted">{{ $t('editor.situatie.canvas.afdekInvoeren') }}</summary>
           <form class="mt-2 flex flex-wrap items-end gap-2" @submit.prevent="bewaarAfdekking(afdekFormulier)">
             <label v-for="veld in (['x', 'y', 'breedte', 'hoogte'] as const)" :key="veld" class="flex flex-col gap-1">
-              {{ $t(`editor.situatie.canvas.afdekVeld.${veld}`) }}
-              <input v-model.number="afdekFormulier[veld]" type="number" required step="any" :min="veld === 'x' || veld === 'y' ? 0 : 1" :max="veld === 'x' || veld === 'breedte' ? achtergrond?.breedte_px : achtergrond?.hoogte_px" class="h-9 w-24 rounded border border-default bg-default px-2" />
+              {{ $t(`editor.situatie.canvas.${cmPerPx ? 'afdekVeldCm' : 'afdekVeld'}.${veld}`) }}
+              <input :value="afdekWaarde(veld)" type="number" required step="any" :min="veld === 'x' || veld === 'y' ? 0 : (cmPerPx ? afrond(cmPerPx) : 1)" :max="afdekGrens(veld)" class="h-9 w-24 rounded border border-default bg-default px-2" @input="zetAfdekWaarde(veld, $event)" />
             </label>
             <UButton type="submit" size="sm" :label="$t('editor.situatie.canvas.afdekToevoegen')" />
           </form>

@@ -11,6 +11,7 @@ import { NodeSchema, type InstallatieDocument, type NodeId } from "./schema";
 import { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
 import {
   NIEUWE_KRING_AUTOMAAT,
+  kringLeiding,
   STANDAARD,
   VISUELE_VELDEN,
   keten,
@@ -120,7 +121,7 @@ function nieuweNodes(
   }
   if (onderdeel === "differentieel") return [STANDAARD.differentieel];
   if (onderdeel === "zekering") return [STANDAARD.zekering, STANDAARD.leiding];
-  const basis = [NIEUWE_KRING_AUTOMAAT, STANDAARD.leiding];
+  const basis = [NIEUWE_KRING_AUTOMAAT, kringLeiding(onderdeel)];
   // De leiding is al deel van de nieuwe kring. Elk ander gekozen onderdeel
   // hoort meteen mee in dezelfde operatie, inclusief zijn voorinstelling.
   return onderdeel === "leiding"

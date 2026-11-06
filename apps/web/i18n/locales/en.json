@@ -562,17 +562,18 @@
         "afdekKlaar": "Done",
         "afdekInvoeren": "Enter dimensions",
         "afdekToevoegen": "Add cover",
-        "afdekVeld": { "x": "Left (px)", "y": "Top (px)", "breedte": "Width (px)", "hoogte": "Height (px)" },
+        "afdekVeld": { "x": "Left (plan pixels)", "y": "Top (plan pixels)", "breedte": "Width (plan pixels)", "hoogte": "Height (plan pixels)" },
+        "afdekVeldCm": { "x": "Left (cm)", "y": "Top (cm)", "breedte": "Width (cm)", "hoogte": "Height (cm)" },
         "draaiLinks": "Rotate 90° anticlockwise",
         "draaiRechts": "Rotate 90° clockwise",
         "vanPlanHalen": "Remove from plan",
         "kiesPunt": "Point on plan",
         "kiesPuntLeeg": "Choose a point",
         "tekenvlak": "Layout plan: keyboard controls",
-        "toetsenbord": "Choose a point. Arrow keys move it; Shift refines to 1 px. R rotates 15° clockwise, Shift+R 15° anticlockwise. The rotation buttons rotate 90°. Delete removes it from the plan. Tab leaves the canvas.",
+        "toetsenbord": "Choose a point. Arrow keys move it; Shift refines to 1 plan pixel. R rotates 15° clockwise, Shift+R 15° anticlockwise. The rotation buttons rotate 90°. Delete removes it from the plan. Tab leaves the canvas.",
         "plaatsToetsenbord": "Click on the plan to place the point. Escape cancels.",
-        "meetToetsenbord": "Arrows move the crosshair; Shift adjusts by 1 px. Enter confirms, Escape cancels.",
-        "cursorPositie": "Position: x {x}, y {y} px",
+        "meetToetsenbord": "Arrows move the crosshair; Shift adjusts by 1 plan pixel. Enter confirms, Escape cancels.",
+        "cursorPositie": "Position: x {x}, y {y} (plan pixels)",
         "bevestigMeetpunt": "Confirm measurement point"
       },
       "toevoegen": {
@@ -906,7 +907,7 @@
       "aanmaken": "Create"
     },
     "stroomtypes": {
-      "2x230V": "2 × 230 V (single phase)",
+      "2x230V": "2 × 230 V (single-phase)",
       "3x230V": "3 × 230 V (three phase)",
       "3N400V": "3N × 400 V (three phase with neutral)"
     }
@@ -938,7 +939,7 @@
       "label": "Curve"
     },
     "kortsluitvermogen_kA": {
-      "label": "Breaking capacity"
+      "label": "Breaking capacity (Icn)"
     },
     "naam": {
       "label": "Name"

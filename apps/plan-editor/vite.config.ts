@@ -13,6 +13,10 @@ export default defineConfig({
       this.emitFile({ type: 'asset', fileName: 'OpenPlan3D-LICENSE.txt', source: readFileSync(new URL('./vendor/openplan3d/LICENSE', import.meta.url), 'utf8') });
     },
   }],
-  resolve: { alias: { $lib: fileURLToPath(new URL('./vendor/openplan3d', import.meta.url)) } },
+  resolve: { alias: [
+    // Maatlabels volgen de interfacetaal; de rest van de vendor-store blijft ongewijzigd.
+    { find: /^\$lib\/stores\/settings$/, replacement: fileURLToPath(new URL('./src/settings.ts', import.meta.url)) },
+    { find: '$lib', replacement: fileURLToPath(new URL('./vendor/openplan3d', import.meta.url)) },
+  ] },
   build: { outDir: 'dist', emptyOutDir: true },
 });

@@ -562,17 +562,18 @@
         "afdekKlaar": "Terminé",
         "afdekInvoeren": "Saisir les dimensions",
         "afdekToevoegen": "Ajouter le masque",
-        "afdekVeld": { "x": "Gauche (px)", "y": "Haut (px)", "breedte": "Largeur (px)", "hoogte": "Hauteur (px)" },
+        "afdekVeld": { "x": "Gauche (pixels du plan)", "y": "Haut (pixels du plan)", "breedte": "Largeur (pixels du plan)", "hoogte": "Hauteur (pixels du plan)" },
+        "afdekVeldCm": { "x": "Gauche (cm)", "y": "Haut (cm)", "breedte": "Largeur (cm)", "hoogte": "Hauteur (cm)" },
         "draaiLinks": "Tourner de 90° à gauche",
         "draaiRechts": "Tourner de 90° à droite",
         "vanPlanHalen": "Retirer du plan",
         "kiesPunt": "Point sur le plan",
         "kiesPuntLeeg": "Choisissez un point",
         "tekenvlak": "Plan de position : commandes au clavier",
-        "toetsenbord": "Choisissez un point. Les flèches déplacent ; Maj affine à 1 px. R tourne de 15° à droite, Maj+R de 15° à gauche. Les boutons de rotation tournent de 90°. Suppr retire du plan. Tab quitte la zone de dessin.",
+        "toetsenbord": "Choisissez un point. Les flèches déplacent ; Maj affine à 1 pixel du plan. R tourne de 15° à droite, Maj+R de 15° à gauche. Les boutons de rotation tournent de 90°. Suppr retire du plan. Tab quitte la zone de dessin.",
         "plaatsToetsenbord": "Cliquez sur le plan pour placer le point. Échap annule.",
-        "meetToetsenbord": "Les flèches déplacent la croix ; Maj affine à 1 px. Entrée confirme, Échap annule.",
-        "cursorPositie": "Position : x {x}, y {y} px",
+        "meetToetsenbord": "Les flèches déplacent la croix ; Maj affine à 1 pixel du plan. Entrée confirme, Échap annule.",
+        "cursorPositie": "Position : x {x}, y {y} (pixels du plan)",
         "bevestigMeetpunt": "Confirmer le point de mesure"
       },
       "toevoegen": {
@@ -938,7 +939,7 @@
       "label": "Courbe"
     },
     "kortsluitvermogen_kA": {
-      "label": "Pouvoir de coupure"
+      "label": "Pouvoir de coupure (Icn)"
     },
     "naam": {
       "label": "Nom"

@@ -43,6 +43,20 @@ export const STANDAARD: { [O in Onderdeel]: NodeInvoer } = {
   onderbord: { type: "verdeelbord" },
 };
 
+/**
+ * De doorsnede (mm²) van de leiding van een nieuwe kring, bepaald door het eerste
+ * onderdeel: verlichting (lichtpunt, schakelaar) 1,5 mm², al het andere 2,5 mm².
+ * Eén bron voor `voegOnderdeelToe` en de sjablonen.
+ */
+export function doorsnedeVoorKring(eerste: Onderdeel): number {
+  return eerste === "lichtpunt" || eerste === "schakelaar" ? 1.5 : 2.5;
+}
+
+/** De leiding van een nieuwe kring die met dit onderdeel begint. */
+export function kringLeiding(eerste: Onderdeel): NodeInvoer {
+  return { type: "leiding", kabeltype: "XVB", doorsnede_mm2: doorsnedeVoorKring(eerste), aantalGeleiders: 3 };
+}
+
 /** De instelling die een nieuw punt meekrijgt, bovenop `STANDAARD` (spec §4.3). */
 export type Voorinstelling = {
   aantal?: number;
@@ -167,7 +181,7 @@ export const SJABLONEN: readonly Sjabloon[] = [
     boom: keten(
       STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 16, curve: "B", polen: 2 },
-      leiding(1.5),
+      leiding(doorsnedeVoorKring("schakelaar")),
       STANDAARD.schakelaar,
       lichtpunt(),
       lichtpunt(),

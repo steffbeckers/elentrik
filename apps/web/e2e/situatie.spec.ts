@@ -282,10 +282,10 @@ test("bron handmatig afdekken, ongedaan maken, herladen en verwijderen op mobiel
   await page.getByTestId("plan-afdekverwijder").click();
   await expect.poll(async () => (await afdekkingen()).length).toBe(0);
   await page.getByText("Afmetingen invoeren", { exact: true }).click();
-  await page.getByLabel("Links (px)", { exact: true }).fill("30");
-  await page.getByLabel("Boven (px)", { exact: true }).fill("40");
-  await page.getByLabel("Breedte (px)", { exact: true }).fill("50");
-  await page.getByLabel("Hoogte (px)", { exact: true }).fill("60");
+  await page.getByLabel("Links (beeldpunten van het plan)", { exact: true }).fill("30");
+  await page.getByLabel("Boven (beeldpunten van het plan)", { exact: true }).fill("40");
+  await page.getByLabel("Breedte (beeldpunten van het plan)", { exact: true }).fill("50");
+  await page.getByLabel("Hoogte (beeldpunten van het plan)", { exact: true }).fill("60");
   await page.getByRole("button", { name: "Afdekking toevoegen", exact: true }).click();
   await expect.poll(async () => (await afdekkingen()).map(({ x, y, breedte, hoogte }) => ({ x, y, breedte, hoogte }))).toEqual([{ x: 30, y: 40, breedte: 50, hoogte: 60 }]);
 });

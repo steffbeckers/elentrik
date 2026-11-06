@@ -54,6 +54,7 @@ In lopende zinnen mag het Engels "RCD" schrijven nadat de term eenmaal voluit is
 | gevoeligheid | sensibilité | sensitivity |
 | polen | pôles | poles |
 | stroomtype | type de courant | current type |
+| 2 × 230 V (eenfasig) | 2 × 230 V (monophasé) | 2 × 230 V (single-phase) |
 | klasse (differentieel) | classe | class |
 | algemeen differentieel | interrupteur différentiel général | main RCD |
 | natte ruimte | local humide | wet room |
@@ -118,7 +119,7 @@ De veldnamen en keuzes van het paneel Eigenschappen (`velden.*` in de vertaalbes
 |---|---|---|
 | label | libellé | label |
 | ruimte (veld) | pièce | room |
-| kortsluitvermogen | pouvoir de coupure | breaking capacity |
+| onderbrekingsvermogen (Icn; veld `kortsluitvermogen_kA`) | pouvoir de coupure (Icn) | breaking capacity (Icn) |
 | aantal geleiders | nombre de conducteurs | number of conductors |
 | plaatsing | pose | installation method |
 | inbouw / opbouw | encastré / apparent | flush-mounted / surface-mounted |
@@ -198,6 +199,7 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | NL | FR | EN |
 |---|---|---|
 | onderbord | tableau divisionnaire | sub-board |
+| beeldpunten van het plan (eenheid van de afdekvelden, zonder kalibratie; met kalibratie: cm) | pixels du plan | plan pixels |
 | onderdeel (in de editor) | élément | component |
 | sjabloon | modèle | template |
 | concept (lokaal) | brouillon | draft |

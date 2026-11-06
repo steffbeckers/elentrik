@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   NIEUWE_KRING_AUTOMAAT,
+  doorsnedeVoorKring,
   SJABLONEN,
   STANDAARD,
   magToevoegen,
@@ -569,5 +570,38 @@ describe("voegSjabloonToe", () => {
     const { doc, bordId } = start();
     voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:bordId}, "kring-stopcontacten");
     expect(kloon([...SJABLONEN])).toEqual(voor);
+  });
+});
+
+describe("doorsnede van een nieuwe kring volgt het eerste onderdeel", () => {
+  function leidingVan(onderdeel: Onderdeel): number {
+    const { doc, bordId } = start();
+    const r = voegOnderdeelToe(doc, { soort: "rail-einde", nodeId: bordId }, onderdeel);
+    const leiding = r.doc.nodes[r.ids[1]!]!;
+    expect(leiding.type).toBe("leiding");
+    return (leiding as Extract<Node, { type: "leiding" }>).doorsnede_mm2;
+  }
+
+  test("lichtpunt en schakelaar geven 1,5 mm²", () => {
+    expect(leidingVan("lichtpunt")).toBe(1.5);
+    expect(leidingVan("schakelaar")).toBe(1.5);
+  });
+
+  test("contactdoos en toestel geven 2,5 mm²", () => {
+    expect(leidingVan("contactdoos")).toBe(2.5);
+    expect(leidingVan("toestel")).toBe(2.5);
+  });
+
+  test("doorsnedeVoorKring is de ene bron", () => {
+    expect(doorsnedeVoorKring("lichtpunt")).toBe(1.5);
+    expect(doorsnedeVoorKring("schakelaar")).toBe(1.5);
+    expect(doorsnedeVoorKring("contactdoos")).toBe(2.5);
+  });
+
+  test("het sjabloon Kring verlichting gebruikt dezelfde waarde", () => {
+    const sjabloon = SJABLONEN.find((s) => s.id === "kring-verlichting")!;
+    let node: SjabloonNode | undefined = sjabloon.boom;
+    while (node && node.type !== "leiding") node = node.kinderen?.[0];
+    expect((node as { doorsnede_mm2: number }).doorsnede_mm2).toBe(doorsnedeVoorKring("lichtpunt"));
   });
 });
