@@ -8,6 +8,7 @@ import {
   type SjabloonDoel,
   type DifferentieelInstellingen,
 } from "@elentrik/model";
+import { KEUZELIJST_IN_DIALOOG } from "~/editor/keuzelijst";
 import { useEditorStore } from "~/stores/editor";
 import {
   invoegBestemmingen,
@@ -112,6 +113,7 @@ function voegIn() {
             :items="ruimteItems"
             class="w-full"
             :disabled="store.alleenLezen"
+            :content="KEUZELIJST_IN_DIALOOG"
             data-testid="sjabloon-ruimte"
           />
         </UFormField>

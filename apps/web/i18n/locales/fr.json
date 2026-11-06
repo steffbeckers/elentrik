@@ -1249,7 +1249,8 @@
       "veld": "Nom de l'entreprise",
       "bewaren": "Enregistrer le nom",
       "bewaard": "Le nom a été enregistré.",
-      "dossierHulp": "Le nom et le logo de vos dossiers se règlent dans {link}."
+      "dossierHulp": "Le nom et le logo de vos dossiers se règlent dans {link}.",
+      "dossierHulpLid": "Le nom et le logo de vos dossiers figurent dans {link}."
     },
     "leden": {
       "titel": "Membres",

@@ -5,6 +5,7 @@ import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import GenummerdeSectie from "~/components/editor/GenummerdeSectie.vue";
 import MetingenVelden from "~/components/editor/MetingenVelden.vue";
 import { leegAdresFormulier } from "~/editor/adres";
+import { KEUZELIJST_IN_DIALOOG } from "~/editor/keuzelijst";
 import {
   formulierUitProject,
   gegevensUitFormulier,
@@ -25,12 +26,6 @@ const voerUit = useDocumentFoutMelding();
 const stroomtypes = computed(() =>
   StroomtypeSchema.options.map((value) => ({ value, label: t(`projecten.stroomtypes.${value}`) })),
 );
-
-/**
- * De keuzelijsten van dit formulier schermen de rest van de dialoog niet af: anders sloot de eerste
- * klik op Bewaren (of een ander veld) alleen de open keuzelijst, en ging de klik verloren.
- */
-const KEUZELIJST = { disableOutsidePointerEvents: false } as const;
 
 /** De talen van het dossier, elk in haar eigen taal ("Français"), zoals de taalkiezer en het exportvenster. */
 const dossierTalen = TALEN.map((value) => ({ value, label: TAALNAMEN[value] }));
@@ -102,13 +97,13 @@ function bewaar(): void {
 
         <GenummerdeSectie :nummer="3" :titel="$t('editor.projectgegevens.installatie.titel')">
           <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
-            <USelect v-model="formulier.stroomtype" :items="stroomtypes" :content="KEUZELIJST" class="w-full" />
+            <USelect v-model="formulier.stroomtype" :items="stroomtypes" :content="KEUZELIJST_IN_DIALOOG" class="w-full" />
           </UFormField>
           <UFormField name="frequentie_Hz" :label="$t('editor.projectgegevens.frequentie')">
             <UInput v-model="formulier.frequentie_Hz" type="number" min="0.01" step="any" class="w-full" />
           </UFormField>
           <UFormField name="installatieContext" :label="$t('editor.projectgegevens.context.label')" :help="$t('editor.projectgegevens.context.hulp')">
-            <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext" :content="KEUZELIJST"
+            <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext" :content="KEUZELIJST_IN_DIALOOG"
               :items="['onbekend', 'nieuw', 'bestaand'].map(value => ({ value, label: $t(`editor.projectgegevens.context.${value}`) }))" />
           </UFormField>
         </GenummerdeSectie>
@@ -127,7 +122,7 @@ function bewaar(): void {
             :label="$t('editor.projectgegevens.dossierTaal.label')"
             :help="$t('editor.projectgegevens.dossierTaal.hulp')"
           >
-            <USelect v-model="formulier.dossierTaal" :items="dossierTalen" :content="KEUZELIJST" class="w-full" data-testid="dossiertaal" />
+            <USelect v-model="formulier.dossierTaal" :items="dossierTalen" :content="KEUZELIJST_IN_DIALOOG" class="w-full" data-testid="dossiertaal" />
           </UFormField>
         </GenummerdeSectie>
       </UForm>

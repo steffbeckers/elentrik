@@ -276,7 +276,8 @@ async function verlaat() {
           />
         </UForm>
         <p :class="isEigenaar ? 'mt-3 text-sm text-muted' : 'text-sm text-muted'" data-testid="organisatie-dossier-hulp">
-          <i18n-t keypath="organisatie.naam.dossierHulp" scope="global">
+          <!-- Een lid kan de bedrijfsgegevens niet wijzigen: alleen zeggen waar ze staan. -->
+          <i18n-t :keypath="isEigenaar ? 'organisatie.naam.dossierHulp' : 'organisatie.naam.dossierHulpLid'" scope="global">
             <template #link>
               <ULink to="/instellingen" class="font-medium text-primary underline underline-offset-4">{{ $t("menu.bedrijfsgegevens") }}</ULink>
             </template>

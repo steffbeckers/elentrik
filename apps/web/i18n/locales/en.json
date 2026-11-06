@@ -1249,7 +1249,8 @@
       "veld": "Company name",
       "bewaren": "Save name",
       "bewaard": "The name has been saved.",
-      "dossierHulp": "Set the name and logo on your dossiers in {link}."
+      "dossierHulp": "Set the name and logo on your dossiers in {link}.",
+      "dossierHulpLid": "The name and logo on your dossiers are in {link}."
     },
     "leden": {
       "titel": "Members",

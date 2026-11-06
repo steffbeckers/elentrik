@@ -204,7 +204,7 @@ describe("metingen", () => {
 describe("zelfde als klantadres", () => {
   const klant = { straat: "Kerkstraat", nummer: "12", bus: "", postcode: "2000", gemeente: "Antwerpen", land: "België" };
 
-  test("staat standaard aan bij een leeg werfadres, uit bij een eigen werfadres", () => {
+  test("staat aan bij een project zonder adressen, uit bij een eigen werfadres", () => {
     expect(startFormulier().werfZelfdeAlsKlant).toBe(true);
     const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
     expect(formulierUitProject("Woning", wijzigProject(doc, { werfadres: adres }).doc).werfZelfdeAlsKlant).toBe(false);
@@ -232,6 +232,22 @@ describe("zelfde als klantadres", () => {
     expect(f.werfZelfdeAlsKlant).toBe(true);
     store.wijzigProjectgegevens(gegevensUitFormulier(f));
     expect(store.gewijzigdSindsOpslaan).toBe(0);
+  });
+
+  test("bestaand project met klantadres en leeg werfadres: vakje uit, bewaren laat het werfadres leeg", () => {
+    const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    const metKlant = wijzigProject(doc, { klantAdres: adres }).doc;
+    const store = useEditorStore();
+    store.laad({ id: "p1", naam: "Woning", versie: 1, document: metKlant });
+    const f = formulierUitProject("Woning", metKlant);
+    expect(f.werfZelfdeAlsKlant).toBe(false);
+    store.wijzigProjectgegevens(gegevensUitFormulier({ ...f, naam: "Hernoemd" }));
+    expect(store.document?.meta.werfadres).toEqual({ straat: "", nummer: "", postcode: "", gemeente: "", land: "België" });
+  });
+
+  test("nieuw leeg project: vakje aan", () => {
+    const doc = nieuwProjectDocument({ klantNaam: "Janssens", stroomtype: "2x230V", datum: "2026-10-18" });
+    expect(formulierUitProject("Woning", doc).werfZelfdeAlsKlant).toBe(true);
   });
 
   test("een werfadres gelijk aan het klantadres opent met het vakje aan", () => {

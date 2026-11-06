@@ -6,6 +6,7 @@ import {
   type LichtschakelingOpties,
   type DifferentieelInstellingen,
 } from "@elentrik/model";
+import { KEUZELIJST_IN_DIALOOG } from "~/editor/keuzelijst";
 import { VELDEN } from "~/editor/velden";
 import { useEditorStore } from "~/stores/editor";
 import {
@@ -126,6 +127,7 @@ function voegIn() {
             "
             class="w-full"
             :disabled="store.alleenLezen"
+            :content="KEUZELIJST_IN_DIALOOG"
             data-testid="licht-schakeling"
           />
         </UFormField>
@@ -145,6 +147,7 @@ function voegIn() {
             ><USelect
               v-model="opties.lichtsoort"
               :items="lichtsoorten"
+              :content="KEUZELIJST_IN_DIALOOG"
               class="w-full"
               :disabled="store.alleenLezen"
           /></UFormField>

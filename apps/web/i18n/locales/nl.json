@@ -1249,7 +1249,8 @@
       "veld": "Naam van het bedrijf",
       "bewaren": "Naam bewaren",
       "bewaard": "De naam is bewaard.",
-      "dossierHulp": "De naam en het logo op je dossiers stel je in bij {link}."
+      "dossierHulp": "De naam en het logo op je dossiers stel je in bij {link}.",
+      "dossierHulpLid": "De naam en het logo op je dossiers staan in {link}."
     },
     "leden": {
       "titel": "Leden",

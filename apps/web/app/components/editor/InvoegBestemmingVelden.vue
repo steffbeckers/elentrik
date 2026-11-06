@@ -5,6 +5,7 @@ import type {
 } from "@elentrik/model";
 import { useEditorStore } from "~/stores/editor";
 import { invoegSpecificatie } from "~/editor/invoegen";
+import { KEUZELIJST_IN_DIALOOG } from "~/editor/keuzelijst";
 import { invoegDoelKeuzes } from "~/editor/schema-navigatie";
 
 const props = defineProps<{ doelen: LichtschakelingDoel[] }>();
@@ -39,6 +40,7 @@ const bestaandeDifferentieel = computed(() =>
       :items="items"
       :placeholder="$t('editor.invoegen.kiesBestemming')"
       class="w-full"
+      :content="KEUZELIJST_IN_DIALOOG"
       data-testid="invoeg-bestemming"
       :disabled="store.alleenLezen"
     />
@@ -78,12 +80,14 @@ const bestaandeDifferentieel = computed(() =>
         ><USelect
           v-model="instellingen.polen"
           :items="[1, 2, 3, 4]"
+          :content="KEUZELIJST_IN_DIALOOG"
           class="w-full"
       /></UFormField>
       <UFormField :label="$t('velden.klasse.label')"
         ><USelect
           v-model="instellingen.klasse"
           :items="['AC', 'A', 'F', 'B']"
+          :content="KEUZELIJST_IN_DIALOOG"
           class="w-full"
       /></UFormField>
     </div>

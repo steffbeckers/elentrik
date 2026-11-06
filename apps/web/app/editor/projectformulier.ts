@@ -33,7 +33,7 @@ export type ProjectFormulier = {
   werf: AdresFormulier;
   /**
    * "Zelfde als klantadres": bij opslaan wordt het klantadres het werfadres en tellen de werfvelden
-   * niet mee. Standaard aan als het werfadres leeg is (of gelijk aan het klantadres).
+   * niet mee. Standaard aan bij een nieuw project zonder adressen of als beide adressen al gelijk zijn.
    */
   werfZelfdeAlsKlant: boolean;
   ean: string;
@@ -104,11 +104,16 @@ function metingenUitFormulier(f: MetingenFormulier): Metingen {
   return metingen;
 }
 
-/** Aan bij een leeg werfadres, of een werfadres dat al gelijk is aan het klantadres. */
+/**
+ * Aan alleen bij een nieuw project (werf- en klantadres allebei leeg) of als beide adressen al gelijk
+ * en ingevuld zijn. Een bestaand project met een klantadres en een leeg werfadres opent met het vakje
+ * uit: bewaren mag dan nooit stil een werfadres invullen dat de installateur niet bevestigde.
+ */
 function zelfdeAlsKlantBijOpenen(doc: InstallatieDocument): boolean {
   const werf = adresFormulierUitAdres(doc.meta.werfadres);
-  if (!heeftAdres(werf)) return true;
-  return zelfdeAdres(volledigAdresUitFormulier(werf), adresUitFormulier(adresFormulierUitAdres(doc.meta.klant.adres)));
+  const klant = adresUitFormulier(adresFormulierUitAdres(doc.meta.klant.adres));
+  if (!heeftAdres(werf)) return klant === undefined;
+  return zelfdeAdres(volledigAdresUitFormulier(werf), klant);
 }
 
 export function formulierUitProject(naam: string, doc: InstallatieDocument): ProjectFormulier {
