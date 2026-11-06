@@ -289,6 +289,25 @@ test("bron handmatig afdekken, ongedaan maken, herladen en verwijderen op mobiel
   await expect.poll(async () => (await afdekkingen()).map(({ x, y, breedte, hoogte }) => ({ x, y, breedte, hoogte }))).toEqual([{ x: 30, y: 40, breedte: 50, hoogte: 60 }]);
 });
 
+test("de dossierchecklist noemt de ongeplaatste onderdelen en een klik selecteert er één in het schema", async ({ page }) => {
+  test.setTimeout(120_000);
+  await maakProjectMetContactdozen(page, `${naam} checklist`);
+  await page.getByTestId("tab-situatieschema").click();
+  await page.getByTestId("werkruimte-bevindingen").click();
+  const checklist = page.getByTestId("dossier-checklist");
+  const details = checklist.locator("..");
+  if (await details.getAttribute("open") === null) await details.locator("summary").click();
+  const namen = checklist.getByTestId("dossier-ongeplaatst");
+  const a1 = namen.getByRole("button", { name: "Selecteer A1 in het schema", exact: true });
+  const a2 = namen.getByRole("button", { name: "Selecteer A2 in het schema", exact: true });
+  await expect(a1).toBeVisible();
+  await expect(a2).toBeVisible();
+  await expect(a2).toHaveText("A2");
+  await a2.click();
+  await expect(page.getByTestId("schema-canvas")).toBeVisible();
+  await expect(page.getByTestId("schema-canvas").locator('[data-testid^="selectie-"]')).toHaveCount(1);
+});
+
 test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend plan", async ({ page, request }) => {
   test.setTimeout(120_000);
   const dialogen: string[] = [];

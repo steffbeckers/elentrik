@@ -17,13 +17,11 @@ test("de checklist noemt elk ongeplaatst onderdeel bij naam", () => {
   const status = dossierStatus(doc, analyse);
   const namen = ongeplaatsteOnderdelen(doc, analyse, status.ongeplaatsteIds, "nl").map(o => o.naam);
   expect(namen).toHaveLength(status.ongeplaatst);
-  expect(namen.some(n => /A1|^[A-Z]\d/.test(n))).toBe(true);
-  expect(namen.join("|").toLowerCase()).toContain("aardingsonderbreker");
-  expect(namen.every(n => n !== "")).toBe(true);
+  expect(namen).toEqual(["A1", "Verdeelbord", "Teller", "Aardingsonderbreker"]);
 });
 
 test("een klik selecteert het onderdeel op het eendraadschema", () => {
-  const store = { selectie: [] as string[], tabblad: "situatieschema" };
+  const store = { selectie: [] as string[], tabblad: "situatieschema" as const };
   kiesOngeplaatst(store, "n1");
   expect(store).toEqual({ selectie: ["n1"], tabblad: "eendraadschema" });
 });

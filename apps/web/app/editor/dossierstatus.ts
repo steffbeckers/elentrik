@@ -1,5 +1,6 @@
 import type { Analyse } from "@elentrik/arei";
 import type { InstallatieDocument, NodeId } from "@elentrik/model";
+import type { Tabblad } from "../stores/editor";
 import { ongeplaatstNaam, TEKSTEN, type Taal } from "@elentrik/render";
 
 export { dossierStatus } from "@elentrik/render";
@@ -10,7 +11,7 @@ export function ongeplaatsteOnderdelen(doc: InstallatieDocument, analyse: Analys
 }
 
 /** Selecteert een ongeplaatst onderdeel op het eendraadschema, waar elk onderdeel te vinden is. */
-export function kiesOngeplaatst(store: { selectie: NodeId[]; tabblad: string }, id: NodeId): void {
+export function kiesOngeplaatst(store: { selectie: NodeId[]; tabblad: Tabblad }, id: NodeId): void {
   store.tabblad = "eendraadschema";
   store.selectie = [id];
 }
