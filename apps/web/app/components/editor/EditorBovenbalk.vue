@@ -75,7 +75,7 @@ const weergave = computed(() =>
       :aria-label="$t('editor.bovenbalk.projecten')"
       :title="$t('editor.bovenbalk.projecten')"
     >
-      <UIcon name="i-lucide-zap" class="size-5 shrink-0 text-primary" />
+      <img src="/icoon.svg" alt="" width="20" height="20" class="size-5 shrink-0" />
       <span class="hidden sm:inline">{{ $t('app.naam') }}</span>
     </NuxtLink>
     <UButton

@@ -7,7 +7,7 @@ defineProps<{ titel: string }>();
 <template>
   <main class="comfortabele-formulieren flex min-h-dvh flex-col items-center justify-center px-4 py-8">
     <p class="mb-6 flex items-center gap-2 text-lg font-semibold">
-      <UIcon name="i-lucide-zap" class="size-5 text-primary" />{{ $t("app.naam") }}
+      <img src="/icoon.svg" alt="" width="20" height="20" class="size-5 shrink-0" />{{ $t("app.naam") }}
     </p>
     <UCard class="w-full max-w-md">
       <template #header>
