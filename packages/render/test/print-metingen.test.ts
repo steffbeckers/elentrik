@@ -119,3 +119,47 @@ describe.each(["nl", "fr", "en"] as const)("metingen in de pdf (%s)", (taal) => 
     for (const zin of ontbreekt) expect(tekst).toContain(zin);
   });
 });
+
+describe("metingen zonder bijlage", () => {
+  const zonderBijlage = { ...opties, onderdelen: { eendraadschema: true, situatieschema: false, kringenlijst: true, bijlage: false } };
+  const aantal = (tekst: string, deel: string) => tekst.split(deel).length - 1;
+
+  test("een export zonder bijlage eindigt met de metingen, de tabel en de vaste zin (nl)", () => {
+    let doc = metMetingen();
+    doc = wijzigProject(doc, { metingen: { aardingsweerstand_ohm: 28.5 } }).doc;
+    const { html } = printHtml(doc, analyseer(doc), [], zonderBijlage);
+    // Geen bijlage: de metingen staan op een eigen slotpagina "Metingen".
+    expect(html).not.toContain('<div class="bijlage" ');
+    expect(html.split('<section class="pagina">').slice(1).filter(p => p.includes('<div class="bijlage metingen"'))).toHaveLength(1);
+    const secties = html.split('<section class="pagina">').slice(1);
+    const laatste = tekstVan(secties.at(-1)!.slice(0, secties.at(-1)!.indexOf('<div class="cartouche">'))).replace(/\n/g, " ");
+    for (const regel of ["Metingen", "Meetdatum: niet ingevuld", "Aardingsweerstand: 28,5 Ω", "Isolatieweerstand: niet ingevuld",
+      "Differentieeltests", "Referentie", "Geregistreerde meetwaarden; geen beoordeling door Elentrik."]) expect(laatste).toContain(regel);
+    expect(html).toContain('data-tabel="differentieeltests"');
+    // Geen bevindingen of dossierchecklist: alleen de metingen.
+    expect(laatste).not.toContain("Dossier afwerken");
+  });
+
+  test("met bijlage staan de metingen er precies één keer", () => {
+    const doc = metMetingen();
+    for (const onderdelen of [opties.onderdelen, { eendraadschema: true, situatieschema: true, kringenlijst: true, bijlage: true }]) {
+      const { html } = printHtml(doc, analyseer(doc), [], { ...opties, onderdelen });
+      const tekst = tekstVan(html).replace(/\n/g, " ");
+      expect(aantal(tekst, "Geregistreerde meetwaarden; geen beoordeling door Elentrik.")).toBe(1);
+      expect(aantal(tekst, "Aardingsweerstand: 28,5 Ω")).toBe(1);
+      expect(aantal(html, 'data-tabel="differentieeltests"')).toBe(1);
+    }
+  });
+
+  test("ook bij een te hoge cartouche (projectgegevenspagina) staan de metingen er één keer", () => {
+    const doc = structuredClone(metMetingen());
+    doc.meta.klant.naam = "Klant ".repeat(400);
+    for (const onderdelen of [opties.onderdelen, zonderBijlage.onderdelen]) {
+      const { html } = printHtml(doc, analyseer(doc), [], { ...opties, onderdelen });
+      expect(html).toContain("Projectgegevens");
+      const tekst = tekstVan(html).replace(/\n/g, " ");
+      expect(aantal(tekst, "Aardingsweerstand: 28,5 Ω")).toBe(1);
+      expect(aantal(tekst, "Geregistreerde meetwaarden; geen beoordeling door Elentrik.")).toBe(1);
+    }
+  });
+});

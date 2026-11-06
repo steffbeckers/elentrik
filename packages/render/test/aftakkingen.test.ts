@@ -27,7 +27,9 @@ test("aftakkingsreferenties blijven gelijk op schema, plan, kringenlijst en PDF;
     papier: "A4", onderdelen: { eendraadschema: true, situatieschema: false, kringenlijst: false, bijlage: false },
     taal: "nl", datum: "2026-11-01", versieLabel: "v1", installateur: { naam: "Voorbeeld" }, afbeeldingen: {},
   });
-  expect(pdf.paginas).toBe(1);
+  // Eén schemablad, plus de slotpagina met metingen (export zonder bijlage).
+  expect(pdf.paginas).toBe(2);
+  expect(pdf.html.split('<section class="pagina">').at(-1)).toContain('<div class="bijlage metingen"');
   expect(pdf.html.match(/>A1<\/text>/g)).toHaveLength(1);
   expect(pdf.html.match(/<text class="tekst-aantal"[^>]*font-size="2.5"[^>]*>×2<\/text>/g)).toHaveLength(1);
   const weg = verwijder(doc, a.ids[0]!);

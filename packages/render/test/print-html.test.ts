@@ -110,8 +110,9 @@ function regels(html: string): Regel[] {
   }));
 }
 
+/** De pagina's, zonder de slotpagina met metingen van een export zonder bijlage (zie print-metingen.test.ts). */
 function paginas(html: string): string[] {
-  return html.split('<section class="pagina">').slice(1);
+  return html.split('<section class="pagina">').slice(1).filter(p => !p.includes('<div class="bijlage metingen"'));
 }
 
 describe("printHtml", () => {
@@ -430,7 +431,7 @@ describe("printHtml", () => {
     const { doc } = installatie().bouw();
     const analyse = analyseer(doc);
     const alleen = printHtml(doc, analyse, [], opties({ onderdelen: alleenOnderdeel("kringenlijst") }));
-    expect(alleen.paginas).toBe(1);
+    expect(paginas(alleen.html)).toHaveLength(1);
     expect(alleen.html).toContain(`>${NL.geenKringen}</div>`);
     const alles = printHtml(doc, analyse, bevindingenVan(doc), opties());
     expect(alles.paginas).toBeGreaterThanOrEqual(1);
@@ -472,7 +473,7 @@ describe("printHtml", () => {
       [],
       opties({ onderdelen: alleenOnderdeel("situatieschema"), afbeeldingen: { "raster-1": "plan.png" } }),
     );
-    expect(uit.paginas).toBe(1);
+    expect(paginas(uit.html)).toHaveLength(1);
     const m = /<div class="kader"[^>]*style="left:([\d.]+)mm;top:([\d.]+)mm;width:([\d.]+)mm;height:([\d.]+)mm"[^>]*>/.exec(
       uit.html,
     )!;
@@ -653,7 +654,7 @@ describe("printHtml", () => {
     const doc = metGegevens(referentieAppartement());
     doc.situatie.paginas.push({ id: "p", titel: "Verdieping", plaatsingen: [] });
     const uit = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("situatieschema") }));
-    expect(uit.paginas).toBe(1);
+    expect(paginas(uit.html)).toHaveLength(1);
     expect(uit.overgeslagen).toEqual(["Verdieping"]);
     expect(regels(uit.html).map((r) => r.tekst)).toContain("Verdieping");
   });
@@ -1093,7 +1094,7 @@ test("kleine situatiesymbolen houden afdruklabels van minstens 2,5 mm", () => {
 test("zes seriestopcontacten met hoofd- en bijkomende differentieel behouden alle labels op één leesbaar blad", () => {
  const doc = installatie().differentieel(300, d => d.verdeelbord(b => b.differentieel(30, bd => bd.kring(k => k.automaat(20).leiding(2.5).contactdozen(6))))).bouw().doc;
  const uit = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("eendraadschema"), installateur: { naam: "Elektro E2E" }, logo: "logo.png" }));
- expect(uit.paginas).toBe(1);
+ expect(paginas(uit.html)).toHaveLength(1);
  expect(uit.html).not.toMatch(/scale\(0\./);
  const labels = [...uit.html.matchAll(/<text class="tekst-punt"[^>]*>(A\d+)<\/text>/g)].map(m => m[1]).sort();
  expect(labels).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);

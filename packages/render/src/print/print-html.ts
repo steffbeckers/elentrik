@@ -394,7 +394,8 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
 }
 
 /** Verdeelt de blokken over pagina's; een kop blijft bij zijn eerste regel. */
-function tekstPaginas(c: Context, blokken: readonly Blok[], titel: string): Pagina[] {
+/** `klasse` is de klasse van de tekstlaag: "bijlage", of "bijlage metingen" voor de slotpagina met metingen. */
+function tekstPaginas(c: Context, blokken: readonly Blok[], titel: string, klasse = "bijlage"): Pagina[] {
   const capaciteit = c.ruimte.hoogte - BIJLAGE_SPELING_MM;
   const groepen: Blok[][] = [[]];
   let gevuld = 0;
@@ -412,7 +413,7 @@ function tekstPaginas(c: Context, blokken: readonly Blok[], titel: string): Pagi
   return groepen.map((groep) => ({
     titel,
     inhoud:
-      `<div class="bijlage" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};` +
+      `<div class="${klasse}" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};` +
       `width:${mm(c.ruimte.breedte)};height:${mm(c.ruimte.hoogte)}">${groep.map((b) => b.html).join("")}</div>`,
   }));
 }
@@ -455,7 +456,6 @@ function metadataPaginas(c: Context, opties: PrintOpties, titels: readonly strin
   kop(t.cartouche.werf);
   adres(c.doc.meta.werfadres);
   veld(t.cartouche.ean, c.doc.meta.ean);
-  for (const [label, waarde] of metingVelden(c.doc.meta.metingen, t, c.taal)) veld(label, waarde);
   veld(t.cartouche.datum, formatteerDatum(opties.datum, c.taal));
   veld(t.cartouche.versie, opties.versieLabel);
   for (const titel of new Set(titels)) veld(t.metadata.paginatitel, titel);
@@ -499,7 +499,8 @@ export function printHtml(
     papier, teksten, taal: opties.taal, meta: doc.meta, voeding: doc.voeding, installateur: opties.installateur,
     logo: opties.logo, datum: opties.datum, versieLabel: opties.versieLabel, nummer: 9999, totaal: 9999,
   };
-  const titels = [teksten.paginatitels.bijlage];
+  // Zonder bijlage komen de metingen op een eigen, korte slotpagina (anders staan ze in de bijlage).
+  const titels = [teksten.paginatitels.bijlage, ...(onderdelen.bijlage ? [] : [teksten.metingen.titel])];
   if (onderdelen.eendraadschema) titels.push(teksten.paginatitels.eendraadschema);
   if (onderdelen.kringenlijst) titels.push(teksten.paginatitels.kringenlijst);
   if (onderdelen.situatieschema) {
@@ -557,6 +558,7 @@ export function printHtml(
   }
   if (onderdelen.kringenlijst) paginas.push(...kringenlijstPaginas(c));
   if (onderdelen.bijlage || paginas.length === 0) paginas.push(...bijlagePaginas(c, bevindingen, overgeslagen));
+  else paginas.push(...tekstPaginas(c, metingBlokken(c), teksten.metingen.titel, "bijlage metingen"));
   if (metadataVervolg) paginas.push(...metadataPaginas(c, opties, titels));
 
   const totaal = paginas.length;
