@@ -85,6 +85,22 @@ const basis = {
 
 const positiefGeheel = z.number().int().min(1);
 const positief = z.number().gt(0);
+const nietNegatief = z.number().finite().min(0);
+
+/**
+ * Geregistreerde meetwaarden van het project. Elentrik beoordeelt ze niet: er zijn geen
+ * grenswaarden, alleen de waarden zoals de installateur ze opmat. Elk veld is optioneel.
+ */
+export const MetingenSchema = z.strictObject({
+  /** ISO-datum van de meting (`2026-11-05`). */
+  datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  aardingsweerstand_ohm: nietNegatief.optional(),
+  isolatieweerstand_MOhm: nietNegatief.optional(),
+  meettoestel: z.string().optional(),
+  opmerking: z.string().optional(),
+});
+
+export const TestResultaatSchema = z.enum(["ok", "niet_ok", "niet_getest"]);
 
 export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({ ...basis, type: z.literal("aansluiting") }),
@@ -99,6 +115,9 @@ export const NodeSchema = z.discriminatedUnion("type", [
     nominaal_A: positief,
     polen: PolenSchema,
     klasse: z.enum(["AC", "A", "F", "B"]),
+    /** Geregistreerde test; geen beoordeling door Elentrik. */
+    testResultaat: TestResultaatSchema.optional(),
+    uitschakeltijd_ms: nietNegatief.optional(),
   }),
   z.strictObject({
     ...basis,
@@ -233,6 +252,8 @@ export const InstallatieDocumentSchema = z.strictObject({
     dossierTaal: TaalSchema.optional(),
     /** Afwezig bij oudere dossiers: toepasselijkheid moet nog worden gecontroleerd. */
     installatieContext: z.enum(["nieuw", "bestaand", "onbekend"]).optional(),
+    /** Afwezig: nog niets gemeten. Een oude editor (clientcompatibiliteit 2) mag dit niet wegschrijven. */
+    metingen: MetingenSchema.optional(),
   }),
   voeding: z.strictObject({ stroomtype: StroomtypeSchema, frequentie_Hz: positief.optional() }),
   rootId: Id,
@@ -256,3 +277,6 @@ export type Ruimte = z.infer<typeof RuimteSchema>;
 export type Toestelsoort = z.infer<typeof ToestelsoortSchema>;
 export type Polen = z.infer<typeof PolenSchema>;
 export type Stroomtype = z.infer<typeof StroomtypeSchema>;
+export type Metingen = z.infer<typeof MetingenSchema>;
+export type TestResultaat = z.infer<typeof TestResultaatSchema>;
+export type DifferentieelTest = Pick<NodeVan<"differentieel">, "testResultaat" | "uitschakeltijd_ms">;

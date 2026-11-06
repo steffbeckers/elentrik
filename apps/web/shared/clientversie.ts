@@ -10,11 +10,15 @@
 // maar dat maakt een oude editor niet veilig: zijn documentkopie mist nieuwe velden en onderdelen.
 // Versie 2 beschermt het schema-2-model (aanleg, bronparameters en plaatsbare infrastructuur)
 // tegen schrijfacties van client 1. De bestaande migratie 1 → 2 bewaart oude dossiers;
-// ze verleent een verouderde client geen schrijftoegang. `test/clientversie.test.ts` pint het paar.
+// ze verleent een verouderde client geen schrijftoegang. Versie 3 beschermt de metingen
+// (`meta.metingen`, `testResultaat` en `uitschakeltijd_ms` per differentieel): ze zijn optioneel
+// binnen schema 2, dus oude dossiers blijven leesbaar zonder migratie, maar de documentkopie van
+// een editor van client 2 kent ze niet en zou ze bij bewaren wegschrijven.
+// `test/clientversie.test.ts` pint het paar.
 //
 // Expliciete import in de server en client (ruling E1): dit bestand importeert niets.
 
-export const CLIENT_COMPATIBILITEIT = 2;
+export const CLIENT_COMPATIBILITEIT = 3;
 
 /** Het verzoek van de client: zijn eigen getal. */
 export const CLIENT_HEADER = "x-elentrik-client";
