@@ -282,7 +282,9 @@
       "aantalWaarschuwingen": "{n} waarschuwing | {n} waarschuwingen",
       "ongedaanMaken": "Ongedaan maken (Ctrl+Z)",
       "opnieuw": "Opnieuw (Ctrl+Y)",
-      "exporteren": "Exporteren"
+      "exporteren": "Exporteren",
+      "aantalInfo": "{n} melding ter info | {n} meldingen ter info",
+      "bevindingenMetInfo": "{fouten}, {waarschuwingen} en {info}"
     },
     "kringenlijst": {
       "titel": "Kringenlijst",
@@ -298,7 +300,12 @@
       "alleen-lezen": "Niet opgeslagen: alleen lezen, je werk blijft lokaal bewaard",
       "alleenLezen": "Alleen lezen",
       "opnieuwProberen": "Opnieuw proberen",
-      "verwijderd": "Project verwijderd"
+      "verwijderd": "Project verwijderd",
+      "kort": {
+        "opgeslagen": "Opgeslagen",
+        "bezig": "Bezig…",
+        "nietOpgeslagen": "Niet opgeslagen"
+      }
     },
     "verwijderd": {
       "melding": "Dit project werd verwijderd.",
@@ -410,7 +417,14 @@
         "beveiliging": "Bekijk beveiliging",
         "kring": "Bekijk kring"
       },
-      "afwijkingenPerPunt": "Afwijkingen per onderdeel"
+      "afwijkingenPerPunt": "Afwijkingen per onderdeel",
+      "legenda": {
+        "titel": "Markeringen op het schema en het plan",
+        "fout": "Fout",
+        "waarschuwing": "Waarschuwing",
+        "info": "Ter info, geen fout. Bijvoorbeeld een onvolledige leiding of een punt dat nog niet op het plan staat.",
+        "afgeweken": "Afgeweken: gemotiveerd aanvaard"
+      }
     },
     "afwijking": {
       "titel": "Afwijking motiveren",
@@ -517,7 +531,9 @@
         "kringFilter": "Kring",
         "alleKringen": "Alle kringen",
         "doorgaan": "Doorgaan met volgend punt",
-        "geenResultaten": "Geen punten voor deze zoekopdracht of kring."
+        "geenResultaten": "Geen punten voor deze zoekopdracht of kring.",
+        "kringKlaar": "Alle punten van kring {label} staan op het plan",
+        "groepKlaar": "Alle punten van {groep} staan op het plan"
       },
       "paginas": {
         "titel": "Pagina's",
@@ -557,7 +573,8 @@
       "hint": {
         "plaatsen": "Klik op het plan om {label} te plaatsen.",
         "meten": "Klik twee punten op het plan aan.",
-        "annuleren": "Annuleren"
+        "annuleren": "Annuleren",
+        "stop": "Stop"
       },
       "verplaatst": "{label} verplaatst van {van} naar {naar}",
       "canvas": {
@@ -695,7 +712,9 @@
         "kalibratieMelding": "Gekalibreerde afdruk — verdeeld over meerdere bladen indien nodig.",
         "referentie": "Referentieblad — wordt niet afgedrukt."
       },
-      "referentieUitleg": "Dit is een referentieblad: plaats hier geen definitieve punten. Het blad wordt niet geëxporteerd. Kies een planpagina om punten te plaatsen."
+      "referentieUitleg": "Dit is een referentieblad: plaats hier geen definitieve punten. Het blad wordt niet geëxporteerd. Kies een planpagina om punten te plaatsen.",
+      "overlap": "Overlapt met {label}",
+      "ongedaanMaken": "Ongedaan maken"
     },
     "export": {
       "titel": "Exporteren als PDF",
@@ -834,6 +853,43 @@
       "actie": "{onderdeel} vóór {doel} invoegen",
       "selectie": "de selectie",
       "uitleg": "Het bestaande onderdeel en zijn vervolg blijven behouden. Controleer daarna de nieuwe eigenschappen."
+    },
+    "sneltoetsen": {
+      "titel": "Sneltoetsen",
+      "beschrijving": "De toetsen werken als de focus niet in een tekstveld of een dialoog staat. Op een Mac gebruik je ⌘ in plaats van Ctrl.",
+      "openen": "Sneltoetsen tonen (?)",
+      "schema": "Eendraadschema",
+      "situatie": "Situatieschema",
+      "of": "of",
+      "spatie": "Spatie",
+      "kies": {
+        "contactdoos": "Contactdoos kiezen. Met een kring geselecteerd: meteen toevoegen na de selectie",
+        "lichtpunt": "Lichtpunt kiezen. Met een kring geselecteerd: meteen toevoegen na de selectie",
+        "schakelaar": "Schakelaar kiezen",
+        "toestel": "Toestel kiezen",
+        "differentieel": "Differentieel kiezen. Met een kring geselecteerd: meteen invoegen vóór de selectie",
+        "zekering": "Zekering kiezen",
+        "onderbord": "Onderbord kiezen"
+      },
+      "symbolen": "Het symbolenvenster openen",
+      "toevoegen": "Het gekozen onderdeel toevoegen bij de selectie",
+      "verwijder": "De selectie verwijderen",
+      "verwijderTak": "De selectie met haar hele tak verwijderen",
+      "navigeer": "Naar het volgende onderdeel of de naburige kring gaan",
+      "wisSelectie": "De selectie wissen en de invoegbalk sluiten",
+      "dupliceer": "De geselecteerde kring dupliceren met de eerste vrije letter",
+      "ongedaan": "Ongedaan maken",
+      "opnieuw": "Opnieuw",
+      "verschuifCanvas": "Ingedrukt houden en slepen om het tekenvlak te verschuiven",
+      "overzicht": "Dit overzicht openen",
+      "draai": "De selectie 15° rechtsom draaien",
+      "draaiTerug": "De selectie 15° linksom draaien",
+      "schuif": "De selectie verschuiven",
+      "schuifFijn": "De selectie per beeldpunt van het plan verschuiven",
+      "vanPlan": "De selectie van het plan halen. Ze blijft in het eendraadschema",
+      "annuleer": "Plaatsen of meten stoppen, anders de selectie wissen",
+      "dupliceerGeenKring": "Selecteer eerst een onderdeel van een kring om die kring te dupliceren.",
+      "dupliceerKlaar": "Kring {bron} gedupliceerd als kring {code}."
     }
   },
   "bedrijf": {

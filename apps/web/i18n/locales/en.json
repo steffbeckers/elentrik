@@ -282,7 +282,9 @@
       "aantalWaarschuwingen": "{n} warning | {n} warnings",
       "ongedaanMaken": "Undo (Ctrl+Z)",
       "opnieuw": "Redo (Ctrl+Y)",
-      "exporteren": "Export"
+      "exporteren": "Export",
+      "aantalInfo": "{n} note for information | {n} notes for information",
+      "bevindingenMetInfo": "{fouten}, {waarschuwingen} and {info}"
     },
     "kringenlijst": {
       "titel": "Circuit list",
@@ -298,7 +300,12 @@
       "alleen-lezen": "Not saved: read-only, your work is kept locally",
       "alleenLezen": "Read-only",
       "opnieuwProberen": "Try again",
-      "verwijderd": "Project deleted"
+      "verwijderd": "Project deleted",
+      "kort": {
+        "opgeslagen": "Saved",
+        "bezig": "Saving…",
+        "nietOpgeslagen": "Not saved"
+      }
     },
     "verwijderd": {
       "melding": "This project was deleted.",
@@ -410,7 +417,14 @@
         "beveiliging": "View protection",
         "kring": "View circuit"
       },
-      "afwijkingenPerPunt": "Deviations by component"
+      "afwijkingenPerPunt": "Deviations by component",
+      "legenda": {
+        "titel": "Markers on the diagram and the plan",
+        "fout": "Error",
+        "waarschuwing": "Warning",
+        "info": "For information, not an error. For example an incomplete cable or a point that is not on the plan yet.",
+        "afgeweken": "Deviation: accepted with a justification"
+      }
     },
     "afwijking": {
       "titel": "Justify a deviation",
@@ -517,7 +531,9 @@
         "kringFilter": "Circuit",
         "alleKringen": "All circuits",
         "doorgaan": "Continue with the next point",
-        "geenResultaten": "No points match this search or circuit."
+        "geenResultaten": "No points match this search or circuit.",
+        "kringKlaar": "All points of circuit {label} are on the plan",
+        "groepKlaar": "All points of {groep} are on the plan"
       },
       "paginas": {
         "titel": "Pages",
@@ -557,7 +573,8 @@
       "hint": {
         "plaatsen": "Click on the plan to place {label}.",
         "meten": "Click two points on the plan.",
-        "annuleren": "Cancel"
+        "annuleren": "Cancel",
+        "stop": "Stop"
       },
       "verplaatst": "{label} moved from {van} to {naar}",
       "canvas": {
@@ -695,7 +712,9 @@
         "kalibratieMelding": "Calibrated print — tiled across sheets when necessary.",
         "referentie": "Reference sheet — excluded from print."
       },
-      "referentieUitleg": "This is a reference sheet: final points cannot be placed here and the sheet is excluded from export. Choose a plan page to place points."
+      "referentieUitleg": "This is a reference sheet: final points cannot be placed here and the sheet is excluded from export. Choose a plan page to place points.",
+      "overlap": "Overlaps {label}",
+      "ongedaanMaken": "Undo"
     },
     "export": {
       "titel": "Export as PDF",
@@ -834,6 +853,43 @@
       "actie": "Insert {onderdeel} before {doel}",
       "selectie": "the selection",
       "uitleg": "The existing component and its downstream components are kept. Check the new properties afterwards."
+    },
+    "sneltoetsen": {
+      "titel": "Keyboard shortcuts",
+      "beschrijving": "The keys work when the focus is not in a text field or a dialog. On a Mac, use ⌘ instead of Ctrl.",
+      "openen": "Show keyboard shortcuts (?)",
+      "schema": "Single-line diagram",
+      "situatie": "Layout plan",
+      "of": "or",
+      "spatie": "Space",
+      "kies": {
+        "contactdoos": "Choose a socket. With a circuit selected: add it straight after the selection",
+        "lichtpunt": "Choose a light point. With a circuit selected: add it straight after the selection",
+        "schakelaar": "Choose a switch",
+        "toestel": "Choose an appliance",
+        "differentieel": "Choose an RCD. With a circuit selected: insert it straight before the selection",
+        "zekering": "Choose a fuse",
+        "onderbord": "Choose a sub-board"
+      },
+      "symbolen": "Open the symbols window",
+      "toevoegen": "Add the chosen component at the selection",
+      "verwijder": "Delete the selection",
+      "verwijderTak": "Delete the selection with its whole branch",
+      "navigeer": "Go to the next component or the neighbouring circuit",
+      "wisSelectie": "Clear the selection and close the insert bar",
+      "dupliceer": "Duplicate the selected circuit with the first free letter",
+      "ongedaan": "Undo",
+      "opnieuw": "Redo",
+      "verschuifCanvas": "Hold and drag to move the drawing area",
+      "overzicht": "Open this overview",
+      "draai": "Rotate the selection 15° clockwise",
+      "draaiTerug": "Rotate the selection 15° anticlockwise",
+      "schuif": "Move the selection",
+      "schuifFijn": "Move the selection by one plan pixel",
+      "vanPlan": "Remove the selection from the plan. It stays in the single-line diagram",
+      "annuleer": "Stop placing or measuring, otherwise clear the selection",
+      "dupliceerGeenKring": "First select a component of a circuit to duplicate that circuit.",
+      "dupliceerKlaar": "Circuit {bron} duplicated as circuit {code}."
     }
   },
   "bedrijf": {

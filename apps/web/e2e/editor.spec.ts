@@ -89,15 +89,15 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   await expect(schemaTekst(page, "XVB 3G2,5")).toHaveCount(1);
   await expect(kringPlus).toHaveCount(1);
 
-  // 3. A1 bestaat al; twee extra contactdozen geven A2 en A3.
+  // 3. A1 bestaat al en is geselecteerd: C voegt meteen A2 toe, zonder extra klik, en de
+  // invoegbalk blijft dicht. De plusknop geeft daarna A3.
+  await expect(schemaTekst(page, "A1")).toHaveCount(1);
   await page.keyboard.press("c");
   await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
-  await expect(schemaTekst(page, "A1")).toHaveCount(1);
-  for (let i = 2; i <= 3; i++) {
-    await pasTeMaken(page);
-    await kringPlus.click();
-    await expect(schemaTekst(page, `A${i}`)).toHaveCount(1);
-  }
+  await expect(schemaTekst(page, "A2")).toHaveCount(1);
+  await expect(page.locator("#schema-invoegen")).toHaveCount(0);
+  await pasTeMaken(page);
+  await kringPlus.click();
   await expect(schemaTekst(page, "A3")).toHaveCount(1);
 
   // 4. Ctrl+Z haalt A3 weg; A2 staat er nog.
@@ -210,4 +210,66 @@ test("ongeldige nominale stroom blijft zichtbaar na blur en selectie verlaten", 
   await page.keyboard.press("Escape");
   await expect(stroom).toHaveValue("16");
   await expect(page.getByText("Deze waarde is niet opgeslagen.", { exact: false })).toHaveCount(0);
+});
+
+test("? toont de sneltoetsen en Ctrl+D dupliceert een kring met de volgende vrije letter", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", {
+    data: { naam: `${naam} sneltoetsen`, klantnaam: "Janssens", stroomtype: "2x230V" },
+  });
+  const { id } = (await antwoord.json()) as { id: string };
+  await page.goto(`/projecten/${id}`);
+  await page.waitForLoadState("networkidle");
+
+  // Twee kringen: A en B.
+  const canvas = page.getByTestId("schema-canvas");
+  const railPlus = canvas.locator('[data-testid^="plus-rail-einde-"]');
+  for (const kring of ["A1", "B1"]) {
+    await pasTeMaken(page);
+    await railPlus.click();
+    await expect(schemaTekst(page, kring)).toHaveCount(1);
+  }
+
+  // ? opent het overzicht; de knop Toetsenbordhulp opent hetzelfde.
+  await canvas.focus();
+  await page.keyboard.press("?");
+  const dialoog = page.getByRole("dialog", { name: "Sneltoetsen" });
+  await expect(dialoog).toBeVisible();
+  await expect(dialoog.getByText("De geselecteerde kring dupliceren met de eerste vrije letter")).toBeVisible();
+  // In een open dialoog doen ? en Ctrl+D niets.
+  await page.keyboard.press("Control+d");
+  await expect(schemaTekst(page, "C1")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialoog).toHaveCount(0);
+  await page.getByRole("button", { name: "Toetsenbordhulp" }).click();
+  await expect(dialoog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialoog).toHaveCount(0);
+
+  // Tijdens het typen in een tekstveld gaan ? en Ctrl+D niet af.
+  await selecteerBij(page, "A1");
+  await page.getByTestId("werkruimte-eigenschappen").click();
+  const label = page.getByTestId("veld-label");
+  await label.fill("Keuken");
+  await label.press("?");
+  await label.press("Control+d");
+  await expect(label).toHaveValue("Keuken?");
+  await expect(dialoog).toHaveCount(0);
+  await expect(schemaTekst(page, "C1")).toHaveCount(0);
+  await label.blur();
+
+  // Ctrl+D op het canvas: kring A wordt gedupliceerd als C, de eerste vrije letter. A en B blijven.
+  await selecteerBij(page, "A1");
+  await page.keyboard.press("Control+d");
+  await expect(page.getByText("Kring A gedupliceerd als kring C.", { exact: true })).toBeVisible();
+  await expect(schemaTekst(page, "C1")).toHaveCount(1);
+  await expect(schemaTekst(page, "A1")).toHaveCount(1);
+  await expect(schemaTekst(page, "B1")).toHaveCount(1);
+  // Eén undo-stap.
+  await page.keyboard.press("Control+z");
+  await expect(schemaTekst(page, "C1")).toHaveCount(0);
+
+  // Zonder kring in de selectie: niets, met een korte melding waarom.
+  await canvas.click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Control+d");
+  await expect(page.getByText("Selecteer eerst een onderdeel van een kring om die kring te dupliceren.", { exact: true })).toBeVisible();
 });

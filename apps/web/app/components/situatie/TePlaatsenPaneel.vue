@@ -2,7 +2,7 @@
 import type { NodeId } from "@elentrik/model";
 import { nodeLabel } from "@elentrik/render";
 import { tekenSymbool } from "@elentrik/symbols";
-import { GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, GROEP_INSTALLATIE, tePlaatsen } from "~/situatie/items";
+import { GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, GROEP_INSTALLATIE, tePlaatsen, type TePlaatsenGroep } from "~/situatie/items";
 import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
 import { schemaKeuzes } from "~/editor/schema-navigatie";
 import { filterPlaatskeuzes } from "~/situatie/plaatskeuzes";
@@ -12,7 +12,8 @@ import { useEditorStore } from "~/stores/editor";
 const zoek = defineModel<string>("zoek", { default: "" });
 const kring = defineModel<string>("kring", { default: "" });
 const doorgaan = defineModel<boolean>("doorgaan", { default: false });
-const emit = defineEmits<{ volgorde: [ids: string[]] }>();
+/** De zichtbare groepen in hun volgorde: "Doorgaan met volgend punt" blijft binnen één groep. */
+const emit = defineEmits<{ volgorde: [groepen: TePlaatsenGroep[]] }>();
 const gekozen = defineModel<NodeId | null>("gekozen", { default: null });
 
 const editor = useEditorStore();
@@ -56,7 +57,7 @@ const groepen = computed(() => {
   }));
 });
 
-watch(groepen, nieuw => emit("volgorde", nieuw.flatMap(g => g.items.map(i => i.nodeId))), { immediate: true });
+watch(groepen, nieuw => emit("volgorde", nieuw.map(g => ({ kringLabel: g.sleutel, nodeIds: g.items.map(i => i.nodeId) }))), { immediate: true });
 watch([zoek, kring], () => { gekozen.value = null; });
 
 // Een gekozen punt dat intussen geplaatst of verwijderd is (bv. via ongedaan maken), is niet meer te plaatsen.
@@ -80,7 +81,7 @@ function sleepStart(event: DragEvent, nodeId: NodeId): void {
 <template>
   <aside class="flex flex-col gap-4 p-3" :aria-label="$t('editor.situatie.tePlaatsen.titel')" @keydown.esc="gekozen = null">
     <div class="px-2">
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
+      <h2 class="text-lg font-semibold">
         {{ $t("editor.situatie.tePlaatsen.titel") }}
       </h2>
       <p v-if="groepen.length > 0" class="mt-1 text-xs text-muted">{{ $t("editor.situatie.tePlaatsen.uitleg") }}</p>

@@ -33,17 +33,23 @@ const aanmeldingMelding = computed(() => {
   return null;
 });
 
-/** "1 fout en 3 waarschuwingen": enkelvoud en meervoud via de pluralisatie van vue-i18n. */
-const bevindingenTekst = computed(() =>
-  t("editor.bovenbalk.bevindingen", {
+/**
+ * "1 fout en 3 waarschuwingen": enkelvoud en meervoud via de pluralisatie van vue-i18n. Zijn er
+ * meldingen ter info, dan staan die er apart bij: ze zijn geen fout.
+ */
+const bevindingenTekst = computed(() => {
+  const waarden = {
     fouten: t("editor.bovenbalk.aantalFouten", { n: store.aantalFouten }, store.aantalFouten),
     waarschuwingen: t(
       "editor.bovenbalk.aantalWaarschuwingen",
       { n: store.aantalWaarschuwingen },
       store.aantalWaarschuwingen,
     ),
-  }),
-);
+  };
+  return store.aantalInfo > 0
+    ? t("editor.bovenbalk.bevindingenMetInfo", { ...waarden, info: t("editor.bovenbalk.aantalInfo", { n: store.aantalInfo }, store.aantalInfo) })
+    : t("editor.bovenbalk.bevindingen", waarden);
+});
 
 const STATUS_STIJL: Record<AutosaveStatus, { icoon: string; klasse: string }> = {
   opgeslagen: { icoon: "i-lucide-cloud-check", klasse: "text-muted" },
@@ -65,6 +71,28 @@ const weergave = computed(() =>
     ? { sleutel: "alleenLezen", ...STATUS_STIJL["alleen-lezen"] }
     : { sleutel: props.status, ...STATUS_STIJL[props.status] },
 );
+
+/** De korte statustekst op een smal scherm: "Opgeslagen", "Bezig…" of "Niet opgeslagen". */
+const KORT: Partial<Record<string, string>> = {
+  opgeslagen: "editor.status.kort.opgeslagen",
+  bezig: "editor.status.kort.bezig",
+  lokaal: "editor.status.kort.nietOpgeslagen",
+  onbewaard: "editor.status.kort.nietOpgeslagen",
+  fout: "editor.status.kort.nietOpgeslagen",
+  "alleen-lezen": "editor.status.kort.nietOpgeslagen",
+};
+const korteStatus = computed(() => t(KORT[weergave.value.sleutel] ?? `editor.status.${weergave.value.sleutel}`));
+
+/** Smal scherm (onder de `sm`-breedte): dan de korte tekst zichtbaar en de volledige voor schermlezers. */
+const smal = ref(false);
+let smalQuery: MediaQueryList | null = null;
+const volgSmal = (event: MediaQueryListEvent) => { smal.value = event.matches; };
+onMounted(() => {
+  smalQuery = window.matchMedia("(max-width: 639px)");
+  smal.value = smalQuery.matches;
+  smalQuery.addEventListener("change", volgSmal);
+});
+onBeforeUnmount(() => smalQuery?.removeEventListener("change", volgSmal));
 </script>
 
 <template>
@@ -107,7 +135,11 @@ const weergave = computed(() =>
           :label="$t('editor.status.conflict')"
           @click="emit('toonConflict')"
         />
-        <span v-else class="sr-only sm:not-sr-only">{{ $t(`editor.status.${weergave.sleutel}`) }}</span>
+        <template v-else-if="smal">
+          <span aria-hidden="true" class="whitespace-nowrap" data-testid="opslagstatus-kort">{{ korteStatus }}</span>
+          <span class="sr-only">{{ $t(`editor.status.${weergave.sleutel}`) }}</span>
+        </template>
+        <span v-else>{{ $t(`editor.status.${weergave.sleutel}`) }}</span>
       </span>
       <UButton
         v-if="status === 'fout'"
@@ -133,6 +165,9 @@ const weergave = computed(() =>
         </span>
         <span class="flex items-center gap-1 text-warning">
           <UIcon name="i-lucide-triangle-alert" class="size-4" />{{ store.aantalWaarschuwingen }}
+        </span>
+        <span v-if="store.aantalInfo > 0" class="flex items-center gap-1 text-info" data-testid="bevindingenteller-info">
+          <UIcon name="i-lucide-info" class="size-4" />{{ store.aantalInfo }}
         </span>
       </UButton>
 

@@ -22,3 +22,26 @@ export function schuif(
     y: Math.min(Math.max(positie.y + dy, 0), raster.hoogte_px),
   };
 }
+
+/**
+ * De plaatsing (niet `nodeId` zelf) waarvan `punt` binnen de symboolgrootte ligt: dan overlappen
+ * de symbolen (vierkanten van `grootte` rond hun middelpunt). Bij meer kandidaten de dichtstbijzijnde.
+ * Alleen een waarschuwing: er komt geen automatische snap.
+ */
+export function overlapMet<T extends { nodeId: string; x: number; y: number }>(
+  plaatsingen: readonly T[],
+  nodeId: string,
+  punt: { x: number; y: number },
+  grootte: number,
+): T | undefined {
+  let beste: { plaatsing: T; afstand: number } | undefined;
+  for (const plaatsing of plaatsingen) {
+    if (plaatsing.nodeId === nodeId) continue;
+    const dx = Math.abs(plaatsing.x - punt.x);
+    const dy = Math.abs(plaatsing.y - punt.y);
+    if (dx >= grootte || dy >= grootte) continue;
+    const afstand = Math.hypot(dx, dy);
+    if (!beste || afstand < beste.afstand) beste = { plaatsing, afstand };
+  }
+  return beste?.plaatsing;
+}

@@ -12,7 +12,9 @@ export type SituatieActie =
   | { soort: "schuif"; dx: number; dy: number }
   | { soort: "annuleer" }
   | { soort: "ongedaan" }
-  | { soort: "opnieuw" };
+  | { soort: "opnieuw" }
+  /** Opent het sneltoetsenoverzicht (`?`); ook in alleen-lezen. */
+  | { soort: "sneltoetsen" };
 
 export type SituatieToets = {
   key: string;
@@ -46,6 +48,7 @@ export function situatieSneltoets(toets: SituatieToets): SituatieActie | null {
   }
   if (toets.doelIsInvoer) return null;
   if (toets.doelIsKnop && (key === "Enter" || key === " ")) return null;
+  if (key === "?") return { soort: "sneltoetsen" };
 
   if (toets.alleenLezen) return key === "Escape" ? { soort: "annuleer" } : null;
 

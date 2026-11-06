@@ -128,9 +128,13 @@ test("template requires a valid destination, reuses F and adds a new RCD only on
 }) => {
   const x = await seed(request);
   await page.goto(`/projecten/${x.id}`);
+  // Het hoofddifferentieel is zelf geen bestemming: de standaard valt dan terug op het bord
+  // (nieuwe kring met een nieuwe differentieel), en annuleren wijzigt niets.
   await selecteer(page, x.hoofd);
   await page.getByRole("button", { name: "Wasmachine", exact: true }).click();
-  await expect(page.getByTestId("bevestig-sjabloon")).toBeDisabled();
+  await expect(
+    page.getByRole("group", { name: "Nieuwe differentieel (voorinstelling)" }),
+  ).toBeVisible();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Annuleren", exact: true })

@@ -50,7 +50,7 @@ function uniekeKeuzeLabels<T extends { label: string }>(keuzes: T[]): T[] {
 }
 
 /** Nearest board context is shared by the canvas insertion chooser and assembly dialogs. */
-function bordVanNode(doc: InstallatieDocument, id: string): string | undefined {
+export function bordVanNode(doc: InstallatieDocument, id: string): string | undefined {
   const gezien = new Set<string>();
   let node = Object.hasOwn(doc.nodes, id) ? doc.nodes[id] : undefined;
   while (node && !gezien.has(node.id)) {

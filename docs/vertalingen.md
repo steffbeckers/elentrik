@@ -242,6 +242,15 @@ Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groe
 | symbool | symbole | symbol |
 | combinatie (van varianten) | combinaison | combination |
 | AREI tabel 2.23 | RGIE tableau 2.23 | AREI table 2.23 |
+| sneltoetsen | raccourcis clavier | keyboard shortcuts |
+| toetsenbordhulp | aide clavier | keyboard help |
+| dupliceren (een kring) | dupliquer | duplicate |
+| invoegbalk | barre d'insertion | insert bar |
+| markering (op het schema of plan) | repère | marker |
+| ter info (melding, geen fout) | pour information | for information |
+| overlapt met | chevauche | overlaps |
+| Doorgaan met volgend punt (modus) | Continuer avec le point suivant | Continue with the next point |
+| stop (een modus) | arrêter | stop |
 
 De rubrieken van tabel 2.23 (de symbolen) volgen in het Nederlands en het Frans de officiële tekst; het Engels is eigen vertaling:
 

@@ -70,7 +70,7 @@ function herstelLabel(): void {
 
 <template>
   <section data-testid="plan-opmaak" class="min-w-0 p-3 text-sm" :aria-label="$t('editor.situatie.opmaak.titel')">
-    <h2 class="font-semibold">{{ $t("editor.situatie.opmaak.titel") }}</h2>
+    <h2 class="text-lg font-semibold">{{ $t("editor.situatie.opmaak.titel") }}</h2>
     <fieldset :disabled="editor.alleenLezen || !pagina?.achtergrond || pagina.referentie" class="mt-4 min-w-0 space-y-4 disabled:opacity-60">
       <div v-for="item in grootteVelden" :key="item.veld">
         <label :for="`${prefix}-${item.veld}`" class="flex items-center justify-between gap-3">
@@ -96,7 +96,7 @@ function herstelLabel(): void {
       </div>
       <p :id="`${prefix}-bereik`" class="text-xs text-muted">{{ $t("editor.situatie.opmaak.paginaHint") }} {{ $t('editor.situatie.opmaak.bereik') }}</p>
       <div class="space-y-3 border-t border-default pt-4">
-        <h3 class="font-medium">{{ $t("editor.situatie.opmaak.labelPositie") }}</h3>
+        <h3 class="text-sm font-medium">{{ $t("editor.situatie.opmaak.labelPositie") }}</h3>
         <template v-if="plaatsing">
           <div v-for="as in (['x', 'y'] as const)" :key="as">
             <label :for="`${prefix}-${as}`" class="flex items-center justify-between gap-3">

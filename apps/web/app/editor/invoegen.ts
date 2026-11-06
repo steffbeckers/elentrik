@@ -79,3 +79,39 @@ export function lichtDoelBijSelectie(
   const kringId = analyseer(doc).kringVanNode[selectie[0]!];
   return kringId ? { soort: "bestaande-kring", nodeId: kringId } : undefined;
 }
+
+/**
+ * De standaardbestemming voor een nieuwe kring: het differentieel van de huidige selectie, anders
+ * het laatst gebruikte differentieel in dit bord (`laatste`: bord-id → differentieel-id), anders
+ * het bord. Een geselecteerd bord blijft het bord. Zonder bord in de selectie geldt het eerste bord.
+ */
+export function kringBestemming<T extends { nodeId: NodeId }>(
+  doc: InstallatieDocument,
+  doelen: readonly T[],
+  selectie: readonly NodeId[],
+  laatste: Readonly<Record<NodeId, NodeId>>,
+): T | undefined {
+  const doelVan = (id: NodeId) => doelen.find((d) => d.nodeId === id);
+  const isBord = (d: T) => doc.nodes[d.nodeId]?.type === "verdeelbord";
+  let bord: T | undefined;
+  if (selectie.length === 1) {
+    const gezien = new Set<NodeId>();
+    let node = Object.hasOwn(doc.nodes, selectie[0]!) ? doc.nodes[selectie[0]!] : undefined;
+    while (node && !gezien.has(node.id)) {
+      gezien.add(node.id);
+      const doel = doelVan(node.id);
+      if (doel && !isBord(doel)) return doel;
+      if (doel) {
+        if (node.id === selectie[0]) return doel;
+        bord = doel;
+        break;
+      }
+      node = node.parentId ? doc.nodes[node.parentId] : undefined;
+    }
+  }
+  bord ??= doelen.find(isBord);
+  if (!bord) return undefined;
+  const vorig = laatste[bord.nodeId];
+  const differentieel = vorig === undefined ? undefined : doelVan(vorig);
+  return differentieel && !isBord(differentieel) ? differentieel : bord;
+}

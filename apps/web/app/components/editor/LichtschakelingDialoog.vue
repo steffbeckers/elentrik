@@ -11,6 +11,7 @@ import { useEditorStore } from "~/stores/editor";
 import {
   invoegBestemmingen,
   lichtDoelBijSelectie,
+  kringBestemming,
   nieuwePuntcode,
 } from "~/editor/invoegen";
 import AlleenLezenMelding from "./AlleenLezenMelding.vue";
@@ -44,8 +45,10 @@ const doelen = computed<LichtschakelingDoel[]>(() => [
 ]);
 watch(open, (value) => {
   if (!value) return;
+  // Een bestaande kring of bord in de selectie; anders een nieuwe kring op de standaardbestemming.
   doel.value = store.document
     ? lichtDoelBijSelectie(store.document, store.selectie)
+      ?? kringBestemming(store.document, invoegBestemmingen(store.document), store.selectie, store.laatsteDifferentieel)
     : undefined;
   Object.assign(opties, {
     schakeling: "enkel",

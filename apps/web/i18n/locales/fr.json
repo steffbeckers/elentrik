@@ -282,7 +282,9 @@
       "aantalWaarschuwingen": "{n} avertissement | {n} avertissements",
       "ongedaanMaken": "Annuler (Ctrl+Z)",
       "opnieuw": "Rétablir (Ctrl+Y)",
-      "exporteren": "Exporter"
+      "exporteren": "Exporter",
+      "aantalInfo": "{n} message d'information | {n} messages d'information",
+      "bevindingenMetInfo": "{fouten}, {waarschuwingen} et {info}"
     },
     "kringenlijst": {
       "titel": "Liste des circuits",
@@ -298,7 +300,12 @@
       "alleen-lezen": "Non enregistré : lecture seule, votre travail reste conservé localement",
       "alleenLezen": "Lecture seule",
       "opnieuwProberen": "Réessayer",
-      "verwijderd": "Projet supprimé"
+      "verwijderd": "Projet supprimé",
+      "kort": {
+        "opgeslagen": "Enregistré",
+        "bezig": "En cours…",
+        "nietOpgeslagen": "Non enregistré"
+      }
     },
     "verwijderd": {
       "melding": "Ce projet a été supprimé.",
@@ -410,7 +417,14 @@
         "beveiliging": "Voir la protection",
         "kring": "Voir le circuit"
       },
-      "afwijkingenPerPunt": "Dérogations par élément"
+      "afwijkingenPerPunt": "Dérogations par élément",
+      "legenda": {
+        "titel": "Repères sur le schéma et le plan",
+        "fout": "Erreur",
+        "waarschuwing": "Avertissement",
+        "info": "Pour information, pas une erreur. Par exemple un câble incomplet ou un point qui n'est pas encore sur le plan.",
+        "afgeweken": "Dérogation : acceptée avec motivation"
+      }
     },
     "afwijking": {
       "titel": "Justifier une dérogation",
@@ -517,7 +531,9 @@
         "kringFilter": "Circuit",
         "alleKringen": "Tous les circuits",
         "doorgaan": "Continuer avec le point suivant",
-        "geenResultaten": "Aucun point pour cette recherche ou ce circuit."
+        "geenResultaten": "Aucun point pour cette recherche ou ce circuit.",
+        "kringKlaar": "Tous les points du circuit {label} sont sur le plan",
+        "groepKlaar": "Tous les points de {groep} sont sur le plan"
       },
       "paginas": {
         "titel": "Pages",
@@ -557,7 +573,8 @@
       "hint": {
         "plaatsen": "Cliquez sur le plan pour placer {label}.",
         "meten": "Cliquez sur deux points du plan.",
-        "annuleren": "Annuler"
+        "annuleren": "Annuler",
+        "stop": "Arrêter"
       },
       "verplaatst": "{label} déplacé de {van} vers {naar}",
       "canvas": {
@@ -695,7 +712,9 @@
         "kalibratieMelding": "Impression étalonnée — répartie sur plusieurs feuilles si nécessaire.",
         "referentie": "Feuille de référence — exclue de l’impression."
       },
-      "referentieUitleg": "Ceci est une feuille de référence : aucun point définitif ne peut y être placé. Elle est exclue de l’export. Choisissez une page de plan pour placer des points."
+      "referentieUitleg": "Ceci est une feuille de référence : aucun point définitif ne peut y être placé. Elle est exclue de l’export. Choisissez une page de plan pour placer des points.",
+      "overlap": "Chevauche {label}",
+      "ongedaanMaken": "Annuler"
     },
     "export": {
       "titel": "Exporter en PDF",
@@ -834,6 +853,43 @@
       "actie": "Insérer {onderdeel} avant {doel}",
       "selectie": "la sélection",
       "uitleg": "L’élément existant et sa suite sont conservés. Vérifiez ensuite les nouvelles propriétés."
+    },
+    "sneltoetsen": {
+      "titel": "Raccourcis clavier",
+      "beschrijving": "Les touches fonctionnent lorsque le focus n'est pas dans un champ de texte ou une boîte de dialogue. Sur un Mac, utilisez ⌘ au lieu de Ctrl.",
+      "openen": "Afficher les raccourcis clavier (?)",
+      "schema": "Schéma unifilaire",
+      "situatie": "Plan de position",
+      "of": "ou",
+      "spatie": "Espace",
+      "kies": {
+        "contactdoos": "Choisir une prise de courant. Avec un circuit sélectionné, l'ajouter directement après la sélection",
+        "lichtpunt": "Choisir un point lumineux. Avec un circuit sélectionné, l'ajouter directement après la sélection",
+        "schakelaar": "Choisir un interrupteur",
+        "toestel": "Choisir un appareil",
+        "differentieel": "Choisir un interrupteur différentiel. Avec un circuit sélectionné, l'insérer directement avant la sélection",
+        "zekering": "Choisir un fusible",
+        "onderbord": "Choisir un tableau divisionnaire"
+      },
+      "symbolen": "Ouvrir la fenêtre des symboles",
+      "toevoegen": "Ajouter l'élément choisi à la sélection",
+      "verwijder": "Supprimer la sélection",
+      "verwijderTak": "Supprimer la sélection avec toute sa branche",
+      "navigeer": "Aller à l'élément suivant ou au circuit voisin",
+      "wisSelectie": "Effacer la sélection et fermer la barre d'insertion",
+      "dupliceer": "Dupliquer le circuit sélectionné avec la première lettre libre",
+      "ongedaan": "Annuler",
+      "opnieuw": "Rétablir",
+      "verschuifCanvas": "Maintenir enfoncée et faire glisser pour déplacer la zone de dessin",
+      "overzicht": "Ouvrir cet aperçu",
+      "draai": "Tourner la sélection de 15° dans le sens horaire",
+      "draaiTerug": "Tourner la sélection de 15° dans le sens antihoraire",
+      "schuif": "Déplacer la sélection",
+      "schuifFijn": "Déplacer la sélection d'un pixel du plan",
+      "vanPlan": "Retirer la sélection du plan. Elle reste dans le schéma unifilaire",
+      "annuleer": "Arrêter le placement ou la mesure, sinon effacer la sélection",
+      "dupliceerGeenKring": "Sélectionnez d'abord un élément d'un circuit pour dupliquer ce circuit.",
+      "dupliceerKlaar": "Circuit {bron} dupliqué comme circuit {code}."
     }
   },
   "bedrijf": {

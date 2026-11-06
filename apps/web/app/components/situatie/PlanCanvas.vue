@@ -7,17 +7,19 @@ import { useBestandenApi } from "~/composables/useBestandenApi";
 import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeergave";
 import { useDocumentFoutMelding } from "~/composables/useDocumentFoutMelding";
 import { useNodeTekst } from "~/composables/useNodeTekst";
-import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
+import MarkeringSymbool from "~/components/editor/MarkeringSymbool.vue";
+import { markeringen as leidMarkeringenAf } from "~/editor/markeringen";
 import { schemaKeuzes } from "~/editor/schema-navigatie";
 import { maxPlanZoom, schermNaarInhoud } from "~/editor/weergave";
 import { planCursorToets } from "~/situatie/bediening";
-import { schuif, symboolGrootte } from "~/situatie/geometrie";
+import { overlapMet, schuif, symboolGrootte } from "~/situatie/geometrie";
 import { NODE_SLEEP_TYPE } from "~/situatie/slepen";
 import { situatieSneltoets } from "~/situatie/sneltoetsen";
 import { useEditorStore } from "~/stores/editor";
 import { useSituatieStore } from "~/stores/situatie";
 
 const { t } = useI18n();
+const toast = useToast();
 const props = defineProps<{
   /** Het punt dat met een klik op het plan geplaatst wordt (gekozen in "Te plaatsen"), of null. */
   teplaatsen: NodeId | null;
@@ -309,10 +311,21 @@ function plaatsOp(nodeId: NodeId, punt: Positie): void {
   const doc = editor.document;
   if (alleenLezen.value || !achtergrond.value || !doc || !Object.hasOwn(doc.nodes, nodeId)) return;
   const { x, y } = binnenRaster(punt);
+  // Vóór het plaatsen: daarna staat het punt zelf ook in `items`.
+  const overlap = overlapMet(items.value, nodeId, { x, y }, symbool.value);
   const uitkomst: { van: string | null } = { van: null };
   if (!voerUit(() => (uitkomst.van = situatie.plaatsNode(nodeId, x, y)))) return;
   editor.selectie = [nodeId];
   emit("geplaatst", nodeId, uitkomst.van);
+  // Alleen een waarschuwing, geen snap: de plaatsing blijft staan tot de gebruiker ze ongedaan maakt.
+  if (overlap) {
+    toast.add({
+      title: t("editor.situatie.overlap", { label: overlap.label || keuzeLabels.value.get(overlap.nodeId) || overlap.nodeId }),
+      color: "warning",
+      icon: "i-lucide-layers",
+      actions: [{ label: t("editor.situatie.ongedaanMaken"), color: "neutral", variant: "outline", onClick: () => editor.ongedaanMaken() }],
+    });
+  }
 }
 
 // De meetcursor dient alleen voor schaalmeting; onderdelen worden op de klikpositie geplaatst.
@@ -502,6 +515,9 @@ function toetsIngedrukt(event: KeyboardEvent): void {
       break;
     case "opnieuw":
       editor.opnieuw();
+      break;
+    case "sneltoetsen":
+      editor.sneltoetsenOpen = true;
       break;
   }
 }
@@ -703,15 +719,15 @@ const markeringen = computed(() => {
             vector-effect="non-scaling-stroke"
             style="stroke: var(--ui-primary)"
           />
-          <circle
+          <MarkeringSymbool
             v-for="m in markeringen"
             :key="`markering-${m.id}`"
             :data-testid="`plan-markering-${m.id}`"
             :data-ernst="m.soort"
-            :cx="m.x"
-            :cy="m.y"
+            :soort="m.soort"
+            :x="m.x"
+            :y="m.y"
             :r="symbool * MARKERING_STRAAL"
-            :class="MARKERING_KLASSE[m.soort]"
           />
           <line
             v-if="meetpunten.length === 2"
@@ -734,7 +750,7 @@ const markeringen = computed(() => {
           />
         </g>
       </svg>
-      <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="selectieKaders.length > 0" :hulp="bedieningsHulp" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
+      <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="selectieKaders.length > 0" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 
 

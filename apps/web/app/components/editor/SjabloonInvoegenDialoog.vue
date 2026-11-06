@@ -8,7 +8,7 @@ import {
 import { useEditorStore } from "~/stores/editor";
 import {
   invoegBestemmingen,
-  doelBijSelectie,
+  kringBestemming,
   invoegSpecificatie,
 } from "~/editor/invoegen";
 import AlleenLezenMelding from "./AlleenLezenMelding.vue";
@@ -30,7 +30,8 @@ const doelen = computed(() =>
 );
 watch(open, (value) => {
   if (!value) return;
-  doel.value = doelBijSelectie(doelen.value, store.selectie);
+  // Het differentieel van de selectie, anders het laatst gebruikte in dit bord, anders het bord.
+  doel.value = store.document ? kringBestemming(store.document, doelen.value, store.selectie, store.laatsteDifferentieel) : undefined;
   instellingen.value = {
     gevoeligheid_mA: 30,
     nominaal_A: 40,

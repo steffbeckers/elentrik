@@ -130,6 +130,39 @@ describe("sneltoets", () => {
       expect(sneltoets(toets("z", { ctrlKey: true, herhaald: true }))).toEqual({ soort: "ongedaan" });
     });
   });
+  describe("sneltoetsenoverzicht (?) en dupliceren (Ctrl+D)", () => {
+    test("? opent het overzicht, ook in alleen-lezen en op een knop", () => {
+      expect(sneltoets(toets("?", { shiftKey: true }))).toEqual({ soort: "sneltoetsen" });
+      expect(sneltoets(toets("?", { shiftKey: true, alleenLezen: true }))).toEqual({ soort: "sneltoetsen" });
+      expect(sneltoets(toets("?", { shiftKey: true, doelIsKnop: true }))).toEqual({ soort: "sneltoetsen" });
+    });
+
+    test("Ctrl+D en Cmd+D dupliceren", () => {
+      expect(sneltoets(toets("d", { ctrlKey: true }))).toEqual({ soort: "dupliceer" });
+      expect(sneltoets(toets("d", { metaKey: true }))).toEqual({ soort: "dupliceer" });
+      expect(sneltoets(toets("D", { ctrlKey: true }))).toEqual({ soort: "dupliceer" });
+    });
+
+    test.each<[string, Toets]>([
+      ["? tijdens typen", toets("?", { shiftKey: true, doelIsInvoer: true })],
+      ["Ctrl+D tijdens typen", toets("d", { ctrlKey: true, doelIsInvoer: true })],
+      ["Ctrl+D in alleen-lezen", toets("d", { ctrlKey: true, alleenLezen: true })],
+      ["Ctrl+Shift+D", toets("D", { ctrlKey: true, shiftKey: true })],
+    ])("geeft null: %s", (_naam, invoer) => {
+      expect(sneltoets(invoer)).toBeNull();
+    });
+  });
+});
+
+describe("in een open dialoog of widget", () => {
+  // De editor vraagt eerst `moetNegeren` en pas daarna `sneltoets`; zo gaan ? en Ctrl+D niet af in een dialoog.
+  const vrij: NegeerToets = { defaultPrevented: false, isComposing: false, altKey: false, doelInWidget: false, overlayOpen: false };
+  test.each<[string, Partial<NegeerToets>]>([
+    ["een open dialoog", { overlayOpen: true }],
+    ["focus in een dialoog of menu", { doelInWidget: true }],
+  ])("? en Ctrl+D worden genegeerd bij %s", (_naam, afwijking) => {
+    expect(moetNegeren({ ...vrij, ...afwijking })).toBe(true);
+  });
 });
 
 describe("doelSoort", () => {

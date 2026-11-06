@@ -114,13 +114,15 @@ async function maakProjectMetContactdozen(page: Page, projectNaam: string, aanta
   const projectId = new URL(page.url()).pathname.split("/").pop()!;
 
   const canvas = page.getByTestId("schema-canvas");
+  await expect(canvas.locator('[data-testid^="plus-rail-einde-"]')).toHaveCount(1);
+  // Vóór de eerste kring: zonder selectie kiest C alleen het onderdeel (met een kring geselecteerd voegt C meteen toe).
+  await page.keyboard.press("c");
+  await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
   await pasTeMaken(page);
   await canvas.locator('[data-testid^="plus-rail-einde-"]').click();
   const kringPlus = canvas.locator('[data-testid^="plus-kring-einde-"]');
   await expect(kringPlus).toHaveCount(1);
 
-  await page.keyboard.press("c");
-  await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
   // The rail action already added A1. Add only the remaining requested points.
   await expect(schemaTekst(page, "A1")).toHaveCount(1);
   for (let i = 2; i <= aantal; i++) {
@@ -480,6 +482,9 @@ test("zeven punten doorplaatsen houdt het paneel en plananker stabiel", async ({
   const afbeelding = page.getByTestId("plan-afbeelding");
   const voor = (await afbeelding.boundingBox())!;
   await page.getByTestId("te-plaatsen-A1").click();
+  // Tijdens de modus staat er een chip met Stop.
+  await expect(page.getByTestId("plan-modus-doorgaan")).toBeVisible();
+  await expect(page.getByTestId("plan-hint-stop")).toHaveText("Stop");
   const canvas = page.getByTestId("plan-canvas");
   for (let i = 0; i < 7; i++) {
     await canvas.click({ position: { x: 90 + 36 * i, y: 130 } });
@@ -491,6 +496,9 @@ test("zeven punten doorplaatsen houdt het paneel en plananker stabiel", async ({
     expect(Math.abs(na.width - voor.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(na.height - voor.height)).toBeLessThanOrEqual(1);
   }
+  // Aan het einde van de kring stopt de modus met een melding, in plaats van stil door te gaan.
+  await expect(page.getByText("Alle punten van kring A staan op het plan", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("plan-modus-doorgaan")).toHaveCount(0);
   await canvas.click({ position: { x: 170, y: 210 } });
   await expect(planSymbolen(page)).toHaveCount(7);
   await wachtOpPlaatsingen(request, projectId, 7);

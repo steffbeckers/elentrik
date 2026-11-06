@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import {
   nieuwProjectDocument,
   voegToe,
@@ -11,6 +11,7 @@ import {
   doelBijSelectie,
   nieuwePuntcode,
   lichtDoelBijSelectie,
+  kringBestemming,
 } from "../app/editor/invoegen";
 test("destination menu excludes the main differential and never guesses from invalid selection", () => {
   const doc = nieuwProjectDocument({ klantNaam: "T", stroomtype: "2x230V" }),
@@ -59,5 +60,42 @@ test("a subboard selection offers a new circuit rather than extending its feeder
   expect(lichtDoelBijSelectie(sub.doc, [sub.ids.at(-1)!])).toEqual({
     soort: "nieuw-op-bord",
     nodeId: sub.ids.at(-1)!,
+  });
+});
+
+describe("kringBestemming", () => {
+  function opzet() {
+    const doc0 = nieuwProjectDocument({ klantNaam: "T", stroomtype: "2x230V" });
+    const bord = Object.values(doc0.nodes).find((n) => n.type === "verdeelbord")!.id;
+    const f = voegToe(doc0, bord, STANDAARD.differentieel);
+    const opF = voegOnderdeelToe(f.doc, { soort: "rail-einde", nodeId: f.id }, "contactdoos");
+    const opBord = voegOnderdeelToe(opF.doc, { soort: "rail-einde", nodeId: bord }, "contactdoos");
+    const doc = opBord.doc;
+    return { doc, bord, diff: f.id, puntOpF: opF.ids.at(-1)!, puntOpBord: opBord.ids.at(-1)!, doelen: invoegBestemmingen(doc) };
+  }
+
+  test("standaard het differentieel van de huidige selectie", () => {
+    const { doc, diff, puntOpF, doelen } = opzet();
+    expect(kringBestemming(doc, doelen, [puntOpF], {})).toEqual({ soort: "bestaande-differentieel", nodeId: diff });
+    expect(kringBestemming(doc, doelen, [diff], {})).toEqual({ soort: "bestaande-differentieel", nodeId: diff });
+  });
+
+  test("anders het laatst gebruikte differentieel in dit bord", () => {
+    const { doc, bord, diff, puntOpBord, doelen } = opzet();
+    expect(kringBestemming(doc, doelen, [puntOpBord], { [bord]: diff })).toEqual({ soort: "bestaande-differentieel", nodeId: diff });
+    expect(kringBestemming(doc, doelen, [], { [bord]: diff })).toEqual({ soort: "bestaande-differentieel", nodeId: diff });
+  });
+
+  test("anders het bord", () => {
+    const { doc, bord, puntOpBord, doelen } = opzet();
+    expect(kringBestemming(doc, doelen, [puntOpBord], {})).toEqual({ soort: "nieuw-op-bord", nodeId: bord });
+    expect(kringBestemming(doc, doelen, [], {})).toEqual({ soort: "nieuw-op-bord", nodeId: bord });
+    // Een verdwenen differentieel (bv. na ongedaan maken) is geen bestemming meer.
+    expect(kringBestemming(doc, doelen, [], { [bord]: "weg" })).toEqual({ soort: "nieuw-op-bord", nodeId: bord });
+  });
+
+  test("een geselecteerd bord blijft het bord", () => {
+    const { doc, bord, diff, doelen } = opzet();
+    expect(kringBestemming(doc, doelen, [bord], { [bord]: diff })).toEqual({ soort: "nieuw-op-bord", nodeId: bord });
   });
 });
