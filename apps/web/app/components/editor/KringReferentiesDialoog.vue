@@ -25,7 +25,7 @@ function hernummer() {
 function dupliceer() {
   if (store.alleenLezen || !duplicaat.value) return;
   const resultaat = duplicaat.value;
-  if (voerUit(() => store.pasToe(resultaat))) { store.selectie = [resultaat.id]; open.value = false; }
+  if (voerUit(() => store.pasToeMetBehoud(resultaat))) { store.selectie = [resultaat.id]; open.value = false; }
 }
 </script>
 

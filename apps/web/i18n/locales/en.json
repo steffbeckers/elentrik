@@ -803,11 +803,11 @@
     },
     "referenties": {
       "titel": "Circuit references",
-      "behoudUitleg": "Fix the current circuit codes. Adding or moving circuits will then keep these codes.",
+      "behoudUitleg": "Existing circuit codes stay fixed: new circuits get the first free letter and nothing shifts. Fix them here explicitly for older projects.",
       "behouden": "Keep existing references",
       "vastgelegd": "The current circuit codes are fixed.",
       "hernummeren": "Renumber circuits",
-      "hernummerUitleg": "Check the proposed codes. Points on the layout plan use the same circuit references.",
+      "hernummerUitleg": "Renumbering is a deliberate choice: the letters then follow the order on the board again. Check the proposed codes. Points on the layout plan use the same circuit references.",
       "huidig": "Current code",
       "nieuw": "New code",
       "bevestigen": "Apply this numbering",

@@ -210,3 +210,51 @@ test.each([false, true])('imported subboard id hoofd keeps its independent names
   expect(analyseer(migrated).kringen.map(k => k.label)).toEqual(fixed ? ['J','A','A.J'] : ['A','B','B.A']);
   expect(migrated.nodes['hoofd']!.id).toBe('hoofd');
 });
+function labelsVan(doc: m.InstallatieDocument, ids: string[]): string[] {
+  const codes = m.bepaalKringCodes(doc);
+  return ids.map((id) => codes[id]!);
+}
+test("behoudKringCodes: invoegen voor A en B laat de oude kringen A en B", () => {
+  const x = basis();
+  expect(labelsVan(x.doc, [x.a, x.b])).toEqual(["A", "B"]);
+  const nieuw = m.voegToe(x.doc, x.bord, m.NIEUWE_KRING_AUTOMAAT, 0);
+  expect(labelsVan(nieuw.doc, [x.a, x.b])).toEqual(["B", "C"]);
+  const r = m.behoudKringCodes(x.doc, nieuw.doc);
+  expect(labelsVan(r.doc, [x.a, x.b, nieuw.id])).toEqual(["A", "B", "C"]);
+  expect(m.pasPatchesToe(r.doc, r.inversePatches)).toEqual(nieuw.doc);
+});
+test("behoudKringCodes: ongewijzigd document komt ongewijzigd terug", () => {
+  const x = basis();
+  const r = m.behoudKringCodes(x.doc, x.doc);
+  expect(r.patches).toEqual([]);
+  expect(r.doc).toBe(x.doc);
+});
+test("behoudKringCodes: sjabloon vóór een lichtkring laat die kring B", () => {
+  const x = basis();
+  const d = m.voegToe(x.doc, x.bord, m.STANDAARD.differentieel, 0);
+  const na = m.voegSjabloonToe(d.doc, { soort: "bestaande-differentieel", nodeId: d.id }, "badkamer");
+  expect(labelsVan(na.doc, [x.b])).not.toEqual(["B"]);
+  const r = m.behoudKringCodes(d.doc, na.doc);
+  expect(labelsVan(r.doc, [x.a, x.b])).toEqual(["A", "B"]);
+});
+test("behoudKringCodes: hernummerKringen volgt daarna weer de volgorde", () => {
+  const x = basis();
+  const nieuw = m.voegToe(x.doc, x.bord, m.NIEUWE_KRING_AUTOMAAT, 0);
+  const vast = m.behoudKringCodes(x.doc, nieuw.doc);
+  const h = m.hernummerKringen(vast.doc);
+  expect(labelsVan(h.doc, [nieuw.id, x.a, x.b])).toEqual(["A", "B", "C"]);
+});
+test("behoudKringCodes: onderborden houden hun eigen reeks", () => {
+  const x = basis();
+  const lamp = Object.values(x.doc.nodes).find((n) => n.type === "lichtpunt")!;
+  const sub = m.voegOnderdeelToe(x.doc, { soort: "kring-einde", nodeId: lamp.id }, "onderbord");
+  const subBord = sub.ids.at(-1)!;
+  const k1 = m.voegToe(sub.doc, subBord, m.NIEUWE_KRING_AUTOMAAT);
+  const k2 = m.voegToe(k1.doc, subBord, m.NIEUWE_KRING_AUTOMAAT, 0);
+  const r = m.behoudKringCodes(k1.doc, k2.doc);
+  const codes = m.bepaalKringCodes(r.doc);
+  expect(codes[k1.id]).toBe("A");
+  expect(codes[k2.id]).toBe("B");
+  expect(codes[x.a]).toBe("A");
+  expect(codes[x.b]).toBe("B");
+});

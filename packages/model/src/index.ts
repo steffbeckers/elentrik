@@ -100,4 +100,4 @@ export {
   type Toestelsoort,
 } from "./schema";
 export { bepaalKringCodes, kringLetter, legKringCodesVast, hernummerKringen, voorbeeldHernummering, type Hernummering } from './referenties';
-export { dupliceerKring } from './referenties';
+export { dupliceerKring, behoudKringCodes } from './referenties';

@@ -803,11 +803,11 @@
     },
     "referenties": {
       "titel": "Repères des circuits",
-      "behoudUitleg": "Figez les repères actuels. Les ajouts et déplacements ne les modifieront plus.",
+      "behoudUitleg": "Les repères existants restent figés : les nouveaux circuits reçoivent la première lettre libre et rien ne se décale. Figez-les ici explicitement pour les anciens projets.",
       "behouden": "Conserver les repères actuels",
       "vastgelegd": "Les repères actuels sont figés.",
       "hernummeren": "Renuméroter",
-      "hernummerUitleg": "Vérifiez les repères proposés. Les points du plan de position suivent les mêmes repères.",
+      "hernummerUitleg": "La renumérotation est un choix délibéré : les lettres suivent à nouveau l’ordre du tableau. Vérifiez les repères proposés. Les points du plan de position suivent les mêmes repères.",
       "huidig": "Repère actuel",
       "nieuw": "Nouveau repère",
       "bevestigen": "Appliquer cette numérotation",

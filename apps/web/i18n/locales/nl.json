@@ -803,11 +803,11 @@
     },
     "referenties": {
       "titel": "Kringreferenties",
-      "behoudUitleg": "Leg de huidige kringcodes vast. Toevoegen en verplaatsen verandert deze codes daarna niet.",
+      "behoudUitleg": "Bestaande kringcodes liggen vast: nieuwe kringen krijgen de eerste vrije letter en verschuiven niets. Leg ze hier expliciet vast voor oudere projecten.",
       "behouden": "Bestaande referenties behouden",
       "vastgelegd": "De huidige kringcodes zijn vastgelegd.",
       "hernummeren": "Opnieuw nummeren",
-      "hernummerUitleg": "Controleer de voorgestelde codes. De punten op het situatieplan volgen dezelfde kringcodes.",
+      "hernummerUitleg": "Hernummeren is een bewuste keuze: de letters volgen dan weer de volgorde op het bord. Controleer de voorgestelde codes. De punten op het situatieplan volgen dezelfde kringcodes.",
       "huidig": "Huidige code",
       "nieuw": "Nieuwe code",
       "bevestigen": "Deze nummering toepassen",

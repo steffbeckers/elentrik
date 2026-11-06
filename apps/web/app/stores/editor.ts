@@ -10,6 +10,7 @@ import {
   STANDAARD,
   migreer,
   legKringCodesVast as legCodesVast,
+  behoudKringCodes as behoudCodes,
   hernummerKringen as hernummer,
   voorbeeldHernummering,
   voegLichtschakelingToe as voegLichtToe,
@@ -216,6 +217,13 @@ export const useEditorStore = defineStore("editor", () => {
     zetDocument(resultaat.doc);
   }
 
+  /** Past een toevoegende operatie toe en legt de codes van bestaande kringen vast, in één undo-stap. */
+  function pasToeMetBehoud(resultaat: OperatieResultaat): void {
+    if (alleenLezen.value) return;
+    const voor = vereisDocument();
+    pasToe(samengevoegd(voor, [resultaat, behoudCodes(voor, resultaat.doc)]));
+  }
+
   function sluitGroep(): void {
     groepGesloten = true;
   }
@@ -266,7 +274,7 @@ export const useEditorStore = defineStore("editor", () => {
       onderdeel.value,
       voorinstelling.value,
     );
-    pasToe(r);
+    pasToeMetBehoud(r);
     selectie.value = [r.ids[r.ids.length - 1]!];
   }
 
@@ -280,7 +288,7 @@ export const useEditorStore = defineStore("editor", () => {
   function voegVoorSelectieIn(): void {
     if (!kanVoorSelectieInvoegen.value) return;
     const r = voegInVoor(vereisDocument(), selectie.value[0]!, STANDAARD[onderdeel.value]);
-    pasToe(r); selectie.value = [r.id];
+    pasToeMetBehoud(r); selectie.value = [r.id];
   }
 
   const kanAftakkingToevoegen = computed(() => {
@@ -301,12 +309,12 @@ export const useEditorStore = defineStore("editor", () => {
     if (alleenLezen.value) return;
     if (!doel) throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "kies een sjabloonbestemming" });
     const r = voegSjabloonToeAanDoc(vereisDocument(), doel, sjabloonId, instellingen);
-    pasToe(r); selectie.value = [r.id];
+    pasToeMetBehoud(r); selectie.value = [r.id];
   }
   function voegLichtschakelingToe(doel: LichtschakelingDoel, opties: LichtschakelingOpties, instellingen?: DifferentieelInstellingen): void {
     if (alleenLezen.value) return;
     const r = voegLichtToe(vereisDocument(), doel, opties, instellingen);
-    pasToe(r); selectie.value = [r.id];
+    pasToeMetBehoud(r); selectie.value = [r.id];
   }
   function legKringCodesVast(): void { if (!alleenLezen.value) pasToe(legCodesVast(vereisDocument())); }
   function hernummerKringen(): void { if (!alleenLezen.value) pasToe(hernummer(vereisDocument())); }
@@ -544,6 +552,7 @@ export const useEditorStore = defineStore("editor", () => {
     zetAlleenLezen,
     markeerGewijzigd,
     pasToe,
+    pasToeMetBehoud,
     sluitGroep,
     ongedaanMaken,
     opnieuw,

@@ -100,6 +100,31 @@ export function legKringCodesVast(doc: InstallatieDocument): OperatieResultaat {
     }
   });
 }
+/**
+ * Houdt bestaande kringcodes stabiel na een toevoegende operatie: elke kring die in `voor` en `na`
+ * bestaat en in `na` geen vaste code heeft, krijgt de code die hij in `voor` had. Verschuift er
+ * niets, dan blijft `na` ongewijzigd.
+ */
+export function behoudKringCodes(
+  voor: InstallatieDocument,
+  na: InstallatieDocument,
+): OperatieResultaat {
+  const oud = bepaalKringCodes(voor);
+  const nu = bepaalKringCodes(na);
+  // Schuift er geen enkele code op, dan is vastleggen overbodig en blijft het document ongewijzigd.
+  const verschoven = Object.entries(oud).some(
+    ([id, code]) => Object.hasOwn(nu, id) && nu[id] !== code,
+  );
+  return resultaat(na, (d) => {
+    if (!verschoven) return;
+    for (const [id, code] of Object.entries(oud)) {
+      if (!Object.hasOwn(d.nodes, id)) continue;
+      const n = d.nodes[id]!;
+      if ((n.type === "automaat" || n.type === "zekering") && !n.kringCode)
+        n.kringCode = code;
+    }
+  });
+}
 export type Hernummering = { nodeId: NodeId; oud: string; nieuw: string };
 export function voorbeeldHernummering(
   doc: InstallatieDocument,
