@@ -18,6 +18,8 @@ const ONDERDELEN: Onderdeel[] = [
   "differentieel",
   "zekering",
   "onderbord",
+  "aardelektrode",
+  "aardingsonderbreker",
 ];
 
 const store = useEditorStore();

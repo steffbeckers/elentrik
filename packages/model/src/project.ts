@@ -58,6 +58,7 @@ export function verwijderAfwijking(
 export type ProjectWijziging = {
   klantNaam?: string;
   stroomtype?: Stroomtype;
+  frequentie_Hz?: number | null;
   /** `null` wist het adres van de klant. */
   klantAdres?: Adres | null;
   werfadres?: Adres;
@@ -93,6 +94,7 @@ export function wijzigProject(
   }
   const klantNaam = wijziging.klantNaam;
   if (stroomtype !== undefined) valideer(StroomtypeSchema, stroomtype);
+  if (wijziging.frequentie_Hz != null) valideer(z.number().positive(), wijziging.frequentie_Hz);
   const klantAdres =
     wijziging.klantAdres === undefined || wijziging.klantAdres === null
       ? wijziging.klantAdres
@@ -112,6 +114,7 @@ export function wijzigProject(
   if (
     klantNaam === undefined &&
     stroomtype === undefined &&
+    wijziging.frequentie_Hz === undefined &&
     klantAdres === undefined &&
     werfadres === undefined &&
     ean === undefined &&
@@ -125,6 +128,8 @@ export function wijzigProject(
   return resultaat(doc, (draft) => {
     if (klantNaam !== undefined) draft.meta.klant.naam = klantNaam;
     if (stroomtype !== undefined) draft.voeding.stroomtype = stroomtype;
+    if (wijziging.frequentie_Hz === null) delete draft.voeding.frequentie_Hz;
+    else if (wijziging.frequentie_Hz !== undefined) draft.voeding.frequentie_Hz = wijziging.frequentie_Hz;
     if (klantAdres === null) delete draft.meta.klant.adres;
     else if (klantAdres !== undefined) draft.meta.klant.adres = klantAdres;
     if (werfadres !== undefined) draft.meta.werfadres = werfadres;

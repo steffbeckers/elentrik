@@ -8,6 +8,14 @@ const AANSLUIT_STRAAL_MM = 2;
 /** Halve breedte van de sinus in mm; elke halve boog heeft de straal `SINUS_HALF_MM / 2`. */
 const SINUS_HALF_MM = 1.4;
 
+/** Aardelektrode: drie afnemende dwarsstrepen. Onderbreker: twee paren contactstrepen. */
+export function tekenAarding(node: NodeVan<"aardelektrode"> | NodeVan<"aardingsonderbreker">): Symbool {
+  const maat = { breedte: 10, hoogte: 10, in: { x: 5, y: node.type === "aardelektrode" ? 0 : 10 }, uit: { x: 5, y: node.type === "aardelektrode" ? 10 : 0 } };
+  return { maat, svg: node.type === "aardelektrode"
+    ? lijn(5, 0, 5, 6) + lijn(0, 6, 10, 6) + lijn(2, 8, 8, 8) + lijn(4, 10, 5, 10) + lijn(5, 10, 6, 10)
+    : lijn(5, 10, 5, 7) + lijn(2, 7, 8, 7) + lijn(2, 6, 8, 6) + lijn(5, 6, 5, 4) + lijn(2, 4, 8, 4) + lijn(2, 3, 8, 3) + lijn(5, 3, 5, 0) };
+}
+
 /**
  * Aansluiting op het openbaar net: een cirkel met het wisselstroomsymbool uit AREI-rubriek A (een
  * sinus, twee halve bogen als pad) onderaan (`in`) en een korte lijn omhoog naar `uit`. 10 × 8 mm.

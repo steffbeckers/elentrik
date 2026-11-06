@@ -19,6 +19,14 @@ export function parseDocument(invoer: unknown): InstallatieDocument {
     if (pagina.referentie && pagina.plaatsingen.length) {
       throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "referentieblad met plaatsingen", paginaId: pagina.id });
     }
+    const ids = new Set<string>();
+    for (const vlak of pagina.afdekkingen ?? []) {
+      const a = pagina.achtergrond;
+      if (!a || ids.has(vlak.id) || vlak.x + vlak.breedte > a.breedte_px || vlak.y + vlak.hoogte > a.hoogte_px) {
+        throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "ongeldige afdekking", paginaId: pagina.id });
+      }
+      ids.add(vlak.id);
+    }
   }
   return resultaat.data;
 }

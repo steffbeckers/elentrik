@@ -70,6 +70,7 @@ export const ToestelsoortSchema = z.enum([
   "koelkast",
   "diepvriezer",
   "andere",
+  "onbekendDrieblad",
 ]);
 
 const basis = {
@@ -87,7 +88,9 @@ const positief = z.number().gt(0);
 
 export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({ ...basis, type: z.literal("aansluiting") }),
-  z.strictObject({ ...basis, type: z.literal("teller") }),
+  z.strictObject({ ...basis, type: z.literal("teller"), nominaal_A: positief.optional() }),
+  z.strictObject({ ...basis, type: z.literal("aardelektrode") }),
+  z.strictObject({ ...basis, type: z.literal("aardingsonderbreker") }),
   z.strictObject({
     ...basis,
     type: z.literal("differentieel"),
@@ -152,6 +155,11 @@ export const NodeSchema = z.discriminatedUnion("type", [
     aftakking: z.literal(true).optional(),
     soort: ToestelsoortSchema,
     vermogen_W: z.number().optional(),
+    schijnbaarVermogen_kVA: positief.optional(),
+    aantalPanelen: positiefGeheel.optional(),
+    dcDetectie_mA: positief.optional(),
+    /** Expliciete bronkeuze; afwezig behoudt automatische nummering. */
+    puntReferentie: z.enum(["automatisch", "geen"]).optional(),
   }),
 ]);
 
@@ -203,6 +211,7 @@ export const SituatiePaginaSchema = z.strictObject({
       labelOffset: z.strictObject({ x: z.number(), y: z.number() }).optional(),
     }),
   ),
+  afdekkingen: z.array(z.strictObject({ id: Id, x: z.number().finite().min(0), y: z.number().finite().min(0), breedte: z.number().finite().positive(), hoogte: z.number().finite().positive() })).optional(),
 });
 
 /** De talen van een dossier; dezelfde drie als `Taal` in @elentrik/arei en @elentrik/render. */
@@ -225,7 +234,7 @@ export const InstallatieDocumentSchema = z.strictObject({
     /** Afwezig bij oudere dossiers: toepasselijkheid moet nog worden gecontroleerd. */
     installatieContext: z.enum(["nieuw", "bestaand", "onbekend"]).optional(),
   }),
-  voeding: z.strictObject({ stroomtype: StroomtypeSchema }),
+  voeding: z.strictObject({ stroomtype: StroomtypeSchema, frequentie_Hz: positief.optional() }),
   rootId: Id,
   nodes: z.record(Id, NodeSchema),
   situatie: z.strictObject({ paginas: z.array(SituatiePaginaSchema) }),

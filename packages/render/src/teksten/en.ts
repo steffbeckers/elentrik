@@ -33,6 +33,8 @@ export const EN: Teksten = {
   },
   differentieel: { eenheid: "mA", type: "type" },
   types: {
+    aardelektrode: "Earth electrode",
+    aardingsonderbreker: "Earth disconnector",
     aansluiting: "Supply connection",
     teller: "Meter",
     differentieel: "Residual current device (RCD)",
@@ -46,6 +48,7 @@ export const EN: Teksten = {
     toestel: "Appliance",
   },
   toestelsoorten: {
+    onbekendDrieblad: "Unknown source symbol (three blades)",
     wasmachine: "washing machine",
     droogkast: "tumble dryer",
     vaatwasser: "dishwasher",

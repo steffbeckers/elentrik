@@ -18,6 +18,7 @@ type Pagina = {
   id: string;
   titel: string;
   plaatsingen: Plaatsing[];
+  afdekkingen?: { id: string; x: number; y: number; breedte: number; hoogte: number }[];
   achtergrond?: { rasterBestandId: string; origineelBestandId: string };
 };
 type Project = { versie: number; document: { situatie: { paginas: Pagina[] } } };
@@ -174,6 +175,63 @@ test("kwartslag in één klik, fijn draaien, undo en herladen op desktop en mobi
   await page.getByTestId("tab-situatieschema").click();
   await expect(planLabel(page, "A1")).toHaveCount(1);
   await expect.poll(rotatie).toBe(90);
+});
+
+test("bron handmatig afdekken, ongedaan maken, herladen en verwijderen op mobiel", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  const projectId = await maakProjectMetContactdozen(page, `${naam} afdekken`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await planAfbeeldingGeladen(page);
+  const canvas = page.getByTestId("plan-canvas");
+  await page.getByTestId("te-plaatsen-A1").click();
+  await canvas.click({ position: { x: 180, y: 180 } });
+  await wachtOpPlaatsingen(request, projectId, 1);
+  const voor = (await haalProject(request, projectId)).document.situatie.paginas[0]!;
+  await page.getByTestId("plan-opschonen").click();
+  await expect(page.getByRole("button", { name: "Draai 90° rechtsom", exact: true })).toBeDisabled();
+  const hoek = async (x: number, y: number) => {
+    const scherm = await canvas.locator("svg").evaluate((svg, p) => {
+      const punt = (svg as SVGSVGElement).createSVGPoint();
+      punt.x = p.x; punt.y = p.y;
+      const s = punt.matrixTransform((svg as SVGSVGElement).getScreenCTM()!);
+      return { x: s.x, y: s.y };
+    }, { x, y });
+    await page.mouse.click(scherm.x, scherm.y);
+  };
+  await hoek(100, 100);
+  await expect(page.getByTestId("plan-afdekbediening")).toContainText("Tik op de tegenoverliggende hoek");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("plan-afdekbediening")).toContainText("Tik op twee tegenoverliggende hoeken");
+  await expect(canvas.getByTestId("plan-afdekkingen").locator("rect")).toHaveCount(0);
+  await hoek(100, 100);
+  await hoek(180, 160);
+  const afdekkingen = () => haalProject(request, projectId).then(p => p.document.situatie.paginas[0]?.afdekkingen ?? []);
+  await expect.poll(async () => (await afdekkingen()).length).toBe(1);
+  await expect(canvas.getByTestId("plan-afdekkingen").locator("rect")).toHaveCount(1);
+  await page.keyboard.press("Control+z");
+  await expect.poll(async () => (await afdekkingen()).length).toBe(0);
+  await page.keyboard.press("Control+y");
+  await expect.poll(async () => (await afdekkingen()).length).toBe(1);
+  await page.getByRole("button", { name: "Klaar", exact: true }).click();
+  await expect(canvas.locator("[data-afdekking-id]")).toHaveCount(0);
+  expect((await haalProject(request, projectId)).document.situatie.paginas[0]).toMatchObject({ achtergrond: voor.achtergrond, plaatsingen: voor.plaatsingen });
+  await page.reload();
+  await page.getByTestId("tab-situatieschema").click();
+  await expect(canvas.getByTestId("plan-afdekkingen").locator("rect")).toHaveCount(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByTestId("plan-opschonen").click();
+  const vlak = (await afdekkingen())[0]!;
+  await page.getByTestId("plan-afdekkeuze").selectOption(vlak.id);
+  await page.getByTestId("plan-afdekverwijder").click();
+  await expect.poll(async () => (await afdekkingen()).length).toBe(0);
+  await page.getByText("Afmetingen invoeren", { exact: true }).click();
+  await page.getByLabel("Links (px)", { exact: true }).fill("30");
+  await page.getByLabel("Boven (px)", { exact: true }).fill("40");
+  await page.getByLabel("Breedte (px)", { exact: true }).fill("50");
+  await page.getByLabel("Hoogte (px)", { exact: true }).fill("60");
+  await page.getByRole("button", { name: "Afdekking toevoegen", exact: true }).click();
+  await expect.poll(async () => (await afdekkingen()).map(({ x, y, breedte, hoogte }) => ({ x, y, breedte, hoogte }))).toEqual([{ x: 30, y: 40, breedte: 50, hoogte: 60 }]);
 });
 
 test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend plan", async ({ page, request }) => {
@@ -519,5 +577,11 @@ test("referentieblad importeert zonder export of definitieve plaatsing", async (
   const project = await haalProject(request, id);
   expect((project.document.situatie.paginas[0] as Pagina & { referentie: boolean }).referentie).toBe(true);
   expect(project.document.situatie.paginas[0]!.plaatsingen).toEqual([]);
+  await expect(page.getByTestId("plan-opschonen")).toHaveCount(0);
+  await expect(page.getByTestId("plan-werkbalk")).toHaveCount(0);
+  await page.getByTestId("plan-canvas").click({ position: { x: 180, y: 180 } });
+  await page.keyboard.press("r");
+  await page.keyboard.press("Delete");
+  expect((await haalProject(request, id)).document).toEqual(project.document);
 
 });

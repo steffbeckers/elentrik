@@ -305,6 +305,18 @@ export function tekenToestel(node: NodeVan<"toestel">, horizontaal = false, eind
   switch (node.soort) {
     case "andere":
       return { maat, svg: vierkant };
+    case "onbekendDrieblad": {
+      // Visueel overgenomen uit ACA maart 2025 p.26 H3. Geen bewezen toestelidentiteit:
+      // AREI Boek 1 v07 p.60 tekent de ventilator als vierkant met twee lussen.
+      const bron = { data: { rol: "bron-drieblad" } };
+      const lobben = [0, 1, 2].map(i => {
+        const a = i * Math.PI * 2 / 3 - Math.PI / 2;
+        const cx = x + Math.cos(a) * 1.35, cy = y + Math.sin(a) * 1.35;
+        return cirkel(cx, cy, 1.35, bron);
+      }).join("");
+      return { maat, svg: invoer(2.5) + cirkel(x, y, 3.5, bron) + lobben + uitvoer(2.5) +
+        pad("M5 1.5 A4.6 4.6 0 0 0 5 10.5", bron) };
+    }
     case "deurbelMonitor":
       // ACA maart 2025 p.26 E1, caption "Deurbel / Monitor"; geen functie afgeleid als intercom.
       return { maat, svg: vierkant + rechthoek(2, 2, 8, 6, PICTO) +

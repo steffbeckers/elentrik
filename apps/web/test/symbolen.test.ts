@@ -33,9 +33,9 @@ describe("kaartenbron", () => {
     expect(types).toEqual(NodeSchema.options.map((o) => o.shape.type.value as string).sort());
   });
 
-  test("kiesbaar: de acht onderdelen, en waarom de rest niet", () => {
+  test("kiesbaar: de tien onderdelen, en waarom de rest niet", () => {
     const onderdelen = KAARTEN.flatMap((k) => (k.onderdeel === null ? [] : [k.onderdeel])).sort();
-    const verwacht: Onderdeel[] = ["contactdoos", "differentieel", "lichtpunt", "leiding", "onderbord", "schakelaar", "toestel", "zekering"];
+    const verwacht: Onderdeel[] = ["aardelektrode", "aardingsonderbreker", "contactdoos", "differentieel", "lichtpunt", "leiding", "onderbord", "schakelaar", "toestel", "zekering"];
     expect(onderdelen).toEqual(verwacht.sort());
     expect(kaartVan("automaat").waaromNiet).toBe("automatisch");
     expect(kaartVan("aansluiting").waaromNiet).toBe("altijd");
@@ -44,7 +44,7 @@ describe("kaartenbron", () => {
   });
 
   test("aantal combinaties", () => {
-    const aantallen: Partial<Record<NodeType, number>> = { contactdoos: 8, lichtpunt: 6, schakelaar: 14, toestel: 17 };
+    const aantallen: Partial<Record<NodeType, number>> = { contactdoos: 8, lichtpunt: 6, schakelaar: 14, toestel: 18 };
     for (const k of KAARTEN) expect(combinaties(k)).toHaveLength(aantallen[k.type] ?? 1);
     expect(combinaties(kaartVan("leiding"))).toEqual([{}]);
   });
@@ -63,13 +63,13 @@ describe("kaartenbron", () => {
     const per = (f: (k: Kaart) => string) => Object.fromEntries(KAARTEN.map((k) => [k.type, f(k)]));
     expect(per((k) => k.categorie)).toEqual({
       contactdoos: "punten", lichtpunt: "punten", schakelaar: "punten", toestel: "punten",
-      leiding: "leidingenEnBorden", verdeelbord: "leidingenEnBorden",
+      leiding: "leidingenEnBorden", verdeelbord: "leidingenEnBorden", aardelektrode: "leidingenEnBorden", aardingsonderbreker: "leidingenEnBorden",
       differentieel: "beveiliging", zekering: "beveiliging", automaat: "beveiliging",
       aansluiting: "voeding", teller: "voeding",
     });
     expect(per((k) => k.rubriek)).toEqual({
       contactdoos: "F", lichtpunt: "G", schakelaar: "E", toestel: "G", leiding: "C", verdeelbord: "B",
-      differentieel: "D", zekering: "D", automaat: "D", aansluiting: "A", teller: "G",
+      differentieel: "D", zekering: "D", automaat: "D", aansluiting: "A", teller: "G", aardelektrode: "D", aardingsonderbreker: "B",
     });
   });
 

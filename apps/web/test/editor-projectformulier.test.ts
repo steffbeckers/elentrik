@@ -11,6 +11,24 @@ import { useEditorStore } from "../app/stores/editor";
 
 beforeEach(() => setActivePinia(createPinia()));
 
+test("voedingsfrequentie is optioneel, wordt expliciet bewaard en kan worden gewist met undo", () => {
+  const doc = nieuwProjectDocument({ klantNaam: "Bron", stroomtype: "3N400V" });
+  const store = useEditorStore();
+  store.laad({ id: "bron", naam: "Bron", versie: 1, document: doc });
+  const formulier = formulierUitProject("Bron", doc);
+  expect(formulier.frequentie_Hz).toBe("");
+  store.wijzigProjectgegevens(gegevensUitFormulier({ ...formulier, frequentie_Hz: "50" }));
+  expect(store.document?.voeding.frequentie_Hz).toBe(50);
+  store.wijzigProjectgegevens({ frequentie_Hz: null });
+  expect(store.document?.voeding.frequentie_Hz).toBeUndefined();
+  store.ongedaanMaken();
+  expect(store.document?.voeding.frequentie_Hz).toBe(50);
+  store.zetAlleenLezen(true);
+  store.wijzigProjectgegevens({ frequentie_Hz: 60 });
+  expect(store.document?.voeding.frequentie_Hz).toBe(50);
+  expect(() => wijzigProject(doc, { frequentie_Hz: -1 })).toThrow();
+});
+
 const adres: Adres = { straat: "Kerkstraat", nummer: "12", postcode: "2000", gemeente: "Antwerpen", land: "België" };
 
 function startFormulier(wijziging: Partial<ProjectFormulier> = {}): ProjectFormulier {
@@ -96,6 +114,7 @@ describe("gegevensUitFormulier", () => {
       naam: "Woning",
       klantNaam: "Janssens",
       stroomtype: "2x230V",
+      frequentie_Hz: null,
       klantAdres: null,
       werfadres: { straat: "Dorpsstraat", nummer: "3", postcode: "9000", gemeente: "Gent", land: "België" },
       ean: "54",

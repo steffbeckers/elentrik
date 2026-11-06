@@ -22,7 +22,7 @@ export type Veld = {
   /** Zonder `labelSleutel` toont een optie haar waarde zelf: een getal (polen) of een symbool (curve B). */
   suggesties?: string[];
   /** Alleen een weergavestandaard; schrijft geen attribuut naar het document. */
-  standaard?: boolean;
+  standaard?: boolean | string;
   opties?: { waarde: string | number; labelSleutel?: string }[];
   min?: number;
   stap?: number;
@@ -44,6 +44,8 @@ const EENHEDEN: Readonly<Record<string, string>> = {
   kortsluitvermogen_kA: "kA",
   doorsnede_mm2: "mm²",
   vermogen_W: "W",
+  schijnbaarVermogen_kVA: "kVA",
+  dcDetectie_mA: "mA DC",
   lengte_m: "m",
 };
 
@@ -127,6 +129,7 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
       throw new Error(`velden.ts: geen veldsoort voor ${sleutel} (${schema.def.type})`);
   }
   if (sleutel === "metBeschermingsgeleider") veld.standaard = true;
+  if (sleutel === "puntReferentie") veld.standaard = "automatisch";
   if (sleutel === "brandreactieklasse") veld.suggesties = ["Eca", "Cca"];
   if (optioneel) veld.optioneel = true;
   return veld;

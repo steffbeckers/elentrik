@@ -478,6 +478,7 @@ export const useEditorStore = defineStore("editor", () => {
     naam?: string;
     klantNaam?: string;
     stroomtype?: Stroomtype;
+    frequentie_Hz?: number | null;
     klantAdres?: Adres | null;
     werfadres?: Adres;
     ean?: string;
@@ -491,6 +492,7 @@ export const useEditorStore = defineStore("editor", () => {
     const wijziging: ProjectWijziging = {};
     if (gegevens.klantNaam !== undefined) wijziging.klantNaam = gegevens.klantNaam;
     if (gegevens.stroomtype !== undefined) wijziging.stroomtype = gegevens.stroomtype;
+    if (gegevens.frequentie_Hz !== undefined && gegevens.frequentie_Hz !== (doc.voeding.frequentie_Hz ?? null)) wijziging.frequentie_Hz = gegevens.frequentie_Hz;
     if (gegevens.klantAdres !== undefined) {
       const huidig = doc.meta.klant.adres;
       if (gegevens.klantAdres === null ? huidig !== undefined : !zelfdeAdres(gegevens.klantAdres, huidig)) {

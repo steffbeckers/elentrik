@@ -96,11 +96,11 @@ Geen kalenderbelofte: vooral codebehoud, documentmigraties en geometrie bij plan
 **Contract:** optioneel `brandreactieklasse: string` op leiding, maximaal 64 tekens, zonder automatisch te raden wat vereist is. Bied Eca en Cca als snelle invoer en laat volledige opgegeven classificaties toe. Vervang de enkelvoudige plaatsing door `aanleg?: { ligging?: 'inbouw' | 'opbouw' | 'grond'; inBuis: boolean }`. Migratie: `buis → {inBuis:true}`, andere oude waarden → overeenkomstige ligging met `inBuis:false`; ontbrekend blijft onbekend. Gebruik geen “onbekend = inbouw”.
 
 - [x] Test oude waarden en combinaties; verifieer migratie zonder verlies van kabeltype/doorsnede/geleiders en zonder dubbele classificatie.
-- [ ] Toon afzonderlijke invoer voor ligging en buis; dezelfde samengestelde symboliek verschijnt op scherm en PDF. Laat de gebruikte symbolen aan de actuele officiële AREI-symbolentabel toetsen voordat ze als correcte notatie worden opgeleverd.
+- [x] Toon afzonderlijke invoer voor ligging en buis; dezelfde samengestelde symboliek verschijnt op scherm en PDF. Laat de gebruikte symbolen aan de actuele officiële AREI-symbolentabel toetsen voordat ze als correcte notatie worden opgeleverd.
 - [x] Neem de klasse op in leidinglabels, kringenlijst en materiaalonderscheid. Leid geen compliance-oordeel af uit alleen deze invoer.
 - [x] Run `pnpm exec vitest run packages/model/test/schema.test.ts packages/model/test/migraties.test.ts packages/layout/test/labels.test.ts packages/render/test/print-html.test.ts` plus de geraakte symbooltests.
 
-**Verificatiebeperking:** invoer en gedeelde weergave zijn geïmplementeerd en getest. De bronlegende en toegankelijke officiële symbolentabel zijn vergeleken; de actuele volledige officiële AREI-uitgave was niet bereikbaar. Daarom blijft de gecombineerde regel hierboven voor actuele normtoetsing open.
+**Aanvullende verificatie 6 november 2026:** de actuele volledige officiële AREI-uitgave is nu bereikbaar: Boek 1 versie 07 van 15 september 2026, van toepassing vanaf 1 november 2026. De gebruikte leidingtekens zijn visueel vergeleken met tabel 2.23, gedrukte p. 55–56 (PDF 60–61); de bestaande samengestelde notatie komt overeen met deze tekens, gedraaid voor verticale leidingen. Twee gerichte symboolregressies slagen. Dit sluit deze bronvergelijking af, niet de deskundige controle van een volledige installatie. Zie [vervolgplan](2026-11-06-elektricien-restpunten.md).
 
 **Klaar als:** XVB 3G2,5 Cca en VOB 3G1,5 Eca in buis in de wand zonder vrije-tekstconstructies getrouw kunnen worden vastgelegd en geëxporteerd.
 

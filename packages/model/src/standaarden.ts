@@ -6,6 +6,8 @@ import type { Sjabloon, SjabloonNode } from "./sjablonen";
 
 /** De onderdelen in het paneel "Onderdelen" van de editor. */
 export type Onderdeel =
+  | "aardelektrode"
+  | "aardingsonderbreker"
   | "contactdoos"
   | "lichtpunt"
   | "schakelaar"
@@ -17,6 +19,8 @@ export type Onderdeel =
 
 /** Standaardwaarden van een nieuw onderdeel (spec §4.3). Een onderbord is een verdeelbord zonder naam. */
 export const STANDAARD: { [O in Onderdeel]: NodeInvoer } = {
+  aardelektrode: { type: "aardelektrode" },
+  aardingsonderbreker: { type: "aardingsonderbreker" },
   contactdoos: {
     type: "contactdoos",
     aantal: 1,

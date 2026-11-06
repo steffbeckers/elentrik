@@ -621,7 +621,7 @@ describe("symbolen voor punten, leiding en onderbord", () => {
     ] as const;
 
     test("alle soorten hebben een test", () => {
-      expect([...vierkantSoorten, "boiler", "laadpaal", "bel", "motor", "deurbelMonitor"].sort()).toEqual([...ToestelsoortSchema.options].sort());
+      expect([...vierkantSoorten, "boiler", "laadpaal", "bel", "motor", "deurbelMonitor", "onbekendDrieblad"].sort()).toEqual([...ToestelsoortSchema.options].sort());
     });
 
     test.each(vierkantSoorten)("%s is een vierkant van 10 × 10 in een kader van 12 × 12", (soort) => {

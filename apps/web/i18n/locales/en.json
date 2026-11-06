@@ -229,6 +229,8 @@
       }
     },
     "onderdelen": {
+      "aardelektrode": "Earth electrode",
+      "aardingsonderbreker": "Earth disconnector",
       "contactdoos": "Socket",
       "lichtpunt": "Light point",
       "schakelaar": "Switch",
@@ -239,6 +241,8 @@
       "onderbord": "Sub-board"
     },
     "types": {
+      "aardelektrode": "Earth electrode",
+      "aardingsonderbreker": "Earth disconnector",
       "aansluiting": "Supply connection",
       "teller": "Meter",
       "differentieel": "Residual current device (RCD)",
@@ -347,6 +351,8 @@
         "altijd": "Part of every diagram."
       },
       "uitleg": {
+        "aardelektrode": "Earth electrode as a separate earthing component.",
+        "aardingsonderbreker": "Disconnector in the earthing connection.",
         "contactdoos": "A socket for a plug, with or without earth contact, child protection or waterproofing.",
         "lichtpunt": "A fixed light point, such as an LED, a fluorescent tube, a spotlight or emergency lighting.",
         "schakelaar": "Controls a light point: single, double, two-way, intermediate, dimmer or push button.",
@@ -410,6 +416,7 @@
       "bewaren": "Save deviation"
     },
     "projectgegevens": {
+      "frequentie": "Supply frequency (Hz)",
       "titel": "Project details",
       "naam": "Name",
       "stroomtype": "Current type",
@@ -486,6 +493,7 @@
     },
     "situatie": {
       "tePlaatsen": {
+        "installatie": "Installation components",
         "titel": "To place",
         "uitleg": "Drag a point onto the plan, or select it and click on the plan.",
         "allesGeplaatst": "All points are on a plan",
@@ -543,6 +551,18 @@
         "planNietGevonden": "Plan not found",
         "planOpnieuwKiezen": "Choose plan again",
         "werkbalk": "Selection on the plan",
+        "opschonen": "Clean up background",
+        "afdekHulp": "Tap two opposite corners to cover an old symbol in white. The source is preserved; check that building lines remain visible.",
+        "afdekTweedeHoek": "Tap the opposite corner. Escape cancels this cover.",
+        "afdekking": "Cover",
+        "afdekNieuw": "New cover",
+        "afdekNummer": "Cover {nummer}",
+        "afdekVerwijder": "Remove cover",
+        "afdekAnnuleer": "Cancel corner",
+        "afdekKlaar": "Done",
+        "afdekInvoeren": "Enter dimensions",
+        "afdekToevoegen": "Add cover",
+        "afdekVeld": { "x": "Left (px)", "y": "Top (px)", "breedte": "Width (px)", "hoogte": "Height (px)" },
         "draaiLinks": "Rotate 90° anticlockwise",
         "draaiRechts": "Rotate 90° clockwise",
         "vanPlanHalen": "Remove from plan",
@@ -886,6 +906,10 @@
     }
   },
   "velden": {
+    "aantalPanelen": {"label": "Panel count"},
+    "schijnbaarVermogen_kVA": {"label": "Apparent power"},
+    "dcDetectie_mA": {"label": "DC residual current detection"},
+    "puntReferentie": {"label": "Point reference", "opties": {"automatisch": "Automatic number", "geen": "No individual number (source choice)"}},
     "label": {
       "label": "Label"
     },
@@ -978,6 +1002,7 @@
         "diepvriezer": "Freezer",
         "wand": "Wall light point",
         "tweepolig": "Double-pole",
+        "onbekendDrieblad": "Unknown source symbol (three blades)",
         "deurbelMonitor": "Doorbell / monitor"
       }
     },

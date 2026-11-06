@@ -4,7 +4,7 @@ import type { Symbool } from "@elentrik/symbols";
 /** Een element van het schema in strookcoördinaten (mm). De y loopt naar beneden; de voeding staat onderaan en het schema groeit naar boven. */
 export type SchemaElement =
   | { soort: "symbool"; nodeId: NodeId; x: number; y: number; symbool: Symbool }
-  | { soort: "lijn"; x1: number; y1: number; x2: number; y2: number; rol: "verbinding" | "rail" }
+  | { soort: "lijn"; x1: number; y1: number; x2: number; y2: number; rol: "verbinding" | "rail" | "aarding" }
   | {
       soort: "tekst";
       x: number;
@@ -12,9 +12,9 @@ export type SchemaElement =
       tekst: string;
       grootte: number;
       anker: "start" | "middle" | "end";
-      rol: "kring" | "punt" | "leiding" | "beveiliging" | "onderbord" | "voeding" | "aantal";
+      rol: "kring" | "punt" | "leiding" | "beveiliging" | "onderbord" | "voeding" | "aantal" | "technisch";
     }
-  | { soort: "vervolg"; x: number; y: number; richting: "links" | "rechts"; paginaNummer: number };
+  | { soort: "vervolg"; x: number; y: number; richting: "links" | "rechts"; paginaNummer: number; verbindingsnummer?: number };
 
 /** Het vak van een getekend symbool in strookcoördinaten (mm). */
 export type Vak = { x: number; y: number; breedte: number; hoogte: number };

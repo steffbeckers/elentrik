@@ -33,6 +33,8 @@ export const FR: Teksten = {
   },
   differentieel: { eenheid: "mA", type: "type" },
   types: {
+    aardelektrode: "Prise de terre",
+    aardingsonderbreker: "Sectionneur de terre",
     aansluiting: "Raccordement",
     teller: "Compteur",
     differentieel: "Interrupteur différentiel",
@@ -46,6 +48,7 @@ export const FR: Teksten = {
     toestel: "Appareil",
   },
   toestelsoorten: {
+    onbekendDrieblad: "Symbole source inconnu (trois pales)",
     wasmachine: "lave-linge",
     droogkast: "sèche-linge",
     vaatwasser: "lave-vaisselle",

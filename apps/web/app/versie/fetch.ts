@@ -1,6 +1,6 @@
 // De omhulling van `fetch` voor het compatibiliteitsgetal (zie shared/clientversie.ts): een eigen
-// /api-verzoek krijgt `X-Elentrik-Client`, en elk antwoord geeft zijn `X-Elentrik-Client-Minimum`
-// en een 426 NIEUWE_VERSIE_VEREIST door.
+// /api-verzoek krijgt `X-Elentrik-Client`, en actuele API-antwoorden geven hun
+// `X-Elentrik-Client-Minimum` en een 426 NIEUWE_VERSIE_VEREIST door.
 //
 // Het zit op `fetch` en niet op `$fetch`: de auto-import `$fetch` van Nuxt is een vaste verwijzing
 // naar het eerste `$fetch`, die een latere `globalThis.$fetch = ...` niet meer volgt. ofetch roept
@@ -41,8 +41,14 @@ export function omhulFetch(origineel: typeof fetch, opties: OmhullingOpties): ty
 
     const antwoord = await origineel(invoer, verzoek);
 
+    // Iconen en bestanden mogen lang in de browsercache blijven. Hun headers kunnen daardoor
+    // bij een vorige serverversie horen; alleen actuele API-antwoorden bepalen compatibiliteit.
+    // Mutaties en expliciete 426-antwoorden blijven wel meetellen, ook op deze routes.
+    const methode = (init?.method ?? (invoer instanceof Request ? invoer.method : "GET")).toUpperCase();
+    const cachebaarAsset = (methode === "GET" || methode === "HEAD") &&
+      ["/api/_nuxt_icon/", "/api/bestanden/", "/api/admin/bestanden/"].some(prefix => url.pathname.startsWith(prefix));
     const minimum = antwoord.headers.get(CLIENT_MINIMUM_HEADER);
-    if (minimum !== null) opties.bijServerversie(minimum);
+    if (minimum !== null && !cachebaarAsset) opties.bijServerversie(minimum);
     if (antwoord.status === 426) {
       // Een kopie lezen: het antwoord zelf blijft voor de aanroeper bruikbaar.
       const data: unknown = await antwoord.clone().json().catch(() => null);

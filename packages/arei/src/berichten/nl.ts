@@ -56,5 +56,6 @@ export const NL: Readonly<Record<string, string>> = {
   "waarde.ventilator": "ventilator",
   "waarde.koelkast": "koelkast",
   "waarde.diepvriezer": "diepvriezer",
+  "waarde.onbekendDrieblad": "Onbekend bronsymbool (drieblad)",
   "waarde.andere": "andere",
 };

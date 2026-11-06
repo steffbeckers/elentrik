@@ -14,6 +14,8 @@ export type SituatieItem = {
   labelOffset?: { x: number; y: number };
   /** Alleen print: een expliciet aantal op een tweede, ongedraaide labelregel. */
   aantalLabel?: string;
+  /** Alleen print: houd het label buiten een vergroot of gedraaid symbool. */
+  labelBuitenSymbool?: boolean;
 };
 
 /** Label-offset en tekstgrootte, als fractie van de symboolgrootte in pixels. */
@@ -37,15 +39,19 @@ function itemSvg(item: SituatieItem, grootte_px: number): string {
   const symbool =
     `<g transform="rotate(${getal(item.rotatie)}) scale(${schaalGetal(schaal)}) ` +
     `translate(${getal(-breedte / 2)} ${getal(-hoogte / 2)})">${item.aantalLabel ? zonderAantallen(item.symbool.svg) : item.symbool.svg}</g>`;
-  const labelX = grootte_px * LABEL_X + (item.labelOffset?.x ?? 0);
-  const labelY = grootte_px * LABEL_Y + (item.labelOffset?.y ?? 0);
-  const font = item.labelGrootte_px ?? grootte_px * LABEL_GROOTTE;
-  const label =
-    `<text x="${getal(grootte_px * LABEL_X + (item.labelOffset?.x ?? 0))}" y="${getal(grootte_px * LABEL_Y + (item.labelOffset?.y ?? 0))}" ` +
-    `font-size="${getal(item.labelGrootte_px ?? grootte_px * LABEL_GROOTTE)}" text-anchor="start" font-family="sans-serif" ` +
-    `fill="currentColor">${escapeXml(item.label)}</text>`;
   const rad = item.rotatie * Math.PI / 180;
   const halfBreedte = schaal * (Math.abs(Math.cos(rad)) * breedte + Math.abs(Math.sin(rad)) * hoogte) / 2;
+  const gekozenX = grootte_px * LABEL_X + (item.labelOffset?.x ?? 0);
+  const labelY = grootte_px * LABEL_Y + (item.labelOffset?.y ?? 0);
+  const font = item.labelGrootte_px ?? grootte_px * LABEL_GROOTTE;
+  const labelX = item.labelBuitenSymbool
+    ? gekozenX < 0 ? Math.min(gekozenX, -halfBreedte - font * .2) : Math.max(gekozenX, halfBreedte + font * .2)
+    : gekozenX;
+  const labelAnker = item.labelBuitenSymbool && labelX < 0 ? "end" : "start";
+  const label =
+    `<text x="${getal(labelX)}" y="${getal(labelY)}" ` +
+    `font-size="${getal(font)}" text-anchor="${labelAnker}" font-family="sans-serif" ` +
+    `fill="currentColor">${escapeXml(item.label)}</text>`;
   const links = labelX < 0;
   const aantalX = links ? Math.min(labelX, -halfBreedte - font * .1) : Math.max(labelX, halfBreedte + font * .1);
   const aantal = item.aantalLabel

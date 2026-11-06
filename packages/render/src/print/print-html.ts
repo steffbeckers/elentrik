@@ -8,6 +8,7 @@ import { kringenlijst, type KringenlijstRij } from "../kringenlijst";
 import { schemaPaginaSvg } from "../schema-svg";
 import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
+import { situatieAfdekkingenSvg } from "../situatie-afdekkingen";
 import { LOCALES, TEKSTEN, type Taal, type Teksten } from "../teksten/index";
 import { leesbareSchemaOpmaak } from "./leesbaar";
 import { cartouche, cartoucheHoogte, formatteerDatum } from "./cartouche";
@@ -110,10 +111,17 @@ function situatiePaginas(c: Context, pagina: SituatiePagina, bestand: string): P
     const node = c.doc.nodes[item.nodeId];
     return { ...item,
       labelGrootte_px: Math.max(item.labelGrootte_px ?? (item.symboolGrootte_px ?? grootte) * .45, 2.5 / schaal),
+      // The meter contains native 2.5mm kWh text. Keep its whole glyph at least native size on
+      // paper, centered at the saved placement; ordinary editor symbols keep their original size.
+      ...(node?.type === "teller" ? { symboolGrootte_px: Math.max(item.symboolGrootte_px ?? grootte, Math.max(item.symbool.maat.breedte, item.symbool.maat.hoogte) / schaal), labelBuitenSymbool: true,
+        // On a situation plan the short external stubs must not become accidental wiring to a
+        // nearby board. Clip to the native meter frame, retaining its complete 0.35mm stroke.
+        symbool: { ...item.symbool, svg: `<svg x="-0.2" y="1.3" width="10.4" height="9.4" viewBox="-0.2 1.3 10.4 9.4" overflow="hidden">${item.symbool.svg}</svg>` },
+      } : {}),
       ...(node && (node.type === "contactdoos" || node.type === "lichtpunt") && node.aantal > 1 ? { aantalLabel: `×${node.aantal}` } : {}),
     };
   });
-  const laag = situatieLaagSvg(items, grootte);
+  const laag = situatieAfdekkingenSvg(pagina.afdekkingen) + situatieLaagSvg(items, grootte);
   const melding = { nl: "Passend op papier", fr: "Adapté au papier", en: "Fit to paper" }[c.taal];
   const bijschrift = gekalibreerd
     ? `${c.teksten.schaalAfdruk}: 1:${new Intl.NumberFormat(LOCALES[c.taal], { maximumFractionDigits: 1 }).format(pagina.afdruk?.schaalNoemer ?? 100)}`

@@ -50,6 +50,8 @@ function kies<T>(opties: readonly T[], keuze: number): T {
 const FABRIEK: Record<NodeType, (w: Waarden) => NodeInvoer> = {
   aansluiting: () => ({ type: "aansluiting" }),
   teller: () => ({ type: "teller" }),
+  aardelektrode: () => ({ type: "aardelektrode" }),
+  aardingsonderbreker: () => ({ type: "aardingsonderbreker" }),
   differentieel: (w) => ({
     type: "differentieel",
     gevoeligheid_mA: w.streng,
@@ -243,7 +245,9 @@ function voerUit(doc: InstallatieDocument, op: Operatie): OperatieResultaat {
     case "voegToe": {
       const ouderId = kiesId(ids, op.ouder);
       const ouder = doc.nodes[ouderId]!;
-      const type = kies(TOEGELATEN_KINDEREN[ouder.type], op.kind);
+      // Een aardelektrode is een echt eindonderdeel. Probeer een verboden kind zodat
+      // de bestaande fout-/immutabiliteitscontrole ook die situatie blijft testen.
+      const type = TOEGELATEN_KINDEREN[ouder.type].length ? kies(TOEGELATEN_KINDEREN[ouder.type], op.kind) : "leiding";
       return voegToe(
         doc,
         ouderId,

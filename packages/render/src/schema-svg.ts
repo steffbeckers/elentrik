@@ -39,7 +39,13 @@ function elementSvg(element: SchemaElement): string {
         element.richting === "rechts" ? "end" : "start",
         `p. ${element.paginaNummer}`,
       );
-      return `<g class="vervolg">${pijl}${label}</g>`;
+      // The pair identifier sits below the rail. Extending the page label horizontally can
+      // collide with the first circuit letter beside the left continuation.
+      const paar = element.verbindingsnummer === undefined ? "" : tekstSvg(
+        "vervolg", element.x - richting * (PIJL_LENGTE_MM + 0.5), element.y + 3.5,
+        PIJL_TEKST_MM, element.richting === "rechts" ? "end" : "start", `#${element.verbindingsnummer}`,
+      );
+      return `<g class="vervolg">${pijl}${label}${paar}</g>`;
     }
   }
 }

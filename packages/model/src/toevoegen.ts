@@ -57,6 +57,12 @@ function nieuweNodes(
   voorinstelling?: Voorinstelling,
 ): NodeInvoer[] {
   const node = vereis(doc, aanknoping.nodeId);
+  if (onderdeel === "aardelektrode" || onderdeel === "aardingsonderbreker") {
+    if ((aanknoping.soort === "rail-einde" && node.type === "verdeelbord") ||
+        (aanknoping.soort === "kring-einde" && node.type === "aardingsonderbreker" && node.kinderen.length === 0 && onderdeel === "aardelektrode"))
+      return [STANDAARD[onderdeel]];
+    throw nietToegelaten({ reden: "aarding op bord of na aardingsonderbreker", onderdeel });
+  }
   if (
     aanknoping.soort === "aftakking" ||
     aanknoping.soort === "aftakking-einde"

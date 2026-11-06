@@ -229,6 +229,8 @@
       }
     },
     "onderdelen": {
+      "aardelektrode": "Prise de terre",
+      "aardingsonderbreker": "Sectionneur de terre",
       "contactdoos": "Prise de courant",
       "lichtpunt": "Point lumineux",
       "schakelaar": "Interrupteur",
@@ -239,6 +241,8 @@
       "onderbord": "Tableau divisionnaire"
     },
     "types": {
+      "aardelektrode": "Prise de terre",
+      "aardingsonderbreker": "Sectionneur de terre",
       "aansluiting": "Raccordement",
       "teller": "Compteur",
       "differentieel": "Interrupteur différentiel",
@@ -347,6 +351,8 @@
         "altijd": "Figure dans chaque schéma."
       },
       "uitleg": {
+        "aardelektrode": "Électrode de terre, composant distinct de la mise à la terre.",
+        "aardingsonderbreker": "Sectionneur dans la liaison de terre.",
         "contactdoos": "Une prise de courant, avec ou sans contact de terre, sécurité enfants ou version étanche.",
         "lichtpunt": "Un point lumineux fixe, par exemple une LED, un tube fluorescent, un spot ou un éclairage de secours.",
         "schakelaar": "Commande un point lumineux : simple, double, va-et-vient, permutateur, variateur ou bouton-poussoir.",
@@ -410,6 +416,7 @@
       "bewaren": "Enregistrer la dérogation"
     },
     "projectgegevens": {
+      "frequentie": "Fréquence de l’alimentation (Hz)",
       "titel": "Données du projet",
       "naam": "Nom",
       "stroomtype": "Type de courant",
@@ -486,6 +493,7 @@
     },
     "situatie": {
       "tePlaatsen": {
+        "installatie": "Composants de l’installation",
         "titel": "À placer",
         "uitleg": "Faites glisser un point sur le plan, ou sélectionnez-le puis cliquez sur le plan.",
         "allesGeplaatst": "Tous les points sont placés sur un plan",
@@ -543,6 +551,18 @@
         "planNietGevonden": "Plan introuvable",
         "planOpnieuwKiezen": "Choisir à nouveau le plan",
         "werkbalk": "Sélection sur le plan",
+        "opschonen": "Nettoyer le fond",
+        "afdekHulp": "Touchez deux coins opposés pour masquer un ancien symbole en blanc. La source est conservée ; vérifiez que les lignes du bâtiment restent visibles.",
+        "afdekTweedeHoek": "Touchez le coin opposé. Échap annule ce masque.",
+        "afdekking": "Masque",
+        "afdekNieuw": "Nouveau masque",
+        "afdekNummer": "Masque {nummer}",
+        "afdekVerwijder": "Supprimer le masque",
+        "afdekAnnuleer": "Annuler le coin",
+        "afdekKlaar": "Terminé",
+        "afdekInvoeren": "Saisir les dimensions",
+        "afdekToevoegen": "Ajouter le masque",
+        "afdekVeld": { "x": "Gauche (px)", "y": "Haut (px)", "breedte": "Largeur (px)", "hoogte": "Hauteur (px)" },
         "draaiLinks": "Tourner de 90° à gauche",
         "draaiRechts": "Tourner de 90° à droite",
         "vanPlanHalen": "Retirer du plan",
@@ -886,6 +906,10 @@
     }
   },
   "velden": {
+    "aantalPanelen": {"label": "Nombre de panneaux"},
+    "schijnbaarVermogen_kVA": {"label": "Puissance apparente"},
+    "dcDetectie_mA": {"label": "Détection de courant résiduel DC"},
+    "puntReferentie": {"label": "Référence du point", "opties": {"automatisch": "Numéro automatique", "geen": "Sans numéro propre (choix de source)"}},
     "label": {
       "label": "Libellé"
     },
@@ -978,6 +1002,7 @@
         "diepvriezer": "Congélateur",
         "wand": "Point lumineux mural",
         "tweepolig": "Bipolaire",
+        "onbekendDrieblad": "Symbole source inconnu (trois pales)",
         "deurbelMonitor": "Carillon / moniteur"
       }
     },

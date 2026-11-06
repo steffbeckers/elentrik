@@ -1,8 +1,21 @@
-import type { NodeVan, Stroomtype } from "@elentrik/model";
+import type { Node, NodeVan, Stroomtype } from "@elentrik/model";
 
 /** Alleen opgeslagen voedingsinformatie; geen afgeleide stroom of frequentie. */
-export function voedingTekst(stroomtype: Stroomtype): string {
-  return { "2x230V": "2 × 230 V ~", "3x230V": "3 × 230 V ~", "3N400V": "3N × 400 V ~" }[stroomtype];
+export function voedingTekst(stroomtype: Stroomtype, frequentie_Hz?: number): string {
+  return { "2x230V": "2 × 230 V ~", "3x230V": "3 × 230 V ~", "3N400V": "3N × 400 V ~" }[stroomtype] + (frequentie_Hz === undefined ? "" : ` ${frequentie_Hz} Hz`);
+}
+
+/** Uitsluitend expliciet opgegeven technische waarden; VA is geen actief vermogen in W. */
+export function technischeLabels(node: Node): string[] {
+  if (node.type === "teller") return node.nominaal_A === undefined ? [] : [`${node.nominaal_A} A`];
+  if (node.type !== "toestel") return [];
+  return [
+    node.soort === "onbekendDrieblad" ? "?" : "",
+    node.vermogen_W === undefined ? "" : `${node.vermogen_W} W`,
+    node.schijnbaarVermogen_kVA === undefined ? "" : `${String(node.schijnbaarVermogen_kVA).replace(".", ",")} kVA`,
+    node.aantalPanelen === undefined ? "" : `×${node.aantalPanelen}`,
+    node.dcDetectie_mA === undefined ? "" : `${node.dcDetectie_mA} mA DC`,
+  ].filter(Boolean);
 }
 
 /** Geschatte breedte van één teken, als fractie van de tekstgrootte. */

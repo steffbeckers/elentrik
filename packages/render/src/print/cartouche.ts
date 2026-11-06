@@ -92,7 +92,7 @@ function vakken(g: CartoucheGegevens): VakInhoud[] {
   return [
     maak(0, "installateur", [[t.cartouche.installateur, "label"], [g.installateur.naam, "naam"], [i1], [i2], [g.installateur.telefoon ?? ""], [g.installateur.email ?? ""]], g.logo !== undefined),
     maak(1, "klant", [[t.cartouche.klant, "label"], [g.meta.klant.naam, "naam"], [k1], [k2]]),
-    maak(2, "werf", [[t.cartouche.werf, "label"], [w1], [w2], [t.cartouche.ean + ": " + (g.meta.ean ?? "")], [voedingTekst(g.voeding.stroomtype), "voeding"]]),
+    maak(2, "werf", [[t.cartouche.werf, "label"], [w1], [w2], [t.cartouche.ean + ": " + (g.meta.ean ?? "")], [voedingTekst(g.voeding.stroomtype, g.voeding.frequentie_Hz), "voeding"]]),
     maak(3, "titel", [[g.titel, "titel", TITEL_MM], [t.cartouche.datum + ": " + formatteerDatum(g.datum, g.taal)], [t.cartouche.versie + ": " + g.versieLabel], [t.cartouche.pagina + " " + g.nummer + " / " + g.totaal, "paginanummer"]]),
     maak(4, "handtekening", [[t.cartouche.handtekeningInstallateur, "label"]]),
     maak(5, "handtekening", [[t.cartouche.handtekeningKeurder, "label"]]),

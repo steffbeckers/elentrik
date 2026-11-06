@@ -115,3 +115,7 @@ De volledige logs en reviewrapporten worden lokaal bewaard onder `out/hertest/ve
 ## Vervolg op 6 november 2026 — kwartslagen
 
 Punt 6 is opgelost: de bestaande draaiknoppen draaien 90° per klik; R/Shift+R blijven 15° draaien. Meerdere geselecteerde punten draaien om hun eigen positie met één undo-stap. De geometrie, labels en andere pagina’s blijven behouden. Verificatie: 91 gerichte tests, volledige typecontrole en een browsertest op desktop en mobiel met opslag/herladen en undo/redo geslaagd. Onafhankelijke code-review vond geen problemen. Dit sluit de overige bronverschillen niet af.
+
+## Vervolg op 6 november 2026 — overige restpunten
+
+De verdere implementatie, praktijkproef, afdrukmetingen en resterende brononzekerheden staan in [de nieuwe hertest](2026-11-06-elektricien-restpunten.md). De bovenstaande open productpunten beschrijven de toestand op 5 november en worden daar opnieuw beoordeeld.

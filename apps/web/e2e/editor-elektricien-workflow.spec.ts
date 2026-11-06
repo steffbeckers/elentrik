@@ -61,6 +61,67 @@ function aantalDifferentielen(doc: InstallatieDocument) {
     .length;
 }
 
+test("bronparameters en aarding via de UI blijven na herladen behouden", async ({ page, request }) => {
+  test.setTimeout(180_000);
+  const x = await seed(request);
+  await page.goto(`/projecten/${x.id}`);
+  await expect(page.getByTestId("schema-canvas")).toBeVisible({ timeout: 30_000 });
+
+  async function paneel(testId: string) {
+    const knop = page.getByTestId(testId);
+    if (await knop.getAttribute("aria-expanded") !== "true") await knop.click();
+  }
+  async function veld(naam: string, waarde: string) {
+    const invoer = page.getByTestId(`veld-${naam}`);
+    await invoer.fill(waarde);
+    await invoer.blur();
+  }
+  const teller = Object.values(x.document.nodes).find(n => n.type === "teller")!;
+  await selecteer(page, teller.id);
+  await paneel("werkruimte-eigenschappen");
+  await veld("nominaal_A", "40");
+  await expect.poll(async () => (await haal(request, x.id)).document.nodes[teller.id]).toMatchObject({ nominaal_A: 40 });
+
+  await paneel("werkruimte-onderdelen");
+  await page.getByTestId("onderdeel-aardingsonderbreker").click();
+  await page.getByRole("button", { name: "Passend maken" }).click();
+  await page.getByTestId(`plus-rail-einde-${x.bord}`).click();
+  await expect.poll(async () => Object.values((await haal(request, x.id)).document.nodes).filter(n => n.type === "aardingsonderbreker").length).toBe(1);
+  const onderbreker = Object.values((await haal(request, x.id)).document.nodes).find(n => n.type === "aardingsonderbreker")!;
+  await page.getByTestId("onderdeel-aardelektrode").click();
+  await page.getByRole("button", { name: "Passend maken" }).click();
+  await page.getByTestId(`plus-kring-einde-${onderbreker.id}`).click();
+  await expect.poll(async () => Object.values((await haal(request, x.id)).document.nodes).filter(n => n.type === "aardelektrode").length).toBe(1);
+
+  await page.getByTestId("onderdeel-toestel").click();
+  await page.getByRole("combobox", { name: "Soort toestel", exact: true }).click();
+  await page.getByRole("option", { name: "Fotovoltaïsch paneel", exact: true }).click();
+  await page.getByRole("button", { name: "Passend maken" }).click();
+  await page.getByTestId(`plus-rail-einde-${x.bord}`).click();
+  await expect.poll(async () => Object.values((await haal(request, x.id)).document.nodes).filter(n => n.type === "toestel").length).toBe(1);
+  const pv = Object.values((await haal(request, x.id)).document.nodes).find(n => n.type === "toestel")!;
+  await selecteer(page, pv.id);
+  await paneel("werkruimte-eigenschappen");
+  await veld("aantalPanelen", "20");
+  await veld("schijnbaarVermogen_kVA", "10");
+  await veld("dcDetectie_mA", "6");
+  await page.getByTestId("veld-puntReferentie").click();
+  await page.getByRole("option", { name: "Geen eigen nummer (bronkeuze)", exact: true }).click();
+  await expect.poll(async () => (await haal(request, x.id)).document.nodes[pv.id]).toMatchObject({ aantalPanelen: 20, schijnbaarVermogen_kVA: 10, dcDetectie_mA: 6, puntReferentie: "geen" });
+  expect((await haal(request, x.id)).document.nodes[pv.id]).not.toHaveProperty("vermogen_W");
+
+  await page.reload();
+  await expect(page.getByTestId("schema-canvas")).toContainText("40 A", { timeout: 30_000 });
+  await expect(page.getByTestId("schema-canvas")).toContainText("10 kVA");
+  await expect(page.getByTestId("schema-canvas")).toContainText("×20");
+  await expect(page.getByTestId("schema-canvas")).toContainText("6 mA DC");
+  await page.getByTestId("tab-situatieschema").click();
+  await paneel("werkruimte-onderdelen");
+  await expect(page.locator('button[draggable="true"]', { hasText: "Teller" })).toHaveCount(1);
+  await expect(page.locator('button[draggable="true"]', { hasText: "Aardelektrode" })).toHaveCount(1);
+  await expect(page.locator('button[draggable="true"]', { hasText: "Aardingsonderbreker" })).toHaveCount(1);
+});
+
 test("template requires a valid destination, reuses F and adds a new RCD only on explicit board insertion", async ({
   page,
   request,

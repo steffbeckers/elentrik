@@ -1,7 +1,7 @@
 export const PAKKET = "@elentrik/layout";
 
 export { maakStrook } from "./kolommen";
-export { TEKEN_BREEDTE_FACTOR, beveiligingLabel, leidingLabel, tekstBreedte, voedingTekst } from "./labels";
+export { TEKEN_BREEDTE_FACTOR, beveiligingLabel, leidingLabel, technischeLabels, tekstBreedte, voedingTekst } from "./labels";
 export { STANDAARD_PAPIER_A4, bruikbaar, papierMaat } from "./papier";
 export type { Papier } from "./papier";
 export { MIN_SCHAAL, opmaak, pagineer } from "./paginering";

@@ -2,6 +2,7 @@ export const PAKKET = "@elentrik/render";
 
 export { schemaPaginaSvg, schemaStripSvg } from "./schema-svg";
 export { situatieLaagSvg, type SituatieItem } from "./situatie-svg";
+export { situatieAfdekkingenSvg } from "./situatie-afdekkingen";
 export { SYMBOOL_DELER, nodeLabel, situatieItems, symboolGrootte, type LabelTerugval } from "./situatie-items";
 export { kringenlijst, type KringenlijstRij } from "./kringenlijst";
 export { NL } from "./teksten/nl";

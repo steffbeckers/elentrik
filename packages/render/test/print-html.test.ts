@@ -26,9 +26,10 @@ const INSTALLATEUR: Partij = {
 test.each(["nl", "fr", "en"] as const)("voeding op elk afgedrukt blad (%s)", taal => {
   const doc = kloon(referentieWoning());
   doc.voeding.stroomtype = "3N400V";
+  doc.voeding.frequentie_Hz = 50;
   const resultaat = printHtml(doc, analyseer(doc), [], opties({ taal }));
   for (const sectie of resultaat.html.split('<section class="pagina">').slice(1)) {
-    expect(sectie).toContain("3N × 400 V ~");
+    expect(sectie).toContain("3N × 400 V ~ 50 Hz");
   }
 });
 
@@ -1053,11 +1054,13 @@ test("referentiebladen worden bewust overgeslagen zonder ontbrekende-planmelding
   expect(r.html).not.toContain("Situatieschema — Gelijkvloers");
 });
 
-test("grote schema's worden verticaal gepagineerd zonder technisch tekst te verkleinen", () => {
+test("grote schema's worden gepagineerd zonder technische tekst te verkleinen of labels te verliezen", () => {
   const doc = installatie().verdeelbord(b => b.kring(k => { let l = k.automaat(16).leiding(2.5); for (let i = 0; i < 60; i++) l = l.contactdozen(1); return l; })).bouw().doc;
   const r = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("eendraadschema") }));
   expect(r.paginas).toBeGreaterThan(1);
   expect(r.html).not.toMatch(/scale\(0\./);
+  const labels = [...r.html.matchAll(/<text class="tekst-punt"[^>]*>(A\d+)<\/text>/g)].map(m => m[1]).sort();
+  expect(labels).toEqual(Array.from({ length: 60 }, (_, i) => `A${i + 1}`).sort());
 });
 
 test("kringenlijst herhaalt de kringgroep op elk vervolgblad", () => {
@@ -1078,10 +1081,10 @@ test("kleine situatiesymbolen houden afdruklabels van minstens 2,5 mm", () => {
  for (const font of fonts) expect(font * breedte / 3000).toBeGreaterThanOrEqual(2.49);
 });
 
-test("zes seriestopcontacten met hoofd- en bijkomende differentieel behouden alle labels op leesbare vervolgbladen", () => {
+test("zes seriestopcontacten met hoofd- en bijkomende differentieel behouden alle labels op één leesbaar blad", () => {
  const doc = installatie().differentieel(300, d => d.verdeelbord(b => b.differentieel(30, bd => bd.kring(k => k.automaat(20).leiding(2.5).contactdozen(6))))).bouw().doc;
  const uit = printHtml(doc, analyseer(doc), [], opties({ onderdelen: alleenOnderdeel("eendraadschema"), installateur: { naam: "Elektro E2E" }, logo: "logo.png" }));
- expect(uit.paginas).toBe(2);
+ expect(uit.paginas).toBe(1);
  expect(uit.html).not.toMatch(/scale\(0\./);
  const labels = [...uit.html.matchAll(/<text class="tekst-punt"[^>]*>(A\d+)<\/text>/g)].map(m => m[1]).sort();
  expect(labels).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);

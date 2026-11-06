@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import CanvasBediening from "~/components/editor/CanvasBediening.vue";
 import type { NodeId } from "@elentrik/model";
-import { situatieItems, situatieLaagSvg } from "@elentrik/render";
+import { situatieItems, situatieLaagSvg, situatieAfdekkingenSvg } from "@elentrik/render";
 import { doelSoort, moetNegeren, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useBestandenApi } from "~/composables/useBestandenApi";
 import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeergave";
@@ -52,11 +52,15 @@ const venster = useTemplateRef<HTMLElement>("venster");
 const hulpId = useId();
 const puntKeuzeId = useId();
 
-const modus = computed<"normaal" | "plaats" | "meet">(() =>
-  props.meetSchaal ? "meet" : props.teplaatsen !== null ? "plaats" : "normaal",
+const opschonen = ref(false);
+const afdekStart = ref<{ x: number; y: number } | null>(null);
+const gekozenAfdekking = ref("");
+const afdekFormulier = reactive({ x: 0, y: 0, breedte: 20, hoogte: 20 });
+const modus = computed<"normaal" | "plaats" | "meet" | "afdek">(() =>
+  props.meetSchaal ? "meet" : props.teplaatsen !== null ? "plaats" : opschonen.value ? "afdek" : "normaal",
 );
 const bedieningsHulp = computed(() => t(`editor.situatie.canvas.${
-  modus.value === "meet" ? "meetToetsenbord" : modus.value === "plaats" ? "plaatsToetsenbord" : "toetsenbord"
+  modus.value === "meet" ? "meetToetsenbord" : modus.value === "plaats" ? "plaatsToetsenbord" : modus.value === "afdek" ? "afdekHulp" : "toetsenbord"
 }`));
 
 // --- Plan ------------------------------------------------------------------
@@ -93,6 +97,47 @@ const items = computed(() => {
 
 /** De enige v-html-bron: `render` escapet alle documenttekst. */
 const laagSvg = computed(() => situatieLaagSvg(items.value, symbool.value));
+const afdekkingenSvg = computed(() => situatieAfdekkingenSvg(pagina.value?.afdekkingen));
+const afdekkingen = computed(() => pagina.value?.afdekkingen ?? []);
+
+watch([() => props.teplaatsen, () => props.meetSchaal, () => pagina.value?.id,
+  () => achtergrond.value?.rasterBestandId, alleenLezen], () => {
+  opschonen.value = false;
+  afdekStart.value = null;
+  gekozenAfdekking.value = "";
+});
+
+function wisselOpschonen(): void {
+  opschonen.value = !opschonen.value;
+  afdekStart.value = null;
+  gekozenAfdekking.value = "";
+}
+
+function bewaarAfdekking(rechthoek: { x: number; y: number; breedte: number; hoogte: number }): void {
+  if (alleenLezen.value || modus.value !== "afdek") return;
+  if (voerUit(() => { gekozenAfdekking.value = situatie.voegAfdekkingToe(rechthoek) ?? ""; })) {
+    afdekStart.value = null;
+  }
+}
+
+function afdekKlik(punt: { x: number; y: number }): void {
+  if (alleenLezen.value) return;
+  const p = binnenRaster(punt);
+  const eerste = afdekStart.value;
+  if (!eerste) {
+    afdekStart.value = p;
+    gekozenAfdekking.value = "";
+    return;
+  }
+  if (eerste.x === p.x || eerste.y === p.y) return;
+  bewaarAfdekking({ x: Math.min(eerste.x, p.x), y: Math.min(eerste.y, p.y),
+    breedte: Math.abs(eerste.x - p.x), hoogte: Math.abs(eerste.y - p.y) });
+}
+
+function verwijderGekozenAfdekking(): void {
+  if (alleenLezen.value || modus.value !== "afdek" || !gekozenAfdekking.value) return;
+  if (voerUit(() => situatie.verwijderAfdekking(gekozenAfdekking.value))) gekozenAfdekking.value = "";
+}
 
 /** Een punt binnen het raster gehouden. */
 function binnenRaster(punt: { x: number; y: number }): { x: number; y: number } {
@@ -327,6 +372,12 @@ function meetKlik(punt: Positie): void {
 
 function klik(event: MouseEvent): void {
   if (canvas.klikOnderdrukt() || !achtergrond.value) return;
+  if (modus.value === "afdek") {
+    const id = (event.target as Element).closest("[data-afdekking-id]")?.getAttribute("data-afdekking-id");
+    if (id && !afdekStart.value) gekozenAfdekking.value = id;
+    else afdekKlik(planPunt(event));
+    return;
+  }
   if (modus.value === "meet") {
     meetKlik(planPunt(event));
     return;
@@ -361,6 +412,11 @@ function soortVan(doel: EventTarget | null): ReturnType<typeof doelSoort> {
 function annuleer(): void {
   if (verschuiving) {
     breekVerschuivingAf();
+    return;
+  }
+  if (modus.value === "afdek") {
+    if (afdekStart.value) afdekStart.value = null;
+    else wisselOpschonen();
     return;
   }
   if (modus.value !== "normaal") {
@@ -398,8 +454,9 @@ function toetsIngedrukt(event: KeyboardEvent): void {
   });
   if (!actie) return;
   // Tijdens het kiezen van een nieuwe plaats blijven eerder geselecteerde punten staan.
-  if (modus.value === "plaats" && (actie.soort === "draai" || actie.soort === "schuif" || actie.soort === "haalVanPlan")) {
+  if ((modus.value === "plaats" || modus.value === "afdek") && (actie.soort === "draai" || actie.soort === "schuif" || actie.soort === "haalVanPlan")) {
     event.preventDefault();
+    if (modus.value === "afdek" && actie.soort === "haalVanPlan") verwijderGekozenAfdekking();
     return;
   }
   // Zonder zichtbaar plan wijzigt niets de plaatsingen; ongedaan maken en opnieuw blijven werken.
@@ -522,6 +579,43 @@ const markeringen = computed(() => {
       />
     </div>
 
+      <UButton
+        v-if="!alleenLezen && !pagina?.tekening"
+        data-testid="plan-opschonen"
+        color="neutral"
+        :variant="opschonen ? 'soft' : 'ghost'"
+        size="sm"
+        icon="i-lucide-eraser"
+        :label="$t('editor.situatie.canvas.opschonen')"
+        :aria-pressed="opschonen"
+        :disabled="props.teplaatsen !== null || props.meetSchaal"
+        @click="wisselOpschonen"
+      />
+      <div v-if="modus === 'afdek'" data-testid="plan-afdekbediening" class="w-full space-y-2 pb-1 text-sm">
+        <p role="status">{{ $t(afdekStart ? 'editor.situatie.canvas.afdekTweedeHoek' : 'editor.situatie.canvas.afdekHulp') }}</p>
+        <div class="flex flex-wrap items-center gap-2">
+          <label v-if="afdekkingen.length" class="flex min-w-0 items-center gap-2">
+            {{ $t('editor.situatie.canvas.afdekking') }}
+            <select v-model="gekozenAfdekking" data-testid="plan-afdekkeuze" class="h-8 max-w-40 rounded border border-default bg-default px-2" @change="afdekStart = null">
+              <option value="">{{ $t('editor.situatie.canvas.afdekNieuw') }}</option>
+              <option v-for="(vlak, index) in afdekkingen" :key="vlak.id" :value="vlak.id">{{ $t('editor.situatie.canvas.afdekNummer', { nummer: index + 1 }) }}</option>
+            </select>
+          </label>
+          <UButton v-if="afdekkingen.length" data-testid="plan-afdekverwijder" color="neutral" variant="outline" size="sm" icon="i-lucide-trash-2" :disabled="!afdekkingen.some(a => a.id === gekozenAfdekking)" :label="$t('editor.situatie.canvas.afdekVerwijder')" @click="verwijderGekozenAfdekking" />
+          <UButton v-if="afdekStart" color="neutral" variant="ghost" size="sm" :label="$t('editor.situatie.canvas.afdekAnnuleer')" @click="afdekStart = null" />
+          <UButton color="neutral" variant="outline" size="sm" :label="$t('editor.situatie.canvas.afdekKlaar')" @click="wisselOpschonen" />
+        </div>
+        <details>
+          <summary class="cursor-pointer text-muted">{{ $t('editor.situatie.canvas.afdekInvoeren') }}</summary>
+          <form class="mt-2 flex flex-wrap items-end gap-2" @submit.prevent="bewaarAfdekking(afdekFormulier)">
+            <label v-for="veld in (['x', 'y', 'breedte', 'hoogte'] as const)" :key="veld" class="flex flex-col gap-1">
+              {{ $t(`editor.situatie.canvas.afdekVeld.${veld}`) }}
+              <input v-model.number="afdekFormulier[veld]" type="number" required step="any" :min="veld === 'x' || veld === 'y' ? 0 : 1" :max="veld === 'x' || veld === 'breedte' ? achtergrond?.breedte_px : achtergrond?.hoogte_px" class="h-9 w-24 rounded border border-default bg-default px-2" />
+            </label>
+            <UButton type="submit" size="sm" :label="$t('editor.situatie.canvas.afdekToevoegen')" />
+          </form>
+        </details>
+      </div>
       <p :id="hulpId" data-testid="plan-keyboard-help" class="sr-only">{{ bedieningsHulp }}</p>
       <div v-if="modus === 'meet'" class="absolute bottom-14 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded border border-default bg-default px-2 py-1">
         <output aria-live="polite" class="text-xs tabular-nums">{{ $t('editor.situatie.canvas.cursorPositie', { x: Math.round(cursor.x), y: Math.round(cursor.y) }) }}</output>
@@ -562,8 +656,17 @@ const markeringen = computed(() => {
           preserveAspectRatio="none"
           @error="planFout = true"
         />
+        <!-- Witte vlakken bedekken alleen het bronraster, nooit de modelpunten. -->
+        <g class="pointer-events-none" data-testid="plan-afdekkingen" v-html="afdekkingenSvg" />
         <!-- v-html is hier veilig: `situatieLaagSvg` escapet alle documenttekst. -->
         <g class="laag" :class="{ verschuifbaar: modus === 'normaal' && !alleenLezen }" v-html="laagSvg" />
+        <g v-if="modus === 'afdek'">
+          <rect v-for="vlak in afdekkingen" :key="vlak.id" :data-afdekking-id="vlak.id"
+            :x="vlak.x" :y="vlak.y" :width="vlak.breedte" :height="vlak.hoogte"
+            fill="transparent" vector-effect="non-scaling-stroke" :stroke-width="gekozenAfdekking === vlak.id ? 3 : 1"
+            stroke-dasharray="4 3" style="stroke: var(--ui-primary)" />
+          <circle v-if="afdekStart" :cx="afdekStart.x" :cy="afdekStart.y" :r="symbool / 10" class="pointer-events-none" style="fill: var(--ui-primary)" />
+        </g>
         <g class="pointer-events-none">
           <g v-if="modus === 'meet'" data-testid="plan-toetscursor" :transform="`translate(${cursor.x},${cursor.y})`" fill="none" style="stroke: var(--ui-primary)" stroke-width="2">
             <circle :r="symbool / 2" vector-effect="non-scaling-stroke" />

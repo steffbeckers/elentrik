@@ -56,6 +56,28 @@ describe("tabblad", () => {
 });
 
 describe("pagina's", () => {
+  test("afdekking toevoegen en verwijderen zijn aparte undo-stappen en alleen-lezen doet niets", () => {
+    const { editor, situatie } = opzet();
+    const id = situatie.voegPlanPaginaToe("Bron", ACHTERGROND);
+    const voor = JSON.parse(JSON.stringify(doc(editor)));
+    const stappen = editor.terug.length;
+    const vlak = situatie.voegAfdekkingToe({ x: 10, y: 20, breedte: 30, hoogte: 40 });
+    expect(vlak).toBeTruthy();
+    expect(editor.terug).toHaveLength(stappen + 1);
+    expect(situatie.actievePagina?.afdekkingen).toHaveLength(1);
+    situatie.verwijderAfdekking(vlak!);
+    expect(situatie.actievePagina?.afdekkingen ?? []).toEqual([]);
+    editor.ongedaanMaken();
+    expect(situatie.actievePagina?.afdekkingen).toHaveLength(1);
+    editor.ongedaanMaken();
+    expect(doc(editor)).toEqual(voor);
+    editor.opnieuw();
+    editor.zetAlleenLezen(true);
+    situatie.verwijderAfdekking(vlak!);
+    expect(situatie.voegAfdekkingToe({ x: 1, y: 1, breedte: 2, hoogte: 2 })).toBeNull();
+    expect(situatie.actievePagina?.afdekkingen).toHaveLength(1);
+    expect(situatie.actievePaginaId).toBe(id);
+  });
   test("kwartslag draait de actieve selectie samen met behoud van posities en één undo-stap", () => {
     const { editor, situatie } = opzet();
     const eerste = situatie.voegPlanPaginaToe("Eerste", ACHTERGROND);

@@ -2,7 +2,8 @@ import type { Analyse } from "@elentrik/arei";
 import type { InstallatieDocument } from "@elentrik/model";
 import { tePlaatsen } from "../situatie/items";
 
-/** Completeness is independent of electrical validation and never certifies conformity. */
+/** Completeness includes all placeable components, including infrastructure. This is separate
+ * from electrical point findings: an unplaced meter is incomplete, not an electrical violation. */
 export function dossierStatus(doc: InstallatieDocument | null, analyse: Analyse | null) {
   const ontbreekt: ("klant" | "werfadres" | "context" | "schema")[] = [];
   if (!doc?.meta.klant.naam.trim()) ontbreekt.push("klant");

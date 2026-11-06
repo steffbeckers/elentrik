@@ -58,6 +58,11 @@ const varianten = NodeSchema.options.map((variant) => ({
 }));
 
 describe("VELDEN", () => {
+  test("een niet ingevulde puntreferentie toont automatische nummering, niet geen", () => {
+    const veld = VELDEN.toestel.find(v => v.sleutel === "puntReferentie")!;
+    expect(veldWeergaveWaarde({}, veld)).toBe("automatisch");
+    expect(veldWeergaveWaarde({ puntReferentie: "geen" }, veld)).toBe("geen");
+  });
   test("aftakkingslidmaatschap is structuur en verschijnt niet als wijzigbaar veld", () => {
     expect(VELDEN.schakelaar.some((v) => v.sleutel === "aftakking")).toBe(false);
     expect(VELDEN.lichtpunt.some((v) => v.sleutel === "aftakking")).toBe(false);

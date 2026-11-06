@@ -55,5 +55,6 @@ export const FR: Readonly<Record<string, string>> = {
   "waarde.ventilator": "ventilateur",
   "waarde.koelkast": "réfrigérateur",
   "waarde.diepvriezer": "congélateur",
+  "waarde.onbekendDrieblad": "Symbole source inconnu (trois pales)",
   "waarde.andere": "autre",
 };

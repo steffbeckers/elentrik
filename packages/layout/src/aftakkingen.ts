@@ -1,10 +1,11 @@
 import { isAftakkingNode, type InstallatieDocument, type NodeId } from "@elentrik/model";
 import { tekenAftakkingSymbool, type Symbool } from "@elentrik/symbols";
+import { technischeLabels, tekstBreedte } from "./labels";
 
 const TUSSENRUIMTE = 4;
 const START_X = 6;
 
-export type AftakkingRij = { ids: NodeId[]; symbolen: Symbool[]; midden: number };
+export type AftakkingRij = { ids: NodeId[]; symbolen: Symbool[]; midden: number; annotaties: string[] };
 export type AftakkingBlok = {
   rijen: AftakkingRij[];
   xVanSymbool: number[];
@@ -19,7 +20,7 @@ export function lijnAftakkingBlokkenUit(blokken: ReadonlyMap<NodeId, AftakkingBl
   for (const [id, blok] of blokken) {
     const kolom = kolomVan.get(id)!;
     const breedtes = breedtesPerKolom.get(kolom) ?? [];
-    for (const rij of blok.rijen) for (const [i, s] of rij.symbolen.entries()) breedtes[i] = Math.max(breedtes[i] ?? 0, s.maat.breedte);
+    for (const rij of blok.rijen) for (const [i, s] of rij.symbolen.entries()) breedtes[i] = Math.max(breedtes[i] ?? 0, s.maat.breedte, tekstBreedte(rij.annotaties[i] ?? "", 2.5));
     breedtesPerKolom.set(kolom, breedtes);
   }
   for (const [id, blok] of blokken) {
@@ -68,9 +69,10 @@ export function maakAftakkingBlokken(
         return s;
       });
       const rijHoogte = symbolen.reduce((max, s) => Math.max(max, s.maat.hoogte), 0);
+      const annotaties = ids.map(id => technischeLabels(doc.nodes[id]!).join(" · "));
       const midden = hoogte + TUSSENRUIMTE + rijHoogte / 2;
-      hoogte = midden + rijHoogte / 2;
-      rijen.push({ ids, symbolen, midden });
+      hoogte = midden + rijHoogte / 2 + (annotaties.some(Boolean) ? 4 : 0);
+      rijen.push({ ids, symbolen, midden, annotaties });
     }
     if (!rijen.length) continue;
     blokken.set(id, { rijen, xVanSymbool: [], breedte: 0, hoogte, knipGrenzen: [] });

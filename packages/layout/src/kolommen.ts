@@ -2,8 +2,9 @@ import { analyseer, type Analyse } from "@elentrik/arei";
 import type { InstallatieDocument, Node, NodeId } from "@elentrik/model";
 import { KOLOM_BREEDTE_MM, tekenSymbool, type Symbool } from "@elentrik/symbols";
 import { heeftKringEinde, heeftRailEinde } from "./aanknopingen";
+import { voegAardingsSectiesToe } from "./aarding";
 import { lijnAftakkingBlokkenUit, maakAftakkingBlokken } from "./aftakkingen";
-import { beveiligingLabel, leidingLabel, tekstBreedte, voedingTekst } from "./labels";
+import { beveiligingLabel, leidingLabel, technischeLabels, tekstBreedte, voedingTekst } from "./labels";
 import {
   KRING_EINDE_AFSTAND_MM,
   RAIL_AFSTAND_MM,
@@ -47,6 +48,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   const kinderenVan = (id: NodeId): NodeId[] => kinderenVanNode.get(id)!;
 
   const ouderVan = new Map<NodeId, NodeId>();
+  const aardtakken: NodeId[] = [];
   let preOrder: NodeId[] = [];
   const bezocht = new Set<NodeId>();
   const stapel: { id: NodeId; ouder: NodeId | null }[] = [{ id: doc.rootId, ouder: null }];
@@ -54,6 +56,10 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     const { id, ouder } = stapel.pop()!;
     if (bezocht.has(id) || !Object.hasOwn(doc.nodes, id)) continue;
     bezocht.add(id);
+    if (doc.nodes[id]!.type === "aardelektrode" || doc.nodes[id]!.type === "aardingsonderbreker") {
+      aardtakken.push(id);
+      continue;
+    }
     preOrder.push(id);
     kinderenVanNode.set(id, []);
     if (ouder !== null) {
@@ -102,7 +108,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     symbolen.set(id, symbool);
     const puntLabel = Object.hasOwn(analyse.puntLabels, id) ? analyse.puntLabels[id] : undefined;
     const regels = teksten(node, symbool, kringLabelVan.get(id), puntLabel);
-    if (node.type === "aansluiting") regels.push({ soort: "tekst", x: symbool.maat.breedte / 2 + 1, y: symbool.maat.hoogte / 2, tekst: voedingTekst(doc.voeding.stroomtype), grootte: 2.5, anker: "start", rol: "voeding" });
+    if (node.type === "aansluiting") regels.push({ soort: "tekst", x: symbool.maat.breedte / 2 + 1, y: symbool.maat.hoogte / 2, tekst: voedingTekst(doc.voeding.stroomtype, doc.voeding.frequentie_Hz), grootte: 2.5, anker: "start", rol: "voeding" });
     for (const regel of regels) regel.grootte = Math.max(regel.grootte, minimaleTekst_mm);
     tekstenVanNode.set(id, regels);
   }
@@ -127,7 +133,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     if (blok) {
       naarRechts = Math.max(naarRechts, blok.breedte);
       for (const rij of blok.rijen) {
-        const label = analyse.puntLabels[rij.ids[0]!];
+        const label = rij.ids.map(id => analyse.puntLabels[id]).find(Boolean);
         if (label) naarLinks = Math.max(naarLinks, tekstBreedte(label, 2.5) + 2);
       }
     }
@@ -187,12 +193,14 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
           const sx = x + blok.xVanSymbool[i]!;
           afstanden.push({ soort: "lijn", x1: vorigeX, y1: midden, x2: sx + s.maat.in.x, y2: midden, rol: "verbinding" });
           afstanden.push({ soort: "symbool", nodeId, x: sx, y: midden - s.maat.hoogte / 2, symbool: s });
+          const annotatie = rij.annotaties[i];
+          if (annotatie) afstanden.push({ soort: "tekst", x: sx, y: midden + s.maat.hoogte / 2 + 3.5, tekst: annotatie, grootte: 2.5, anker: "start", rol: "technisch" });
           kolomVan.set(nodeId, kolomVan.get(id)!);
           vorigeX = sx + s.maat.uit.x;
         }
         const laatste = rij.symbolen.at(-1)!;
         afstandAanknopingen.push({ soort: "aftakking-einde", nodeId: rij.ids.at(-1)!, x: x + blok.xVanSymbool[rij.ids.length - 1]! + laatste.maat.breedte + KRING_EINDE_AFSTAND_MM, d: midden });
-        const label = analyse.puntLabels[rij.ids[0]!];
+        const label = rij.ids.map(id => analyse.puntLabels[id]).find(Boolean);
         if (label) afstanden.push({ soort: "tekst", x: x - 2, y: midden + 0.9, tekst: label, grootte: 2.5, anker: "end", rol: "punt" });
       }
       verste = Math.max(verste, dBegin + blok.hoogte);
@@ -269,7 +277,7 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     if (kolom !== undefined) grenzen.add(kolomGrenzen[kolom]!);
   }
 
-  return {
+  const strook: Strook = {
     breedte,
     hoogte: hoogteStrook,
     elementen,
@@ -280,6 +288,8 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
     vakken,
     aanknopingen: afstandAanknopingen.map(({ soort, nodeId, x, d }): Aanknoping => ({ soort, nodeId, x, y: hoogteStrook - d })),
   };
+  voegAardingsSectiesToe(strook, doc, aardtakken, minimaleTekst_mm);
+  return strook;
 }
 
 /**
@@ -291,6 +301,8 @@ function teksten(node: Node, symbool: Symbool, kringLabel: string | undefined, p
   const rechts = breedte / 2 + 1;
   const midden = hoogte / 2;
   const resultaat: TekstElement[] = [];
+  const technisch = technischeLabels(node).join(" · ");
+  if (technisch) resultaat.push({ soort: "tekst", x: rechts, y: midden + 0.7, tekst: technisch, grootte: 2.5, anker: "start", rol: "technisch" });
   if (kringLabel !== undefined) {
     // Links van de lijn, tussen de rail en de beveiliging (aan de voedingskant), zodat de verbinding de letter niet doorsnijdt.
     resultaat.push({ soort: "tekst", x: -1, y: -1, tekst: kringLabel, grootte: 3, anker: "end", rol: "kring" });

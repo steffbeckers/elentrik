@@ -1,22 +1,27 @@
 // Pure afleiding van het situatieschema uit het document; expliciete imports (ruling E1).
 import type { Analyse } from "@elentrik/arei";
-import type { InstallatieDocument, NodeId } from "@elentrik/model";
+import { PLAATSBARE_TYPES, PUNT_TYPES, type InstallatieDocument, type NodeId } from "@elentrik/model";
 
 /** Het label van de groep met niet-geplaatste verdeelborden; de UI vertaalt deze sleutel. */
 export const GROEP_VERDEELBORDEN = "Verdeelborden";
 /** Het label van de groep met punten zonder kring. */
 export const GROEP_ZONDER_KRING = "—";
+export const GROEP_INSTALLATIE = "Installatieonderdelen";
 
 export type TePlaatsenGroep = { kringLabel: string; nodeIds: NodeId[] };
 
-/** De verdeelborden van het document in pre-order. */
-function verdeelbordenInVolgorde(doc: InstallatieDocument): NodeId[] {
+/** Placeable infrastructure in pre-order; uses the same catalogue as the placement command. */
+function installatieInVolgorde(doc: InstallatieDocument): NodeId[] {
   const borden: NodeId[] = [];
   const stapel: NodeId[] = [doc.rootId];
+  const gezien = new Set<NodeId>();
   while (stapel.length > 0) {
-    const node = doc.nodes[stapel.pop()!];
+    const id = stapel.pop()!;
+    if (gezien.has(id) || !Object.hasOwn(doc.nodes, id)) continue;
+    gezien.add(id);
+    const node = doc.nodes[id];
     if (!node) continue;
-    if (node.type === "verdeelbord") borden.push(node.id);
+    if ((PLAATSBARE_TYPES as readonly string[]).includes(node.type) && !(PUNT_TYPES as readonly string[]).includes(node.type)) borden.push(node.id);
     for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push(node.kinderen[i]!);
   }
   return borden;
@@ -24,7 +29,8 @@ function verdeelbordenInVolgorde(doc: InstallatieDocument): NodeId[] {
 
 /**
  * Wat nog op een plan moet: de niet-geplaatste punten per kring (in volgorde van de kringen),
- * dan de punten zonder kring, dan de niet-geplaatste verdeelborden. Lege groepen vallen weg.
+ * dan de punten zonder kring, borden en overige plaatsbare installatieonderdelen.
+ * Infrastructuur is plaatsbaar zoals een bord; ze wordt daardoor geen verplicht elektrisch punt.
  */
 export function tePlaatsen(doc: InstallatieDocument, analyse: Analyse): TePlaatsenGroep[] {
   const nietGeplaatst = new Set(analyse.nietGeplaatst);
@@ -42,8 +48,11 @@ export function tePlaatsen(doc: InstallatieDocument, analyse: Analyse): TePlaats
   for (const pagina of doc.situatie.paginas) {
     for (const plaatsing of pagina.plaatsingen) geplaatst.add(plaatsing.nodeId);
   }
-  const borden = verdeelbordenInVolgorde(doc).filter((id) => !geplaatst.has(id));
+  const installatie = installatieInVolgorde(doc).filter((id) => !geplaatst.has(id));
+  const borden = installatie.filter(id => doc.nodes[id]!.type === "verdeelbord");
   if (borden.length > 0) groepen.push({ kringLabel: GROEP_VERDEELBORDEN, nodeIds: borden });
+  const andere = installatie.filter(id => doc.nodes[id]!.type !== "verdeelbord");
+  if (andere.length > 0) groepen.push({ kringLabel: GROEP_INSTALLATIE, nodeIds: andere });
 
   return groepen;
 }

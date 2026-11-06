@@ -13,6 +13,7 @@ export type ProjectFormulier = {
   naam: string;
   klantNaam: string;
   stroomtype: Stroomtype;
+  frequentie_Hz?: number | string;
   klant: AdresFormulier;
   werf: AdresFormulier;
   ean: string;
@@ -34,6 +35,7 @@ export type ProjectgegevensWijziging = {
   naam: string;
   klantNaam: string;
   stroomtype: Stroomtype;
+  frequentie_Hz?: number | null;
   klantAdres: Adres | null;
   /** Zonder ingevulde velden het lege adres, zoals een nieuw project het heeft: het oude werfadres wordt gewist. */
   werfadres: Adres;
@@ -48,6 +50,7 @@ export function formulierUitProject(naam: string, doc: InstallatieDocument): Pro
     naam,
     klantNaam: doc.meta.klant.naam,
     stroomtype: doc.voeding.stroomtype,
+    frequentie_Hz: doc.voeding.frequentie_Hz ?? "",
     klant: adresFormulierUitAdres(doc.meta.klant.adres),
     werf: adresFormulierUitAdres(doc.meta.werfadres),
     ean: doc.meta.ean ?? "",
@@ -82,6 +85,7 @@ export function gegevensUitFormulier(f: ProjectFormulier): ProjectgegevensWijzig
     naam: f.naam.trim(),
     klantNaam: f.klantNaam.trim(),
     stroomtype: f.stroomtype,
+    frequentie_Hz: f.frequentie_Hz === "" || f.frequentie_Hz == null ? null : Number(f.frequentie_Hz),
     klantAdres: adresUitFormulier(f.klant) ?? null,
     werfadres: volledigAdresUitFormulier(f.werf),
     ean: f.ean.trim(),

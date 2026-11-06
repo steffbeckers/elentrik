@@ -3,7 +3,7 @@ import { cirkel, lijn, rechthoek } from "./svg";
 import type { Symbool } from "./types";
 
 /** Placement marks follow FOD Economie table 2.23 C, rotated with the vertical conductor.
- * Reference inspected: Symboles-nl.pdf pp.40-41 (2023); current 2026 book is CAPTCHA-protected.
+ * Reference inspected 6 November 2026: FOD Economie, AREI Boek 1 version 07, pp.55-56 (effective 1 November 2026).
  * Missing installation stays unmarked. Independent wall and conduit marks can be combined.
  */
 export function tekenLeiding(node: NodeVan<"leiding">): Symbool {

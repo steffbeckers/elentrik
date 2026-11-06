@@ -1,6 +1,10 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { useVersieStore, ZONDER_WAARSCHUWING_MS } from "../app/stores/versie";
+import { CLIENT_COMPATIBILITEIT } from "../shared/clientversie";
+
+const EIGEN_VERSIE = String(CLIENT_COMPATIBILITEIT);
+const ANDERE_VERSIE = String(CLIENT_COMPATIBILITEIT + 1);
 
 beforeEach(() => {
   setActivePinia(createPinia());
@@ -21,7 +25,7 @@ describe("toonMelding", () => {
   test("een vereiste update geeft geen toast: het modale venster neemt het over", () => {
     const store = useVersieStore();
     store.meldBuild("b");
-    store.meldServerversie("999");
+    store.meldServerversie(ANDERE_VERSIE);
     expect(store.vereist).toBe(true);
     expect(store.toonMelding).toBe(false);
   });
@@ -30,11 +34,11 @@ describe("toonMelding", () => {
 describe("meldServerversie", () => {
   test("een ander getal zet vereist; het gaat nooit terug", () => {
     const store = useVersieStore();
-    store.meldServerversie("1");
+    store.meldServerversie(EIGEN_VERSIE);
     expect(store.vereist).toBe(false);
-    store.meldServerversie("2");
+    store.meldServerversie(ANDERE_VERSIE);
     expect(store.vereist).toBe(true);
-    store.meldServerversie("1");
+    store.meldServerversie(EIGEN_VERSIE);
     store.meldServerversie(null);
     expect(store.vereist).toBe(true);
   });

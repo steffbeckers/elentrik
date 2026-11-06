@@ -1,6 +1,7 @@
 // Het compatibiliteitsgetal aan de kant van de browser: elk eigen /api-verzoek krijgt
-// `X-Elentrik-Client`, en elk antwoord (ook een fout) geeft `X-Elentrik-Client-Minimum` aan de
-// versie-store. Een 426 NIEUWE_VERSIE_VEREIST zet daar `vereist`. De store is de enige plek met de
+// `X-Elentrik-Client`, en actuele API-antwoorden geven `X-Elentrik-Client-Minimum` aan de
+// versie-store. Cachebare iconen/bestanden bepalen de versie niet. Een 426 NIEUWE_VERSIE_VEREIST
+// zet daar wel altijd `vereist`. De store is de enige plek met de
 // toestand; hier staat er niets. De omhulling zelf staat in app/versie/fetch.ts, op `fetch` (niet op
 // `$fetch`: zie daar waarom).
 //

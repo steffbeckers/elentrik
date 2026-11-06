@@ -67,6 +67,8 @@ describe("constanten", () => {
       "automaat",
       "zekering",
       "leiding",
+      "aardingsonderbreker",
+      "aardelektrode",
     ]);
     expect(TOEGELATEN_KINDEREN.automaat).toEqual(["leiding", "verdeelbord", "differentieel"]);
     expect(TOEGELATEN_KINDEREN.zekering).toEqual(["leiding", "verdeelbord", "differentieel"]);

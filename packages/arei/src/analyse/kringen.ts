@@ -149,8 +149,10 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
       ketens[id] = { leidingId, beveiligingId, differentielen: alsArray(differentielen) };
       if (kring) {
         kring.kring.puntIds.push(id);
-        puntLabels[id] = aftakkingLabel ?? `${kring.kring.label}${kring.volgendPunt++}`;
-        if (isAftakkingNode(node)) aftakkingLabel = puntLabels[id];
+        // De interne puntgroep blijft bestaan als één lid zijn zichtbare referentie onderdrukt.
+        if (isAftakkingNode(node)) aftakkingLabel ??= `${kring.kring.label}${kring.volgendPunt++}`;
+        if (node.type !== "toestel" || node.puntReferentie !== "geen")
+          puntLabels[id] = aftakkingLabel ?? `${kring.kring.label}${kring.volgendPunt++}`;
         if (node.ruimte !== undefined && !kring.ruimtes.has(node.ruimte)) {
           kring.ruimtes.add(node.ruimte);
           kring.kring.ruimtes.push(node.ruimte);

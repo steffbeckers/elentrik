@@ -86,6 +86,8 @@ export const NL: Teksten = {
   },
   differentieel: { eenheid: "mA", type: "type" },
   types: {
+    aardelektrode: "Aardelektrode",
+    aardingsonderbreker: "Aardingsonderbreker",
     aansluiting: "Aansluiting",
     teller: "Teller",
     differentieel: "Differentieel",
@@ -99,6 +101,7 @@ export const NL: Teksten = {
     toestel: "Toestel",
   },
   toestelsoorten: {
+    onbekendDrieblad: "Onbekend bronsymbool (drieblad)",
     wasmachine: "wasmachine",
     droogkast: "droogkast",
     vaatwasser: "vaatwasser",

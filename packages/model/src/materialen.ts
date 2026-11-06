@@ -11,7 +11,7 @@ export type MateriaalRij = {
 };
 
 const GEEN_MATERIAALEIGENSCHAP = new Set([
-  "id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam", "naam", "aantal", "lengte_m", "plaatsing", "aanleg", "kringCode", "referentie", "metBeschermingsgeleider",
+  "id", "type", "parentId", "kinderen", "aftakking", "label", "ruimte", "ruimteNaam", "naam", "aantal", "aantalPanelen", "puntReferentie", "lengte_m", "plaatsing", "aanleg", "kringCode", "referentie", "metBeschermingsgeleider",
 ]);
 
 /** Afgeleid van de onderdelen, nooit van plaatsingen of afnemers: elke leiding telt één keer. */
@@ -44,7 +44,7 @@ export function materiaallijst(doc: InstallatieDocument): MateriaalRij[] {
       if (node.lengte_m === undefined) rij.ontbrekendeLengtes++;
       else rij.hoeveelheid += node.lengte_m * (draad ? node.aantalGeleiders : 1);
     } else {
-      rij.hoeveelheid += node.type === "contactdoos" || node.type === "lichtpunt" ? node.aantal : 1;
+      rij.hoeveelheid += node.type === "contactdoos" || node.type === "lichtpunt" ? node.aantal : node.type === "toestel" && node.soort === "pvPaneel" ? node.aantalPanelen ?? 1 : 1;
     }
   }
   return [...groepen.values()];

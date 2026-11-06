@@ -1,6 +1,6 @@
 import { PUNT_TYPES, type Node } from "@elentrik/model";
 
-const KRING_EINDE_TYPES: ReadonlySet<string> = new Set<string>([...PUNT_TYPES, "leiding", "automaat", "zekering"]);
+const KRING_EINDE_TYPES: ReadonlySet<string> = new Set<string>([...PUNT_TYPES, "leiding", "automaat", "zekering", "aardingsonderbreker"]);
 
 /** Een node zonder kinderen krijgt een `kring-einde` als hij een punt, een leiding, een automaat of een zekering is. */
 export function heeftKringEinde(node: Node, aantalKinderen: number): boolean {

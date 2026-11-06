@@ -77,6 +77,9 @@ function bewaar(): void {
           <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
             <USelect v-model="formulier.stroomtype" :items="stroomtypes" class="w-full" />
           </UFormField>
+          <UFormField name="frequentie_Hz" :label="$t('editor.projectgegevens.frequentie')">
+            <UInput v-model="formulier.frequentie_Hz" type="number" min="0.01" step="any" class="w-full" />
+          </UFormField>
           <UFormField name="installatieContext" :label="$t('editor.projectgegevens.context.label')" :help="$t('editor.projectgegevens.context.hulp')">
             <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext"
               :items="['onbekend', 'nieuw', 'bestaand'].map(value => ({ value, label: $t(`editor.projectgegevens.context.${value}`) }))" />

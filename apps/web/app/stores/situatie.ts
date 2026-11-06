@@ -2,6 +2,8 @@
 // rechtstreeks (ruling E1).
 import {
   hernoemPagina,
+  voegAfdekkingToe as voegAfdekkingToeInDoc,
+  verwijderAfdekking as verwijderAfdekkingInDoc,
   plaats,
   verplaatsPagina as verplaatsPaginaInDoc,
   verwijderPagina as verwijderPaginaUitDoc,
@@ -83,6 +85,20 @@ export const useSituatieStore = defineStore("situatie", () => {
   function vervangAchtergrond(paginaId: string, achtergrond: Achtergrond): void {
     if (editor.alleenLezen) return;
     editor.pasToe(zetAchtergrond(vereisDocument(), paginaId, achtergrond));
+  }
+
+  function voegAfdekkingToe(rechthoek: { x: number; y: number; breedte: number; hoogte: number }): string | null {
+    const pagina = actievePagina.value;
+    if (editor.alleenLezen || !pagina || pagina.referentie || pagina.tekening) return null;
+    const r = voegAfdekkingToeInDoc(vereisDocument(), pagina.id, rechthoek);
+    editor.pasToe(r);
+    return r.id;
+  }
+
+  function verwijderAfdekking(id: string): void {
+    const pagina = actievePagina.value;
+    if (editor.alleenLezen || !pagina || pagina.referentie) return;
+    editor.pasToe(verwijderAfdekkingInDoc(vereisDocument(), pagina.id, id));
   }
 
   function bewaarTekening(titel: string, achtergrond: Achtergrond, tekening: PlanTekening, paginaId?: string): string {
@@ -227,6 +243,8 @@ export const useSituatieStore = defineStore("situatie", () => {
     voegPlanPaginaToe,
     voegPlanPaginasToe,
     vervangAchtergrond,
+    voegAfdekkingToe,
+    verwijderAfdekking,
     bewaarTekening,
     hernoem,
     verwijderPagina,

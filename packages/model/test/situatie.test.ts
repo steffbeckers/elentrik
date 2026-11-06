@@ -123,6 +123,9 @@ describe("PLAATSBARE_TYPES", () => {
       "schakelaar",
       "toestel",
       "verdeelbord",
+      "teller",
+      "aardelektrode",
+      "aardingsonderbreker",
     ]);
   });
 });
