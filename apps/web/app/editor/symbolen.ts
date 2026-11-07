@@ -78,6 +78,8 @@ export const KAARTEN: readonly Kaart[] = [
   }),
   kaart("toestel", "toestel", "punten", "G", { velden: [{ sleutel: "soort", waarden: ToestelsoortSchema.options }] }),
   kaart("leiding", "leiding", "leidingenEnBorden", "C"),
+  kaart("aardelektrode", "aardelektrode", "leidingenEnBorden", "D"),
+  kaart("aardingsonderbreker", "aardingsonderbreker", "leidingenEnBorden", "B"),
   kaart("verdeelbord", "onderbord", "leidingenEnBorden", "B"),
   kaart("differentieel", "differentieel", "beveiliging", "D"),
   kaart("zekering", "zekering", "beveiliging", "D"),

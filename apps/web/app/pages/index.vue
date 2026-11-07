@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
-import type { ProjectSamenvatting } from "~/composables/useProjectenApi";
+import type { ProjectInLijst } from "~/composables/useProjectenApi";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import { vertaalFout } from "~/fouten";
 import { useSessieStore } from "~/stores/sessie";
 import { filterProjecten } from "~/utils/projectenZoeken";
+import { LOCALES } from "../../shared/taal";
 
 const { t } = useI18n();
 const api = useProjectenApi();
@@ -21,7 +22,7 @@ const kanSchrijven = computed(() => sessie.toegang.schrijven);
 // actieve organisatie (de organisatiekeuze) laadt de lijst van die organisatie.
 const { data: projecten, status, error, refresh } = useAsyncData("projecten", () => api.lijst(), {
   server: false,
-  default: () => [] as ProjectSamenvatting[],
+  default: () => [] as ProjectInLijst[],
   watch: [() => sessie.actieveOrganisatieId],
 });
 
@@ -46,15 +47,24 @@ onMounted(() => {
 });
 onBeforeUnmount(() => clearInterval(timer));
 
-const kolommen = computed<TableColumn<ProjectSamenvatting>[]>(() => [
-  { accessorKey: "naam", header: t("projecten.kolommen.naam") },
-  { accessorKey: "klantnaam", header: t("projecten.kolommen.klant") },
-  { accessorKey: "gewijzigd", header: t("projecten.kolommen.gewijzigd") },
-  { id: "acties" },
+// Echt leeg: geladen, zonder fout en zonder projecten. Dan staat "Nieuw project" bij de stappen.
+const leeg = computed(() => status.value === "success" && projecten.value.length === 0);
+const leegStappen = ["klant", "schema", "plan", "export"] as const;
+
+const exportDatum = computed(() => new Intl.DateTimeFormat(LOCALES[taal.value], { dateStyle: "short" }));
+
+const kolommen = computed<TableColumn<ProjectInLijst>[]>(() => [
+  { accessorKey: "naam", header: t("projecten.kolommen.naam"), meta: { class: { td: "whitespace-normal break-words" } } },
+  { accessorKey: "klantnaam", header: t("projecten.kolommen.klant"), meta: { class: { td: "whitespace-normal break-words" } } },
+  // Onder `sm` verdwijnen Werf en Status, zodat de rijacties op een telefoon in beeld blijven.
+  { accessorKey: "werfGemeente", header: t("projecten.kolommen.werf"), meta: { class: { th: "hidden sm:table-cell", td: "hidden sm:table-cell" } } },
+  { id: "status", header: t("projecten.kolommen.status"), meta: { class: { th: "hidden sm:table-cell", td: "hidden sm:table-cell" } } },
+  { accessorKey: "gewijzigd", header: t("projecten.kolommen.gewijzigd"), meta: { class: { td: "whitespace-normal" } } },
+  { id: "acties", meta: { class: { th: "px-2 sm:px-4", td: "px-2 sm:px-4" } } },
 ]);
 
 const nieuwOpen = ref(false);
-const teVerwijderen = ref<ProjectSamenvatting | null>(null);
+const teVerwijderen = ref<ProjectInLijst | null>(null);
 const verwijderOpen = computed({
   get: () => teVerwijderen.value !== null,
   set: (open) => {
@@ -79,7 +89,7 @@ async function voerActieUit(actie: () => Promise<unknown>): Promise<boolean> {
 const dupliceerBezig = ref<string | null>(null);
 const verwijderBezig = ref(false);
 
-async function dupliceer(project: ProjectSamenvatting) {
+async function dupliceer(project: ProjectInLijst) {
   if (dupliceerBezig.value !== null) return;
   dupliceerBezig.value = project.id;
   try {
@@ -112,11 +122,12 @@ async function bevestigVerwijderen() {
       <div class="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <h1 class="text-2xl font-semibold">{{ $t("projecten.titel") }}</h1>
         <div class="flex flex-wrap gap-2">
-          <UButton v-if="kanSchrijven" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
+          <UButton v-if="kanSchrijven && !leeg" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
         </div>
       </div>
 
       <UInput
+        v-if="!leeg"
         ref="zoekveld"
         v-model="zoek"
         type="search"
@@ -148,13 +159,23 @@ async function bevestigVerwijderen() {
         :description="$t('projecten.laden.fout.beschrijving')"
         :actions="[{ label: $t('projecten.laden.fout.opnieuw'), color: 'error', onClick: () => refresh() }]"
       />
+      <!-- Nog geen projecten: de stappen van de workflow met "Nieuw project" als primaire actie, geen lege tabel. -->
+      <section v-else-if="leeg" class="flex max-w-xl flex-col items-start gap-4 py-4" data-testid="projecten-leeg">
+        <h2 class="font-medium text-highlighted">{{ $t("projecten.leeg") }}</h2>
+        <ol class="list-decimal space-y-1 ps-5 text-muted">
+          <li v-for="stap in leegStappen" :key="stap">{{ $t(`projecten.leegStappen.${stap}`) }}</li>
+        </ol>
+        <UButton v-if="kanSchrijven" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
+      </section>
       <UTable
         v-else
         :data="gefilterdeProjecten"
         :columns="kolommen"
         :loading="laadt"
-        :empty="zoek.trim() && projecten.length ? $t('projecten.zoeken.geenResultaten') : $t('projecten.leeg')"
       >
+        <template #empty>
+          <span v-if="zoek.trim()">{{ $t("projecten.zoeken.geenResultaten") }}</span>
+        </template>
         <template #naam-cell="{ row }">
           <ULink :to="`/projecten/${row.original.id}`" class="font-medium text-primary underline-offset-4 hover:underline">
             {{ row.original.naam }}
@@ -164,7 +185,19 @@ async function bevestigVerwijderen() {
           <span class="sr-only">{{ $t("projecten.kolommen.acties") }}</span>
         </template>
         <template #gewijzigd-cell="{ row }">
-          {{ relatieveTijd(row.original.gewijzigd, taal, nu) }}
+          {{ relatieveTijd(row.original.gewijzigd, taal, nu, $t("projecten.zojuist")) }}
+        </template>
+        <template #werfGemeente-cell="{ row }">
+          {{ row.original.werfGemeente ?? "" }}
+        </template>
+        <template #status-cell="{ row }">
+          <span v-if="row.original.laatsteExport" class="inline-flex items-center gap-2 whitespace-nowrap">
+            <UBadge color="success" variant="subtle" :label="$t('projecten.status.geexporteerd')" />
+            <time :datetime="row.original.laatsteExport" class="text-muted tabular-nums">
+              {{ exportDatum.format(new Date(row.original.laatsteExport)) }}
+            </time>
+          </span>
+          <UBadge v-else color="neutral" variant="subtle" :label="$t('projecten.status.nietGeexporteerd')" />
         </template>
         <template #acties-cell="{ row }">
           <div class="flex justify-end gap-1">
@@ -199,7 +232,7 @@ async function bevestigVerwijderen() {
         </template>
       </UTable>
 
-      <NieuwProjectDialoog v-model:open="nieuwOpen" @aangemaakt="() => refresh()" />
+      <NieuwProjectDialoog v-model:open="nieuwOpen" />
 
       <UModal v-model:open="verwijderOpen" :title="$t('projecten.verwijderen.titel')">
         <template #body>

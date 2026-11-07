@@ -1,4 +1,11 @@
 import { describe, expect, test } from "vitest";
+import { voedingTekst } from "../src/labels";
+
+test("voeding bewaart de drie exacte aansluitconfiguraties", () => {
+  expect(voedingTekst("2x230V")).toBe("2 × 230 V ~");
+  expect(voedingTekst("3x230V")).toBe("3 × 230 V ~");
+  expect(voedingTekst("3N400V")).toBe("3N × 400 V ~");
+});
 import { installatie } from "@elentrik/arei/testing";
 import { voegToe, type NodeId, type NodeVan } from "@elentrik/model";
 import {

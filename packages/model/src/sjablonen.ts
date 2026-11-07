@@ -8,14 +8,20 @@ import {
   type NodeInvoer,
   type OperatieResultaat,
 } from "./operaties";
-import { NodeSchema, type InstallatieDocument, type Node, type NodeId } from "./schema";
+import { NodeSchema, type InstallatieDocument, type Node, type NodeId, type Ruimte } from "./schema";
 import { TOEGELATEN_KINDEREN } from "./structuur";
 import { magAftakkingKind } from "./aftakkingen";
 
 /** Een node van een sjabloon; `kinderen` zijn de geneste sjabloonnodes (geen id's). */
 export type SjabloonNode = NodeInvoer & { kinderen?: SjabloonNode[] };
 
-export type Sjabloon = { id: string; naam: string; boom: SjabloonNode };
+export type Sjabloon = {
+  id: string;
+  naam: string;
+  boom: SjabloonNode;
+  /** De soort ruimte die het sjabloon voorstelt voor zijn punten (de badkamer); de gebruiker kan ze wijzigen. */
+  ruimte?: Ruimte;
+};
 
 type Werk = {
   invoer: SjabloonNode;

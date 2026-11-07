@@ -6,6 +6,8 @@ import type { Sjabloon, SjabloonNode } from "./sjablonen";
 
 /** De onderdelen in het paneel "Onderdelen" van de editor. */
 export type Onderdeel =
+  | "aardelektrode"
+  | "aardingsonderbreker"
   | "contactdoos"
   | "lichtpunt"
   | "schakelaar"
@@ -17,6 +19,8 @@ export type Onderdeel =
 
 /** Standaardwaarden van een nieuw onderdeel (spec §4.3). Een onderbord is een verdeelbord zonder naam. */
 export const STANDAARD: { [O in Onderdeel]: NodeInvoer } = {
+  aardelektrode: { type: "aardelektrode" },
+  aardingsonderbreker: { type: "aardingsonderbreker" },
   contactdoos: {
     type: "contactdoos",
     aantal: 1,
@@ -38,6 +42,20 @@ export const STANDAARD: { [O in Onderdeel]: NodeInvoer } = {
   zekering: { type: "zekering", nominaal_A: 16 },
   onderbord: { type: "verdeelbord" },
 };
+
+/**
+ * De doorsnede (mm²) van de leiding van een nieuwe kring, bepaald door het eerste
+ * onderdeel: verlichting (lichtpunt, schakelaar) 1,5 mm², al het andere 2,5 mm².
+ * Eén bron voor `voegOnderdeelToe` en de sjablonen.
+ */
+export function doorsnedeVoorKring(eerste: Onderdeel): number {
+  return eerste === "lichtpunt" || eerste === "schakelaar" ? 1.5 : 2.5;
+}
+
+/** De leiding van een nieuwe kring die met dit onderdeel begint. */
+export function kringLeiding(eerste: Onderdeel): NodeInvoer {
+  return { type: "leiding", kabeltype: "XVB", doorsnede_mm2: doorsnedeVoorKring(eerste), aantalGeleiders: 3 };
+}
 
 /** De instelling die een nieuw punt meekrijgt, bovenop `STANDAARD` (spec §4.3). */
 export type Voorinstelling = {
@@ -131,7 +149,7 @@ function kookplaat(polen: 2 | 4, aantalGeleiders: 3 | 5): Sjabloon {
     boom: keten(
       { type: "automaat", nominaal_A: 32, curve: "B", polen },
       leiding(6, aantalGeleiders),
-      { type: "toestel", soort: "kookplaat", ruimte: "keuken" },
+      { type: "toestel", soort: "kookplaat" },
     ),
   };
 }
@@ -163,7 +181,7 @@ export const SJABLONEN: readonly Sjabloon[] = [
     boom: keten(
       STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 16, curve: "B", polen: 2 },
-      leiding(1.5),
+      leiding(doorsnedeVoorKring("schakelaar")),
       STANDAARD.schakelaar,
       lichtpunt(),
       lichtpunt(),
@@ -182,18 +200,19 @@ export const SJABLONEN: readonly Sjabloon[] = [
       STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 20, curve: "B", polen: 2 },
       leiding(2.5),
-      { type: "toestel", soort: "wasmachine", ruimte: "wasplaats" },
+      { type: "toestel", soort: "wasmachine" },
     ),
   },
   {
     id: "badkamer",
     naam: "Badkamer",
+    ruimte: "badkamer",
     boom: keten(
       STANDAARD.differentieel,
       { type: "automaat", nominaal_A: 16, curve: "B", polen: 2 },
       leiding(2.5),
-      contactdoos("badkamer"),
-      contactdoos("badkamer"),
+      contactdoos(),
+      contactdoos(),
     ),
   },
 ];

@@ -149,3 +149,12 @@ test("de laatste eigenaar kan zichzelf niet degraderen, en de pagina zegt waarom
   expect(leden.find((l) => l.email === gebruiker().email)?.rol).toBe("eigenaar");
   await expect(page.getByTestId("organisatie-uitnodigen-email")).toBeVisible();
 });
+
+test("Mijn organisatie zegt waar de naam en het logo op de dossiers staan, met een link", async ({ page }) => {
+  await ga(page, "/organisatie");
+  const hulp = page.getByTestId("organisatie-dossier-hulp");
+  await expect(hulp).toHaveText("De naam en het logo op je dossiers stel je in bij Bedrijfsgegevens.");
+  await hulp.getByRole("link", { name: "Bedrijfsgegevens" }).click();
+  await expect(page).toHaveURL(/\/instellingen$/);
+  await expect(page.getByText("Het logo wordt meteen bewaard.", { exact: false })).toBeVisible();
+});

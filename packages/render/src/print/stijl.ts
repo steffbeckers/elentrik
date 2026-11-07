@@ -62,6 +62,8 @@ export function stijl(breedte: number, hoogte: number, metWatermerk = false): st
     ".bijlage { position: absolute; }",
     `.bijlage .motivatie, .bijlage .door { margin-left: ${getal(INSPRINGING_MM)}mm; }`,
     `.bijlage .kop { margin-top: ${getal(KOP_MARGE_MM)}mm; }`,
+    ".bijlage .meetrij { display: flex; }",
+    ".bijlage .meetrij > div { flex: none; overflow: hidden; }",
     ...(metWatermerk ? watermerkStijl(breedte, hoogte) : []),
   ].join("\n");
 }

@@ -17,7 +17,7 @@ export function maakRegelDoorsnedeBeveiliging(p: Arei2020Parameters): Regel {
         const doorsnede = kring.minDoorsnede_mm2;
         if (doorsnede === null) continue;
         const beveiliging = doc.nodes[kring.beveiligingId];
-        if (beveiliging === undefined || !("nominaal_A" in beveiliging)) continue;
+        if (beveiliging === undefined || (beveiliging.type !== "automaat" && beveiliging.type !== "zekering")) continue;
 
         const rij = p.maxStroomPerDoorsnede.find(([mm2]) => mm2 === doorsnede);
         if (rij === undefined) {

@@ -2,14 +2,18 @@
 // pagina is een <section> met een vaste maat in mm, met een cartouche onderaan.
 import { formatteerBericht, REGELSETS, type Analyse, type Bevinding, type Ernst } from "@elentrik/arei";
 import { bruikbaar, opmaak, papierMaat, STANDAARD_PAPIER_A4, type Papier } from "@elentrik/layout";
-import type { Adres, InstallatieDocument, NodeId, NodeType, Partij, SituatiePagina } from "@elentrik/model";
+import type { Adres, InstallatieDocument, NodeId, NodeType, NodeVan, Partij, SituatiePagina } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import { kringenlijst, type KringenlijstRij } from "../kringenlijst";
 import { schemaPaginaSvg } from "../schema-svg";
-import { nodeLabel, situatieItems, symboolGrootte } from "../situatie-items";
+import { situatieItems, symboolGrootte } from "../situatie-items";
 import { situatieLaagSvg } from "../situatie-svg";
+import { situatieAfdekkingenSvg } from "../situatie-afdekkingen";
+import { bordVanNode, differentieelNaam, differentieelPlaatsen } from "../differentieelnaam";
+import { dossierStatus, onderwerpLabel as onderwerpLabelGedeeld, ongeplaatstNaam } from "../dossierstatus";
 import { LOCALES, TEKSTEN, type Taal, type Teksten } from "../teksten/index";
-import { cartouche, cartoucheHoogte, formatteerDatum } from "./cartouche";
+import { leesbareSchemaOpmaak } from "./leesbaar";
+import { cartouche, cartoucheHoogte, formatteerDatum, formatteerGetal, meetwaardeTekst, metingVelden } from "./cartouche";
 import { CEL_MARGE_MM, INSPRINGING_MM, KOP_MARGE_MM, KRINGENLIJST_RIJ_MM, RAND_MM, REGELHOOGTE, stijl } from "./stijl";
 import { breekRegels, tekstRegel, vloer } from "./tekst";
 
@@ -38,6 +42,7 @@ export type PrintResultaat = {
 /** Tekstgrootte in de kringenlijst en de bijlage, en van een kop in de bijlage, in mm. */
 const TABEL_TEKST_MM = 3;
 const BIJLAGE_TEKST_MM = 3;
+
 /**
  * De bijlage breekt haar regels zelf af; een regel die toch te breed is, zou de browser stil afknippen.
  * Daarom rekent ze met een voorzichtige tekenbreedte: 0,6 em × 1,6 = 0,96 em per teken, breder dan de
@@ -62,8 +67,7 @@ const KOLOMMEN: readonly { sleutel: keyof Teksten["kolommen"] & keyof Kringenlij
 ];
 
 const ERNSTEN: readonly Ernst[] = ["fout", "waarschuwing", "info"];
-
-type Pagina = { titel: string; inhoud: string };
+type Pagina = { titel: string; inhoud: string; papier?: Papier };
 
 type Context = {
   doc: InstallatieDocument;
@@ -88,33 +92,57 @@ function mm(waarde: number): string {
 }
 
 function eendraadschemaPaginas(c: Context): Pagina[] {
-  const schema = opmaak(c.doc, c.papier, c.analyse);
+  const schema = leesbareSchemaOpmaak(c.doc, c.papier, c.analyse);
   return schema.paginas.map((_, i) => ({ titel: c.teksten.paginatitels.eendraadschema, inhoud: schemaPaginaSvg(schema, i) }));
 }
-
-/** Plan en symboollaag in één kader dat met behoud van verhouding in de bruikbare ruimte past, gecentreerd. */
-function situatieInhoud(c: Context, pagina: SituatiePagina, bestand: string): string {
+/** The exported raster is exactly the prepared editor crop. A calibrated print is tiled, never silently resized. */
+function situatiePaginas(c: Context, pagina: SituatiePagina, bestand: string): Pagina[] {
   const achtergrond = pagina.achtergrond!;
   const { breedte_px, hoogte_px } = achtergrond;
+  const gekalibreerd = pagina.afdruk?.schaalmodus === "gekalibreerd";
   const mmPerPx = achtergrond.schaal?.mmPerPx;
-  const gekalibreerd = mmPerPx !== undefined && Number.isFinite(mmPerPx) && mmPerPx > 0;
-  const bijschriftHoogte = gekalibreerd ? 6 : 0;
-  const planHoogte = c.ruimte.hoogte - bijschriftHoogte;
-  const schaal = Math.min(c.ruimte.breedte / breedte_px, planHoogte / hoogte_px);
+  if (gekalibreerd && !(mmPerPx && Number.isFinite(mmPerPx) && mmPerPx > 0)) throw new RangeError("Kalibreer eerst de definitieve uitsnede");
+  const planHoogte = c.ruimte.hoogte - 6;
+  const schaal = gekalibreerd ? mmPerPx! / (pagina.afdruk?.schaalNoemer ?? 100) : Math.min(c.ruimte.breedte / breedte_px, planHoogte / hoogte_px);
   const breedte = breedte_px * schaal;
   const hoogte = hoogte_px * schaal;
-  const links = c.papier.marge_mm + (c.ruimte.breedte - breedte) / 2;
-  const boven = c.papier.marge_mm + bijschriftHoogte + (planHoogte - hoogte) / 2;
+  const kolommen = Math.max(1, Math.ceil((breedte - 1e-7) / c.ruimte.breedte));
+  const rijen = Math.max(1, Math.ceil((hoogte - 1e-7) / planHoogte));
+  const grootte = symboolGrootte(achtergrond);
+  const items = situatieItems(c.doc, c.analyse, pagina.id, c.terugval).map(item => {
+    const node = c.doc.nodes[item.nodeId];
+    return { ...item,
+      labelGrootte_px: Math.max(item.labelGrootte_px ?? (item.symboolGrootte_px ?? grootte) * .45, 2.5 / schaal),
+      // The meter contains native 2.5mm kWh text. Keep its whole glyph at least native size on
+      // paper, centered at the saved placement; ordinary editor symbols keep their original size.
+      ...(node?.type === "teller" ? { symboolGrootte_px: Math.max(item.symboolGrootte_px ?? grootte, Math.max(item.symbool.maat.breedte, item.symbool.maat.hoogte) / schaal), labelBuitenSymbool: true,
+        // On a situation plan the short external stubs must not become accidental wiring to a
+        // nearby board. Clip to the native meter frame, retaining its complete 0.35mm stroke.
+        symbool: { ...item.symbool, svg: `<svg x="-0.2" y="1.3" width="10.4" height="9.4" viewBox="-0.2 1.3 10.4 9.4" overflow="hidden">${item.symbool.svg}</svg>` },
+      } : {}),
+      ...(node && (node.type === "contactdoos" || node.type === "lichtpunt") && node.aantal > 1 ? { aantalLabel: `×${node.aantal}` } : {}),
+    };
+  });
+  const laag = situatieAfdekkingenSvg(pagina.afdekkingen) + situatieLaagSvg(items, grootte);
+  const melding = { nl: "Passend op papier", fr: "Adapté au papier", en: "Fit to paper" }[c.taal];
   const bijschrift = gekalibreerd
-    ? `<div class="schaal" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)}">${escapeXml(c.teksten.schaalAfdruk)}: 1:${new Intl.NumberFormat(LOCALES[c.taal], { maximumFractionDigits: 1 }).format(mmPerPx / schaal)}</div>`
-    : "";
-  const laag = situatieLaagSvg(situatieItems(c.doc, c.analyse, pagina.id, c.terugval), symboolGrootte(achtergrond));
-  return (
-    bijschrift + `<div class="kader" style="left:${mm(links)};top:${mm(boven)};width:${mm(breedte)};height:${mm(hoogte)}">` +
-    `<img class="plan" src="${escapeXml(bestand)}" alt="">` +
-    `<svg class="laag" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${getal(breedte_px)} ${getal(hoogte_px)}" ` +
-    `preserveAspectRatio="none">${laag}</svg></div>`
-  );
+    ? `${c.teksten.schaalAfdruk}: 1:${new Intl.NumberFormat(LOCALES[c.taal], { maximumFractionDigits: 1 }).format(pagina.afdruk?.schaalNoemer ?? 100)}`
+    : `${melding}${mmPerPx ? ` — ${c.teksten.schaalAfdruk}: 1:${new Intl.NumberFormat(LOCALES[c.taal], { maximumFractionDigits: 1 }).format(mmPerPx / schaal)}` : ""}`;
+  const resultaat: Pagina[] = [];
+  for (let rij = 0; rij < rijen; rij++) for (let kolom = 0; kolom < kolommen; kolom++) {
+    const links = c.papier.marge_mm + (kolommen === 1 ? (c.ruimte.breedte - breedte) / 2 : 0);
+    const boven = c.papier.marge_mm + 6 + (rijen === 1 ? (planHoogte - hoogte) / 2 : 0);
+    const tegelBreedte = Math.min(breedte, c.ruimte.breedte);
+    const tegelHoogte = Math.min(hoogte, planHoogte);
+    const tegel = kolommen * rijen > 1 ? ` (${kolom + 1}/${kolommen}, ${rij + 1}/${rijen})` : "";
+    resultaat.push({ titel: `${c.teksten.paginatitels.situatieschema} — ${pagina.titel}${tegel}`, papier: c.papier, inhoud:
+      `<div class="schaal" data-schaalmodus="${gekalibreerd ? "gekalibreerd" : "passend"}" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)}">${escapeXml(bijschrift + tegel)}</div>` +
+      `<div class="kader" data-situatie-pagina-id="${escapeXml(pagina.id)}" data-plan-breedte-mm="${getal(breedte)}" style="left:${mm(links)};top:${mm(boven)};width:${mm(tegelBreedte)};height:${mm(tegelHoogte)}">` +
+      `<div style="position:absolute;left:${mm(-kolom * c.ruimte.breedte)};top:${mm(-rij * planHoogte)};width:${mm(breedte)};height:${mm(hoogte)}">` +
+      `<img class="plan" src="${escapeXml(bestand)}" style="position:absolute;width:100%;height:100%" alt="">` +
+      `<svg class="laag" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${getal(breedte_px)} ${getal(hoogte_px)}" style="position:absolute;width:100%;height:100%" preserveAspectRatio="none">${laag}</svg></div></div>` });
+  }
+  return resultaat;
 }
 
 function kringenlijstPaginas(c: Context): Pagina[] {
@@ -149,19 +177,29 @@ function kringenlijstPaginas(c: Context): Pagina[] {
   };
   const kop = rij("kopregel", regels(KOLOMMEN.map(k => c.teksten.kolommen[k.sleutel])), "kolomkop");
   const capaciteit = c.ruimte.hoogte - kop.hoogte - RAND_MM - 1;
-  const maxRegels = Math.floor((capaciteit - 2 * CEL_MARGE_MM - RAND_MM) / regelhoogte);
+  const groepHoogte = 6;
+  const maxRegels = Math.floor((capaciteit - groepHoogte - 2 * CEL_MARGE_MM - RAND_MM) / regelhoogte);
   if (maxRegels < 1) throw new RangeError("Geen ruimte voor kringenlijstrijen");
+
   const paginas: Pagina[] = [];
   let body = "";
   let gebruikt = 0;
+  let actieveGroep = "";
   const sluit = () => {
     paginas.push({ titel: c.teksten.paginatitels.kringenlijst, inhoud:
       '<div class="kringen" style="left:' + mm(c.papier.marge_mm) + ';top:' + mm(c.papier.marge_mm) + ';width:' + mm(c.ruimte.breedte) + '">' + kop.html + body + '</div>' });
     body = "";
     gebruikt = 0;
+    actieveGroep = "";
   };
-  const voegToe = (blok: { html: string; hoogte: number }) => {
-    if (body && gebruikt + blok.hoogte > capaciteit) sluit();
+  const voegToe = (blok: { html: string; hoogte: number }, groep?: string) => {
+    const extra = groep && groep !== actieveGroep ? groepHoogte : 0;
+    if (body && gebruikt + blok.hoogte + extra > capaciteit) sluit();
+    if (groep && groep !== actieveGroep) {
+      body += `<div class="groepskop" style="height:${mm(groepHoogte)}">${tekstRegel(c.teksten.kolommen.kring + " " + groep, c.ruimte.breedte - 2, TABEL_TEKST_MM, "kop")}</div>`;
+      gebruikt += groepHoogte;
+      actieveGroep = groep;
+    }
     body += blok.html;
     gebruikt += blok.hoogte;
   };
@@ -173,7 +211,7 @@ function kringenlijstPaginas(c: Context): Pagina[] {
     for (let start = 0; start < aantal; start += maxRegels) {
       const deel = cellen.map((cel, i) => start > 0 && (KOLOMMEN[i]!.sleutel === "kring" || KOLOMMEN[i]!.sleutel === "punt")
         ? cel : cel.slice(start, start + maxRegels));
-      voegToe(rij("rij", deel, "cel"));
+      voegToe(rij("rij", deel, "cel"), r.kring);
     }
   }
   if (!rijen.length) voegToe({ html: '<div class="rij leeg" style="height:6mm">' + tekstRegel(c.teksten.geenKringen, c.ruimte.breedte - 2 * CEL_MARGE_MM, TABEL_TEKST_MM, "leeg") + "</div>", hoogte: 6 });
@@ -189,11 +227,7 @@ function artikelVan(doc: InstallatieDocument, regelId: string): string {
 
 /** Het label van het onderwerp van een bevinding: het puntlabel, "Kring A" voor een kringbeveiliging, anders `nodeLabel`. */
 function onderwerpLabel(c: Context, nodeId: NodeId): string {
-  const punt = c.analyse.puntLabels[nodeId];
-  if (punt) return punt;
-  const kring = c.analyse.kringen.find((k) => k.beveiligingId === nodeId);
-  if (kring) return `${c.teksten.kolommen.kring} ${kring.label}`;
-  return nodeLabel(c.doc, c.analyse, nodeId, c.terugval);
+  return onderwerpLabelGedeeld(c.doc, c.analyse, nodeId, c.teksten);
 }
 
 /**
@@ -209,6 +243,102 @@ function bevindingTekst(c: Context, b: Bevinding): string {
 
 /** Eén blok van de bijlage: een kop of een tekstregel, met zijn hoogte in mm. */
 type Blok = { html: string; hoogte: number; kop: boolean };
+
+/** De kolommen van de tabel met differentieeltests, als aandeel van de tabelbreedte. */
+const MEETTABEL_AANDELEN = [0.37, 0.21, 0.21, 0.21];
+/** De tabel met differentieeltests is hooguit zo breed, in mm: smaller blijft ze leesbaar. */
+const MEETTABEL_MAX_MM = 190;
+
+/** De differentiëlen in de volgorde van het eendraadschema (diepte eerst vanaf de aansluiting). */
+function differentiëlenInVolgorde(doc: InstallatieDocument, type: NodeType = "differentieel"): NodeId[] {
+  const uit: NodeId[] = [];
+  const bezocht = new Set<NodeId>();
+  const stapel: NodeId[] = [doc.rootId];
+  while (stapel.length) {
+    const id = stapel.pop()!;
+    if (bezocht.has(id) || !Object.hasOwn(doc.nodes, id)) continue;
+    bezocht.add(id);
+    const node = doc.nodes[id]!;
+    if (node.type === type) uit.push(id);
+    for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push(node.kinderen[i]!);
+  }
+  return uit;
+}
+
+/**
+ * De geregistreerde metingen en de differentieeltests. Een ontbrekende waarde is "niet ingevuld";
+ * er is geen grenswaarde en geen beoordeling, alleen de vaste zin die dat zegt.
+ */
+function metingBlokken(c: Context): Blok[] {
+  const t = c.teksten;
+  const m = t.metingen;
+  const metingen = c.doc.meta.metingen;
+  const breedte = c.ruimte.breedte;
+  const regelHoogte = BIJLAGE_TEKST_MM * REGELHOOGTE;
+  const blokken: Blok[] = [];
+  const kop = (tekst: string) => blokken.push({
+    html: tekstRegel(tekst, breedte, BIJLAGE_KOP_TEKST_MM, "kop"),
+    hoogte: KOP_MARGE_MM + BIJLAGE_KOP_TEKST_MM * REGELHOOGTE,
+    kop: true,
+  });
+  const tekst = (inhoud: string, klasse: string) => {
+    for (const regel of breekRegels(inhoud, vloer(breedte), BIJLAGE_TEKST_MM, BIJLAGE_BREEDTE_FACTOR)) {
+      blokken.push({ html: tekstRegel(regel, breedte, BIJLAGE_TEKST_MM, klasse), hoogte: regelHoogte, kop: false });
+    }
+  };
+  kop(m.titel);
+  for (const [label, waarde] of metingVelden(metingen, t, c.taal)) tekst(`${label}: ${waarde}`, "meting");
+  if (metingen?.meettoestel) tekst(`${m.meettoestel}: ${metingen.meettoestel}`, "meting");
+  if (metingen?.opmerking) tekst(`${m.opmerking}: ${metingen.opmerking}`, "meting");
+
+  const ids = differentiëlenInVolgorde(c.doc);
+  if (ids.length) {
+    const tabelBreedte = Math.min(breedte, MEETTABEL_MAX_MM);
+    const breedtes = MEETTABEL_AANDELEN.map(a => tabelBreedte * a);
+    const rij = (cellen: string[], klasse: string, extra = "") => {
+      const regels = cellen.map((cel, i) => breekRegels(cel, vloer(breedtes[i]! - CEL_MARGE_MM), BIJLAGE_TEKST_MM, BIJLAGE_BREEDTE_FACTOR));
+      const hoogte = Math.max(1, ...regels.map(r => r.length)) * regelHoogte;
+      return {
+        html: `<div class="meetrij${klasse === "kolomkop" ? " kopregel" : ""}"${extra} style="height:${mm(hoogte)}">` +
+          regels.map((r, i) => `<div style="width:${mm(breedtes[i]!)}">${r.map(regel => tekstRegel(regel, breedtes[i]! - CEL_MARGE_MM, BIJLAGE_TEKST_MM, klasse)).join("")}</div>`).join("") +
+          "</div>",
+        hoogte,
+      };
+    };
+    kop(m.differentieeltests);
+    // De kolomkop blijft bij de eerste rij (`kop: true`).
+    blokken.push({ ...rij([m.referentie, m.gevoeligheid, m.resultaat, m.tijd], "kolomkop", ' data-tabel="differentieeltests"'), kop: true });
+    const plaatsen = differentieelPlaatsen(c.doc, ids);
+    const borden = differentiëlenInVolgorde(c.doc, "verdeelbord");
+    const namen = new Map(ids.map(id => [id, differentieelNaam(c.doc.nodes[id] as NodeVan<"differentieel">, plaatsen.get(id) ?? 1, type => t.types[type])]));
+    const aantalPerNaam = new Map<string, number>();
+    for (const naam of namen.values()) aantalPerNaam.set(naam, (aantalPerNaam.get(naam) ?? 0) + 1);
+    // De plaats telt per bord: alleen als twee namen anders gelijk zijn, komt de herkomst (bord of bovenliggend onderdeel) erbij.
+    const herkomst = (id: NodeId): string | undefined => {
+      if (aantalPerNaam.get(namen.get(id)!)! < 2) return undefined;
+      const bord = bordVanNode(c.doc, id);
+      if (bord !== undefined) {
+        const node = c.doc.nodes[bord]!;
+        return node.type === "verdeelbord" && node.naam?.trim() ? node.naam.trim() : `${t.types.verdeelbord} ${borden.indexOf(bord) + 1}`;
+      }
+      const ouder = c.doc.nodes[id]?.parentId;
+      return ouder != null && Object.hasOwn(c.doc.nodes, ouder) ? t.types[c.doc.nodes[ouder]!.type] : undefined;
+    };
+    for (const id of ids) {
+      const node = c.doc.nodes[id]!;
+      if (node.type !== "differentieel") continue;
+      // Dezelfde naam als in de editor.
+      blokken.push({ ...rij([
+        [namen.get(id), herkomst(id)].filter(Boolean).join(" · "),
+        `${formatteerGetal(node.gevoeligheid_mA, c.taal)} mA`,
+        node.testResultaat ? m.resultaten[node.testResultaat] : m.nietIngevuld,
+        meetwaardeTekst(node.uitschakeltijd_ms, "ms", t, c.taal),
+      ], "cel"), kop: false });
+    }
+  }
+  tekst(m.geenBeoordeling, "bericht");
+  return blokken;
+}
 
 function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgeslagen: readonly string[]): Blok[] {
   const t = c.teksten;
@@ -227,9 +357,26 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
     }
   };
 
+  const dossier = dossierStatus(c.doc, c.analyse);
+  if (!dossier.volledig) {
+    const d = t.bijlage.dossier;
+    kop(d.titel);
+    tekst(d.uitleg, "bericht", volleBreedte);
+    for (const veld of dossier.ontbreekt) tekst(d[veld], "bericht", volleBreedte);
+    if (!dossier.plannen) tekst(d.plan, "bericht", volleBreedte);
+    for (const pagina of c.doc.situatie.paginas.filter(p => !p.referentie && !p.achtergrond)) {
+      tekst(`${pagina.titel} — ${d.zonderPlan}`, "bericht", volleBreedte);
+    }
+    for (const id of dossier.ongeplaatsteIds) {
+      const onderwerp = ongeplaatstNaam(c.doc, c.analyse, id, c.teksten);
+      tekst(`${onderwerp} — ${d.ongeplaatst}`, "bericht", volleBreedte);
+    }
+  }
+  blokken.push(...metingBlokken(c));
+  const voorBevindingen = blokken.length;
   const titels = { fout: t.bijlage.fouten, waarschuwing: t.bijlage.waarschuwingen, info: t.bijlage.info } as const;
   for (const ernst of ERNSTEN) {
-    const lijst = bevindingen.filter((b) => b.ernst === ernst);
+    const lijst = bevindingen.filter((b) => b.ernst === ernst && (b.regelId !== "arei.situatie.niet-geplaatst" || b.afgeweken));
     if (lijst.length === 0) continue;
     kop(`${titels[ernst]} (${lijst.length})`);
     for (const b of lijst) {
@@ -252,12 +399,13 @@ function bijlageBlokken(c: Context, bevindingen: readonly Bevinding[], overgesla
     kop(`${t.bijlage.overgeslagenPaginas} (${overgeslagen.length})`);
     for (const titel of overgeslagen) tekst(titel, "overgeslagen", volleBreedte);
   }
-  if (blokken.length === 0) tekst(t.bijlage.geenBevindingen, "leeg", volleBreedte);
+  if (dossier.volledig && blokken.length === voorBevindingen) tekst(t.bijlage.geenBevindingen, "leeg", volleBreedte);
   return blokken;
 }
 
 /** Verdeelt de blokken over pagina's; een kop blijft bij zijn eerste regel. */
-function tekstPaginas(c: Context, blokken: readonly Blok[], titel: string): Pagina[] {
+/** `klasse` is de klasse van de tekstlaag: "bijlage", of "bijlage metingen" voor de slotpagina met metingen. */
+function tekstPaginas(c: Context, blokken: readonly Blok[], titel: string, klasse = "bijlage"): Pagina[] {
   const capaciteit = c.ruimte.hoogte - BIJLAGE_SPELING_MM;
   const groepen: Blok[][] = [[]];
   let gevuld = 0;
@@ -275,7 +423,7 @@ function tekstPaginas(c: Context, blokken: readonly Blok[], titel: string): Pagi
   return groepen.map((groep) => ({
     titel,
     inhoud:
-      `<div class="bijlage" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};` +
+      `<div class="${klasse}" style="left:${mm(c.papier.marge_mm)};top:${mm(c.papier.marge_mm)};` +
       `width:${mm(c.ruimte.breedte)};height:${mm(c.ruimte.hoogte)}">${groep.map((b) => b.html).join("")}</div>`,
   }));
 }
@@ -335,7 +483,7 @@ function bestandVan(pagina: SituatiePagina, afbeeldingen: Readonly<Record<string
  * bestand in `afbeeldingen`. De server gebruikt dit om de bijlage dan verplicht te maken.
  */
 export function overgeslagenPaginas(doc: InstallatieDocument, afbeeldingen: Readonly<Record<string, string>>): string[] {
-  return doc.situatie.paginas.filter((p) => bestandVan(p, afbeeldingen) === undefined).map((p) => p.titel);
+  return doc.situatie.paginas.filter((p) => !p.referentie && bestandVan(p, afbeeldingen) === undefined).map((p) => p.titel);
 }
 
 /**
@@ -358,14 +506,15 @@ export function printHtml(
   const papier: Papier = { ...STANDAARD_PAPIER_A4, formaat: opties.papier };
   const beperking = !REGELSETS[doc.regelset]?.gepubliceerd;
   const cartoucheBasis = {
-    papier, teksten, taal: opties.taal, meta: doc.meta, installateur: opties.installateur,
+    papier, teksten, taal: opties.taal, meta: doc.meta, voeding: doc.voeding, installateur: opties.installateur,
     logo: opties.logo, datum: opties.datum, versieLabel: opties.versieLabel, nummer: 9999, totaal: 9999,
   };
-  const titels = [teksten.paginatitels.bijlage];
+  // Zonder bijlage komen de metingen op een eigen, korte slotpagina (anders staan ze in de bijlage).
+  const titels = [teksten.paginatitels.bijlage, ...(onderdelen.bijlage ? [] : [teksten.metingen.titel])];
   if (onderdelen.eendraadschema) titels.push(teksten.paginatitels.eendraadschema);
   if (onderdelen.kringenlijst) titels.push(teksten.paginatitels.kringenlijst);
   if (onderdelen.situatieschema) {
-    titels.push(...doc.situatie.paginas.filter(p => bestandVan(p, opties.afbeeldingen) !== undefined)
+    titels.push(...doc.situatie.paginas.filter(p => !p.referentie && bestandVan(p, opties.afbeeldingen) !== undefined)
       .map(p => `${teksten.paginatitels.situatieschema} — ${p.titel}`));
   }
   const volledigeHoogte = Math.max(...titels.map(titel => cartoucheHoogte({ ...cartoucheBasis, titel })));
@@ -408,37 +557,41 @@ export function printHtml(
   if (onderdelen.situatieschema) {
     overgeslagen.push(...overgeslagenPaginas(doc, opties.afbeeldingen));
     for (const pagina of doc.situatie.paginas) {
+      if (pagina.referentie) continue;
       const bestand = bestandVan(pagina, opties.afbeeldingen);
       if (bestand === undefined) continue;
-      paginas.push({
-        titel: `${teksten.paginatitels.situatieschema} — ${pagina.titel}`,
-        inhoud: situatieInhoud(c, pagina, bestand),
-      });
+      const eigenPapier: Papier = { ...papier, cartoucheHoogte_mm: metadataHoogte, ...(pagina.afdruk ? { formaat: pagina.afdruk.papier, orientatie: pagina.afdruk.orientatie } : {}) };
+      const eigenHoogte = cartoucheHoogte({ ...cartoucheGegevens, papier: eigenPapier, titel: cartoucheTitel(`${teksten.paginatitels.situatieschema} — ${pagina.titel}`) });
+      eigenPapier.cartoucheHoogte_mm = eigenHoogte + beperkingHoogte;
+      paginas.push(...situatiePaginas({ ...c, papier: eigenPapier, ruimte: bruikbaar(eigenPapier) }, pagina, bestand));
     }
   }
   if (onderdelen.kringenlijst) paginas.push(...kringenlijstPaginas(c));
   if (onderdelen.bijlage || paginas.length === 0) paginas.push(...bijlagePaginas(c, bevindingen, overgeslagen));
+  else paginas.push(...tekstPaginas(c, metingBlokken(c), teksten.metingen.titel, "bijlage metingen"));
   if (metadataVervolg) paginas.push(...metadataPaginas(c, opties, titels));
 
   const totaal = paginas.length;
   const watermerk = opties.watermerk ? watermerkHtml(opties.watermerk) : "";
-  const secties = paginas.map(
-    (pagina, i) =>
-      `<section class="pagina">${pagina.inhoud}${cartouche({
-        ...cartoucheGegevens,
-        papier: { ...papier, cartoucheHoogte_mm: metadataHoogte },
-        titel: cartoucheTitel(pagina.titel),
-        nummer: i + 1,
-        totaal,
-      })}${beperking ? `<div class="controlebeperking" style="left:${mm(papier.marge_mm)};top:${mm(papierMaat(papier.formaat).hoogte - papier.marge_mm - metadataHoogte - beperkingHoogte + 1)};width:${mm(c.ruimte.breedte)}">${escapeXml(teksten.controlebeperking)}</div>` : ""}${watermerk}</section>`,
-  );
+  const paginaStijlen = new Map<string, string>();
+  const secties = paginas.map((pagina, i) => {
+    const blad = pagina.papier ?? papier;
+    const maat = papierMaat(blad.formaat, blad.orientatie);
+    const naam = `blad${blad.formaat}${blad.orientatie ?? "liggend"}`;
+    paginaStijlen.set(naam, `@page ${naam}{size:${maat.breedte}mm ${maat.hoogte}mm;margin:0}`);
+    const footerHoogte = blad.cartoucheHoogte_mm - beperkingHoogte;
+    paginaStijlen.set(`pagina${i}`, `.pagina:nth-of-type(${i + 1}){page:${naam};width:${mm(maat.breedte)};height:${mm(maat.hoogte)}}`);
+    return `<section class="pagina">${pagina.inhoud}${cartouche({
+      ...cartoucheGegevens, papier: { ...blad, cartoucheHoogte_mm: footerHoogte }, titel: cartoucheTitel(pagina.titel), nummer: i + 1, totaal,
+    })}${beperking ? `<div class="controlebeperking" style="left:${mm(blad.marge_mm)};top:${mm(maat.hoogte - blad.marge_mm - footerHoogte - beperkingHoogte + 1)};width:${mm(bruikbaar(blad).breedte)}">${escapeXml(teksten.controlebeperking)}</div>` : ""}${watermerk}</section>`;
+  });
   const maat = papierMaat(papier.formaat);
   const titel = [doc.meta.klant.naam, opties.versieLabel].filter((d) => d.trim() !== "").join(" — ");
   const html =
     "<!doctype html>\n" +
     `<html lang="${opties.taal}">\n<head>\n<meta charset="utf-8">\n` +
     `<title>${escapeXml(titel)}</title>\n` +
-    `<style>\n${stijl(maat.breedte, maat.hoogte, opties.watermerk !== undefined)}\n</style>\n</head>\n<body>\n` +
+    `<style>\n${stijl(maat.breedte, maat.hoogte, opties.watermerk !== undefined)}\n${[...paginaStijlen.values()].join("\n")}\n</style>\n</head>\n<body>\n` +
     `${secties.join("\n")}\n</body>\n</html>\n`;
   return { html, paginas: totaal, overgeslagen };
 }

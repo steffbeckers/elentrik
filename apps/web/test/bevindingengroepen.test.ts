@@ -48,7 +48,7 @@ test("een bevinding over meerdere kringen krijgt geen enkelvoudige kringgroep", 
 function installatie(sjabloon = false) {
   const leeg = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
   const bord = Object.values(leeg.nodes).find(n => n.type === "verdeelbord")!;
-  const doc = sjabloon ? voegSjabloonToe(leeg, bord.id, "kring-stopcontacten").doc
+  const doc = sjabloon ? voegSjabloonToe(leeg, {soort:"nieuw-op-bord",nodeId:bord.id}, "kring-stopcontacten").doc
     : voegOnderdeelToe(leeg, { soort: "rail-einde", nodeId: bord.id }, "contactdoos").doc;
   const a = analyseer(doc);
   const puntId = Object.keys(a.puntLabels)[0]!;

@@ -1,4 +1,22 @@
-import type { NodeVan } from "@elentrik/model";
+import type { Node, NodeVan, Stroomtype } from "@elentrik/model";
+
+/** Alleen opgeslagen voedingsinformatie; geen afgeleide stroom of frequentie. */
+export function voedingTekst(stroomtype: Stroomtype, frequentie_Hz?: number): string {
+  return { "2x230V": "2 × 230 V ~", "3x230V": "3 × 230 V ~", "3N400V": "3N × 400 V ~" }[stroomtype] + (frequentie_Hz === undefined ? "" : ` ${frequentie_Hz} Hz`);
+}
+
+/** Uitsluitend expliciet opgegeven technische waarden; VA is geen actief vermogen in W. */
+export function technischeLabels(node: Node): string[] {
+  if (node.type === "teller") return node.nominaal_A === undefined ? [] : [`${node.nominaal_A} A`];
+  if (node.type !== "toestel") return [];
+  return [
+    node.soort === "onbekendDrieblad" ? "?" : "",
+    node.vermogen_W === undefined ? "" : `${node.vermogen_W} W`,
+    node.schijnbaarVermogen_kVA === undefined ? "" : `${String(node.schijnbaarVermogen_kVA).replace(".", ",")} kVA`,
+    node.aantalPanelen === undefined ? "" : `×${node.aantalPanelen}`,
+    node.dcDetectie_mA === undefined ? "" : `${node.dcDetectie_mA} mA DC`,
+  ].filter(Boolean);
+}
 
 /** Geschatte breedte van één teken, als fractie van de tekstgrootte. */
 export const TEKEN_BREEDTE_FACTOR = 0.6;
@@ -22,7 +40,9 @@ export function leidingLabel(node: NodeVan<"leiding">): string {
   const kabeltype = node.kabeltype.trim() === "" ? "?" : node.kabeltype;
   const tekst = doorsnedeTekst(node.doorsnede_mm2);
   const doorsnede = tekst === "0" ? "?" : tekst;
-  return `${kabeltype} ${node.aantalGeleiders}G${doorsnede}`;
+  const klasse = node.brandreactieklasse?.trim();
+  const alVermeld = klasse && ` ${kabeltype.toLowerCase()} `.includes(` ${klasse.toLowerCase()} `);
+  return `${kabeltype} ${node.aantalGeleiders}${node.metBeschermingsgeleider === false ? "x" : "G"}${doorsnede}${klasse && !alVermeld ? ` ${klasse}` : ""}`;
 }
 
 /** De gevoeligheid in ampere uit milliampere: maximaal 3 decimalen, zonder overbodige nullen en met een komma. Zonder Intl, voor een vast resultaat. */
@@ -41,7 +61,7 @@ export function beveiligingLabel(node: NodeVan<"automaat"> | NodeVan<"zekering">
     case "zekering":
       return `${node.nominaal_A} A`;
     case "differentieel":
-      return `${node.nominaal_A}/${ampereTekst(node.gevoeligheid_mA)}A type ${node.klasse}${polenSuffix(node.polen)}`;
+      return `${node.referentie ? `${node.referentie} \u00b7 ` : ""}${node.nominaal_A}/${ampereTekst(node.gevoeligheid_mA)}A type ${node.klasse}${polenSuffix(node.polen)}`;
   }
 }
 

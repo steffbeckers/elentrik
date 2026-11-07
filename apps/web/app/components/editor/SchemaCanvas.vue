@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { DocumentFout, magToevoegen, type Aanknoping } from "@elentrik/model";
+import { DocumentFout, magToevoegen, type Aanknoping, type Onderdeel } from "@elentrik/model";
 import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
 import CanvasBediening from "~/components/editor/CanvasBediening.vue";
 import { doelSoort, moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useCanvasWeergave } from "~/composables/useCanvasWeergave";
-import { markeringen as leidMarkeringenAf, MARKERING_KLASSE } from "~/editor/markeringen";
+import MarkeringSymbool from "~/components/editor/MarkeringSymbool.vue";
+import { markeringen as leidMarkeringenAf } from "~/editor/markeringen";
+import { kringBestemming } from "~/editor/invoegen";
 import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie } from "~/editor/schema-navigatie";
 import { useEditorStore } from "~/stores/editor";
 
@@ -17,6 +19,7 @@ const PLUS_STRAAL_MM = 2.5;
 const store = useEditorStore();
 const { t, te } = useI18n();
 const toast = useToast();
+const voerUit = useDocumentFoutMelding();
 
 const venster = useTemplateRef<HTMLElement>("venster");
 const basis = useTemplateRef<HTMLElement>("basis");
@@ -151,7 +154,8 @@ function toetsIngedrukt(event: KeyboardEvent): void {
 
   switch (actie.soort) {
     case "kies":
-      store.onderdeel = actie.onderdeel;
+      if (actie.alleenKiezen) store.onderdeel = actie.onderdeel;
+      else kies(actie.onderdeel);
       break;
     case "toevoegen":
       if (toevoegenOpen.value) voegViaToetsenbordToe();
@@ -180,11 +184,41 @@ function toetsIngedrukt(event: KeyboardEvent): void {
       break;
     case "wisSelectie":
       store.selectie = [];
+      toevoegenOpen.value = false;
       break;
     case "symbolen":
       store.symbolenOpen = true;
       break;
+    case "sneltoetsen":
+      store.sneltoetsenOpen = true;
+      break;
+    case "dupliceer":
+      dupliceer();
+      break;
   }
+}
+
+/**
+ * Een lettertoets kiest het onderdeel. C, L en D met een kring geselecteerd voegen het meteen toe
+ * (`snelToevoegen`); dan blijft de invoegbalk dicht.
+ */
+function kies(onderdeel: Onderdeel): void {
+  const vorig = store.onderdeel;
+  let toegevoegd = false;
+  if (!voerUit(() => (toegevoegd = store.snelToevoegen(onderdeel))) || !toegevoegd) {
+    store.onderdeel = onderdeel;
+    return;
+  }
+  toevoegenOpen.value = false;
+  onderdrukInvoegbalk = vorig !== onderdeel;
+}
+
+/** Ctrl+D: de kring van de selectie dupliceren, of kort melden waarom dat niet kan. */
+function dupliceer(): void {
+  let uitkomst: ReturnType<typeof store.dupliceerSelectieKring> = null;
+  if (!voerUit(() => (uitkomst = store.dupliceerSelectieKring()))) return;
+  if (uitkomst) toast.add({ title: t("editor.sneltoetsen.dupliceerKlaar", uitkomst), color: "success", icon: "i-lucide-copy" });
+  else toast.add({ title: t("editor.sneltoetsen.dupliceerGeenKring"), color: "neutral", icon: "i-lucide-info" });
 }
 
 // --- Overlay ---------------------------------------------------------------
@@ -235,7 +269,12 @@ const zoekBestemmingInvoer = computed(() => ({
   "aria-label": t("werkbaarheid.tekenen.zoekBestemming"),
 }));
 const toevoegenOpen = ref(false);
-watch(() => store.onderdeel, () => { if (!store.alleenLezen) toevoegenOpen.value = true; });
+/** Na een snelle toevoeging (C, L, D) opent de gewijzigde onderdeelkeuze de invoegbalk niet. */
+let onderdrukInvoegbalk = false;
+watch(() => store.onderdeel, () => {
+  if (onderdrukInvoegbalk) { onderdrukInvoegbalk = false; return; }
+  if (!store.alleenLezen) toevoegenOpen.value = true;
+});
 const invoegKeuze = ref("");
 const invoegSoort = ref<Aanknoping["soort"]>("kring-einde");
 const alleInvoegpunten = computed(() => store.document && store.analyse
@@ -258,9 +297,14 @@ const invoegGroepen = computed(() => {
   ]);
 });
 const geldigInvoegpunt = computed(() => invoegpunten.value.find(a => a.sleutel === invoegKeuze.value));
+/** Een nieuwe kring komt standaard op het differentieel van de selectie, anders het laatst gebruikte in dit bord, anders het bord. */
+function nieuweKringPunt(punten: typeof invoegpunten.value): (typeof invoegpunten.value)[number] | undefined {
+  return store.document ? kringBestemming(store.document, punten, store.selectie, store.laatsteDifferentieel) ?? punten[0] : punten[0];
+}
 watch(invoegpunten, punten => {
   if (!punten.some(a => a.sleutel === invoegKeuze.value)) {
-    const doel = gekozenNode.value && store.analyse ? invoegpuntBijSelectie(store.analyse, punten, gekozenNode.value) : punten[0];
+    const doel = invoegSoort.value === "rail-einde" ? nieuweKringPunt(punten)
+      : gekozenNode.value && store.analyse ? invoegpuntBijSelectie(store.analyse, punten, gekozenNode.value) : punten[0];
     invoegKeuze.value = doel?.sleutel ?? "";
   }
 }, { immediate: true });
@@ -271,7 +315,8 @@ watch(gekozenNode, id => {
   invoegKeuze.value = doel?.sleutel ?? "";
 }, { flush: "sync" });
 function veranderInvoegSoort(): void {
-  invoegKeuze.value = invoegpunten.value[0]?.sleutel ?? "";
+  const punten = invoegpunten.value;
+  invoegKeuze.value = (invoegSoort.value === "rail-einde" ? nieuweKringPunt(punten) : punten[0])?.sleutel ?? "";
 }
 const doelMarkering = computed(() => toevoegenOpen.value && geldigInvoegpunt.value
   ? store.opmaak?.strook.aanknopingen.find(a => a.soort === geldigInvoegpunt.value?.soort && a.nodeId === geldigInvoegpunt.value.nodeId) : null);
@@ -289,9 +334,11 @@ function focusSelectie(): void {
 function kiesStructuur(id: string): void {
   if (id) store.selectie = [id];
 }
+/** Voegt toe op het gekozen invoegpunt; de invoegbalk sluit daarna. */
 function voegViaToetsenbordToe(): void {
   const a = geldigInvoegpunt.value;
-  if (a && !store.alleenLezen) store.voegToe(a);
+  if (!a || store.alleenLezen) return;
+  if (voerUit(() => store.voegToe(a))) toevoegenOpen.value = false;
 }
 function activeerPlus(event: KeyboardEvent, a: (typeof plusknoppen.value)[number]): void {
   if (event.key !== "Enter" && event.key !== " ") return;
@@ -383,15 +430,15 @@ watchPostEffect(() => {
           stroke-width="0.5"
           style="stroke: var(--ui-primary)"
         />
-        <circle
+        <MarkeringSymbool
           v-for="m in markeringen"
           :key="`markering-${m.id}`"
           :data-testid="`markering-${m.id}`"
           :data-ernst="m.soort"
-          :cx="m.x"
-          :cy="m.y"
+          :soort="m.soort"
+          :x="m.x"
+          :y="m.y"
           :r="MARKERING_STRAAL_MM"
-          :class="MARKERING_KLASSE[m.soort]"
         />
         <g
           v-for="a in plusknoppen"
@@ -410,7 +457,7 @@ watchPostEffect(() => {
           <path d="M-1.2 0H1.2M0 -1.2V1.2" fill="none" stroke-width="0.5" stroke-linecap="round" style="stroke: var(--ui-primary)" />
         </g>
       </svg>
-      <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="!!gekozenNode" :hulp="$t('werkbaarheid.tekenen.hulp')" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
+      <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="!!gekozenNode" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 
     <UModal v-model:open="bevestigOpen" :title="$t('editor.canvas.takVerwijderen.titel')">

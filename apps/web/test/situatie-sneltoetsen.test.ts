@@ -75,3 +75,13 @@ describe("situatieSneltoets", () => {
     });
   });
 });
+
+describe("sneltoetsenoverzicht (?)", () => {
+  test("? opent het overzicht, ook in alleen-lezen", () => {
+    expect(situatieSneltoets(toets("?", { shiftKey: true }))).toEqual({ soort: "sneltoetsen" });
+    expect(situatieSneltoets(toets("?", { shiftKey: true, alleenLezen: true }))).toEqual({ soort: "sneltoetsen" });
+  });
+  test("niet tijdens typen", () => {
+    expect(situatieSneltoets(toets("?", { shiftKey: true, doelIsInvoer: true }))).toBeNull();
+  });
+});

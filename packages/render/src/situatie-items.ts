@@ -30,7 +30,7 @@ export function nodeLabel(
   const node = doc.nodes[nodeId];
   if (!node) return "";
   const label = analyse.puntLabels[nodeId] ?? (node.type === "verdeelbord" ? (node.naam ?? "") : "");
-  return label || terugval(node.type);
+  return (label || terugval(node.type)) + (node.type === "toestel" && node.soort === "onbekendDrieblad" ? " ?" : "");
 }
 
 /**

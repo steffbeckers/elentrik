@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* Contrast: `text-dimmed` (o.a. placeholders en bijschriften) haalt minstens 4,5:1 op de achtergrond.
+   Nuxt UI zet neutral-400 in light mode (2,6:1 op wit) en neutral-500 in dark mode (3,7:1). */
+:root,
+.light {
+  --ui-text-dimmed: var(--ui-color-neutral-500);
+}
+.dark {
+  --ui-text-dimmed: var(--ui-color-neutral-400);
+}
+
 /* Touch comfort for forms without inflating the drawing editor's toolbars. */
 @media (max-width: 640px) {
   .comfortabele-formulieren :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, button, [role="combobox"]) { min-height: 44px; }

@@ -2,6 +2,8 @@
 // rechtstreeks (ruling E1).
 import {
   hernoemPagina,
+  voegAfdekkingToe as voegAfdekkingToeInDoc,
+  verwijderAfdekking as verwijderAfdekkingInDoc,
   plaats,
   verplaatsPagina as verplaatsPaginaInDoc,
   verwijderPagina as verwijderPaginaUitDoc,
@@ -12,6 +14,8 @@ import {
   type PlanTekening,
   zetSchaal as zetSchaalInDoc,
   zetPaginaOpmaak as zetPaginaOpmaakInDoc,
+  zetPaginaAfdruk,
+  zetReferentiePagina,
   zetLabelOffset as zetLabelOffsetInDoc,
   type NodeId,
   type OperatieResultaat,
@@ -51,18 +55,50 @@ export const useSituatieStore = defineStore("situatie", () => {
 
   /** Voegt een pagina met plan toe als één undo-stap en maakt haar actief; in alleen-lezen gebeurt niets (lege id). */
   function voegPlanPaginaToe(titel: string, achtergrond: Achtergrond): string {
-    if (editor.alleenLezen) return "";
+    return voegPlanPaginasToe([{ titel, achtergrond }])[0] ?? "";
+  }
+
+  /** All preparations succeed before one transaction adds any page. */
+  function voegPlanPaginasToe(invoer: readonly { titel: string; achtergrond: Achtergrond; referentie?: boolean }[]): string[] {
+    if (editor.alleenLezen) return [];
     const doc = vereisDocument();
-    const toegevoegd = voegPaginaToe(doc, titel);
-    const metPlan = zetAchtergrond(toegevoegd.doc, toegevoegd.id, achtergrond);
-    editor.pasToe(samengevoegd(doc, [toegevoegd, metPlan]));
-    gekozenPaginaId.value = toegevoegd.id;
-    return toegevoegd.id;
+    let huidig = doc;
+    const ids: string[] = [];
+    const resultaten: OperatieResultaat[] = [];
+    for (const pagina of invoer) {
+      const toegevoegd = voegPaginaToe(huidig, pagina.titel);
+      const metPlan = zetAchtergrond(toegevoegd.doc, toegevoegd.id, pagina.achtergrond);
+      resultaten.push(toegevoegd, metPlan);
+      huidig = metPlan.doc;
+      if (pagina.referentie) {
+        const referentie = zetReferentiePagina(huidig, toegevoegd.id, true);
+        resultaten.push(referentie);
+        huidig = referentie.doc;
+      }
+      ids.push(toegevoegd.id);
+    }
+    if (resultaten.length) editor.pasToe(samengevoegd(doc, resultaten));
+    gekozenPaginaId.value = ids[0] ?? gekozenPaginaId.value;
+    return ids;
   }
 
   function vervangAchtergrond(paginaId: string, achtergrond: Achtergrond): void {
     if (editor.alleenLezen) return;
     editor.pasToe(zetAchtergrond(vereisDocument(), paginaId, achtergrond));
+  }
+
+  function voegAfdekkingToe(rechthoek: { x: number; y: number; breedte: number; hoogte: number }): string | null {
+    const pagina = actievePagina.value;
+    if (editor.alleenLezen || !pagina || pagina.referentie || pagina.tekening) return null;
+    const r = voegAfdekkingToeInDoc(vereisDocument(), pagina.id, rechthoek);
+    editor.pasToe(r);
+    return r.id;
+  }
+
+  function verwijderAfdekking(id: string): void {
+    const pagina = actievePagina.value;
+    if (editor.alleenLezen || !pagina || pagina.referentie) return;
+    editor.pasToe(verwijderAfdekkingInDoc(vereisDocument(), pagina.id, id));
   }
 
   function bewaarTekening(titel: string, achtergrond: Achtergrond, tekening: PlanTekening, paginaId?: string): string {
@@ -97,6 +133,11 @@ export const useSituatieStore = defineStore("situatie", () => {
   function zetSchaal(paginaId: string, mmPerPx: number | undefined): void {
     if (editor.alleenLezen) return;
     editor.pasToe(zetSchaalInDoc(vereisDocument(), paginaId, mmPerPx));
+  }
+
+  function zetAfdruk(paginaId: string, afdruk: NonNullable<SituatiePagina["afdruk"]>): void {
+    if (editor.alleenLezen) return;
+    editor.pasToe(zetPaginaAfdruk(vereisDocument(), paginaId, afdruk));
   }
 
   function zetPaginaOpmaak(paginaId: string, opmaak: Pick<SituatiePagina, "symboolSchaal" | "labelSchaal">): void {
@@ -182,9 +223,9 @@ export const useSituatieStore = defineStore("situatie", () => {
     if (resultaten.length > 0) editor.pasToe(samengevoegd(doc, resultaten));
   }
 
-  /** Draait de geselecteerde, geplaatste nodes één stap van 15 graden. */
-  function draaiSelectie(richting: 1 | -1): void {
-    wijzigGeselecteerde((p) => ({ x: p.x, y: p.y, rotatie: draai(p.rotatie, richting) }));
+  /** Draait de geplaatste selectie om de eigen posities, samen in één undo-stap. */
+  function draaiSelectie(richting: 1 | -1, stap: 15 | 90 = 15): void {
+    wijzigGeselecteerde((p) => ({ x: p.x, y: p.y, rotatie: draai(p.rotatie, richting, stap) }));
   }
 
   /** Verschuift de geselecteerde, geplaatste nodes binnen het raster van hun pagina. */
@@ -200,12 +241,16 @@ export const useSituatieStore = defineStore("situatie", () => {
     actievePaginaId,
     actievePagina,
     voegPlanPaginaToe,
+    voegPlanPaginasToe,
     vervangAchtergrond,
+    voegAfdekkingToe,
+    verwijderAfdekking,
     bewaarTekening,
     hernoem,
     verwijderPagina,
     verplaatsPagina,
     zetSchaal,
+    zetAfdruk,
     zetPaginaOpmaak,
     zetLabelOffset,
     plaatsNode,

@@ -1,5 +1,6 @@
+import { bordVanNode, differentieelNaam, differentieelPlaatsen } from "@elentrik/render";
 import type { Analyse } from "@elentrik/arei";
-import type { Aanknoping, InstallatieDocument, NodeType } from "@elentrik/model";
+import type { Aanknoping, InstallatieDocument, NodeType, NodeVan, LichtschakelingDoel } from "@elentrik/model";
 
 /** A new selection never silently leaves insertion pointing at an unrelated circuit. */
 export function invoegpuntBijSelectie<T extends Aanknoping>(analyse: Analyse, punten: readonly T[], id: string): T | undefined {
@@ -14,7 +15,7 @@ export function invoegpuntBijSelectie<T extends Aanknoping>(analyse: Analyse, pu
 
 /** De volledige elektrische structuur, ook nodes zonder puntlabel of eigen symboolvak. */
 export function schemaKeuzes(doc: InstallatieDocument, analyse: Analyse, typeNaam: (type: NodeType) => string): { id: string; label: string }[] {
-  const keuzes: { id: string; label: string }[] = [];
+  const volgorde: { id: string; kring: string }[] = [];
   const kringen = new Map(analyse.kringen.map(k => [k.beveiligingId, k.label]));
   const gezien = new Set<string>();
   const stapel = [{ id: doc.rootId, kring: "" }];
@@ -24,11 +25,64 @@ export function schemaKeuzes(doc: InstallatieDocument, analyse: Analyse, typeNaa
     if (!node || gezien.has(id)) continue;
     gezien.add(id);
     const kring = kringen.get(id) ?? bovenliggendeKring;
-    const identiteit = analyse.puntLabels[id] ?? (node.type === "verdeelbord" ? node.naam : kring);
-    keuzes.push({ id, label: [identiteit, typeNaam(node.type), node.label].filter(Boolean).join(" · ") });
+    volgorde.push({ id, kring });
     for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push({ id: node.kinderen[i]!, kring });
   }
-  return keuzes;
+  const plaatsen = differentieelPlaatsen(doc, volgorde.map(v => v.id));
+  return uniekeKeuzeLabels(volgorde.map(({ id, kring }) => {
+    const node = doc.nodes[id]!;
+    const delen = node.type === "differentieel"
+      ? [differentieelNaam(node, plaatsen.get(id)!, typeNaam)]
+      : [analyse.puntLabels[id] ?? (node.type === "verdeelbord" ? node.naam : kring), typeNaam(node.type)];
+    return { id, label: [...delen, node.label].filter(Boolean).join(" · ") };
+  }));
+}
+
+/** Reserve existing descriptions before assigning ordinals, including descriptions such as "Keuken 1". */
+function uniekeKeuzeLabels<T extends { label: string }>(keuzes: T[]): T[] {
+  const aantallen = new Map<string, number>();
+  for (const keuze of keuzes) aantallen.set(keuze.label, (aantallen.get(keuze.label) ?? 0) + 1);
+  const nummers = new Map<string, number>();
+  // Reserve original descriptions as well as generated labels; e.g. "Keuken 1" may already exist.
+  const bezet = new Set(keuzes.map(keuze => keuze.label));
+  return keuzes.map(keuze => {
+    if (aantallen.get(keuze.label)! < 2) return keuze;
+    let nummer = (nummers.get(keuze.label) ?? 0) + 1;
+    while (bezet.has(`${keuze.label} ${nummer}`)) nummer++;
+    nummers.set(keuze.label, nummer);
+    const label = `${keuze.label} ${nummer}`;
+    bezet.add(label);
+    return { ...keuze, label };
+  });
+}
+
+function bordKeuzeLabels(doc: InstallatieDocument, structuur: {id: string; label: string}[], typeNaam: (type: NodeType) => string): Map<string, string> {
+  const borden = structuur.filter(k => doc.nodes[k.id]!.type === "verdeelbord");
+  return new Map(uniekeKeuzeLabels(borden.map((k, index) => {
+    const node = doc.nodes[k.id]!;
+    return { id: k.id, label: node.type === "verdeelbord" && node.naam?.trim() ? k.label : `${typeNaam("verdeelbord")} ${index + 1}` };
+  })).map(k => [k.id, k.label]));
+}
+
+/** Unique node labels, source references and board context for template and lighting destinations. */
+export function invoegDoelKeuzes(
+  doc: InstallatieDocument,
+  analyse: Analyse,
+  doelen: readonly LichtschakelingDoel[],
+  typeNaam: (type: NodeType) => string,
+  doelNaam: (soort: LichtschakelingDoel["soort"]) => string,
+): {value: string; label: string}[] {
+  const structuur = schemaKeuzes(doc, analyse, typeNaam);
+  const namen = new Map(structuur.map(k => [k.id, k.label]));
+  const borden = bordKeuzeLabels(doc, structuur, typeNaam);
+  return uniekeKeuzeLabels(doelen.map(doel => {
+    const bordId = bordVanNode(doc, doel.nodeId);
+    const context = bordId !== undefined && bordId !== doel.nodeId ? borden.get(bordId) : undefined;
+    return {
+      value: `${doel.soort}:${doel.nodeId}`,
+      label: [borden.get(doel.nodeId) ?? namen.get(doel.nodeId), context, doelNaam(doel.soort)].filter(Boolean).join(" — "),
+    };
+  }));
 }
 
 /** Sorteer bestemmingen los van de geometrische volgorde van de plusknoppen. */
@@ -41,19 +95,11 @@ export function schemaInvoegKeuzes(
 ): (Aanknoping & { sleutel: string; label: string; bordId: string; bord: string })[] {
   const structuur = schemaKeuzes(doc, analyse, typeNaam);
   const bordIds = structuur.filter(n => doc.nodes[n.id]?.type === "verdeelbord").map(n => n.id);
+  const bordLabels = bordKeuzeLabels(doc, structuur, typeNaam);
   const differentielen = structuur.filter(n => doc.nodes[n.id]?.type === "differentieel").map(n => n.id);
+  const plaatsen = differentieelPlaatsen(doc, differentielen);
   const kringIndex = new Map(analyse.kringen.map((k, index) => [k.id, index]));
   const natuurlijk = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
-  function bordVan(id: string): string {
-    const gezien = new Set<string>();
-    let node = doc.nodes[id];
-    while (node && !gezien.has(node.id)) {
-      gezien.add(node.id);
-      if (node.type === "verdeelbord") return node.id;
-      node = node.parentId ? doc.nodes[node.parentId] : undefined;
-    }
-    return "";
-  }
   function ligtOnder(id: string, voorouderId: string): boolean {
     const gezien = new Set<string>();
     let node = doc.nodes[id];
@@ -66,11 +112,8 @@ export function schemaInvoegKeuzes(
   }
   return aanknopingen.filter(a => !!doc.nodes[a.nodeId]).map(a => {
     const node = doc.nodes[a.nodeId]!;
-    const bordId = bordVan(node.id);
-    const bordNode = doc.nodes[bordId];
-    const bord = bordNode?.type === "verdeelbord"
-      ? bordNode.naam || `${typeNaam("verdeelbord")} ${bordIds.indexOf(bordId) + 1}`
-      : typeNaam("aansluiting");
+    const bordId = bordVanNode(doc, node.id) ?? "";
+    const bord = bordLabels.get(bordId) ?? typeNaam("aansluiting");
     const kring = analyse.kringen.find(k => k.id === analyse.kringVanNode[node.id]);
     let label: string;
     if (a.soort === "kring-einde" || a.soort === "aftakking-einde") {
@@ -78,9 +121,8 @@ export function schemaInvoegKeuzes(
       label = tekst("kringBestemming", { kring: kring?.label ?? "—", punt });
       if (node.label) label += ` · ${node.label}`;
     } else if (node.type === "differentieel") {
-      const nummer = differentielen.filter(id => bordVan(id) === bordId).indexOf(node.id) + 1;
       const kringen = analyse.kringen.filter(k => ligtOnder(k.beveiligingId, node.id)).map(k => k.label);
-      label = `${typeNaam(node.type)} ${nummer} · ${node.nominaal_A} A / ${node.gevoeligheid_mA} mA · ${node.polen}P · ${node.klasse}`;
+      label = `${differentieelNaam(node, plaatsen.get(node.id) ?? 1, typeNaam)} · ${node.nominaal_A} A · ${node.polen}P · ${node.klasse}`;
       if (node.label) label += ` · ${node.label}`;
       if (kringen.length) label += ` · ${tekst("voorKringen", { kringen: kringen.join(", ") })}`;
     } else {
@@ -103,3 +145,5 @@ export function schemaInvoegKeuzes(
     return differentielen.indexOf(a.nodeId) - differentielen.indexOf(b.nodeId);
   });
 }
+
+export { bordVanNode, differentieelNaam };

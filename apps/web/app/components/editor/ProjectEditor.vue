@@ -16,6 +16,7 @@ import ExportDialoog from "~/components/editor/ExportDialoog.vue";
 import OnderdelenPaneel from "~/components/editor/OnderdelenPaneel.vue";
 import SchemaCanvas from "~/components/editor/SchemaCanvas.vue";
 import SymbolenVenster from "~/components/editor/SymbolenVenster.vue";
+import SneltoetsenDialoog from "~/components/editor/SneltoetsenDialoog.vue";
 import KringenlijstTabel from "~/components/kringenlijst/KringenlijstTabel.vue";
 import MateriaallijstTabel from "~/components/materiaallijst/MateriaallijstTabel.vue";
 import PaginaTabs from "~/components/situatie/PaginaTabs.vue";
@@ -24,7 +25,12 @@ import PlanCanvas from "~/components/situatie/PlanCanvas.vue";
 import PlanOpmaak from "~/components/situatie/PlanOpmaak.vue";
 import PlanToevoegenDialoog from "~/components/situatie/PlanToevoegenDialoog.vue";
 import SchaalDialoog from "~/components/situatie/SchaalDialoog.vue";
+import { volgendPunt } from "~/situatie/plaatskeuzes";
+import { GROEP_INSTALLATIE, GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, type TePlaatsenGroep } from "~/situatie/items";
 import TePlaatsenPaneel from "~/components/situatie/TePlaatsenPaneel.vue";
+import SjabloonInvoegenDialoog from "./SjabloonInvoegenDialoog.vue";
+import LichtschakelingDialoog from "./LichtschakelingDialoog.vue";
+import KringReferentiesDialoog from "./KringReferentiesDialoog.vue";
 import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
@@ -72,6 +78,11 @@ store.nieuwVenster();
 const { nodeTekst } = useNodeTekst();
 const { t } = useI18n();
 const toast = useToast();
+const sjabloonOpen = ref(false);
+const sjabloonId = ref("");
+const lichtschakelingOpen = ref(false);
+const referentiesOpen = ref(false);
+function openSjabloon(id: string): void { sjabloonId.value = id; sjabloonOpen.value = true; }
 
 useHead({ title: () => (store.projectId === id && store.naam ? `${store.naam} · ${t("app.naam")}` : t("app.naam")) });
 
@@ -414,7 +425,18 @@ const exportOpen = ref(false);
 
 /** Het punt dat met een klik op het plan geplaatst wordt (gekozen in "Te plaatsen"), of null. */
 const teplaatsen = ref<NodeId | null>(null);
-watch(teplaatsen, (id) => { if (id !== null) werkruimte.value?.toonWerk(); });
+const plaatsZoek = ref("");
+const plaatsKring = ref("");
+const doorplaatsen = ref(false);
+/** De zichtbare groepen van "Te plaatsen", in hun volgorde; "Doorgaan" blijft binnen één groep (kring). */
+const plaatsVolgorde = ref<TePlaatsenGroep[]>([]);
+let plaatsReeks: TePlaatsenGroep[] = [];
+watch(teplaatsen, (id) => {
+  if (id === null) return;
+  plaatsReeks = plaatsVolgorde.value.map((g) => ({ ...g, nodeIds: [...g.nodeIds] }));
+  // Small screens keep the established route back to the full plan.
+  if (window.matchMedia("(max-width: 767px)").matches) werkruimte.value?.toonWerk();
+});
 /** De pagina waarop twee klikken een afstand meten (schaalmodus), of null. */
 const meetPaginaId = ref<string | null>(null);
 const meetSchaal = computed(() => meetPaginaId.value !== null && meetPaginaId.value === situatie.actievePaginaId);
@@ -443,6 +465,7 @@ watch(
   () => situatie.actievePaginaId,
   (id) => {
     if (id !== meetPaginaId.value) meetPaginaId.value = null;
+    teplaatsen.value = null;
   },
 );
 watch(
@@ -460,8 +483,31 @@ const hint = computed(() => {
   return null;
 });
 
+watch(() => store.alleenLezen || situatie.actievePagina?.referentie, alleenLezen => { if (alleenLezen) stopPlaatsenEnMeten(); });
+watch([plaatsZoek, plaatsKring], () => { teplaatsen.value = null; });
+
+/** De naam van een groep van "Te plaatsen" in de melding dat ze af is. */
+function groepKlaarMelding(kringLabel: string): string {
+  const groep = { [GROEP_VERDEELBORDEN]: "verdeelborden", [GROEP_INSTALLATIE]: "installatie", [GROEP_ZONDER_KRING]: "zonderKring" }[kringLabel];
+  return groep
+    ? t("editor.situatie.tePlaatsen.groepKlaar", { groep: t(`editor.situatie.tePlaatsen.${groep}`) })
+    : t("editor.situatie.tePlaatsen.kringKlaar", { label: kringLabel });
+}
+
+/** "Doorgaan met volgend punt" loopt; de modus-chip met Stop staat dan in de hint. */
+const doorplaatsenActief = computed(() => doorplaatsen.value && teplaatsen.value !== null);
+
 function geplaatst(nodeId: NodeId, vanPagina: string | null): void {
-  stopPlaatsenEnMeten();
+  if (doorplaatsen.value && teplaatsen.value === nodeId) {
+    const volgende = volgendPunt(plaatsReeks, nodeId);
+    teplaatsen.value = volgende.soort === "volgend" ? volgende.nodeId : null;
+    if (volgende.soort === "kringKlaar") {
+      toast.add({ title: groepKlaarMelding(volgende.kringLabel), color: "success", icon: "i-lucide-circle-check" });
+    }
+  } else {
+    teplaatsen.value = null;
+  }
+  meetPaginaId.value = null;
   const naar = situatie.actievePagina?.titel;
   if (vanPagina === null || naar === undefined) return;
   toast.add({ title: t("editor.situatie.verplaatst", { label: nodeTekst(nodeId), van: vanPagina, naar }) });
@@ -592,30 +638,44 @@ onBeforeUnmount(() => {
       <AbonnementBanner v-if="!admin" />
       <EditorWerkruimte ref="werkruimte" :tabblad="store.tabblad" :selectie="store.selectie" :heeft-plan="!!situatie.actievePagina?.achtergrond">
         <template #gereedschap>
-          <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" />
-          <TePlaatsenPaneel v-else v-model:gekozen="teplaatsen" />
+          <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" @sjabloon="openSjabloon" @lichtschakeling="lichtschakelingOpen = true" @referenties="referentiesOpen = true" @eigenschappen="werkruimte?.toonEigenschappen()" />
+          <TePlaatsenPaneel v-else :inert="situatie.actievePagina?.referentie || undefined" v-model:gekozen="teplaatsen" v-model:zoek="plaatsZoek" v-model:kring="plaatsKring" v-model:doorgaan="doorplaatsen" @volgorde="plaatsVolgorde = $event" />
         </template>
         <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />
         <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="min-h-0 flex-1" />
         <MateriaallijstTabel v-else-if="store.tabblad === 'materiaallijst'" class="min-h-0 flex-1" />
         <template v-else>
           <div v-if="heeftPaginas" class="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <p v-if="situatie.actievePagina?.referentie" role="status" class="border-b border-default px-3 py-2 text-sm" data-testid="referentieblad-melding">{{ $t('editor.situatie.referentieUitleg') }}</p>
 
             <div
               v-if="hint"
-              class="flex min-h-9 shrink-0 items-center gap-2 border-b border-default bg-primary/5 px-3 py-1 text-sm"
+              class="absolute inset-x-3 top-12 z-10 flex min-h-9 flex-wrap items-center gap-x-2 gap-y-1 rounded border border-default bg-default px-3 py-1 text-sm"
               role="status"
               data-testid="plan-hint"
             >
               <UIcon :name="meetSchaal ? 'i-lucide-ruler' : 'i-lucide-map-pin'" class="size-4 shrink-0" />
-              <span class="max-h-full min-w-0 flex-1 overflow-auto">{{ hint }}</span>
+              <UBadge
+                v-if="doorplaatsenActief && !meetSchaal"
+                color="primary"
+                variant="subtle"
+                icon="i-lucide-repeat"
+                :label="$t('editor.situatie.tePlaatsen.doorgaan')"
+                class="shrink-0"
+                data-testid="plan-modus-doorgaan"
+              />
+              <!-- Op een smal scherm breekt de uitleg naast de doorgaan-chip naar een eigen regel. -->
+              <span class="max-h-full min-w-0 flex-1 basis-48 overflow-auto" data-testid="plan-hint-tekst">{{ hint }}</span>
               <UButton
                 v-if="hint"
-                color="neutral"
-                variant="link"
+                :color="doorplaatsenActief && !meetSchaal ? 'primary' : 'neutral'"
+                :variant="doorplaatsenActief && !meetSchaal ? 'soft' : 'link'"
+                :icon="doorplaatsenActief && !meetSchaal ? 'i-lucide-square' : undefined"
                 size="sm"
                 class="ml-auto"
-                :label="$t('editor.situatie.hint.annuleren')"
+                :label="$t(doorplaatsenActief && !meetSchaal ? 'editor.situatie.hint.stop' : 'editor.situatie.hint.annuleren')"
+                :aria-keyshortcuts="'Escape'"
+                data-testid="plan-hint-stop"
                 @click="stopPlaatsenEnMeten"
               />
             </div>
@@ -654,6 +714,9 @@ onBeforeUnmount(() => {
         <template #bevindingen><BevindingenPaneel id="bevindingen" @selecteer="herstelBevinding" @navigeer="navigeerDossier" /></template>
         <template #opmaak><PlanOpmaak /></template>
       </EditorWerkruimte>
+      <SjabloonInvoegenDialoog v-model:open="sjabloonOpen" :sjabloon-id="sjabloonId" />
+      <LichtschakelingDialoog v-model:open="lichtschakelingOpen" />
+      <KringReferentiesDialoog v-model:open="referentiesOpen" />
     </template>
 
     <UContainer v-else-if="laadstatus === 'nietGevonden'" class="py-8">
@@ -693,6 +756,7 @@ onBeforeUnmount(() => {
     />
     <SchaalDialoog v-model:open="schaalOpen" :pagina-id="meetPaginaId" :afstand-px="schaalAfstandPx" />
     <SymbolenVenster />
+    <SneltoetsenDialoog />
 
     <ConceptDialoog
       v-if="concept"

@@ -1,19 +1,17 @@
 import type { Analyse } from "@elentrik/arei";
-import type { InstallatieDocument } from "@elentrik/model";
-import { tePlaatsen } from "../situatie/items";
+import type { InstallatieDocument, NodeId } from "@elentrik/model";
+import type { Tabblad } from "../stores/editor";
+import { ongeplaatstNaam, TEKSTEN, type Taal } from "@elentrik/render";
 
-/** Completeness is independent of electrical validation and never certifies conformity. */
-export function dossierStatus(doc: InstallatieDocument | null, analyse: Analyse | null) {
-  const ontbreekt: ("klant" | "werfadres" | "context" | "schema")[] = [];
-  if (!doc?.meta.klant.naam.trim()) ontbreekt.push("klant");
-  const adres = doc?.meta.werfadres;
-  if (!adres || ![adres.straat, adres.nummer, adres.postcode, adres.gemeente].every(v => v.trim())) ontbreekt.push("werfadres");
-  if (!doc?.meta.installatieContext || doc.meta.installatieContext === "onbekend") ontbreekt.push("context");
-  if (!analyse?.kringen.length) ontbreekt.push("schema");
-  const paginas = doc?.situatie.paginas ?? [];
-  const plannen = paginas.filter(p => p.achtergrond).length;
-  const zonderPlan = paginas.filter(p => !p.achtergrond).length;
-  const ongeplaatst = doc && analyse ? tePlaatsen(doc, analyse).reduce((a, g) => a + g.nodeIds.length, 0) : 0;
-  return { ontbreekt, plannen, zonderPlan, ongeplaatst,
-    volledig: !!doc && !!analyse && !ontbreekt.length && plannen > 0 && !zonderPlan && !ongeplaatst };
+export { dossierStatus } from "@elentrik/render";
+
+/** De ongeplaatste onderdelen met dezelfde benoeming als de bijlage van de pdf ("I3", "PV-installatie", "aardingsonderbreker"). */
+export function ongeplaatsteOnderdelen(doc: InstallatieDocument, analyse: Analyse, ids: readonly NodeId[], taal: Taal): { id: NodeId; naam: string }[] {
+  return ids.map((id) => ({ id, naam: ongeplaatstNaam(doc, analyse, id, TEKSTEN[taal]) })).filter((o) => o.naam !== "");
+}
+
+/** Selecteert een ongeplaatst onderdeel op het eendraadschema, waar elk onderdeel te vinden is. */
+export function kiesOngeplaatst(store: { selectie: NodeId[]; tabblad: Tabblad }, id: NodeId): void {
+  store.tabblad = "eendraadschema";
+  store.selectie = [id];
 }

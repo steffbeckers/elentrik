@@ -123,6 +123,9 @@ describe("PLAATSBARE_TYPES", () => {
       "schakelaar",
       "toestel",
       "verdeelbord",
+      "teller",
+      "aardelektrode",
+      "aardingsonderbreker",
     ]);
   });
 });
@@ -433,4 +436,31 @@ describe("verplaatsPagina", () => {
     const { doc } = metDrie();
     expect(vangFout(() => verplaatsPagina(doc, "weg", 0)).code).toBe("ONBEKENDE_PAGINA");
   });
+});
+
+test("referentiebladen laten geen plaatsing toe en veranderen bestaande punten niet", async () => {
+  const { zetReferentiePagina } = await import("../src/situatie");
+  const { doc, p1, doos } = opstelling();
+  const referentie = zetReferentiePagina(doc, p1, true).doc;
+  expect(() => plaats(referentie, p1, doos, { x: 1, y: 1, rotatie: 0 })).toThrow();
+  const geplaatst = plaats(doc, p1, doos, { x: 1, y: 1, rotatie: 0 }).doc;
+  expect(() => zetReferentiePagina(geplaatst, p1, true)).toThrow();
+});
+
+test("afdrukconcept valideert kalibratie en is ongedaan te maken", async () => {
+  const { zetPaginaAfdruk } = await import("../src/situatie");
+  const { doc, p1 } = opstelling();
+  expect(() => zetPaginaAfdruk(doc, p1, { papier: "A3", orientatie: "staand", schaalmodus: "gekalibreerd" })).toThrow();
+  const r = zetPaginaAfdruk(doc, p1, { papier: "A3", orientatie: "staand", schaalmodus: "passend" });
+  expect(r.doc.situatie.paginas.find(p => p.id === p1)?.afdruk?.orientatie).toBe("staand");
+  expect(pasPatchesToe(r.doc, r.inversePatches)).toEqual(doc);
+});
+
+test("een nieuwe achtergrond neemt geen oude gekalibreerde afdruk over", async () => {
+ const { zetPaginaAfdruk } = await import("../src/situatie");
+ const { doc, p1 } = opstelling();
+ const metPlan = zetAchtergrond(doc, p1, { origineelBestandId: "o", rasterBestandId: "r", breedte_px: 100, hoogte_px: 100, schaal: { mmPerPx: 100 } }).doc;
+ const gekalibreerd = zetPaginaAfdruk(metPlan, p1, { papier: "A4", orientatie: "liggend", schaalmodus: "gekalibreerd", schaalNoemer: 100 }).doc;
+ const nieuw = zetAchtergrond(gekalibreerd, p1, { origineelBestandId: "o2", rasterBestandId: "r2", breedte_px: 50, hoogte_px: 50 }).doc;
+ expect(nieuw.situatie.paginas.find(p => p.id === p1)?.afdruk).toBeUndefined();
 });

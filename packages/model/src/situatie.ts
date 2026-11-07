@@ -11,7 +11,7 @@ import {
 } from "./schema";
 import { PUNT_TYPES } from "./structuur";
 
-export const PLAATSBARE_TYPES = [...PUNT_TYPES, "verdeelbord"] as const;
+export const PLAATSBARE_TYPES = [...PUNT_TYPES, "verdeelbord", "teller", "aardelektrode", "aardingsonderbreker"] as const;
 
 const AchtergrondSchema = SituatiePaginaSchema.shape.achtergrond.unwrap();
 
@@ -49,7 +49,9 @@ export function zetAchtergrond(
   return resultaat(doc, (draft) => {
     const pagina = draft.situatie.paginas.find((p) => p.id === paginaId)!;
     pagina.achtergrond = nieuw;
+    if (pagina.afdruk?.schaalmodus === "gekalibreerd") delete pagina.afdruk;
     delete pagina.tekening;
+    delete pagina.afdekkingen;
   });
 }
 
@@ -78,7 +80,41 @@ export function zetGetekendPlan(
       }
     }
     pagina.tekening = bron.data;
+    delete pagina.afdekkingen;
     pagina.achtergrond = { ...beeld.data, schaal: { mmPerPx: 10 / nieuw.pxPerCm } };
+  });
+}
+
+/** Een vaste witte afdekking verandert alleen de weergave, nooit het bronbestand. */
+export function voegAfdekkingToe(
+  doc: InstallatieDocument,
+  paginaId: string,
+  rechthoek: { x: number; y: number; breedte: number; hoogte: number },
+): OperatieResultaat & { id: string } {
+  vereisPagina(doc, paginaId);
+  const pagina = doc.situatie.paginas.find(p => p.id === paginaId)!;
+  const id = nieuwId();
+  const parsed = SituatiePaginaSchema.shape.afdekkingen.unwrap().element.safeParse({ ...rechthoek, id });
+  const a = pagina.achtergrond;
+  if (!parsed.success || !a || pagina.referentie || pagina.tekening ||
+      rechthoek.x + rechthoek.breedte > a.breedte_px || rechthoek.y + rechthoek.hoogte > a.hoogte_px) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "Afdekking moet binnen een geïmporteerd definitief plan liggen" });
+  }
+  return resultaat(doc, draft => {
+    const p = draft.situatie.paginas.find(p => p.id === paginaId)!;
+    (p.afdekkingen ??= []).push(parsed.data);
+  }, { id });
+}
+
+export function verwijderAfdekking(doc: InstallatieDocument, paginaId: string, id: string): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const pagina = doc.situatie.paginas.find(p => p.id === paginaId)!;
+  if (pagina.referentie) throw new DocumentFout("ONGELDIG_SCHEMA");
+  if (!pagina.afdekkingen?.some(a => a.id === id)) return { doc, patches: [], inversePatches: [] };
+  return resultaat(doc, draft => {
+    const p = draft.situatie.paginas.find(p => p.id === paginaId)!;
+    p.afdekkingen = p.afdekkingen!.filter(a => a.id !== id);
+    if (!p.afdekkingen.length) delete p.afdekkingen;
   });
 }
 
@@ -90,6 +126,9 @@ export function plaats(
   positie: { x: number; y: number; rotatie: number },
 ): OperatieResultaat {
   vereisPagina(doc, paginaId);
+  if (doc.situatie.paginas.find(p => p.id === paginaId)!.referentie) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "Referentieblad: kies een definitief plan om punten te plaatsen" });
+  }
   const node = vereis(doc, nodeId);
   if (!(PLAATSBARE_TYPES as readonly string[]).includes(node.type)) {
     throw new DocumentFout("NIET_PLAATSBAAR", { nodeId, type: node.type });
@@ -130,6 +169,25 @@ export function zetPaginaOpmaak(
   return resultaat(doc, (draft) => {
     Object.assign(draft.situatie.paginas.find((p) => p.id === paginaId)!, geparsed.data);
   });
+}
+
+export function zetPaginaAfdruk(doc: InstallatieDocument, paginaId: string, afdruk: NonNullable<SituatiePagina["afdruk"]>): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  const parsed = SituatiePaginaSchema.shape.afdruk.unwrap().safeParse(afdruk);
+  if (!parsed.success) throw new DocumentFout("ONGELDIG_SCHEMA", { issues: parsed.error.issues });
+  const pagina = doc.situatie.paginas.find(p => p.id === paginaId)!;
+  if (afdruk.schaalmodus === "gekalibreerd" && !(pagina.achtergrond?.schaal?.mmPerPx && pagina.achtergrond.schaal.mmPerPx > 0)) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "Kalibreer eerst de definitieve uitsnede" });
+  }
+  return resultaat(doc, draft => { draft.situatie.paginas.find(p => p.id === paginaId)!.afdruk = parsed.data; });
+}
+
+export function zetReferentiePagina(doc: InstallatieDocument, paginaId: string, referentie: boolean): OperatieResultaat {
+  vereisPagina(doc, paginaId);
+  if (referentie && doc.situatie.paginas.find(p => p.id === paginaId)!.plaatsingen.length) {
+    throw new DocumentFout("ONGELDIG_SCHEMA", { reden: "Een blad met definitieve punten kan geen referentieblad worden" });
+  }
+  return resultaat(doc, draft => { draft.situatie.paginas.find(p => p.id === paginaId)!.referentie = referentie; });
 }
 
 /** Wijzigt uitsluitend het label; het symbool behoudt zijn positie en rotatie. */

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import AfdrukInstellingen from "./AfdrukInstellingen.vue";
+const afdrukOpen = ref(false);
+const afdrukPagina = ref<SituatiePagina>();
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { SituatiePagina } from "@elentrik/model";
 import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
@@ -67,6 +70,7 @@ function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
         label: t("editor.situatie.tekenen.edit"), icon: "i-lucide-pencil-ruler",
         disabled: editor.alleenLezen, onSelect: () => emit("tekenen", pagina.id),
       }] : []),
+      { label: t("editor.situatie.afdruk.titel"), icon: "i-lucide-printer", onSelect: () => { afdrukPagina.value = pagina; afdrukOpen.value = true; } },
       {
         label: t("editor.situatie.paginas.hernoemen"),
         icon: "i-lucide-pencil",
@@ -169,6 +173,7 @@ function menu(pagina: SituatiePagina, index: number): DropdownMenuItem[][] {
 
     </div>
 
+    <AfdrukInstellingen v-model:open="afdrukOpen" :pagina="afdrukPagina" />
     <PaginaHernoemenDialoog v-model:open="hernoemOpen" :pagina-id="hernoemPaginaId" />
 
     <UModal v-model:open="verwijderOpen" :title="$t('editor.situatie.verwijderen.titel')">

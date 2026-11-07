@@ -18,6 +18,7 @@ export type PlanInvoer = {
   naam: string;
   /** Het gekozen paginanummer (1-gebaseerd) bij een PDF. */
   pdfPagina?: number;
+  bronUitsnede?: PlanAchtergrond["bronUitsnede"];
 };
 
 export type PlanAchtergrond = NonNullable<SituatiePagina["achtergrond"]>;
@@ -41,23 +42,39 @@ export async function laadPlanOp(
   invoer: PlanInvoer,
   signal?: AbortSignal,
 ): Promise<PlanAchtergrond> {
-  vereisNietAfgebroken(signal);
-  const origineel = await api.upload(projectId, "plan-origineel", invoer.origineel, invoer.naam, signal);
-  let raster = origineel;
-  if (invoer.raster !== invoer.origineel) {
+  return (await laadPlannenOp(api, projectId, [invoer], signal))[0]!;
+}
+
+/** Prepare every raster before publishing any document page. Originals are shared by identity. */
+export async function laadPlannenOp(api: PlanUploader, projectId: string, invoeren: readonly PlanInvoer[], signal?: AbortSignal): Promise<PlanAchtergrond[]> {
+  const originelen = new Map<Blob, Awaited<ReturnType<PlanUploader["upload"]>>>();
+  const resultaten: PlanAchtergrond[] = [];
+  for (const invoer of invoeren) {
     vereisNietAfgebroken(signal);
-    raster = await api.upload(projectId, "plan-raster", invoer.raster, `${invoer.naam}.png`, signal);
+    let origineel = originelen.get(invoer.origineel);
+    if (!origineel) {
+      origineel = await api.upload(projectId, "plan-origineel", invoer.origineel, invoer.naam, signal);
+      originelen.set(invoer.origineel, origineel);
+    }
+    let raster = origineel;
+    if (invoer.raster !== invoer.origineel) {
+      vereisNietAfgebroken(signal);
+      raster = await api.upload(projectId, "plan-raster", invoer.raster, `${invoer.naam}.png`, signal);
+    }
+    if (raster.breedte_px === undefined || raster.hoogte_px === undefined) {
+      throw new Error("De server gaf geen afmetingen voor het raster");
+    }
+    vereisNietAfgebroken(signal);
+    resultaten.push({
+      origineelBestandId: origineel.id,
+      rasterBestandId: raster.id,
+      ...(invoer.pdfPagina === undefined ? {} : { pdfPagina: invoer.pdfPagina }),
+      breedte_px: raster.breedte_px,
+      hoogte_px: raster.hoogte_px,
+      ...(invoer.bronUitsnede ? { bronUitsnede: invoer.bronUitsnede } : {}),
+    });
   }
-  if (raster.breedte_px === undefined || raster.hoogte_px === undefined) {
-    throw new Error("De server gaf geen afmetingen voor het raster");
-  }
-  return {
-    origineelBestandId: origineel.id,
-    rasterBestandId: raster.id,
-    ...(invoer.pdfPagina === undefined ? {} : { pdfPagina: invoer.pdfPagina }),
-    breedte_px: raster.breedte_px,
-    hoogte_px: raster.hoogte_px,
-  };
+  return resultaten;
 }
 
 /**

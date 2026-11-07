@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, test } from "vitest";
 import { haalBestand } from "../server/bestanden/repo";
 import { maakLokaleOpslag, type BestandOpslag } from "../server/bestanden/opslag";
-import { bestanden, projecten } from "../server/db/schema";
+import { bestanden, exports, projecten, snapshots } from "../server/db/schema";
 import {
   bewaarProject,
   dupliceerProject,
@@ -231,6 +231,64 @@ describe("projecten-repo", () => {
     expect((await lijstProjecten(db, b)).map((p) => p.id)).toEqual([vanB.id]);
     expect(await projectOrganisatie(db, vanA.id)).toBe(a);
     expect((await haalProject(db, a, vanA.id))!.organisatieId).toBe(a);
+  });
+
+  test("lijstProjecten geeft de gemeente van de werf (anders van de klant) en de laatste export", async () => {
+    const db = await maakTestDb();
+    const a = await maakTestOrganisatie(db, "A");
+    const b = await maakTestOrganisatie(db, "B");
+    const adres = (gemeente: string) => ({ straat: "Kerkstraat", nummer: "1", postcode: "9000", gemeente, land: "België" });
+
+    const metWerf = await maakProject(db, a, { ...invoer, naam: "Met werf" });
+    const document = structuredClone((await haalProject(db, a, metWerf.id))!.document);
+    document.meta.werfadres = adres("Gent");
+    document.meta.klant.adres = adres("Brugge");
+    await bewaarProject(db, a, metWerf.id, 1, { document });
+
+    const alleenKlant = await maakProject(db, a, { ...invoer, naam: "Alleen klant" });
+    const document2 = structuredClone((await haalProject(db, a, alleenKlant.id))!.document);
+    document2.meta.werfadres = adres("  ");
+    document2.meta.klant.adres = adres("Leuven");
+    await bewaarProject(db, a, alleenKlant.id, 1, { document: document2 });
+
+    const zonderAdres = await maakProject(db, a, { ...invoer, naam: "Zonder adres" });
+    const vanB = await maakProject(db, b, { ...invoer, naam: "Van B" });
+
+    async function exporteer(projectId: string, aangemaakt: Date) {
+      const [snapshot] = await db
+        .insert(snapshots)
+        .values({ projectId, versie: 1, document: {}, reden: "export" })
+        .returning();
+      const [bestand] = await db
+        .insert(bestanden)
+        .values({ projectId, soort: "export", mime: "application/pdf", grootte: 1, sleutel: `export-${aangemaakt.getTime()}` })
+        .returning();
+      await db.insert(exports).values({
+        projectId,
+        snapshotId: snapshot!.id,
+        bestandId: bestand!.id,
+        versieLabel: "v1",
+        papier: "A4",
+        onderdelen: {},
+        aantalFouten: 0,
+        aantalWaarschuwingen: 0,
+        aangemaakt,
+      });
+    }
+    await exporteer(metWerf.id, new Date("2026-11-01T10:00:00Z"));
+    await exporteer(metWerf.id, new Date("2026-11-04T15:30:00Z"));
+    await exporteer(vanB.id, new Date("2026-11-05T08:00:00Z"));
+
+    const lijst = await lijstProjecten(db, a);
+    const perId = new Map(lijst.map((p) => [p.id, p]));
+    expect(lijst).toHaveLength(3);
+    expect(perId.get(metWerf.id)).toMatchObject({ werfGemeente: "Gent", laatsteExport: "2026-11-04T15:30:00.000Z" });
+    expect(perId.get(alleenKlant.id)).toMatchObject({ werfGemeente: "Leuven", laatsteExport: null });
+    expect(perId.get(zonderAdres.id)).toMatchObject({ werfGemeente: null, laatsteExport: null });
+    expect(perId.has(vanB.id)).toBe(false);
+    expect(await lijstProjecten(db, b)).toEqual([
+      expect.objectContaining({ id: vanB.id, werfGemeente: null, laatsteExport: "2026-11-05T08:00:00.000Z" }),
+    ]);
   });
 
   test("een project van een andere organisatie bestaat niet voor haalProject, bewaren, dupliceren of verwijderen", async () => {

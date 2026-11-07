@@ -1,5 +1,5 @@
 // De cartouche: een strook van `cartoucheHoogte_mm` onderaan elke pagina, binnen de marge.
-import { papierMaat, type Papier } from "@elentrik/layout";
+import { papierMaat, voedingTekst, type Papier } from "@elentrik/layout";
 import type { Adres, InstallatieDocument, Partij } from "@elentrik/model";
 import { escapeXml, getal } from "@elentrik/symbols";
 import { LOCALES, type Taal, type Teksten } from "../teksten/index";
@@ -15,6 +15,11 @@ const TITEL_MM = 3.5;
 /** Breedte van het logo en de ruimte tussen logo en tekst in mm. */
 const LOGO_BREEDTE_MM = 18;
 const LOGO_TUSSENRUIMTE_MM = 2;
+/**
+ * Speling onder de laatste regel van het hoogste vak: de browser rondt elke regel af op hele pixels,
+ * en één pixel is 0,53 mm in het afdrukvoorbeeld op 50 %. Zo wordt de laatste regel nooit afgesneden.
+ */
+const SPELING_MM = 0.6;
 
 /**
  * De vakken van links naar rechts, als aandeel van de breedte van de cartouche: installateur,
@@ -22,12 +27,14 @@ const LOGO_TUSSENRUIMTE_MM = 2;
  */
 const AANDELEN = [0.25, 0.16, 0.16, 0.21, 0.11, 0.11];
 const DATUM_FORMATTEERDERS = new Map<Taal, Intl.DateTimeFormat>();
+const GETAL_FORMATTEERDERS = new Map<Taal, Intl.NumberFormat>();
 
 export type CartoucheGegevens = {
   papier: Papier;
   teksten: Teksten;
   taal: Taal;
   meta: InstallatieDocument["meta"];
+  voeding: InstallatieDocument["voeding"];
   installateur: Partij;
   logo: string | undefined;
   titel: string;
@@ -63,13 +70,37 @@ export function formatteerDatum(datum: string, taal: Taal): string {
   return formatter.format(moment);
 }
 
+/** Een meetwaarde in de locale van `taal` (`28,5`), tot drie decimalen. */
+export function formatteerGetal(waarde: number, taal: Taal): string {
+  let formatter = GETAL_FORMATTEERDERS.get(taal);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALES[taal], { maximumFractionDigits: 3 });
+    GETAL_FORMATTEERDERS.set(taal, formatter);
+  }
+  return formatter.format(waarde);
+}
+
+/** Een meetwaarde met haar eenheid, of "niet ingevuld": nooit 0 of leeg voor een ontbrekende waarde. */
+export function meetwaardeTekst(waarde: number | undefined, eenheid: string, t: Teksten, taal: Taal): string {
+  return waarde === undefined ? t.metingen.nietIngevuld : `${formatteerGetal(waarde, taal)} ${eenheid}`;
+}
+
+/** Meetdatum, aardingsweerstand en isolatieweerstand als [label, waarde], zonder beoordeling. */
+export function metingVelden(metingen: InstallatieDocument["meta"]["metingen"], t: Teksten, taal: Taal): [string, string][] {
+  const m = t.metingen;
+  return [
+    [m.datum, metingen?.datum ? formatteerDatum(metingen.datum, taal) : m.nietIngevuld],
+    [m.aardingsweerstand, meetwaardeTekst(metingen?.aardingsweerstand_ohm, "Ω", t, taal)],
+    [m.isolatieweerstand, meetwaardeTekst(metingen?.isolatieweerstand_MOhm, "MΩ", t, taal)],
+  ];
+}
 
 type VakInhoud = { soort: string; breedte: number; html: string; hoogte: number };
 
 /** Wrap before measuring: exported fields retain every character, at readable size. */
 function vakken(g: CartoucheGegevens): VakInhoud[] {
   const t = g.teksten;
-  const breedte = papierMaat(g.papier.formaat).breedte - 2 * g.papier.marge_mm;
+  const breedte = papierMaat(g.papier.formaat, g.papier.orientatie).breedte - 2 * g.papier.marge_mm;
   type Veld = [string, string?, number?];
   const maak = (i: number, soort: string, velden: Veld[], metLogo = false): VakInhoud => {
     const vakBreedte = breedte * AANDELEN[i]! + (i === 0 ? 0 : RAND_MM);
@@ -77,7 +108,7 @@ function vakken(g: CartoucheGegevens): VakInhoud[] {
     const tekstBreedte = vakBreedte - 2 * VAK_MARGE_MM - 2 * RAND_MM - inspringing;
     let hoogte = 0;
     const regels = velden.map(([tekst, klasse = "", grootte = TEKST_MM]) =>
-      breekRegels(tekst, vloer(tekstBreedte), grootte, 1.35).map(regel => {
+      breekRegels(tekst, vloer(tekstBreedte), grootte, 1.35, { smalleCijfers: true, koppeltekens: true }).map(regel => {
         hoogte += grootte * REGELHOOGTE;
         return tekstRegel(regel, tekstBreedte, grootte, klasse);
       }).join("")
@@ -92,23 +123,27 @@ function vakken(g: CartoucheGegevens): VakInhoud[] {
   return [
     maak(0, "installateur", [[t.cartouche.installateur, "label"], [g.installateur.naam, "naam"], [i1], [i2], [g.installateur.telefoon ?? ""], [g.installateur.email ?? ""]], g.logo !== undefined),
     maak(1, "klant", [[t.cartouche.klant, "label"], [g.meta.klant.naam, "naam"], [k1], [k2]]),
-    maak(2, "werf", [[t.cartouche.werf, "label"], [w1], [w2], [t.cartouche.ean + ": " + (g.meta.ean ?? "")]]),
+    maak(2, "werf", [[t.cartouche.werf, "label"], [w1], [w2], [t.cartouche.ean + ": " + (g.meta.ean ?? "")], [voedingTekst(g.voeding.stroomtype, g.voeding.frequentie_Hz), "voeding"]]),
     maak(3, "titel", [[g.titel, "titel", TITEL_MM], [t.cartouche.datum + ": " + formatteerDatum(g.datum, g.taal)], [t.cartouche.versie + ": " + g.versieLabel], [t.cartouche.pagina + " " + g.nummer + " / " + g.totaal, "paginanummer"]]),
     maak(4, "handtekening", [[t.cartouche.handtekeningInstallateur, "label"]]),
     maak(5, "handtekening", [[t.cartouche.handtekeningKeurder, "label"]]),
   ];
 }
 
+function hoogteVoor(papier: Papier, inhoud: VakInhoud[]): number {
+  return Math.max(papier.cartoucheHoogte_mm, Math.ceil(Math.max(...inhoud.map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM + SPELING_MM));
+}
+
 /** Reserve sufficient height for complete metadata before paginating the drawing/table. */
 export function cartoucheHoogte(g: CartoucheGegevens): number {
-  return Math.max(g.papier.cartoucheHoogte_mm, Math.ceil(Math.max(...vakken(g).map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM));
+  return hoogteVoor(g.papier, vakken(g));
 }
 
 /** Complete escaped, multiline metadata; the same measurement is used by print pagination. */
 export function cartouche(g: CartoucheGegevens): string {
   const inhoud = vakken(g);
-  const hoogte = Math.max(g.papier.cartoucheHoogte_mm, Math.ceil(Math.max(...inhoud.map(v => v.hoogte)) + 2 * VAK_MARGE_MM + 2 * RAND_MM));
-  const boven = papierMaat(g.papier.formaat).hoogte - g.papier.marge_mm - hoogte;
+  const hoogte = hoogteVoor(g.papier, inhoud);
+  const boven = papierMaat(g.papier.formaat, g.papier.orientatie).hoogte - g.papier.marge_mm - hoogte;
   let links = g.papier.marge_mm;
   return '<div class="cartouche">' + inhoud.map((vak, i) => {
     const logo = i === 0 && g.logo !== undefined

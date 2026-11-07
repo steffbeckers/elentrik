@@ -3,14 +3,11 @@
 // De symboolgrootte is gedeeld met de pdf-export en staat daarom in render.
 export { symboolGrootte } from "@elentrik/render";
 
-/** Een draaistap in graden. */
-const DRAAISTAP = 15;
-
 type Raster = { breedte_px: number; hoogte_px: number };
 
-/** Draait één stap van 15 graden; het resultaat ligt in [0, 360). */
-export function draai(rotatie: number, richting: 1 | -1): number {
-  return (((rotatie + richting * DRAAISTAP) % 360) + 360) % 360;
+/** Draait fijn (15°) of een kwartslag (90°); het resultaat ligt in [0, 360). */
+export function draai(rotatie: number, richting: 1 | -1, stap: 15 | 90 = 15): number {
+  return (((rotatie + richting * stap) % 360) + 360) % 360;
 }
 
 /** Verschuift een positie met `dx` en `dy` en houdt die binnen het raster. */
@@ -24,4 +21,27 @@ export function schuif(
     x: Math.min(Math.max(positie.x + dx, 0), raster.breedte_px),
     y: Math.min(Math.max(positie.y + dy, 0), raster.hoogte_px),
   };
+}
+
+/**
+ * De plaatsing (niet `nodeId` zelf) waarvan `punt` binnen de symboolgrootte ligt: dan overlappen
+ * de symbolen (vierkanten van `grootte` rond hun middelpunt). Bij meer kandidaten de dichtstbijzijnde.
+ * Alleen een waarschuwing: er komt geen automatische snap.
+ */
+export function overlapMet<T extends { nodeId: string; x: number; y: number }>(
+  plaatsingen: readonly T[],
+  nodeId: string,
+  punt: { x: number; y: number },
+  grootte: number,
+): T | undefined {
+  let beste: { plaatsing: T; afstand: number } | undefined;
+  for (const plaatsing of plaatsingen) {
+    if (plaatsing.nodeId === nodeId) continue;
+    const dx = Math.abs(plaatsing.x - punt.x);
+    const dy = Math.abs(plaatsing.y - punt.y);
+    if (dx >= grootte || dy >= grootte) continue;
+    const afstand = Math.hypot(dx, dy);
+    if (!beste || afstand < beste.afstand) beste = { plaatsing, afstand };
+  }
+  return beste?.plaatsing;
 }

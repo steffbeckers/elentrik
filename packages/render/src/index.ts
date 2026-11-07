@@ -1,7 +1,11 @@
 export const PAKKET = "@elentrik/render";
+export { dossierStatus, ongeplaatstNaam } from "./dossierstatus";
+export { bordVanNode, differentieelNaam, differentieelPlaatsen } from "./differentieelnaam";
+export { tePlaatsen, GROEP_VERDEELBORDEN, GROEP_ZONDER_KRING, GROEP_INSTALLATIE, type TePlaatsenGroep } from "./te-plaatsen";
 
 export { schemaPaginaSvg, schemaStripSvg } from "./schema-svg";
 export { situatieLaagSvg, type SituatieItem } from "./situatie-svg";
+export { situatieAfdekkingenSvg } from "./situatie-afdekkingen";
 export { SYMBOOL_DELER, nodeLabel, situatieItems, symboolGrootte, type LabelTerugval } from "./situatie-items";
 export { kringenlijst, type KringenlijstRij } from "./kringenlijst";
 export { NL } from "./teksten/nl";
