@@ -2,6 +2,7 @@
 import { LOCALES } from "@elentrik/arei";
 import { materiaallijst, type MateriaalRij } from "@elentrik/model";
 import { computed } from "vue";
+import { bestandsnaamMateriaalCsv, materiaalCsv } from "~/editor/materiaalcsv";
 import { VELDEN } from "~/editor/velden";
 import { useEditorStore } from "~/stores/editor";
 
@@ -26,6 +27,30 @@ function uitvoering(rij: MateriaalRij): string {
   }).join(" · ");
 }
 
+/** De CSV volgt de lijst: dezelfde volgorde, uitvoering en taal; gedownload via een Blob, zonder server. */
+function downloadCsv(): void {
+  const csv = materiaalCsv(rijen.value, taal.value, {
+    uitvoering,
+    materiaal: (rij) => t(`editor.types.${rij.type}`),
+    teksten: {
+      kop: {
+        materiaal: t("editor.materiaallijst.csvKop.materiaal"), uitvoering: t("editor.materiaallijst.csvKop.uitvoering"),
+        hoeveelheid: t("editor.materiaallijst.hoeveelheid"), eenheid: t("editor.materiaallijst.csvKop.eenheid"),
+      },
+      stuk: t("editor.materiaallijst.stuks", 1), stuks: t("editor.materiaallijst.stuks", 2), meter: t("editor.materiaallijst.m"),
+      lengteOntbreekt: t("editor.materiaallijst.onvolledig"),
+    },
+  });
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = bestandsnaamMateriaalCsv(store.naam);
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function bronTekst(id: string): string {
   const node = store.document?.nodes[id];
   if (node?.type !== "leiding") return nodeTekst(id);
@@ -40,7 +65,11 @@ function bronTekst(id: string): string {
 <template>
   <section class="min-h-0 min-w-0 overflow-auto" :aria-label="$t('editor.materiaallijst.titel')" data-testid="materiaallijst">
     <div class="space-y-2 border-b border-default p-4">
-      <h2 class="text-lg font-semibold">{{ $t('editor.materiaallijst.titel') }}</h2>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold">{{ $t('editor.materiaallijst.titel') }}</h2>
+        <UButton v-if="rijen.length" color="neutral" variant="outline" size="sm" icon="i-lucide-download"
+          :label="$t('editor.materiaallijst.csvDownloaden')" data-testid="materiaallijst-csv" @click="downloadCsv" />
+      </div>
       <p class="max-w-prose text-sm text-muted">{{ $t('editor.materiaallijst.uitleg') }}</p>
       <p class="max-w-prose text-sm text-muted">{{ $t('editor.materiaallijst.lengteUitleg') }}</p>
       <p v-if="ontbrekend" role="status" class="text-sm text-warning" data-testid="materiaallijst-ontbrekend">

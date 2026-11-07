@@ -6,6 +6,7 @@ import {
   type ProjectenFetch,
 } from "../app/composables/useProjectenApi";
 import { relatieveTijd } from "../app/utils/relatieveTijd";
+import nl from "../i18n/locales/nl.json";
 
 type Oproep = Parameters<ProjectenFetch>;
 
@@ -142,14 +143,19 @@ describe("relatieveTijd", () => {
     ["2026-10-18T09:00:00Z", "3 uur geleden"],
     ["2026-10-17T12:00:00Z", "gisteren"],
   ])("%s", (iso, verwacht) => {
-    expect(relatieveTijd(iso, "nl", nu)).toBe(verwacht);
+    expect(relatieveTijd(iso, "nl", nu, nl.projecten.zojuist)).toBe(verwacht);
+  });
+
+  test("een tijd in de toekomst (klokverschil) is zojuist", () => {
+    expect(relatieveTijd("2026-10-18T12:00:40Z", "nl", nu, nl.projecten.zojuist)).toBe("zojuist");
+    expect(relatieveTijd("2026-10-18T14:00:00Z", "nl", nu, nl.projecten.zojuist)).toBe("zojuist");
   });
 
   test("volgt de taal: fr-BE en en-GB", () => {
-    expect(relatieveTijd("2026-10-17T12:00:00Z", "fr", nu)).toBe("hier");
-    expect(relatieveTijd("2026-10-18T09:00:00Z", "fr", nu)).toBe(
+    expect(relatieveTijd("2026-10-17T12:00:00Z", "fr", nu, "")).toBe("hier");
+    expect(relatieveTijd("2026-10-18T09:00:00Z", "fr", nu, "")).toBe(
       new Intl.RelativeTimeFormat("fr-BE", { numeric: "auto", style: "short" }).format(-3, "hour"),
     );
-    expect(relatieveTijd("2026-10-17T12:00:00Z", "en", nu)).toBe("yesterday");
+    expect(relatieveTijd("2026-10-17T12:00:00Z", "en", nu, "")).toBe("yesterday");
   });
 });

@@ -43,8 +43,8 @@ describe("migreer", () => {
     expect(vangFout(() => migreer(doc)).code).toBe("ONGELDIG_SCHEMA");
   });
 
-  test("MIGRATIES is voorlopig leeg", () => {
-    expect(Object.keys(MIGRATIES)).toEqual([]);
+  test("migratie vanaf versie 1 is geregistreerd", () => {
+    expect(Object.keys(MIGRATIES)).toEqual(["1"]);
   });
 });
 

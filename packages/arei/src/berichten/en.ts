@@ -1,7 +1,7 @@
 /** Engelse berichtteksten per berichtSleutel; dezelfde sleutels en plaatshouders als `nl.ts`. */
 export const EN: Readonly<Record<string, string>> = {
-  "arei.differentieel.aanvullend.ontbreekt": "This ordinary socket outlet or lighting point lacks additional residual-current protection of at most 30 mA for a new domestic installation.",
-  "arei.differentieel.aanvullend.context": "This ordinary socket outlet or lighting point has no additional protection of at most 30 mA. Check the installation context and transitional provisions; an existing installation is not automatically exempt.",
+  "arei.differentieel.aanvullend.ontbreekt": "This ordinary point (socket outlet or lighting point) lacks additional residual-current protection of at most 30 mA for a new domestic installation.",
+  "arei.differentieel.aanvullend.context": "This ordinary point (socket outlet or lighting point) has no additional protection of at most 30 mA. Check the installation context and transitional provisions; an existing installation is not automatically exempt.",
   "waarde.hal": "hall",
   "arei.differentieel.algemeen.ontbreekt": "The installation has no main RCD.",
   "arei.differentieel.algemeen.te-ongevoelig":
@@ -48,5 +48,13 @@ export const EN: Readonly<Record<string, string>> = {
   "waarde.warmtepomp": "heat pump",
   "waarde.laadpaal": "EV charger",
   "waarde.omvormer": "inverter",
+  "waarde.pvPaneel": "photovoltaic panel",
+  "waarde.deurbelMonitor": "doorbell / monitor",
+  "waarde.bel": "bell",
+  "waarde.motor": "motor",
+  "waarde.ventilator": "fan",
+  "waarde.koelkast": "refrigerator",
+  "waarde.diepvriezer": "freezer",
+  "waarde.onbekendDrieblad": "Unknown source symbol (three blades)",
   "waarde.andere": "other",
 };

@@ -156,9 +156,9 @@ describe("maakStrook: kringGrenzen en kolomGrenzen", () => {
     expect(strook.breedte).toBe(strook.kolomGrenzen[3]);
   });
 
-  test("een strook zonder labels houdt kolommen van KOLOM_BREEDTE_MM", () => {
+  test("een lege installatie reserveert plaats voor de voedingsnotatie", () => {
     const strook = maakStrook(nieuwDocument());
-    expect(strook.kolomGrenzen).toEqual([STROOK_MARGE_MM, STROOK_MARGE_MM + KOLOM_BREEDTE_MM + STROOK_MARGE_MM]);
+    expect(strook.kolomGrenzen).toEqual([STROOK_MARGE_MM, 42.5]);
   });
 
   test("een lang puntlabel verbreedt de linkerkant van zijn kolom; de tekst blijft op zijn plaats", () => {
@@ -258,7 +258,8 @@ describe("maakStrook: vertakkingen en randgevallen", () => {
     const strook = maakStrook(nieuwDocument());
     expect(symbolen(strook.elementen)).toHaveLength(2);
     expect(lijnen(strook.elementen)).toHaveLength(1);
-    expect(strook.breedte).toBe(2 * 4 + 24);
+    expect(strook.breedte).toBe(42.5);
+    expect(strook.elementen.some(e => e.soort === "tekst" && e.rol === "voeding")).toBe(true);
   });
 
   test("een punt zonder kring wordt getekend", () => {
@@ -332,6 +333,7 @@ describe("maakStrook: volgorde van de elementen", () => {
     });
     expect(volgorde).toEqual([
       "symbool:aansluiting",
+      "tekst:voeding:2 \u00d7 230 V ~",
       "lijn:verbinding",
       "symbool:teller",
       "lijn:verbinding",

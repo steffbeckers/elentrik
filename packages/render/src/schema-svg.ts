@@ -1,12 +1,11 @@
 import { bruikbaar, papierMaat, type SchemaElement, type SchemaOpmaak } from "@elentrik/layout";
 import { LIJNDIKTE_MM, escapeXml, getal } from "@elentrik/symbols";
 
-
 /** Lengte en halve breedte van het vervolgpijltje in mm. */
 const PIJL_LENGTE_MM = 2;
 const PIJL_HALVE_BREEDTE_MM = 1;
 /** Tekstgrootte van "p. N" in mm. */
-const PIJL_TEKST_MM = 2;
+const PIJL_TEKST_MM = 2.5;
 /** Afstand van de tekstbasislijn boven de lijn waarop het vervolg staat, zodat de tekst de lijn niet raakt. */
 const PIJL_LABEL_BOVEN_LIJN_MM = 1.2;
 
@@ -40,7 +39,13 @@ function elementSvg(element: SchemaElement): string {
         element.richting === "rechts" ? "end" : "start",
         `p. ${element.paginaNummer}`,
       );
-      return `<g class="vervolg">${pijl}${label}</g>`;
+      // The pair identifier sits below the rail. Extending the page label horizontally can
+      // collide with the first circuit letter beside the left continuation.
+      const paar = element.verbindingsnummer === undefined ? "" : tekstSvg(
+        "vervolg", element.x - richting * (PIJL_LENGTE_MM + 0.5), element.y + 3.5,
+        PIJL_TEKST_MM, element.richting === "rechts" ? "end" : "start", `#${element.verbindingsnummer}`,
+      );
+      return `<g class="vervolg">${pijl}${label}${paar}</g>`;
     }
   }
 }
@@ -77,7 +82,7 @@ export function schemaPaginaSvg(opmaak: SchemaOpmaak, paginaIndex: number): stri
     throw new RangeError(`Pagina ${paginaIndex} bestaat niet (0 tot en met ${opmaak.paginas.length - 1})`);
   }
   const { papier } = opmaak;
-  const maat = papierMaat(papier.formaat);
+  const maat = papierMaat(papier.formaat, papier.orientatie);
   const ruimte = bruikbaar(papier);
   const marge = getal(papier.marge_mm);
   // Naar beneden afgerond op 2 decimalen: een afgeronde schaal mag de hoogte nooit overschrijden.
@@ -93,7 +98,7 @@ export function schemaPaginaSvg(opmaak: SchemaOpmaak, paginaIndex: number): stri
     maat.breedte,
     maat.hoogte,
     `${clip}<g clip-path="url(#${clipId})"><g transform="translate(${marge} ${marge}) scale(${schaal}) ` +
-      `translate(${getal(-pagina.xVan)} 0)">${inhoud}</g></g>`,
+      `translate(${getal(-pagina.xVan)} ${getal(-(pagina.yVan ?? 0))})">${inhoud}</g></g>`,
   );
 }
 

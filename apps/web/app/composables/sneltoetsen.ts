@@ -5,7 +5,8 @@ import type { Onderdeel } from "@elentrik/model";
 export type Richting = "op" | "neer" | "links" | "rechts";
 
 export type Actie =
-  | { soort: "kies"; onderdeel: Onderdeel }
+  /** `alleenKiezen`: een ingehouden toets (auto-repeat) kiest het onderdeel maar voegt niets snel toe. */
+  | { soort: "kies"; onderdeel: Onderdeel; alleenKiezen?: true }
   | { soort: "toevoegen" }
   | { soort: "verwijder"; heleTak: boolean }
   | { soort: "ongedaan" }
@@ -13,7 +14,11 @@ export type Actie =
   | { soort: "navigeer"; richting: Richting }
   | { soort: "wisSelectie" }
   /** Opent het symbolenvenster; ook in alleen-lezen, want bekijken wijzigt niets. */
-  | { soort: "symbolen" };
+  | { soort: "symbolen" }
+  /** Opent het overzicht van de sneltoetsen (`?`); ook in alleen-lezen. */
+  | { soort: "sneltoetsen" }
+  /** Dupliceert de geselecteerde kring (Ctrl+D of Cmd+D). */
+  | { soort: "dupliceer" };
 
 export type Toets = {
   key: string;
@@ -24,12 +29,12 @@ export type Toets = {
   doelIsInvoer: boolean;
   /** Het doel van de toetsaanslag is een knop: Enter en spatie blijven dan bij de knop, de rest werkt gewoon. */
   doelIsKnop?: boolean;
-  /** De toets blijft ingedrukt (`event.repeat`): verwijderen en toevoegen gebeuren dan niet nog eens. */
+  /** De toets blijft ingedrukt (`event.repeat`): verwijderen, toevoegen en dupliceren gebeuren dan niet nog eens. */
   herhaald?: boolean;
   /**
    * De editor is alleen-lezen (geen abonnement): alles wat het document wijzigt (toevoegen,
-   * verwijderen, ongedaan maken, opnieuw) geeft `null`. Kiezen, navigeren, de selectie wissen en het
-   * symbolenvenster openen blijven.
+   * verwijderen, dupliceren, ongedaan maken, opnieuw) geeft `null`. Kiezen, navigeren, de selectie
+   * wissen en het symbolenvenster of het sneltoetsenoverzicht openen blijven.
    */
   alleenLezen?: boolean;
 };
@@ -83,6 +88,9 @@ export function spatieSchuift(key: string, soort: DoelSoort): boolean {
   return key === " " && soort === "overig";
 }
 
+/** De toets van het sneltoetsenoverzicht (Shift+/ op een QWERTY-toetsenbord). */
+export const OVERZICHT_TOETS = "?";
+
 /** De sneltoets (kleine letter) van het symbolenvenster; ook getoond in het paneel Onderdelen. */
 export const SYMBOLEN_TOETS = "a";
 
@@ -112,10 +120,13 @@ export function sneltoets(toets: Toets): Actie | null {
     if (toets.alleenLezen) return null;
     if (key === "z") return toets.shiftKey ? { soort: "opnieuw" } : { soort: "ongedaan" };
     if (key === "y" && !toets.shiftKey) return { soort: "opnieuw" };
+    // Tijdens typen blijft Ctrl+D bij de browser.
+    if (key === "d" && !toets.shiftKey && !toets.doelIsInvoer) return toets.herhaald ? null : { soort: "dupliceer" };
     return null;
   }
   if (toets.doelIsInvoer) return null;
   if (toets.doelIsKnop && (key === "Enter" || key === " ")) return null;
+  if (key === OVERZICHT_TOETS) return { soort: "sneltoetsen" };
 
   if (key === "Enter") return toets.herhaald || toets.alleenLezen ? null : { soort: "toevoegen" };
   if (key === "Delete" || key === "Backspace") {
@@ -128,5 +139,6 @@ export function sneltoets(toets: Toets): Actie | null {
   if (key === SYMBOLEN_TOETS) return { soort: "symbolen" };
 
   const onderdeel = ONDERDEEL_PER_TOETS[key];
-  return onderdeel ? { soort: "kies", onderdeel } : null;
+  if (!onderdeel) return null;
+  return toets.herhaald ? { soort: "kies", onderdeel, alleenKiezen: true } : { soort: "kies", onderdeel };
 }

@@ -1,7 +1,7 @@
 /** Franse berichtteksten per berichtSleutel; dezelfde sleutels en plaatshouders als `nl.ts`. De termen volgen `docs/vertalingen.md`. */
 export const FR: Readonly<Record<string, string>> = {
-  "arei.differentieel.aanvullend.ontbreekt": "Ce socle de prise de courant ordinaire ou point lumineux manque de protection différentielle complémentaire de maximum 30 mA pour une nouvelle installation domestique.",
-  "arei.differentieel.aanvullend.context": "Ce socle de prise de courant ordinaire ou point lumineux ne dispose pas de protection complémentaire de maximum 30 mA. Vérifiez le contexte et les dispositions transitoires ; une installation existante n’est pas automatiquement exemptée.",
+  "arei.differentieel.aanvullend.ontbreekt": "Ce point ordinaire (prise de courant ou point lumineux) manque de protection différentielle complémentaire de maximum 30 mA pour une nouvelle installation domestique.",
+  "arei.differentieel.aanvullend.context": "Ce point ordinaire (prise de courant ou point lumineux) ne dispose pas de protection complémentaire de maximum 30 mA. Vérifiez le contexte et les dispositions transitoires ; une installation existante n’est pas automatiquement exemptée.",
   "waarde.hal": "hall",
   "arei.differentieel.algemeen.ontbreekt": "L'installation ne comporte pas d'interrupteur différentiel général.",
   "arei.differentieel.algemeen.te-ongevoelig":
@@ -48,5 +48,13 @@ export const FR: Readonly<Record<string, string>> = {
   "waarde.warmtepomp": "pompe à chaleur",
   "waarde.laadpaal": "borne de recharge",
   "waarde.omvormer": "onduleur",
+  "waarde.pvPaneel": "panneau photovoltaïque",
+  "waarde.deurbelMonitor": "carillon / moniteur",
+  "waarde.bel": "sonnerie",
+  "waarde.motor": "moteur",
+  "waarde.ventilator": "ventilateur",
+  "waarde.koelkast": "réfrigérateur",
+  "waarde.diepvriezer": "congélateur",
+  "waarde.onbekendDrieblad": "Symbole source inconnu (trois pales)",
   "waarde.andere": "autre",
 };

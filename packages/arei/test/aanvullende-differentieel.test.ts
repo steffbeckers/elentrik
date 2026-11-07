@@ -33,7 +33,7 @@ test.each([undefined, "bestaand", "onbekend"] as const)("context %s kent geen au
 test.each(["kring-stopcontacten", "kring-verlichting"])("sjabloon %s beschermt alle gewone punten aanvullend", naam => {
   const doc = nieuwProjectDocument({ klantNaam: "Test", stroomtype: "2x230V" });
   const bord = Object.values(doc.nodes).find(n => n.type === "verdeelbord")!;
-  const gebouwd = voegSjabloonToe(doc, bord.id, naam).doc;
+  const gebouwd = voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:bord.id}, naam).doc;
   for (const keten of Object.values(analyseer(gebouwd).ketens)) {
     expect(keten.differentielen.some(id => {
       const n = gebouwd.nodes[id]; return n?.type === "differentieel" && n.gevoeligheid_mA <= 30;

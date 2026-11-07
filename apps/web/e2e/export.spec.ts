@@ -1,3 +1,4 @@
+import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
@@ -22,6 +23,7 @@ async function nieuwProject(request: APIRequestContext, achtervoegsel: string): 
 async function openMetKring(page: Page, id: string): Promise<void> {
   await page.goto(`/projecten/${id}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
 }
 
 test("exporteren bewaart eerst, downloadt de PDF en werkt de lijst bij", async ({ page, request }) => {
@@ -89,6 +91,7 @@ test("exporteren kan niet als opslaan mislukt", async ({ page, request }) => {
     route.request().method() === "PUT" ? route.fulfill({ status: 503 }) : route.fallback(),
   );
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   await page.getByTestId("exporteren").click();
 
   const dialoog = page.getByRole("dialog");
@@ -220,6 +223,7 @@ test.describe("echte pdf-export", () => {
     // 3. Het werfadres.
     await page.getByTestId("projectnaam").click();
     const gegevens = page.getByRole("dialog");
+    await gegevens.getByTestId("werf-zelfde-als-klant").click();
     await gegevens.getByTestId("werf-straat").fill("Dorpsstraat");
     await gegevens.getByTestId("werf-nummer").fill("3");
     await gegevens.getByTestId("werf-postcode").fill("9000");
@@ -241,26 +245,40 @@ test.describe("echte pdf-export", () => {
     const bytes = new Uint8Array(Buffer.concat(delen));
     expect(Buffer.from(bytes.subarray(0, 5)).toString("latin1")).toBe("%PDF-");
 
-    // De PDF heeft: de eendraadschemapagina's, 1 situatiepagina (A1 staat op het plan), minstens 1
-    // kringenlijstpagina en 1 bijlagepagina (A2 tot A6 staan niet op het plan: dat is info). Het aantal
-    // eendraadschemapagina's volgt uit de PDF zelf (de pagina's met de titel Eendraadschema) en moet
-    // voor dit kleine project 1 zijn: één kring met zes punten past op één liggende A4.
+    // De PDF behoudt de technische tekstgrootte. Ook een kring met zes seriepunten kan
+    // door de hoofd- en bijkomende differentieel meerdere schemabladen nodig hebben.
+    // Controleer volledige inhoud en blokvolgorde, zonder een vaste paginatelling af te dwingen.
     const pdf = await leesPdf(bytes);
     const volgorde = soorten(pdf.paginaTeksten);
     const aantal = (soort: string) => volgorde.filter((v) => v === soort).length;
     expect(aantal("onbekend")).toBe(0);
-    expect(aantal("Eendraadschema")).toBe(1);
+    expect(aantal("Eendraadschema")).toBeGreaterThanOrEqual(1);
     expect(aantal("Situatieschema")).toBe(1);
     expect(aantal("Kringenlijst")).toBeGreaterThanOrEqual(1);
     expect(aantal("Bijlage")).toBe(1);
     expect(pdf.aantalPaginas).toBe(aantal("Eendraadschema") + 1 + aantal("Kringenlijst") + 1);
     // De onderdelen staan in vaste volgorde en elke cartouche telt mee in "Pagina k / N".
-    expect(volgorde).toEqual(["Eendraadschema", "Situatieschema", "Kringenlijst", "Bijlage"]);
+    expect(volgorde).toEqual([
+      ...Array(aantal("Eendraadschema")).fill("Eendraadschema"),
+      "Situatieschema",
+      ...Array(aantal("Kringenlijst")).fill("Kringenlijst"),
+      "Bijlage",
+    ]);
+    const schemaTekst = pdf.paginaTeksten.slice(0, aantal("Eendraadschema")).join(" ");
+    for (let punt = 1; punt <= 6; punt++) expect(schemaTekst).toMatch(new RegExp(`\\bA${punt}\\b`));
+    pdf.paginaTeksten.forEach(tekst => expect(tekst).toContain("230 V"));
     pdf.paginaTeksten.forEach((tekst, i) => expect(tekst).toContain(`Pagina ${i + 1} / ${pdf.aantalPaginas}`));
-    // De bijlage vermeldt de info en de situatiepagina is niet overgeslagen. "Info (5)" hangt af van het
-    // sjabloon "Kring stopcontacten" (6 contactdozen, A1 tot A6) waarvan enkel A1 op het plan staat.
-    expect(pdf.paginaTeksten.at(-1)).toContain("Info (5)");
-    expect(pdf.paginaTeksten.at(-1)).not.toContain("Overgeslagen");
+    // De bijlage vermeldt de ongeplaatste punten en de situatiepagina is niet overgeslagen. Het sjabloon
+    // "Kring stopcontacten" heeft 6 contactdozen (A1 tot A6) waarvan enkel A1 op het plan staat; sinds de
+    // dossierchecklist staan A2 tot A6 daar, niet meer als "Info (5)" bij de bevindingen.
+    const bijlageTekst = pdf.paginaTeksten.at(-1)!;
+    for (let punt = 2; punt <= 6; punt++) expect(bijlageTekst).toContain(`A${punt} — Nog niet op een situatieplan geplaatst.`);
+    expect(bijlageTekst).not.toContain("A1 — Nog niet op een situatieplan geplaatst.");
+    expect(bijlageTekst).not.toContain("Overgeslagen");
+    // Geen metingen ingevuld: de bijlage zegt "niet ingevuld", met de vaste zin en zonder beoordeling.
+    expect(bijlageTekst).toContain("Aardingsweerstand niet ingevuld.");
+    expect(bijlageTekst).toContain("Aardingsweerstand: niet ingevuld");
+    expect(bijlageTekst).toContain("Geregistreerde meetwaarden; geen beoordeling door Elentrik.");
     // Het logo staat in de cartouche van pagina 1 (het eendraadschema heeft zelf geen afbeelding): dat is
     // de enige afbeelding op die pagina. Het plan staat op de situatiepagina.
     expect(pdf.afbeeldingenPerPagina[0]).toBeGreaterThanOrEqual(1);
@@ -325,4 +343,18 @@ test.describe("echte pdf-export", () => {
     await expect(rijA1).toHaveAttribute("aria-selected", "true");
     await expect(page.getByTestId("eigenschappen-titel")).toContainText("A1");
   });
+});
+
+test("afdrukvoorbeeld toont dezelfde 400 V voeding zonder een export te bewaren", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", { data: { naam: `${naam} voorbeeld`, klantnaam: "", stroomtype: "3N400V" } });
+  expect(antwoord.status()).toBe(201);
+  const id = ((await antwoord.json()) as { id: string }).id;
+  await openMetKring(page, id);
+  await page.getByTestId("exporteren").click();
+  await expect(page.getByTestId("export-versie")).toHaveValue("V1");
+  await page.getByTestId("export-voorbeeld").click();
+  const frame = page.frameLocator('[data-testid="afdrukvoorbeeld"]');
+  await expect(frame.locator('.t.voeding').first()).toHaveText("3N × 400 V ~");
+  const exports = await request.get(`/api/projecten/${id}/exports`);
+  expect(await exports.json()).toEqual([]);
 });

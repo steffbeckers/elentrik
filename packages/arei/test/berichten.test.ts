@@ -133,10 +133,11 @@ describe("vertaalde parameterwaarden", () => {
         expect(formatteerBericht(kring(label), taal), `${taal} kring ${label}`).toContain(` ${label} `);
       }
     }
-    // Het Nederlands blijft voor elke ruimte en toestelsoort ongewijzigd: de waarde is al Nederlands.
+    // Nederlandse enumwaarden blijven leesbaar; technische sleutels krijgen hun volledige naam.
     const { RuimteSchema, ToestelsoortSchema } = await import("@elentrik/model");
+    const namen: Record<string, string> = { onbekendDrieblad: "Onbekend bronsymbool (drieblad)", pvPaneel: "fotovoltaïsch paneel", deurbelMonitor: "deurbel / monitor" };
     for (const waarde of [...RuimteSchema.options, ...ToestelsoortSchema.options]) {
-      expect(formatteerBericht(maak({ reden: waarde, max: 30 }), "nl")).toContain(`(${waarde})`);
+      expect(formatteerBericht(maak({ reden: waarde, max: 30 }), "nl")).toContain(`(${namen[waarde] ?? waarde})`);
     }
   });
 

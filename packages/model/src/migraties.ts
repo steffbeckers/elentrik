@@ -11,7 +11,14 @@ import { SCHEMA_VERSIE } from "./versie";
 export type Migratie = (doc: Record<string, unknown>) => Record<string, unknown>;
 
 /** De sleutel `n` migreert van versie n naar n+1. Voorlopig leeg. */
-export const MIGRATIES: Readonly<Record<number, Migratie>> = {};
+export const MIGRATIES: Readonly<Record<number, Migratie>> = {
+  1: (doc) => ({ ...doc, nodes: Object.fromEntries(Object.entries((doc.nodes ?? {}) as Record<string, Record<string, unknown>>).map(([id, node]) => {
+    if (node.type !== "leiding" || node.plaatsing === undefined) return [id, node];
+    const { plaatsing, ...rest } = node;
+    if (!["buis", "inbouw", "opbouw", "grond"].includes(String(plaatsing))) throw new DocumentFout("ONGELDIG_SCHEMA", { nodeId: id, plaatsing });
+    return [id, { ...rest, aanleg: plaatsing === "buis" ? { inBuis: true } : { ligging: plaatsing, inBuis: false } }];
+  })) }),
+};
 
 export function pasMigratiesToe(
   doc: Record<string, unknown>,

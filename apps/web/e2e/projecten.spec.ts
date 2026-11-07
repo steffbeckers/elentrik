@@ -12,8 +12,22 @@ const klantnaam = "<img src=x onerror=alert(1)>";
 test("zoek op project of klant en herstel de lijst door de zoekopdracht te wissen", async ({ page }) => {
   await page.route("**/api/projecten", (route) => route.fulfill({
     json: [
-      { id: "zoek-1", naam: "Woning Gent", klantnaam: "Janssens", gewijzigd: "2026-11-03T12:00:00Z" },
-      { id: "zoek-2", naam: "Atelier", klantnaam: "De Smet", gewijzigd: "2026-11-02T12:00:00Z" },
+      {
+        id: "zoek-1",
+        naam: "Woning Gent",
+        klantnaam: "Janssens",
+        gewijzigd: "2026-11-03T12:00:00Z",
+        werfGemeente: "Gent",
+        laatsteExport: "2026-11-03T11:00:00Z",
+      },
+      {
+        id: "zoek-2",
+        naam: "Atelier",
+        klantnaam: "De Smet",
+        gewijzigd: "2026-11-02T12:00:00Z",
+        werfGemeente: "Sint-Niklaas",
+        laatsteExport: null,
+      },
     ],
   }));
   await page.goto("/");
@@ -22,6 +36,18 @@ test("zoek op project of klant en herstel de lijst door de zoekopdracht te wisse
   const zoek = page.getByRole("searchbox", { name: "Projecten zoeken" });
   await expect(woning).toBeVisible();
   await expect(atelier).toBeVisible();
+  // De werf en de status: geëxporteerd met de datum, anders concept.
+  const rijWoning = page.getByRole("row").filter({ has: woning });
+  const rijAtelier = page.getByRole("row").filter({ has: atelier });
+  await expect(rijWoning.getByRole("cell", { name: "Gent", exact: true })).toBeVisible();
+  await expect(rijWoning).toContainText("Geëxporteerd");
+  await expect(rijWoning).not.toContainText("Niet geëxporteerd");
+  await expect(rijWoning.locator("time")).toHaveAttribute("datetime", "2026-11-03T11:00:00Z");
+  await expect(rijAtelier).toContainText("Niet geëxporteerd");
+
+  await zoek.fill("niklaas");
+  await expect(atelier).toBeVisible();
+  await expect(woning).toHaveCount(0);
 
   await zoek.fill(" GENT ");
   await expect(woning).toBeVisible();
@@ -55,7 +81,8 @@ test("een mislukte lijst toont een foutmelding in plaats van de lege staat", asy
   await page.unroute("**/api/projecten");
   await page.getByRole("button", { name: "Opnieuw proberen" }).click();
   await expect(page.getByText("Projecten laden mislukt")).toHaveCount(0);
-  await expect(page.getByRole("table")).toBeVisible();
+  // De lijst of, zonder projecten, de lege staat met de stappen.
+  await expect(page.getByRole("table").or(page.getByTestId("projecten-leeg"))).toBeVisible();
 });
 
 test("maak, dupliceer en verwijder een project", async ({ page }) => {
@@ -75,10 +102,17 @@ test("maak, dupliceer en verwijder een project", async ({ page }) => {
   await nieuw.getByLabel("Klant").fill(klantnaam);
   await nieuw.getByRole("button", { name: "Aanmaken" }).click();
 
+  // Een nieuw project opent meteen in de editor.
+  await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("schema-canvas")).toBeVisible();
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
   // De klantnaam staat letterlijk als tekst in de cel, nooit als HTML.
   const rij = page.getByRole("row").filter({ hasText: naam });
   await expect(rij).toHaveCount(1);
   await expect(rij.getByRole("cell", { name: klantnaam })).toHaveText(klantnaam);
+  await expect(rij).toContainText("Niet geëxporteerd");
   await expect(page.locator("table img")).toHaveCount(0);
 
   await rij.getByRole("button", { name: "Dupliceren" }).click();
@@ -114,4 +148,29 @@ test("sneltoetsen blijven werken na een klik op een paneelknop", async ({ page, 
     "aria-label",
     "0 fouten en 0 waarschuwingen",
   );
+});
+
+test("op 390 px verbergt de lijst Werf en Status en blijven de rijacties zichtbaar", async ({ page }) => {
+  await page.route("**/api/projecten", (route) => route.fulfill({
+    json: [{
+      id: "smal-1",
+      naam: "Woning Smal",
+      klantnaam: "Janssens",
+      gewijzigd: "2026-11-03T12:00:00Z",
+      werfGemeente: "Gent",
+      laatsteExport: null,
+    }],
+  }));
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto("/");
+  const rij = page.getByRole("row").filter({ has: page.getByRole("link", { name: "Woning Smal", exact: true }) });
+  await expect(rij).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Werf" })).toBeHidden();
+  await expect(page.getByRole("columnheader", { name: "Status" })).toBeHidden();
+  await expect(rij.getByText("Niet geëxporteerd")).toBeHidden();
+  const verwijderen = rij.getByRole("button", { name: "Verwijderen" });
+  await expect(verwijderen).toBeVisible();
+  // De laatste actie ligt volledig binnen het scherm: geen horizontaal scrollen nodig.
+  const doos = await verwijderen.boundingBox();
+  expect(doos!.x + doos!.width).toBeLessThanOrEqual(390);
 });

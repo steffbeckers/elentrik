@@ -1,3 +1,4 @@
+import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 import { expect, test } from '@playwright/test';
 import { gebruikTestgebruiker } from './hulp/inloggen';
 import { leesPdf } from './hulp/pdf';
@@ -14,7 +15,12 @@ test('tekenen, bewaren, plaatsen, heropenen en uitbreiden behoudt wereldcoördin
   const { id } = await r.json();
   const read = async () => (await (await request.get(`/api/projecten/${id}`)).json()).document.situatie.paginas[0];
   await page.goto(`/projecten/${id}`);
-  await page.getByRole('button', { name: 'Kring stopcontacten' }).click();
+  // De korte standaardtimeout hierboven geldt voor de tekenstappen. Op een koude ontwikkelserver
+  // compileert de editor bij het eerste bezoek langer dan 10 s: wacht daar dus ruimer op.
+  const sjabloon = page.getByRole('button', { name: 'Kring stopcontacten' });
+  await expect(sjabloon).toBeVisible({ timeout: 60_000 });
+  await sjabloon.click();
+  await bevestigSjabloonOpBord(page);
   await page.getByTestId('tab-situatieschema').click();
   await page.getByTestId('plan-tekenen-leeg').click();
   const frame = page.frameLocator('iframe[title="Zelf plan tekenen"]');

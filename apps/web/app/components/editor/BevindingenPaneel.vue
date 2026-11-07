@@ -3,6 +3,8 @@ import { formatteerBericht, REGELSETS, type Bevinding, type Ernst } from "@elent
 import AfwijkingDialoog from "~/components/editor/AfwijkingDialoog.vue";
 import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.vue";
 import DossierChecklist from "~/components/editor/DossierChecklist.vue";
+import MarkeringSymbool from "~/components/editor/MarkeringSymbool.vue";
+import { MARKERING_SOORTEN } from "~/editor/markeringen";
 import { groepeerBevindingen, herstelDoel, bevindingVoorNode } from "~/editor/bevindingengroepen";
 import { useEditorStore } from "~/stores/editor";
 
@@ -116,6 +118,15 @@ function verwijderAfwijking(b: Bevinding): void {
     </div>
     <details v-if="voorlopigeControle" class="mb-3 text-xs text-muted" data-testid="voorlopige-controle"><summary class="cursor-pointer py-2">{{ $t('werkbaarheid.bevindingen.controle') }}</summary><p class="pb-2">{{ $t("editor.bevindingen.voorlopig") }}</p></details>
     <p v-if="groepen.length === 0" class="text-sm text-muted">{{ $t("werkbaarheid.bevindingen.geenElektrische") }}</p>
+    <section class="mb-4 rounded-md border border-default p-2" aria-labelledby="markeringen-legenda" data-testid="markeringen-legenda">
+      <h3 id="markeringen-legenda" class="mb-1 text-sm font-medium">{{ $t("editor.bevindingen.legenda.titel") }}</h3>
+      <ul class="space-y-1 text-xs text-muted">
+        <li v-for="soort in MARKERING_SOORTEN" :key="soort" class="flex items-start gap-2">
+          <svg viewBox="-1.5 -1.5 3 3" class="mt-0.5 size-3.5 shrink-0" aria-hidden="true"><MarkeringSymbool :soort="soort" :x="0" :y="0" :r="1.1" /></svg>
+          <span>{{ $t(`editor.bevindingen.legenda.${soort}`) }}</span>
+        </li>
+      </ul>
+    </section>
 
     <div v-for="groep in groepen" :key="groep.ernst" class="mb-4" :data-testid="`bevindingen-${groep.ernst}`">
       <h3 class="mb-1 flex items-center gap-1 text-sm font-medium" :class="KLEUR[groep.ernst]">

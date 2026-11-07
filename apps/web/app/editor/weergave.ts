@@ -58,8 +58,14 @@ export function weergaveNaResize(
   volgend: Afmeting,
   inhoud: Afmeting,
   marge: number,
+  behoudSchaalEnAnker = false,
 ): Weergave {
   if (volgend.breedte <= 0 || volgend.hoogte <= 0) return huidig;
+  // Plan panels grow from the right/bottom: retain the content under the unchanged top-left corner.
+  if (behoudSchaalEnAnker && vorig.breedte > 0) {
+    const eenhedenPerPixel = huidig.b / vorig.breedte;
+    return { ...huidig, b: volgend.breedte * eenhedenPerPixel, h: volgend.hoogte * eenhedenPerPixel };
+  }
   const wasPassend = passendeWeergave(inhoud, vorig, marge);
   const nuPassend = passendeWeergave(inhoud, volgend, marge)!;
   if (!wasPassend || (["x", "y", "b", "h"] as const).every(k =>

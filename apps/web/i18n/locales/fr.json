@@ -229,6 +229,8 @@
       }
     },
     "onderdelen": {
+      "aardelektrode": "Prise de terre",
+      "aardingsonderbreker": "Sectionneur de terre",
       "contactdoos": "Prise de courant",
       "lichtpunt": "Point lumineux",
       "schakelaar": "Interrupteur",
@@ -239,6 +241,8 @@
       "onderbord": "Tableau divisionnaire"
     },
     "types": {
+      "aardelektrode": "Prise de terre",
+      "aardingsonderbreker": "Sectionneur de terre",
       "aansluiting": "Raccordement",
       "teller": "Compteur",
       "differentieel": "Interrupteur différentiel",
@@ -278,11 +282,16 @@
       "aantalWaarschuwingen": "{n} avertissement | {n} avertissements",
       "ongedaanMaken": "Annuler (Ctrl+Z)",
       "opnieuw": "Rétablir (Ctrl+Y)",
-      "exporteren": "Exporter"
+      "exporteren": "Exporter",
+      "aantalInfo": "{n} message d'information | {n} messages d'information",
+      "bevindingenMetInfo": "{fouten}, {waarschuwingen} et {info}"
     },
     "kringenlijst": {
       "titel": "Liste des circuits",
-      "toetsenbord": "Points par circuit. Les flèches haut et bas déplacent le focus ; Entrée sélectionne le point. Faites défiler horizontalement pour voir toutes les caractéristiques."
+      "toetsenbord": "Points par circuit. Les flèches haut et bas déplacent le focus ; Entrée sélectionne le point. Faites défiler horizontalement pour voir toutes les caractéristiques.",
+      "omschrijvingBewerken": "Modifier la description du circuit {kring}",
+      "omschrijvingHint": "Cliquez sur la description d'un circuit ou appuyez sur F2 pour la modifier ; Entrée enregistre, Échap annule.",
+      "omschrijvingVeld": "Description du circuit {kring}"
     },
     "status": {
       "opgeslagen": "Enregistré",
@@ -294,7 +303,12 @@
       "alleen-lezen": "Non enregistré : lecture seule, votre travail reste conservé localement",
       "alleenLezen": "Lecture seule",
       "opnieuwProberen": "Réessayer",
-      "verwijderd": "Projet supprimé"
+      "verwijderd": "Projet supprimé",
+      "kort": {
+        "opgeslagen": "Enregistré",
+        "bezig": "En cours…",
+        "nietOpgeslagen": "Non enregistré"
+      }
     },
     "verwijderd": {
       "melding": "Ce projet a été supprimé.",
@@ -312,8 +326,14 @@
     "onderdelenPaneel": {
       "titel": "Éléments",
       "toestelsoort": "Type d'appareil",
-      "sjablonen": "Modèles",
-      "geenSneltoets": "—"
+      "sjablonen": "Modèles et références",
+      "geenSneltoets": "—",
+      "groepen": {
+        "kring": "Circuit et protection",
+        "eindpunten": "Points d’utilisation"
+      },
+      "meer": "Plus…",
+      "minder": "Moins"
     },
     "symbolen": {
       "openen": "Tous les symboles",
@@ -347,6 +367,8 @@
         "altijd": "Figure dans chaque schéma."
       },
       "uitleg": {
+        "aardelektrode": "Électrode de terre, composant distinct de la mise à la terre.",
+        "aardingsonderbreker": "Sectionneur dans la liaison de terre.",
         "contactdoos": "Une prise de courant, avec ou sans contact de terre, sécurité enfants ou version étanche.",
         "lichtpunt": "Un point lumineux fixe, par exemple une LED, un tube fluorescent, un spot ou un éclairage de secours.",
         "schakelaar": "Commande un point lumineux : simple, double, va-et-vient, permutateur, variateur ou bouton-poussoir.",
@@ -368,13 +390,23 @@
       "badkamer": "Salle de bain"
     },
     "eigenschappen": {
+      "groepen": {
+        "test": "Test",
+        "elektrisch": "Électrique",
+        "uitvoering": "Exécution",
+        "benaming": "Désignation et plan",
+        "ruimte": "Local"
+      },
       "titel": "Propriétés",
       "leeg": "Sélectionnez un élément sur le schéma.",
       "gemengd": "{aantal} éléments sélectionnés",
       "zelfdeType": "{aantal} × {type}",
       "verschillend": "—",
       "geen": "Aucun",
-      "ongeldig": "Valeur non valide"
+      "ongeldig": "Cette valeur n’est pas enregistrée. Corrigez la saisie ou appuyez sur Échap pour rétablir la valeur enregistrée.",
+      "conceptVerlaten": "Cette saisie incorrecte d’une sélection précédente n’est pas enregistrée.",
+      "terugNaarConcept": "Revenir à la saisie",
+      "conceptHerstellen": "Rétablir les valeurs enregistrées"
     },
     "bevindingen": {
       "titel": "Constats",
@@ -398,7 +430,14 @@
         "beveiliging": "Voir la protection",
         "kring": "Voir le circuit"
       },
-      "afwijkingenPerPunt": "Dérogations par élément"
+      "afwijkingenPerPunt": "Dérogations par élément",
+      "legenda": {
+        "titel": "Repères sur le schéma et le plan",
+        "fout": "Erreur",
+        "waarschuwing": "Avertissement",
+        "info": "Pour information, pas une erreur. Par exemple un câble incomplet ou un point qui n'est pas encore sur le plan.",
+        "afgeweken": "Dérogation : acceptée avec motivation"
+      }
     },
     "afwijking": {
       "titel": "Justifier une dérogation",
@@ -407,8 +446,9 @@
       "bewaren": "Enregistrer la dérogation"
     },
     "projectgegevens": {
+      "frequentie": "Fréquence de l’alimentation (Hz)",
       "titel": "Données du projet",
-      "naam": "Nom",
+      "naam": "Nom du projet",
       "stroomtype": "Type de courant",
       "dossierTaal": {
         "label": "Langue du dossier",
@@ -421,11 +461,11 @@
         "adresHulp": "L'adresse du client est facultative."
       },
       "werf": {
-        "titel": "Chantier",
-        "ean": "Code EAN"
+        "titel": "Adresse du chantier",
+        "ean": "Code EAN",
+        "zelfdeAlsKlant": "Identique à l’adresse du client"
       },
       "datum": {
-        "titel": "Date",
         "label": "Date du projet"
       },
       "adres": {
@@ -439,7 +479,17 @@
       "fouten": {
         "naamVerplicht": "Donnez un nom au projet.",
         "adresVerplicht": "Obligatoire pour une adresse.",
-        "datumVerplicht": "Choisissez une date."
+        "datumVerplicht": "Choisissez une date.",
+        "meetwaardeOngeldig": "Indiquez un nombre égal ou supérieur à 0, ou laissez le champ vide."
+      },
+      "metingen": {
+        "titel": "Mesures",
+        "uitleg": "Valeurs mesurées enregistrées ; aucune évaluation par Elentrik.",
+        "datum": "Date de mesure",
+        "aardingsweerstand": "Résistance de dispersion",
+        "isolatieweerstand": "Résistance d’isolement",
+        "meettoestel": "Appareil de mesure",
+        "opmerking": "Remarque"
       },
       "context": {
         "label": "Contexte de l’installation",
@@ -447,6 +497,12 @@
         "nieuw": "Partie nouvelle / modifiée — prescriptions actuelles",
         "bestaand": "Partie existante — vérifier les dispositions transitoires",
         "onbekend": "À déterminer"
+      },
+      "installatie": {
+        "titel": "Installation"
+      },
+      "dossier": {
+        "titel": "Dossier"
       }
     },
     "concept": {
@@ -483,12 +539,20 @@
     },
     "situatie": {
       "tePlaatsen": {
+        "installatie": "Composants de l’installation",
         "titel": "À placer",
         "uitleg": "Faites glisser un point sur le plan, ou sélectionnez-le puis cliquez sur le plan.",
         "allesGeplaatst": "Tous les points sont placés sur un plan",
         "kring": "Circuit {label}",
         "zonderKring": "Sans circuit",
-        "verdeelborden": "Tableaux de distribution"
+        "verdeelborden": "Tableaux de distribution",
+        "zoeken": "Rechercher par code, type ou description",
+        "kringFilter": "Circuit",
+        "alleKringen": "Tous les circuits",
+        "doorgaan": "Continuer avec le point suivant",
+        "geenResultaten": "Aucun point pour cette recherche ou ce circuit.",
+        "kringKlaar": "Tous les points du circuit {label} sont sur le plan",
+        "groepKlaar": "Tous les points de {groep} sont sur le plan"
       },
       "paginas": {
         "titel": "Pages",
@@ -528,24 +592,38 @@
       "hint": {
         "plaatsen": "Cliquez sur le plan pour placer {label}.",
         "meten": "Cliquez sur deux points du plan.",
-        "annuleren": "Annuler"
+        "annuleren": "Annuler",
+        "stop": "Arrêter"
       },
       "verplaatst": "{label} déplacé de {van} vers {naar}",
       "canvas": {
         "planNietGevonden": "Plan introuvable",
         "planOpnieuwKiezen": "Choisir à nouveau le plan",
         "werkbalk": "Sélection sur le plan",
-        "draaiLinks": "Pivoter vers la gauche (Maj+R)",
-        "draaiRechts": "Pivoter vers la droite (R)",
+        "opschonen": "Nettoyer le fond",
+        "afdekHulp": "Touchez deux coins opposés pour masquer un ancien symbole en blanc. La source est conservée ; vérifiez que les lignes du bâtiment restent visibles.",
+        "afdekTweedeHoek": "Touchez le coin opposé. Échap annule ce masque.",
+        "afdekking": "Masque",
+        "afdekNieuw": "Nouveau masque",
+        "afdekNummer": "Masque {nummer}",
+        "afdekVerwijder": "Supprimer le masque",
+        "afdekAnnuleer": "Annuler le coin",
+        "afdekKlaar": "Terminé",
+        "afdekInvoeren": "Saisir les dimensions",
+        "afdekToevoegen": "Ajouter le masque",
+        "afdekVeld": { "x": "Gauche (pixels du plan)", "y": "Haut (pixels du plan)", "breedte": "Largeur (pixels du plan)", "hoogte": "Hauteur (pixels du plan)" },
+        "afdekVeldCm": { "x": "Gauche (cm)", "y": "Haut (cm)", "breedte": "Largeur (cm)", "hoogte": "Hauteur (cm)" },
+        "draaiLinks": "Tourner de 90° à gauche",
+        "draaiRechts": "Tourner de 90° à droite",
         "vanPlanHalen": "Retirer du plan",
         "kiesPunt": "Point sur le plan",
         "kiesPuntLeeg": "Choisissez un point",
         "tekenvlak": "Plan de position : commandes au clavier",
-        "toetsenbord": "Choisissez un point. Les flèches le déplacent ; Maj affine à 1 px. R fait pivoter, Suppr retire du plan. Tab quitte la zone de dessin.",
-        "plaatsToetsenbord": "Les flèches déplacent la croix ; Maj affine à 1 px. Entrée confirme, Échap annule.",
-        "cursorPositie": "Position : x {x}, y {y} px",
-        "bevestigMeetpunt": "Confirmer le point de mesure",
-        "bevestigPlaats": "Placer ici"
+        "toetsenbord": "Choisissez un point. Les flèches déplacent ; Maj affine à 1 pixel du plan. R tourne de 15° à droite, Maj+R de 15° à gauche. Les boutons de rotation tournent de 90°. Suppr retire du plan. Tab quitte la zone de dessin.",
+        "plaatsToetsenbord": "Cliquez sur le plan pour placer le point. Échap annule.",
+        "meetToetsenbord": "Les flèches déplacent la croix ; Maj affine à 1 pixel du plan. Entrée confirme, Échap annule.",
+        "cursorPositie": "Position : x {x}, y {y} (pixels du plan)",
+        "bevestigMeetpunt": "Confirmer le point de mesure"
       },
       "toevoegen": {
         "titel": "Ajouter un plan",
@@ -599,6 +677,12 @@
         "hint": "Cliquez pour dessiner les murs. Échap termine le mur. Sélectionnez un mur pour modifier ses dimensions."
       },
       "opmaak": {
+        "afdrukBewerken": "Ajuster la mise en page imprimée",
+        "afdrukHint": "Visualisez et déplacez les libellés à leur taille sur papier.",
+        "afdrukPagina": "Page du plan",
+        "afdrukPunt": "Point sur le plan imprimé",
+        "afdrukBewaren": "Les modifications de mise en page sont enregistrées automatiquement. La version ci-dessus s’applique à cet aperçu ; utilisez la même version et les mêmes paramètres à l’exportation.",
+        "opnieuwLaden": "Recharger l’aperçu",
         "titel": "Mise en forme du plan",
         "symbolen": "Taille des symboles",
         "labels": "Taille des libellés",
@@ -613,7 +697,44 @@
         "ongeldigPercentage": "Saisissez un nombre de 25 à 400 inclus. La taille enregistrée n’a pas changé.",
         "ongeldigeOffset": "Saisissez un nombre valide, par exemple 0 ou -15. La position enregistrée n’a pas changé.",
         "herstelInvoer": "Rétablir les valeurs enregistrées"
-      }
+      },
+      "uitsnede": {
+        "naam": "Nom du niveau",
+        "verwijder": "Supprimer le cadrage",
+        "x": "Gauche (%)",
+        "y": "Haut (%)",
+        "breedte": "Largeur (%)",
+        "hoogte": "Hauteur (%)",
+        "draai": "Tourner de 90°",
+        "referentie": "Feuille de référence, sans export",
+        "uitleg": "Choisissez les pages sources et nommez chaque cadrage. Les pourcentages se mesurent avant rotation. Le cadrage ne supprime pas les anciens symboles électriques.",
+        "extra": "Ajouter un cadrage",
+        "kalibratie": "Étalonnez chaque nouveau cadrage définitif. L’ancien étalonnage n’est pas repris.",
+        "bestaandePunten": "Cette feuille contient des points. Les cadrages créent de nouvelles feuilles ; les points existants sont conservés."
+      },
+      "afdruk": {
+        "titel": "Paramètres d’impression",
+        "papier": "Papier",
+        "orientatie": "Orientation",
+        "staand": "Portrait",
+        "liggend": "Paysage",
+        "schaal": "Échelle d’impression",
+        "passend": "Adapter au papier",
+        "gekalibreerd": "Échelle étalonnée",
+        "noemer": "Échelle 1 :",
+        "ontbreekt": "Étalonnez d’abord ce cadrage définitif.",
+        "bewaren": "Enregistrer les paramètres",
+        "voorbeeld": "Aperçu avant impression",
+        "uitleg": "À 100 %, vérifiez la taille du texte et les limites des pages. L’objectif de 2,5 mm pour les textes techniques ne constitue pas un contrôle de conformité légale.",
+        "zoom": "Zoom de l’aperçu",
+        "passendMelding": "Adapté au papier — la taille imprimée dépend du papier choisi.",
+        "kalibratieMelding": "Impression étalonnée — répartie sur plusieurs feuilles si nécessaire.",
+        "referentie": "Feuille de référence — exclue de l’impression."
+      },
+      "referentieUitleg": "Ceci est une feuille de référence : aucun point définitif ne peut y être placé. Elle est exclue de l’export. Choisissez une page de plan pour placer des points.",
+      "overlap": "Chevauche {label}",
+      "ongedaanMaken": "Annuler",
+      "nietMeerOngedaan": "Ce placement ne peut plus être annulé"
     },
     "export": {
       "titel": "Exporter en PDF",
@@ -698,14 +819,108 @@
       "ja": "Oui",
       "nee": "Non",
       "stuks": "pièce | pièces",
-      "m": "m"
+      "m": "m",
+      "csvKop": {
+        "materiaal": "Matériel",
+        "uitvoering": "Exécution",
+        "eenheid": "Unité"
+      },
+      "csvDownloaden": "Télécharger le CSV"
     },
     "aftakkingen": {
       "titel": "Dérivations",
-      "hulp": "Choisissez un interrupteur ou un point lumineux et sélectionnez la canalisation du circuit. Ajoutez une dérivation, puis complétez-la avec le plus à droite.",
+      "hulp": "Choisissez une canalisation et un élément pour créer un ensemble horizontal avec un seul repère de point. Ajoutez à droite des interrupteurs, points lumineux, prises ou appareils.",
       "toevoegen": "Ajouter une dérivation",
       "uitbreiden": "Ajouter {onderdeel} à la dérivation",
       "bestemming": "Prolonger une dérivation"
+    },
+    "invoegen": {
+      "sjabloonTitel": "Insérer un modèle",
+      "lichtTitel": "Ajouter une commande d’éclairage",
+      "bestemming": "Destination",
+      "kiesBestemming": "Choisissez un tableau, un différentiel ou un circuit existant valable.",
+      "hergebruik": "Différentiel existant conservé :",
+      "nieuweDifferentieel": "Nouveau différentiel (valeurs prédéfinies)",
+      "voorinstellingen": "Ces valeurs sont prédéfinies. Vérifiez la protection et la canalisation pour cette installation. La classification du local reste vide.",
+      "voorinstellingenMetRuimte": "Ces valeurs sont prédéfinies. Vérifiez la protection et la canalisation pour cette installation.",
+      "onderdelen": "Éléments ajoutés",
+      "ongeldigeWaarden": "Vérifiez la destination et les valeurs saisies.",
+      "toevoegen": "Ajouter",
+      "schakeling": "Composition",
+      "aantalLichtpunten": "Nombre de points lumineux distincts",
+      "lichtVoorbeeld": "Point {punt} : {schakelaars} interrupteurs et {lampen} points lumineux à placer séparément.",
+      "doelen": {
+        "nieuw-op-bord": "Nouveau circuit avec différentiel",
+        "bestaande-differentieel": "Utiliser le différentiel existant",
+        "bestaande-kring": "Dérivation sur le circuit existant"
+      },
+      "schakelingen": {
+        "enkel": "Interrupteur unipolaire + point lumineux",
+        "wissel": "Deux interrupteurs va-et-vient + point lumineux",
+        "kruis": "Deux va-et-vient + permutateur + point lumineux"
+      },
+      "annuleren": "Annuler",
+      "ruimte": {
+        "label": "Type de local",
+        "hulp": "S’applique aux nouveaux points de ce modèle."
+      }
+    },
+    "referenties": {
+      "titel": "Repères des circuits",
+      "behoudUitleg": "Les repères existants restent figés : les nouveaux circuits reçoivent la première lettre libre et rien ne se décale. Figez-les ici explicitement pour les anciens projets.",
+      "behouden": "Conserver les repères actuels",
+      "vastgelegd": "Les repères actuels sont figés.",
+      "hernummeren": "Renuméroter",
+      "hernummerUitleg": "La renumérotation est un choix délibéré : les lettres suivent à nouveau l’ordre du tableau. Vérifiez les repères proposés. Les points du plan de position suivent les mêmes repères.",
+      "huidig": "Repère actuel",
+      "nieuw": "Nouveau repère",
+      "bevestigen": "Appliquer cette numérotation",
+      "dupliceren": "Dupliquer le circuit {code}",
+      "vrijeCode": "Nouveau repère disponible",
+      "codeOngeldig": "Utilisez un repère disponible en majuscules A–Z.",
+      "maakKopie": "Ajouter le circuit avec ce repère"
+    },
+    "invoegenVoor": {
+      "actie": "Insérer {onderdeel} avant {doel}",
+      "selectie": "la sélection",
+      "uitleg": "L’élément existant et sa suite sont conservés. Vérifiez ensuite les nouvelles propriétés."
+    },
+    "sneltoetsen": {
+      "titel": "Raccourcis clavier",
+      "beschrijving": "Les touches fonctionnent lorsque le focus n'est pas dans un champ de texte ou une boîte de dialogue. Sur un Mac, utilisez ⌘ au lieu de Ctrl.",
+      "openen": "Afficher les raccourcis clavier (?)",
+      "schema": "Schéma unifilaire",
+      "situatie": "Plan de position",
+      "of": "ou",
+      "spatie": "Espace",
+      "kies": {
+        "contactdoos": "Choisir une prise de courant. Avec un circuit sélectionné, l'ajouter directement après la sélection",
+        "lichtpunt": "Choisir un point lumineux. Avec un circuit sélectionné, l'ajouter directement après la sélection",
+        "schakelaar": "Choisir un interrupteur",
+        "toestel": "Choisir un appareil",
+        "differentieel": "Choisir un interrupteur différentiel. Avec un circuit sélectionné, l'insérer directement avant la sélection",
+        "zekering": "Choisir un fusible",
+        "onderbord": "Choisir un tableau divisionnaire"
+      },
+      "symbolen": "Ouvrir la fenêtre des symboles",
+      "toevoegen": "Ajouter l'élément choisi à la sélection",
+      "verwijder": "Supprimer la sélection",
+      "verwijderTak": "Supprimer la sélection avec toute sa branche",
+      "navigeer": "Aller à l'élément suivant ou au circuit voisin",
+      "wisSelectie": "Effacer la sélection et fermer la barre d'insertion",
+      "dupliceer": "Dupliquer le circuit sélectionné avec la première lettre libre",
+      "ongedaan": "Annuler",
+      "opnieuw": "Rétablir",
+      "verschuifCanvas": "Maintenir enfoncée et faire glisser pour déplacer la zone de dessin",
+      "overzicht": "Ouvrir cet aperçu",
+      "draai": "Tourner la sélection de 15° dans le sens horaire",
+      "draaiTerug": "Tourner la sélection de 15° dans le sens antihoraire",
+      "schuif": "Déplacer la sélection",
+      "schuifFijn": "Déplacer la sélection d'un pixel du plan",
+      "vanPlan": "Retirer la sélection du plan. Elle reste dans le schéma unifilaire",
+      "annuleer": "Arrêter le placement ou la mesure, sinon effacer la sélection",
+      "dupliceerGeenKring": "Sélectionnez d'abord un élément d'un circuit pour dupliquer ce circuit.",
+      "dupliceerKlaar": "Circuit {bron} dupliqué comme circuit {code}."
     }
   },
   "bedrijf": {
@@ -755,9 +970,20 @@
     "titel": "Projets",
     "nieuw": "Nouveau projet",
     "leeg": "Pas encore de projet. Créez votre premier projet.",
+    "leegStappen": {
+      "klant": "Complétez le client et le chantier.",
+      "schema": "Construisez le schéma unifilaire.",
+      "plan": "Placez les points sur le plan de position.",
+      "export": "Vérifiez les constats et exportez le dossier en PDF."
+    },
+    "zojuist": "à l’instant",
+    "status": {
+      "nietGeexporteerd": "Non exporté",
+      "geexporteerd": "Exporté"
+    },
     "zoeken": {
       "label": "Rechercher des projets",
-      "placeholder": "Rechercher par nom de projet ou client…",
+      "placeholder": "Rechercher par nom de projet, client ou commune…",
       "wissen": "Effacer la recherche",
       "geenResultaten": "Aucun projet trouvé. Modifiez votre recherche."
     },
@@ -771,6 +997,8 @@
     "kolommen": {
       "naam": "Nom",
       "klant": "Client",
+      "werf": "Chantier",
+      "status": "Statut",
       "gewijzigd": "Modifié",
       "acties": "Actions"
     },
@@ -798,6 +1026,12 @@
     }
   },
   "velden": {
+    "aantalPanelen": {"label": "Nombre de panneaux"},
+    "schijnbaarVermogen_kVA": {"label": "Puissance apparente"},
+    "dcDetectie_mA": {"label": "Détection de courant résiduel DC"},
+    "puntReferentie": {"label": "Référence du point", "opties": {"automatisch": "Numéro automatique", "geen": "Sans numéro propre (choix de source)"}},
+    "testResultaat": {"label": "Résultat du test", "opties": {"ok": "OK", "niet_ok": "Pas OK", "niet_getest": "Non testé"}},
+    "uitschakeltijd_ms": {"label": "Temps de déclenchement"},
     "label": {
       "label": "Libellé"
     },
@@ -820,7 +1054,7 @@
       "label": "Courbe"
     },
     "kortsluitvermogen_kA": {
-      "label": "Pouvoir de coupure"
+      "label": "Pouvoir de coupure (Icn)"
     },
     "naam": {
       "label": "Nom"
@@ -881,7 +1115,17 @@
         "warmtepomp": "Pompe à chaleur",
         "laadpaal": "Borne de recharge",
         "omvormer": "Onduleur",
-        "andere": "Autre"
+        "andere": "Autre",
+        "pvPaneel": "Panneau photovoltaïque",
+        "bel": "Sonnerie",
+        "motor": "Moteur",
+        "ventilator": "Ventilateur",
+        "koelkast": "Réfrigérateur",
+        "diepvriezer": "Congélateur",
+        "wand": "Point lumineux mural",
+        "tweepolig": "Bipolaire",
+        "onbekendDrieblad": "Symbole source inconnu (trois pales)",
+        "deurbelMonitor": "Carillon / moniteur"
       }
     },
     "ruimteNaam": {
@@ -889,6 +1133,31 @@
     },
     "lengte_m": {
       "label": "Longueur du parcours"
+    },
+    "kringCode": {
+      "label": "Code de circuit fixe"
+    },
+    "referentie": {
+      "label": "Repère de l’appareil"
+    },
+    "brandreactieklasse": {
+      "label": "Classe de réaction au feu"
+    },
+    "aanleg": {
+      "ligging": {
+        "label": "Pose",
+        "opties": {
+          "inbouw": "Dans une paroi",
+          "opbouw": "Sur une paroi",
+          "grond": "Souterraine"
+        }
+      },
+      "inBuis": {
+        "label": "Sous conduit"
+      }
+    },
+    "metBeschermingsgeleider": {
+      "label": "Avec conducteur de protection (G)"
     }
   },
   "ruimtes": {
@@ -1002,7 +1271,9 @@
     "naam": {
       "veld": "Nom de l'entreprise",
       "bewaren": "Enregistrer le nom",
-      "bewaard": "Le nom a été enregistré."
+      "bewaard": "Le nom a été enregistré.",
+      "dossierHulp": "Le nom et le logo de vos dossiers se règlent dans {link}.",
+      "dossierHulpLid": "Le nom et le logo de vos dossiers figurent dans {link}."
     },
     "leden": {
       "titel": "Membres",
@@ -1224,6 +1495,9 @@
       "schema": "Dessiner le premier circuit",
       "plan": "Ajouter un plan | Ajouter les {aantal} plans manquants",
       "plaatsen": "Encore 1 élément à placer sur le plan | Encore {aantal} éléments à placer sur le plan",
+      "kiesOnderdeel": "Sélectionner {naam} dans le schéma",
+      "aardingsweerstand": "Indiquer la résistance de dispersion",
+      "isolatieweerstand": "Indiquer la résistance d’isolement",
       "conceptUitleg": "Des éléments du dossier manquent encore. Vous pouvez exporter un brouillon et le compléter plus tard.",
       "conceptExport": "Créer un PDF brouillon"
     },
@@ -1247,7 +1521,6 @@
     "bewaren": "Enregistrement des coordonnées…",
     "gewijzigd": "Modifications non enregistrées",
     "geenWijzigingen": "Aucune modification non enregistrée",
-    "organisatieNaam": "Ce nom identifie votre organisation dans l’application. Le nom de l’entreprise sur le PDF se modifie dans les coordonnées de l’entreprise.",
     "rolTitel": "Confirmer le changement de rôle",
     "rolVraag": "Attribuer le rôle {rol} à {naam} ?",
     "eigenaarGevolg": "Un propriétaire gère les coordonnées de l’entreprise, les membres, les invitations et l’abonnement, et peut modifier les projets.",

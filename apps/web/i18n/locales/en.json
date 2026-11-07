@@ -229,6 +229,8 @@
       }
     },
     "onderdelen": {
+      "aardelektrode": "Earth electrode",
+      "aardingsonderbreker": "Earth disconnector",
       "contactdoos": "Socket",
       "lichtpunt": "Light point",
       "schakelaar": "Switch",
@@ -239,6 +241,8 @@
       "onderbord": "Sub-board"
     },
     "types": {
+      "aardelektrode": "Earth electrode",
+      "aardingsonderbreker": "Earth disconnector",
       "aansluiting": "Supply connection",
       "teller": "Meter",
       "differentieel": "Residual current device (RCD)",
@@ -278,11 +282,16 @@
       "aantalWaarschuwingen": "{n} warning | {n} warnings",
       "ongedaanMaken": "Undo (Ctrl+Z)",
       "opnieuw": "Redo (Ctrl+Y)",
-      "exporteren": "Export"
+      "exporteren": "Export",
+      "aantalInfo": "{n} note for information | {n} notes for information",
+      "bevindingenMetInfo": "{fouten}, {waarschuwingen} and {info}"
     },
     "kringenlijst": {
       "titel": "Circuit list",
-      "toetsenbord": "Points grouped by circuit. Up and down arrows move focus; Enter selects the point. Scroll horizontally to see all specifications."
+      "toetsenbord": "Points grouped by circuit. Up and down arrows move focus; Enter selects the point. Scroll horizontally to see all specifications.",
+      "omschrijvingBewerken": "Edit the description of circuit {kring}",
+      "omschrijvingHint": "Click a circuit description or press F2 to edit it; Enter saves, Escape cancels.",
+      "omschrijvingVeld": "Description of circuit {kring}"
     },
     "status": {
       "opgeslagen": "Saved",
@@ -294,7 +303,12 @@
       "alleen-lezen": "Not saved: read-only, your work is kept locally",
       "alleenLezen": "Read-only",
       "opnieuwProberen": "Try again",
-      "verwijderd": "Project deleted"
+      "verwijderd": "Project deleted",
+      "kort": {
+        "opgeslagen": "Saved",
+        "bezig": "Saving…",
+        "nietOpgeslagen": "Not saved"
+      }
     },
     "verwijderd": {
       "melding": "This project was deleted.",
@@ -312,8 +326,14 @@
     "onderdelenPaneel": {
       "titel": "Components",
       "toestelsoort": "Appliance type",
-      "sjablonen": "Templates",
-      "geenSneltoets": "—"
+      "sjablonen": "Templates and references",
+      "geenSneltoets": "—",
+      "groepen": {
+        "kring": "Circuit and protection",
+        "eindpunten": "End points"
+      },
+      "meer": "More…",
+      "minder": "Less"
     },
     "symbolen": {
       "openen": "All symbols",
@@ -347,6 +367,8 @@
         "altijd": "Part of every diagram."
       },
       "uitleg": {
+        "aardelektrode": "Earth electrode as a separate earthing component.",
+        "aardingsonderbreker": "Disconnector in the earthing connection.",
         "contactdoos": "A socket for a plug, with or without earth contact, child protection or waterproofing.",
         "lichtpunt": "A fixed light point, such as an LED, a fluorescent tube, a spotlight or emergency lighting.",
         "schakelaar": "Controls a light point: single, double, two-way, intermediate, dimmer or push button.",
@@ -368,13 +390,23 @@
       "badkamer": "Bathroom"
     },
     "eigenschappen": {
+      "groepen": {
+        "test": "Test",
+        "elektrisch": "Electrical",
+        "uitvoering": "Construction",
+        "benaming": "Name and plan",
+        "ruimte": "Room"
+      },
       "titel": "Properties",
       "leeg": "Select a component on the diagram.",
       "gemengd": "{aantal} components selected",
       "zelfdeType": "{aantal} × {type}",
       "verschillend": "—",
       "geen": "None",
-      "ongeldig": "Invalid value"
+      "ongeldig": "This value has not been saved. Correct the input or press Escape to restore the saved value.",
+      "conceptVerlaten": "This invalid input from a previous selection has not been saved.",
+      "terugNaarConcept": "Return to input",
+      "conceptHerstellen": "Restore saved values"
     },
     "bevindingen": {
       "titel": "Findings",
@@ -398,7 +430,14 @@
         "beveiliging": "View protection",
         "kring": "View circuit"
       },
-      "afwijkingenPerPunt": "Deviations by component"
+      "afwijkingenPerPunt": "Deviations by component",
+      "legenda": {
+        "titel": "Markers on the diagram and the plan",
+        "fout": "Error",
+        "waarschuwing": "Warning",
+        "info": "For information, not an error. For example an incomplete cable or a point that is not on the plan yet.",
+        "afgeweken": "Deviation: accepted with a justification"
+      }
     },
     "afwijking": {
       "titel": "Justify a deviation",
@@ -407,8 +446,9 @@
       "bewaren": "Save deviation"
     },
     "projectgegevens": {
+      "frequentie": "Supply frequency (Hz)",
       "titel": "Project details",
-      "naam": "Name",
+      "naam": "Project name",
       "stroomtype": "Current type",
       "dossierTaal": {
         "label": "Dossier language",
@@ -421,11 +461,11 @@
         "adresHulp": "The customer's address is optional."
       },
       "werf": {
-        "titel": "Site",
-        "ean": "EAN code"
+        "titel": "Site address",
+        "ean": "EAN code",
+        "zelfdeAlsKlant": "Same as customer address"
       },
       "datum": {
-        "titel": "Date",
         "label": "Project date"
       },
       "adres": {
@@ -439,7 +479,17 @@
       "fouten": {
         "naamVerplicht": "Give the project a name.",
         "adresVerplicht": "Required for an address.",
-        "datumVerplicht": "Choose a date."
+        "datumVerplicht": "Choose a date.",
+        "meetwaardeOngeldig": "Enter a number of 0 or more, or leave the field empty."
+      },
+      "metingen": {
+        "titel": "Measurements",
+        "uitleg": "Recorded measured values; not assessed by Elentrik.",
+        "datum": "Measurement date",
+        "aardingsweerstand": "Earth resistance",
+        "isolatieweerstand": "Insulation resistance",
+        "meettoestel": "Measuring instrument",
+        "opmerking": "Note"
       },
       "context": {
         "label": "Installation context",
@@ -447,6 +497,12 @@
         "nieuw": "New / altered part — current requirements",
         "bestaand": "Existing part — check transitional provisions",
         "onbekend": "To be determined"
+      },
+      "installatie": {
+        "titel": "Installation"
+      },
+      "dossier": {
+        "titel": "Dossier details"
       }
     },
     "concept": {
@@ -483,12 +539,20 @@
     },
     "situatie": {
       "tePlaatsen": {
+        "installatie": "Installation components",
         "titel": "To place",
         "uitleg": "Drag a point onto the plan, or select it and click on the plan.",
         "allesGeplaatst": "All points are on a plan",
         "kring": "Circuit {label}",
         "zonderKring": "Without circuit",
-        "verdeelborden": "Distribution boards"
+        "verdeelborden": "Distribution boards",
+        "zoeken": "Search by code, type or description",
+        "kringFilter": "Circuit",
+        "alleKringen": "All circuits",
+        "doorgaan": "Continue with the next point",
+        "geenResultaten": "No points match this search or circuit.",
+        "kringKlaar": "All points of circuit {label} are on the plan",
+        "groepKlaar": "All points of {groep} are on the plan"
       },
       "paginas": {
         "titel": "Pages",
@@ -528,24 +592,38 @@
       "hint": {
         "plaatsen": "Click on the plan to place {label}.",
         "meten": "Click two points on the plan.",
-        "annuleren": "Cancel"
+        "annuleren": "Cancel",
+        "stop": "Stop"
       },
       "verplaatst": "{label} moved from {van} to {naar}",
       "canvas": {
         "planNietGevonden": "Plan not found",
         "planOpnieuwKiezen": "Choose plan again",
         "werkbalk": "Selection on the plan",
-        "draaiLinks": "Rotate anticlockwise (Shift+R)",
-        "draaiRechts": "Rotate clockwise (R)",
+        "opschonen": "Clean up background",
+        "afdekHulp": "Tap two opposite corners to cover an old symbol in white. The source is preserved; check that building lines remain visible.",
+        "afdekTweedeHoek": "Tap the opposite corner. Escape cancels this cover.",
+        "afdekking": "Cover",
+        "afdekNieuw": "New cover",
+        "afdekNummer": "Cover {nummer}",
+        "afdekVerwijder": "Remove cover",
+        "afdekAnnuleer": "Cancel corner",
+        "afdekKlaar": "Done",
+        "afdekInvoeren": "Enter dimensions",
+        "afdekToevoegen": "Add cover",
+        "afdekVeld": { "x": "Left (plan pixels)", "y": "Top (plan pixels)", "breedte": "Width (plan pixels)", "hoogte": "Height (plan pixels)" },
+        "afdekVeldCm": { "x": "Left (cm)", "y": "Top (cm)", "breedte": "Width (cm)", "hoogte": "Height (cm)" },
+        "draaiLinks": "Rotate 90° anticlockwise",
+        "draaiRechts": "Rotate 90° clockwise",
         "vanPlanHalen": "Remove from plan",
         "kiesPunt": "Point on plan",
         "kiesPuntLeeg": "Choose a point",
         "tekenvlak": "Layout plan: keyboard controls",
-        "toetsenbord": "Choose a point. Arrows move it; Shift adjusts by 1 px. R rotates, Delete removes it from the plan. Tab leaves the drawing area.",
-        "plaatsToetsenbord": "Arrows move the crosshair; Shift adjusts by 1 px. Enter confirms, Escape cancels.",
-        "cursorPositie": "Position: x {x}, y {y} px",
-        "bevestigMeetpunt": "Confirm measurement point",
-        "bevestigPlaats": "Place here"
+        "toetsenbord": "Choose a point. Arrow keys move it; Shift refines to 1 plan pixel. R rotates 15° clockwise, Shift+R 15° anticlockwise. The rotation buttons rotate 90°. Delete removes it from the plan. Tab leaves the canvas.",
+        "plaatsToetsenbord": "Click on the plan to place the point. Escape cancels.",
+        "meetToetsenbord": "Arrows move the crosshair; Shift adjusts by 1 plan pixel. Enter confirms, Escape cancels.",
+        "cursorPositie": "Position: x {x}, y {y} (plan pixels)",
+        "bevestigMeetpunt": "Confirm measurement point"
       },
       "toevoegen": {
         "titel": "Add plan",
@@ -599,6 +677,12 @@
         "hint": "Click to draw walls. Escape ends the wall. Select a wall to adjust its dimensions."
       },
       "opmaak": {
+        "afdrukBewerken": "Adjust the printed layout",
+        "afdrukHint": "View and move labels at the size they will have on paper.",
+        "afdrukPagina": "Plan page",
+        "afdrukPunt": "Point on printed plan",
+        "afdrukBewaren": "Layout changes are saved to the project automatically. The version above applies to this preview; use the same version and print settings when exporting.",
+        "opnieuwLaden": "Reload preview",
         "titel": "Plan appearance",
         "symbolen": "Symbol size",
         "labels": "Label size",
@@ -613,7 +697,44 @@
         "ongeldigPercentage": "Enter a number from 25 to 400 inclusive. The saved size has not changed.",
         "ongeldigeOffset": "Enter a valid number, such as 0 or -15. The saved position has not changed.",
         "herstelInvoer": "Restore saved values"
-      }
+      },
+      "uitsnede": {
+        "naam": "Floor name",
+        "verwijder": "Remove crop",
+        "x": "Left (%)",
+        "y": "Top (%)",
+        "breedte": "Width (%)",
+        "hoogte": "Height (%)",
+        "draai": "Rotate 90°",
+        "referentie": "Reference sheet, exclude from export",
+        "uitleg": "Choose source pages and name each crop. Percentages are measured before rotation. Cropping does not remove old electrical symbols.",
+        "extra": "Add another crop",
+        "kalibratie": "Calibrate each new final crop. Previous calibration is not carried over.",
+        "bestaandePunten": "This sheet contains points. Crops will create new sheets; existing points are preserved."
+      },
+      "afdruk": {
+        "titel": "Print settings",
+        "papier": "Paper",
+        "orientatie": "Orientation",
+        "staand": "Portrait",
+        "liggend": "Landscape",
+        "schaal": "Print scale",
+        "passend": "Fit to paper",
+        "gekalibreerd": "Calibrated scale",
+        "noemer": "Scale 1 :",
+        "ontbreekt": "Calibrate this final crop first.",
+        "bewaren": "Save settings",
+        "voorbeeld": "Print preview",
+        "uitleg": "At 100%, check text size and page boundaries. Technical text targets at least 2.5 mm; this is not a legal compliance check.",
+        "zoom": "Preview zoom",
+        "passendMelding": "Fit to paper — printed size follows the chosen paper.",
+        "kalibratieMelding": "Calibrated print — tiled across sheets when necessary.",
+        "referentie": "Reference sheet — excluded from print."
+      },
+      "referentieUitleg": "This is a reference sheet: final points cannot be placed here and the sheet is excluded from export. Choose a plan page to place points.",
+      "overlap": "Overlaps {label}",
+      "ongedaanMaken": "Undo",
+      "nietMeerOngedaan": "This placement can no longer be undone"
     },
     "export": {
       "titel": "Export as PDF",
@@ -698,14 +819,108 @@
       "ja": "Yes",
       "nee": "No",
       "stuks": "pc | pcs",
-      "m": "m"
+      "m": "m",
+      "csvKop": {
+        "materiaal": "Material",
+        "uitvoering": "Specification",
+        "eenheid": "Unit"
+      },
+      "csvDownloaden": "Download CSV"
     },
     "aftakkingen": {
       "titel": "Branches",
-      "hulp": "Choose a switch or light point and select the circuit cable. Add a branch, then extend it using the plus on the right.",
+      "hulp": "Select a cable and a component to start a horizontal assembly with one point reference. Add switches, light points, sockets or appliances on the right.",
       "toevoegen": "Add branch",
       "uitbreiden": "Add {onderdeel} to branch",
       "bestemming": "Extend a branch"
+    },
+    "invoegen": {
+      "sjabloonTitel": "Insert template",
+      "lichtTitel": "Add lighting circuit assembly",
+      "bestemming": "Destination",
+      "kiesBestemming": "Choose a valid distribution board, RCD or existing circuit.",
+      "hergebruik": "Keep existing RCD:",
+      "nieuweDifferentieel": "New RCD (preset values)",
+      "voorinstellingen": "These are preset values. Check the protection and cable for this installation. Room classification remains blank.",
+      "voorinstellingenMetRuimte": "These are preset values. Check the protection and cable for this installation.",
+      "onderdelen": "Added components",
+      "ongeldigeWaarden": "Check the destination and entered values.",
+      "toevoegen": "Add",
+      "schakeling": "Assembly",
+      "aantalLichtpunten": "Number of separate light points",
+      "lichtVoorbeeld": "Point {punt}: {schakelaars} switches and {lampen} individually placeable light points.",
+      "doelen": {
+        "nieuw-op-bord": "New circuit with RCD",
+        "bestaande-differentieel": "Use existing RCD",
+        "bestaande-kring": "Branch on existing circuit"
+      },
+      "schakelingen": {
+        "enkel": "Single-pole switch + light point",
+        "wissel": "Two two-way switches + light point",
+        "kruis": "Two two-way switches + intermediate switch + light point"
+      },
+      "annuleren": "Cancel",
+      "ruimte": {
+        "label": "Room type",
+        "hulp": "Applies to the new points of this template."
+      }
+    },
+    "referenties": {
+      "titel": "Circuit references",
+      "behoudUitleg": "Existing circuit codes stay fixed: new circuits get the first free letter and nothing shifts. Fix them here explicitly for older projects.",
+      "behouden": "Keep existing references",
+      "vastgelegd": "The current circuit codes are fixed.",
+      "hernummeren": "Renumber circuits",
+      "hernummerUitleg": "Renumbering is a deliberate choice: the letters then follow the order on the board again. Check the proposed codes. Points on the layout plan use the same circuit references.",
+      "huidig": "Current code",
+      "nieuw": "New code",
+      "bevestigen": "Apply this numbering",
+      "dupliceren": "Duplicate circuit {code}",
+      "vrijeCode": "New available circuit code",
+      "codeOngeldig": "Use an available code with capital letters A–Z.",
+      "maakKopie": "Add circuit with this code"
+    },
+    "invoegenVoor": {
+      "actie": "Insert {onderdeel} before {doel}",
+      "selectie": "the selection",
+      "uitleg": "The existing component and its downstream components are kept. Check the new properties afterwards."
+    },
+    "sneltoetsen": {
+      "titel": "Keyboard shortcuts",
+      "beschrijving": "The keys work when the focus is not in a text field or a dialog. On a Mac, use ⌘ instead of Ctrl.",
+      "openen": "Show keyboard shortcuts (?)",
+      "schema": "Single-line diagram",
+      "situatie": "Layout plan",
+      "of": "or",
+      "spatie": "Space",
+      "kies": {
+        "contactdoos": "Choose a socket. With a circuit selected: add it straight after the selection",
+        "lichtpunt": "Choose a light point. With a circuit selected: add it straight after the selection",
+        "schakelaar": "Choose a switch",
+        "toestel": "Choose an appliance",
+        "differentieel": "Choose an RCD. With a circuit selected: insert it straight before the selection",
+        "zekering": "Choose a fuse",
+        "onderbord": "Choose a sub-board"
+      },
+      "symbolen": "Open the symbols window",
+      "toevoegen": "Add the chosen component at the selection",
+      "verwijder": "Delete the selection",
+      "verwijderTak": "Delete the selection with its whole branch",
+      "navigeer": "Go to the next component or the neighbouring circuit",
+      "wisSelectie": "Clear the selection and close the insert bar",
+      "dupliceer": "Duplicate the selected circuit with the first free letter",
+      "ongedaan": "Undo",
+      "opnieuw": "Redo",
+      "verschuifCanvas": "Hold and drag to move the drawing area",
+      "overzicht": "Open this overview",
+      "draai": "Rotate the selection 15° clockwise",
+      "draaiTerug": "Rotate the selection 15° anticlockwise",
+      "schuif": "Move the selection",
+      "schuifFijn": "Move the selection by one plan pixel",
+      "vanPlan": "Remove the selection from the plan. It stays in the single-line diagram",
+      "annuleer": "Stop placing or measuring, otherwise clear the selection",
+      "dupliceerGeenKring": "First select a component of a circuit to duplicate that circuit.",
+      "dupliceerKlaar": "Circuit {bron} duplicated as circuit {code}."
     }
   },
   "bedrijf": {
@@ -755,9 +970,20 @@
     "titel": "Projects",
     "nieuw": "New project",
     "leeg": "No projects yet. Create your first project.",
+    "leegStappen": {
+      "klant": "Enter the customer and site details.",
+      "schema": "Build the single-line diagram.",
+      "plan": "Place the points on the layout plan.",
+      "export": "Review the findings and export the dossier as a PDF."
+    },
+    "zojuist": "just now",
+    "status": {
+      "nietGeexporteerd": "Not exported",
+      "geexporteerd": "Exported"
+    },
     "zoeken": {
       "label": "Search projects",
-      "placeholder": "Search by project name or customer…",
+      "placeholder": "Search by project name, customer or town…",
       "wissen": "Clear search",
       "geenResultaten": "No projects found. Try a different search."
     },
@@ -771,6 +997,8 @@
     "kolommen": {
       "naam": "Name",
       "klant": "Customer",
+      "werf": "Site",
+      "status": "Status",
       "gewijzigd": "Modified",
       "acties": "Actions"
     },
@@ -792,12 +1020,18 @@
       "aanmaken": "Create"
     },
     "stroomtypes": {
-      "2x230V": "2 × 230 V (single phase)",
+      "2x230V": "2 × 230 V (single-phase)",
       "3x230V": "3 × 230 V (three phase)",
       "3N400V": "3N × 400 V (three phase with neutral)"
     }
   },
   "velden": {
+    "aantalPanelen": {"label": "Panel count"},
+    "schijnbaarVermogen_kVA": {"label": "Apparent power"},
+    "dcDetectie_mA": {"label": "DC residual current detection"},
+    "puntReferentie": {"label": "Point reference", "opties": {"automatisch": "Automatic number", "geen": "No individual number (source choice)"}},
+    "testResultaat": {"label": "Test result", "opties": {"ok": "OK", "niet_ok": "Not OK", "niet_getest": "Not tested"}},
+    "uitschakeltijd_ms": {"label": "Tripping time"},
     "label": {
       "label": "Label"
     },
@@ -820,7 +1054,7 @@
       "label": "Curve"
     },
     "kortsluitvermogen_kA": {
-      "label": "Breaking capacity"
+      "label": "Breaking capacity (Icn)"
     },
     "naam": {
       "label": "Name"
@@ -881,7 +1115,17 @@
         "warmtepomp": "Heat pump",
         "laadpaal": "EV charger",
         "omvormer": "Inverter",
-        "andere": "Other"
+        "andere": "Other",
+        "pvPaneel": "Photovoltaic panel",
+        "bel": "Bell",
+        "motor": "Motor",
+        "ventilator": "Fan",
+        "koelkast": "Refrigerator",
+        "diepvriezer": "Freezer",
+        "wand": "Wall light point",
+        "tweepolig": "Double-pole",
+        "onbekendDrieblad": "Unknown source symbol (three blades)",
+        "deurbelMonitor": "Doorbell / monitor"
       }
     },
     "ruimteNaam": {
@@ -889,6 +1133,31 @@
     },
     "lengte_m": {
       "label": "Route length"
+    },
+    "kringCode": {
+      "label": "Fixed circuit code"
+    },
+    "referentie": {
+      "label": "Device reference"
+    },
+    "brandreactieklasse": {
+      "label": "Reaction to fire class"
+    },
+    "aanleg": {
+      "ligging": {
+        "label": "Installation",
+        "opties": {
+          "inbouw": "In a wall",
+          "opbouw": "On a wall",
+          "grond": "Underground"
+        }
+      },
+      "inBuis": {
+        "label": "In conduit"
+      }
+    },
+    "metBeschermingsgeleider": {
+      "label": "With protective conductor (G)"
     }
   },
   "ruimtes": {
@@ -1002,7 +1271,9 @@
     "naam": {
       "veld": "Company name",
       "bewaren": "Save name",
-      "bewaard": "The name has been saved."
+      "bewaard": "The name has been saved.",
+      "dossierHulp": "Set the name and logo on your dossiers in {link}.",
+      "dossierHulpLid": "The name and logo on your dossiers are in {link}."
     },
     "leden": {
       "titel": "Members",
@@ -1224,6 +1495,9 @@
       "schema": "Draw the first circuit",
       "plan": "Add a floor plan | Add {aantal} missing plans",
       "plaatsen": "1 component still needs placing on the plan | {aantal} components still need placing on the plan",
+      "kiesOnderdeel": "Select {naam} in the diagram",
+      "aardingsweerstand": "Enter the earth resistance",
+      "isolatieweerstand": "Enter the insulation resistance",
       "conceptUitleg": "Some dossier information is missing. You can export a draft now and finish it later.",
       "conceptExport": "Create draft PDF"
     },
@@ -1247,7 +1521,6 @@
     "bewaren": "Saving company details…",
     "gewijzigd": "Unsaved changes",
     "geenWijzigingen": "No unsaved changes",
-    "organisatieNaam": "This name identifies your organisation in the app. Manage the company name shown on PDFs under Company details.",
     "rolTitel": "Confirm role change",
     "rolVraag": "Give {naam} the {rol} role?",
     "eigenaarGevolg": "An owner manages company details, members, invitations and the subscription, and can edit projects.",

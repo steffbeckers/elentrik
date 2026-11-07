@@ -3,11 +3,11 @@
 // krijgt de fetch-functie van buitenaf en is zo zonder Nuxt te testen.
 import type { InstallatieDocument, Stroomtype } from "@elentrik/model";
 import { VERWACHTE_GEBRUIKER_HEADER } from "../../shared/gebruiker";
-import type { Project, ProjectSamenvatting } from "../../shared/projecten";
+import type { Project, ProjectInLijst, ProjectSamenvatting } from "../../shared/projecten";
 import { voorOrganisatie } from "../sessie/organisatie";
 import { useSessieStore } from "../stores/sessie";
 
-export type { Project, ProjectSamenvatting };
+export type { Project, ProjectInLijst, ProjectSamenvatting };
 
 export type NieuwProject = { naam: string; klantnaam: string; stroomtype: Stroomtype };
 
@@ -78,7 +78,7 @@ export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOptie
     ? { [VERWACHTE_GEBRUIKER_HEADER]: opties.gebruikerId }
     : {};
   return {
-    lijst: () => haal("/api/projecten") as Promise<ProjectSamenvatting[]>,
+    lijst: () => haal("/api/projecten") as Promise<ProjectInLijst[]>,
 
     maak: (invoer: NieuwProject) =>
       haal("/api/projecten", {

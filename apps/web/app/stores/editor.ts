@@ -5,6 +5,20 @@ import { STANDAARD_PAPIER_A4, opmaak as legOp, type SchemaOpmaak } from "@elentr
 import {
   DocumentFout,
   magToevoegen,
+  magInvoegenVoor,
+  voegInVoor,
+  STANDAARD,
+  migreer,
+  legKringCodesVast as legCodesVast,
+  behoudKringCodes as behoudCodes,
+  bepaalKringCodes,
+  hernummerKringen as hernummer,
+  voorbeeldHernummering,
+  voegLichtschakelingToe as voegLichtToe,
+  type SjabloonDoel,
+  type DifferentieelInstellingen,
+  type LichtschakelingDoel,
+  type LichtschakelingOpties,
   pasPatchesToe,
   verwijder,
   verwijderAfwijking,
@@ -17,11 +31,13 @@ import {
   type Aanknoping,
   type Adres,
   type InstallatieDocument,
+  type Metingen,
   type Node,
   type NodeId,
   type OperatieResultaat,
   type Onderdeel,
   type Patch,
+  type Ruimte,
   type ProjectWijziging,
   type Stroomtype,
   type Toestelsoort,
@@ -32,6 +48,8 @@ import { defineStore } from "pinia";
 import { computed, ref, shallowRef } from "vue";
 import type { Richting } from "../composables/sneltoetsen";
 import { zelfdeAdres } from "../editor/adres";
+import { dupliceerMetVrijeCode } from "../editor/dupliceren";
+import { bordVanNode } from "../editor/schema-navigatie";
 import { samengevoegd } from "../editor/resultaten";
 import type { Taal } from "../../shared/taal";
 import { useSessieStore } from "./sessie";
@@ -65,18 +83,6 @@ function vandaag(): string {
   return `${nu.getFullYear()}-${maand}-${dag}`;
 }
 
-/** Het eerste verdeelbord in pre-order. */
-function eersteVerdeelbord(doc: InstallatieDocument): NodeId | undefined {
-  const stapel: NodeId[] = [doc.rootId];
-  while (stapel.length > 0) {
-    const node = doc.nodes[stapel.pop()!];
-    if (!node) continue;
-    if (node.type === "verdeelbord") return node.id;
-    for (let i = node.kinderen.length - 1; i >= 0; i--) stapel.push(node.kinderen[i]!);
-  }
-  return undefined;
-}
-
 export const useEditorStore = defineStore("editor", () => {
   // De documenten zijn diep bevroren door immer: een shallowRef, zodat Vue er niets aan wrapt.
   const document = shallowRef<InstallatieDocument | null>(null);
@@ -99,6 +105,13 @@ export const useEditorStore = defineStore("editor", () => {
   });
   /** Open het symbolenvenster? Een weergavekeuze, ook open in alleen-lezen. */
   const symbolenOpen = ref(false);
+  /** Open het sneltoetsenoverzicht (`?` of de knop Toetsenbordhulp)? Ook open in alleen-lezen. */
+  const sneltoetsenOpen = ref(false);
+  /**
+   * Per bord het differentieel dat het laatst een nieuwe kring kreeg (bord-id → differentieel-id):
+   * de standaardbestemming voor de volgende nieuwe kring als de selectie geen differentieel heeft.
+   */
+  const laatsteDifferentieel = ref<Record<NodeId, NodeId>>({});
   const tabblad = ref<Tabblad>("eendraadschema");
   // Elke wijziging vervangt de array, zodat een shallowRef volstaat.
   const terug = shallowRef<Stap[]>([]);
@@ -135,6 +148,10 @@ export const useEditorStore = defineStore("editor", () => {
   const aantalWaarschuwingen = computed(
     () => bevindingen.value.filter((b) => b.ernst === "waarschuwing" && !b.afgeweken).length,
   );
+  /** De actieve infobevindingen, zoals het paneel Bevindingen ze toont: zonder de nog niet geplaatste punten. */
+  const aantalInfo = computed(
+    () => bevindingen.value.filter((b) => b.ernst === "info" && !b.afgeweken && b.regelId !== "arei.situatie.niet-geplaatst").length,
+  );
 
   function vereisDocument(): InstallatieDocument {
     if (!document.value) throw new Error("Er is geen document geladen");
@@ -167,12 +184,14 @@ export const useEditorStore = defineStore("editor", () => {
   let vensterAuteur: { id: string; naam: string } | null = null;
 
   function laad(project: TeLadenProject): void {
-    document.value = project.document;
+    document.value = migreer(project.document);
     projectId.value = project.id;
     naam.value = project.naam;
     versie.value = project.versie;
     selectie.value = [];
     symbolenOpen.value = false;
+    sneltoetsenOpen.value = false;
+    laatsteDifferentieel.value = {};
     tabblad.value = "eendraadschema";
     terug.value = [];
     vooruit.value = [];
@@ -216,6 +235,13 @@ export const useEditorStore = defineStore("editor", () => {
     zetDocument(resultaat.doc);
   }
 
+  /** Past een toevoegende operatie toe en legt de codes van bestaande kringen vast, in één undo-stap. */
+  function pasToeMetBehoud(resultaat: OperatieResultaat): void {
+    if (alleenLezen.value) return;
+    const voor = vereisDocument();
+    pasToe(samengevoegd(voor, [resultaat, behoudCodes(voor, resultaat.doc)]));
+  }
+
   function sluitGroep(): void {
     groepGesloten = true;
   }
@@ -229,6 +255,18 @@ export const useEditorStore = defineStore("editor", () => {
     vooruit.value = [...vooruit.value, stap];
     groepGesloten = true;
     zetDocument(doc);
+  }
+
+  /** De bovenste undo-stap, om er later bij `ongedaanMakenAlsLaatste` naar te verwijzen. */
+  function laatsteStap(): Stap | undefined {
+    return terug.value.at(-1);
+  }
+
+  /** Maakt alleen `stap` ongedaan, en alleen als ze nog bovenaan staat; anders blijft alles zoals het is. */
+  function ongedaanMakenAlsLaatste(stap: Stap | undefined): boolean {
+    if (!stap || terug.value.at(-1) !== stap) return false;
+    ongedaanMaken();
+    return true;
   }
 
   function opnieuw(): void {
@@ -257,17 +295,39 @@ export const useEditorStore = defineStore("editor", () => {
     voorinstellingen.value = begin ? { ...rest, [gekozen]: { ...begin } } : rest;
   }
 
+  /** Onthoudt `differentieelId` als laatst gebruikte bestemming voor een nieuwe kring in zijn bord. */
+  function onthoudDifferentieel(doc: InstallatieDocument, differentieelId: NodeId): void {
+    if (doc.nodes[differentieelId]?.type !== "differentieel") return;
+    const bord = bordVanNode(doc, differentieelId);
+    if (bord !== undefined) laatsteDifferentieel.value = { ...laatsteDifferentieel.value, [bord]: differentieelId };
+  }
+
   /** Voegt `onderdeel` toe op de aanknoping en selecteert de bovenste nieuwe node. */
   function voegToe(aanknoping: Aanknoping): void {
     if (alleenLezen.value) return;
+    const doc = vereisDocument();
     const r = voegOnderdeelToe(
-      vereisDocument(),
+      doc,
       { soort: aanknoping.soort, nodeId: aanknoping.nodeId },
       onderdeel.value,
       voorinstelling.value,
     );
-    pasToe(r);
+    pasToeMetBehoud(r);
+    if (aanknoping.soort === "rail-einde") onthoudDifferentieel(doc, aanknoping.nodeId);
     selectie.value = [r.ids[r.ids.length - 1]!];
+  }
+
+  const kanVoorSelectieInvoegen = computed(() => {
+    const doc = document.value;
+    const id = selectie.value[0];
+    const tool = onderdeel.value;
+    return !alleenLezen.value && !!doc && selectie.value.length === 1 && id !== undefined &&
+      (tool === "leiding" || tool === "differentieel") && magInvoegenVoor(doc, id, STANDAARD[tool]);
+  });
+  function voegVoorSelectieIn(): void {
+    if (!kanVoorSelectieInvoegen.value) return;
+    const r = voegInVoor(vereisDocument(), selectie.value[0]!, STANDAARD[onderdeel.value]);
+    pasToeMetBehoud(r); selectie.value = [r.id];
   }
 
   const kanAftakkingToevoegen = computed(() => {
@@ -283,18 +343,26 @@ export const useEditorStore = defineStore("editor", () => {
     voegToe({ soort: "aftakking", nodeId: selectie.value[0]! });
   }
 
-  /** Op het geselecteerde bord of differentieel, anders op het eerste verdeelbord in pre-order. */
-  function voegSjabloonToe(sjabloonId: string): void {
+  /** Het doel uit de bevestigingsdialoog; die stelt een standaard voor (`kringBestemming`), de gebruiker bevestigt. */
+  /** `ruimte`: de soort ruimte voor de nieuwe punten; weggelaten de suggestie van het sjabloon, `null` voor geen. */
+  function voegSjabloonToe(sjabloonId: string, doel?: SjabloonDoel, instellingen?: DifferentieelInstellingen, ruimte?: Ruimte | null): void {
+    if (alleenLezen.value) return;
+    if (!doel) throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "kies een sjabloonbestemming" });
+    const doc = vereisDocument();
+    const r = voegSjabloonToeAanDoc(doc, doel, sjabloonId, instellingen, ruimte);
+    pasToeMetBehoud(r); selectie.value = [r.id];
+    if (doel.soort === "bestaande-differentieel") onthoudDifferentieel(doc, doel.nodeId);
+  }
+  function voegLichtschakelingToe(doel: LichtschakelingDoel, opties: LichtschakelingOpties, instellingen?: DifferentieelInstellingen): void {
     if (alleenLezen.value) return;
     const doc = vereisDocument();
-    const geselecteerd = selectie.value.find((id) => {
-      const type = doc.nodes[id]?.type;
-      return type === "verdeelbord" || type === "differentieel";
-    });
-    const doel = geselecteerd ?? eersteVerdeelbord(doc);
-    if (doel === undefined) throw new DocumentFout("ONBEKENDE_NODE", { reden: "geen verdeelbord" });
-    pasToe(voegSjabloonToeAanDoc(doc, doel, sjabloonId));
+    const r = voegLichtToe(doc, doel, opties, instellingen);
+    pasToeMetBehoud(r); selectie.value = [r.id];
+    if (doel.soort === "bestaande-differentieel") onthoudDifferentieel(doc, doel.nodeId);
   }
+  function legKringCodesVast(): void { if (!alleenLezen.value) pasToe(legCodesVast(vereisDocument())); }
+  function hernummerKringen(): void { if (!alleenLezen.value) pasToe(hernummer(vereisDocument())); }
+  const hernummerVoorbeeld = computed(() => document.value ? voorbeeldHernummering(document.value) : []);
 
   /**
    * Wijzigt één veld op alle nodes in één undo-stap. Opeenvolgende wijzigingen van
@@ -307,7 +375,16 @@ export const useEditorStore = defineStore("editor", () => {
     const resultaten: OperatieResultaat[] = [];
     let huidig = doc;
     for (const id of nodeIds) {
-      const r = wijzigEigenschappen(huidig, id, { [sleutel]: waarde });
+      const node = huidig.nodes[id]!;
+      let wijziging: Record<string, unknown> = { [sleutel]: waarde };
+      if (sleutel === "aanleg.ligging" || sleutel === "aanleg.inBuis") {
+        if (node.type !== "leiding") throw new DocumentFout("ONGELDIG_SCHEMA");
+        const aanleg: Record<string, unknown> = { ...node.aanleg, [sleutel.slice(7)]: waarde };
+        if (waarde === undefined) delete aanleg[sleutel.slice(7)];
+        // InBuis is verplicht zodra een aanleg is opgegeven.
+        wijziging = { aanleg: Object.keys(aanleg).length === 0 ? undefined : { inBuis: false, ...aanleg } };
+      }
+      const r = wijzigEigenschappen(huidig, id, wijziging);
       resultaten.push(r);
       huidig = r.doc;
     }
@@ -351,6 +428,56 @@ export const useEditorStore = defineStore("editor", () => {
     if (!aanknoping) return;
     if (!magToevoegen(doc, aanknoping, onderdeel.value, voorinstelling.value)) return;
     voegToe(aanknoping);
+  }
+
+  /** De kring (id van de beveiliging) van de enige geselecteerde node, of undefined. */
+  function kringVanSelectie(): NodeId | undefined {
+    const id = selectie.value.length === 1 ? selectie.value[0] : undefined;
+    const a = analyse.value;
+    if (id === undefined || !a) return undefined;
+    return a.kringVanNode[id] ?? a.kringen.find((k) => k.beveiligingId === id)?.id;
+  }
+
+  /**
+   * C, L en D met een kring geselecteerd: kiest `gekozen` en voegt het meteen toe, zonder extra klik.
+   * Een contactdoos of lichtpunt komt na de selectie (zoals Enter), een differentieel vóór de
+   * selectie, of anders vóór de kring. Geeft true als er iets is toegevoegd; anders is het onderdeel
+   * alleen gekozen.
+   */
+  function snelToevoegen(gekozen: Onderdeel): boolean {
+    if (alleenLezen.value) return false;
+    onderdeel.value = gekozen;
+    const doc = document.value;
+    const kring = kringVanSelectie();
+    if (!doc || kring === undefined) return false;
+    if (gekozen === "contactdoos" || gekozen === "lichtpunt") {
+      voegToeBijSelectie();
+      return document.value !== doc;
+    }
+    if (gekozen !== "differentieel") return false;
+    const invoer = STANDAARD.differentieel;
+    const doelId = [selectie.value[0]!, kring].find((id) => magInvoegenVoor(doc, id, invoer));
+    if (doelId === undefined) return false;
+    const r = voegInVoor(doc, doelId, invoer);
+    pasToeMetBehoud(r);
+    selectie.value = [r.id];
+    return true;
+  }
+
+  /**
+   * Ctrl+D: dupliceert de kring van de selectie met de eerste vrije letter (`dupliceerKring`), als
+   * één undo-stap waarin de bestaande codes vast blijven, en selecteert de kopie. Geeft de codes van
+   * bron en kopie, of null als de selectie geen kring is.
+   */
+  function dupliceerSelectieKring(): { code: string; bron: string } | null {
+    if (alleenLezen.value) return null;
+    const doc = document.value;
+    const kring = kringVanSelectie();
+    if (!doc || kring === undefined) return null;
+    const { resultaat, code } = dupliceerMetVrijeCode(doc, kring);
+    pasToeMetBehoud(resultaat);
+    selectie.value = [resultaat.id];
+    return { code, bron: bepaalKringCodes(doc)[kring] ?? "" };
   }
 
   /**
@@ -453,6 +580,7 @@ export const useEditorStore = defineStore("editor", () => {
     naam?: string;
     klantNaam?: string;
     stroomtype?: Stroomtype;
+    frequentie_Hz?: number | null;
     klantAdres?: Adres | null;
     werfadres?: Adres;
     ean?: string;
@@ -460,12 +588,15 @@ export const useEditorStore = defineStore("editor", () => {
     /** De taal van het dossier (PDF); dezelfde taal opnieuw (of nl zonder taal) maakt geen stap. */
     dossierTaal?: Taal;
     installatieContext?: "nieuw" | "bestaand" | "onbekend";
+    /** Vervangt alle metingen; dezelfde metingen opnieuw maken geen stap (`wijzigProject`). */
+    metingen?: Metingen | null;
   }): void {
     if (alleenLezen.value) return;
     const doc = vereisDocument();
     const wijziging: ProjectWijziging = {};
     if (gegevens.klantNaam !== undefined) wijziging.klantNaam = gegevens.klantNaam;
     if (gegevens.stroomtype !== undefined) wijziging.stroomtype = gegevens.stroomtype;
+    if (gegevens.frequentie_Hz !== undefined && gegevens.frequentie_Hz !== (doc.voeding.frequentie_Hz ?? null)) wijziging.frequentie_Hz = gegevens.frequentie_Hz;
     if (gegevens.klantAdres !== undefined) {
       const huidig = doc.meta.klant.adres;
       if (gegevens.klantAdres === null ? huidig !== undefined : !zelfdeAdres(gegevens.klantAdres, huidig)) {
@@ -479,6 +610,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (gegevens.datum !== undefined) wijziging.datum = gegevens.datum;
     if (gegevens.dossierTaal !== undefined) wijziging.dossierTaal = gegevens.dossierTaal;
     if (gegevens.installatieContext !== undefined) wijziging.installatieContext = gegevens.installatieContext;
+    if (gegevens.metingen !== undefined) wijziging.metingen = gegevens.metingen;
     // Eerst de operatie: gooit die, dan blijft ook de naam ongewijzigd.
     const r = wijzigProject(doc, wijziging);
     if (gegevens.naam !== undefined && gegevens.naam !== naam.value) {
@@ -499,6 +631,8 @@ export const useEditorStore = defineStore("editor", () => {
     voorinstelling,
     toestelsoort,
     symbolenOpen,
+    sneltoetsenOpen,
+    laatsteDifferentieel,
     kiesVariant,
     zetStandaard,
     tabblad,
@@ -513,19 +647,31 @@ export const useEditorStore = defineStore("editor", () => {
     svg,
     aantalFouten,
     aantalWaarschuwingen,
+    aantalInfo,
     laad,
     zetAlleenLezen,
     markeerGewijzigd,
     pasToe,
+    pasToeMetBehoud,
     sluitGroep,
     ongedaanMaken,
+    laatsteStap,
+    ongedaanMakenAlsLaatste,
     opnieuw,
     voegToe,
+    kanVoorSelectieInvoegen,
+    voegVoorSelectieIn,
     kanAftakkingToevoegen,
     voegAftakkingToeBijSelectie,
     voegSjabloonToe,
+    voegLichtschakelingToe,
+    legKringCodesVast,
+    hernummerKringen,
+    hernummerVoorbeeld,
     wijzigVeld,
     voegToeBijSelectie,
+    snelToevoegen,
+    dupliceerSelectieKring,
     navigeer,
     verwijderSelectie,
     zetAfwijking,

@@ -4,11 +4,13 @@ import { resultaat, vereis, type OperatieResultaat } from "./operaties";
 import {
   AdresSchema,
   AfwijkingSchema,
+  MetingenSchema,
   StroomtypeSchema,
   TaalSchema,
   type Adres,
   type Afwijking,
   type InstallatieDocument,
+  type Metingen,
   type NodeId,
   type Stroomtype,
   type Taal,
@@ -58,6 +60,7 @@ export function verwijderAfwijking(
 export type ProjectWijziging = {
   klantNaam?: string;
   stroomtype?: Stroomtype;
+  frequentie_Hz?: number | null;
   /** `null` wist het adres van de klant. */
   klantAdres?: Adres | null;
   werfadres?: Adres;
@@ -66,6 +69,8 @@ export type ProjectWijziging = {
   /** De taal van het dossier; `nl` op een document zonder taal verandert niets. */
   dossierTaal?: Taal;
   installatieContext?: "nieuw" | "bestaand" | "onbekend";
+  /** Vervangt het hele object; `null` of een leeg object wist de metingen. */
+  metingen?: Metingen | null;
 };
 
 const TekstSchema = z.string();
@@ -79,7 +84,7 @@ function valideer<T>(schema: z.ZodType<T>, waarde: unknown): T {
 }
 
 /**
- * Wijzigt de projectgegevens: klantnaam, klantadres, werfadres, EAN en datum
+ * Wijzigt de projectgegevens: klantnaam, klantadres, werfadres, EAN, datum en metingen
  * (`meta`), de dossiertaal (`meta.dossierTaal`) en het stroomtype (`voeding.stroomtype`). Alles in een aanroep is een
  * resultaat, dus een undo-stap.
  */
@@ -93,6 +98,7 @@ export function wijzigProject(
   }
   const klantNaam = wijziging.klantNaam;
   if (stroomtype !== undefined) valideer(StroomtypeSchema, stroomtype);
+  if (wijziging.frequentie_Hz != null) valideer(z.number().positive(), wijziging.frequentie_Hz);
   const klantAdres =
     wijziging.klantAdres === undefined || wijziging.klantAdres === null
       ? wijziging.klantAdres
@@ -108,16 +114,25 @@ export function wijzigProject(
     dossierTaal !== undefined && dossierTaal !== (doc.meta.dossierTaal ?? "nl") ? dossierTaal : undefined;
   const installatieContext = wijziging.installatieContext === undefined ? undefined
     : valideer(z.enum(["nieuw", "bestaand", "onbekend"]), wijziging.installatieContext);
+  // Een ongedefinieerd veld telt als afwezig; leeg betekent wissen.
+  const metingen = wijziging.metingen === undefined ? undefined : wijziging.metingen === null ? null
+    : valideer(MetingenSchema, Object.fromEntries(Object.entries(wijziging.metingen).filter(([, w]) => w !== undefined)));
+  const nieuweMetingen = metingen === undefined ? undefined
+    : metingen === null || Object.keys(metingen).length === 0
+      ? (doc.meta.metingen === undefined ? undefined : null)
+      : (zelfdeMetingen(metingen, doc.meta.metingen) ? undefined : metingen);
 
   if (
     klantNaam === undefined &&
     stroomtype === undefined &&
+    wijziging.frequentie_Hz === undefined &&
     klantAdres === undefined &&
     werfadres === undefined &&
     ean === undefined &&
     datum === undefined &&
     nieuweTaal === undefined &&
-    (installatieContext === undefined || installatieContext === doc.meta.installatieContext)
+    (installatieContext === undefined || installatieContext === doc.meta.installatieContext) &&
+    nieuweMetingen === undefined
   ) {
     return { doc, patches: [], inversePatches: [] };
   }
@@ -125,6 +140,8 @@ export function wijzigProject(
   return resultaat(doc, (draft) => {
     if (klantNaam !== undefined) draft.meta.klant.naam = klantNaam;
     if (stroomtype !== undefined) draft.voeding.stroomtype = stroomtype;
+    if (wijziging.frequentie_Hz === null) delete draft.voeding.frequentie_Hz;
+    else if (wijziging.frequentie_Hz !== undefined) draft.voeding.frequentie_Hz = wijziging.frequentie_Hz;
     if (klantAdres === null) delete draft.meta.klant.adres;
     else if (klantAdres !== undefined) draft.meta.klant.adres = klantAdres;
     if (werfadres !== undefined) draft.meta.werfadres = werfadres;
@@ -132,5 +149,13 @@ export function wijzigProject(
     if (datum !== undefined) draft.meta.datum = datum;
     if (nieuweTaal !== undefined) draft.meta.dossierTaal = nieuweTaal;
     if (installatieContext !== undefined) draft.meta.installatieContext = installatieContext;
+    if (nieuweMetingen === null) delete draft.meta.metingen;
+    else if (nieuweMetingen !== undefined) draft.meta.metingen = nieuweMetingen;
   });
+}
+
+const METINGVELDEN = ["datum", "aardingsweerstand_ohm", "isolatieweerstand_MOhm", "meettoestel", "opmerking"] as const satisfies readonly (keyof Metingen)[];
+
+function zelfdeMetingen(a: Metingen, b: Metingen | undefined): boolean {
+  return b !== undefined && METINGVELDEN.every((veld) => a[veld] === b[veld]);
 }

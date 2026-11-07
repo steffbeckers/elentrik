@@ -1,3 +1,4 @@
+import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 // Abonnementen end-to-end, tegen een nep-Stripe op poort 3199 (zie hulp/nep-stripe.ts en
 // global-setup.ts). De server draait met Stripe aan, dus elke nieuwe organisatie krijgt een proef.
 // Een verlopen proef zetten we rechtstreeks in de e2e-database.
@@ -82,6 +83,7 @@ test("verlopen proef: alleen-lezen met banner, zonder Nieuw project, geen wijzig
   const { id } = (await aangemaakt.json()) as { id: string };
   await ga(page, `/projecten/${id}`);
   await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
   // Wachten tot de kring op de server staat (de versie gaat omhoog).
   await expect
     .poll(async () => ((await (await request.get(`/api/projecten/${id}`)).json()) as { versie: number }).versie, {
@@ -114,8 +116,9 @@ test("verlopen proef: alleen-lezen met banner, zonder Nieuw project, geen wijzig
   await page.getByTestId("projectnaam").click();
   const gegevens = page.getByRole("dialog");
   await expect(gegevens.getByTestId("dialoog-alleen-lezen")).toContainText("Alleen lezen");
-  await expect(gegevens.getByLabel("Naam").first()).toBeDisabled();
-  await expect(gegevens.getByTestId("werf-straat")).toBeDisabled();
+  await expect(gegevens.getByLabel("Projectnaam")).toBeDisabled();
+  await expect(gegevens.getByTestId("werf-zelfde-als-klant")).toBeDisabled();
+  await expect(gegevens.getByTestId("klant-straat")).toBeDisabled();
   await expect(gegevens.getByTestId("projectdatum")).toBeDisabled();
   await expect(gegevens.getByRole("button", { name: "Bewaren" })).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -168,7 +171,7 @@ test("een dialoog die openstaat bij de overgang naar alleen-lezen blijft open me
     await expect(dialoog).toBeVisible();
     await expect(dialoog.getByTestId("dialoog-alleen-lezen")).toContainText("kunnen niet meer bewaard worden");
     await expect(dialoog.getByRole("button", { name: "Bewaren" })).toHaveCount(0);
-    await expect(dialoog.getByLabel("Naam").first()).toBeDisabled();
+    await expect(dialoog.getByLabel("Projectnaam")).toBeDisabled();
   } finally {
     await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
     await request.delete(`/api/projecten/${id}`);

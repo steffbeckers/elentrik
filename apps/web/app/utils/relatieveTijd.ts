@@ -23,11 +23,15 @@ function formaatVoor(taal: Taal): Intl.RelativeTimeFormat {
   return formaat;
 }
 
-/** Een tijdstip relatief tot `nu` in de taal, bv. "2 min. geleden" of "nu". */
-export function relatieveTijd(iso: string, taal: Taal, nu: Date = new Date()): string {
+/**
+ * Een tijdstip relatief tot `nu` in de taal, bv. "2 min. geleden" of "nu". Een tijdstip in de
+ * toekomst (de klok van de server loopt voor) geeft `zojuist`, de vertaalde tekst van de aanroeper.
+ */
+export function relatieveTijd(iso: string, taal: Taal, nu: Date, zojuist: string): string {
   const formaat = formaatVoor(taal);
   const verschil = (new Date(iso).getTime() - nu.getTime()) / 1000;
   if (Number.isNaN(verschil)) return "";
+  if (verschil > 0) return zojuist;
   for (const [eenheid, seconden] of EENHEDEN) {
     if (Math.abs(verschil) >= seconden || eenheid === "second") {
       return formaat.format(Math.trunc(verschil / seconden), eenheid);

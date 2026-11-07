@@ -62,7 +62,15 @@ export const ToestelsoortSchema = z.enum([
   "warmtepomp",
   "laadpaal",
   "omvormer",
+  "pvPaneel",
+  "bel",
+  "deurbelMonitor",
+  "motor",
+  "ventilator",
+  "koelkast",
+  "diepvriezer",
   "andere",
+  "onbekendDrieblad",
 ]);
 
 const basis = {
@@ -77,27 +85,50 @@ const basis = {
 
 const positiefGeheel = z.number().int().min(1);
 const positief = z.number().gt(0);
+const nietNegatief = z.number().finite().min(0);
+
+/**
+ * Geregistreerde meetwaarden van het project. Elentrik beoordeelt ze niet: er zijn geen
+ * grenswaarden, alleen de waarden zoals de installateur ze opmat. Elk veld is optioneel.
+ */
+export const MetingenSchema = z.strictObject({
+  /** ISO-datum van de meting (`2026-11-05`). */
+  datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  aardingsweerstand_ohm: nietNegatief.optional(),
+  isolatieweerstand_MOhm: nietNegatief.optional(),
+  meettoestel: z.string().optional(),
+  opmerking: z.string().optional(),
+});
+
+export const TestResultaatSchema = z.enum(["ok", "niet_ok", "niet_getest"]);
 
 export const NodeSchema = z.discriminatedUnion("type", [
   z.strictObject({ ...basis, type: z.literal("aansluiting") }),
-  z.strictObject({ ...basis, type: z.literal("teller") }),
+  z.strictObject({ ...basis, type: z.literal("teller"), nominaal_A: positief.optional() }),
+  z.strictObject({ ...basis, type: z.literal("aardelektrode") }),
+  z.strictObject({ ...basis, type: z.literal("aardingsonderbreker") }),
   z.strictObject({
     ...basis,
     type: z.literal("differentieel"),
+    referentie: z.string().regex(/^[A-Z]+$/).optional(),
     gevoeligheid_mA: positief,
     nominaal_A: positief,
     polen: PolenSchema,
     klasse: z.enum(["AC", "A", "F", "B"]),
+    /** Geregistreerde test; geen beoordeling door Elentrik. */
+    testResultaat: TestResultaatSchema.optional(),
+    uitschakeltijd_ms: nietNegatief.optional(),
   }),
   z.strictObject({
     ...basis,
     type: z.literal("automaat"),
+    kringCode: z.string().regex(/^[A-Z]+$/).optional(),
     nominaal_A: positief,
     polen: PolenSchema,
     curve: z.enum(["B", "C", "D"]),
     kortsluitvermogen_kA: z.number().optional(),
   }),
-  z.strictObject({ ...basis, type: z.literal("zekering"), nominaal_A: positief }),
+  z.strictObject({ ...basis, type: z.literal("zekering"), nominaal_A: positief, kringCode: z.string().regex(/^[A-Z]+$/).optional() }),
   z.strictObject({ ...basis, type: z.literal("verdeelbord"), naam: z.string().optional() }),
   z.strictObject({
     ...basis,
@@ -107,13 +138,17 @@ export const NodeSchema = z.discriminatedUnion("type", [
     // 0 = niet ingevuld
     doorsnede_mm2: z.number().min(0),
     aantalGeleiders: positiefGeheel,
+    /** Afwezig behoudt de bestaande G-notatie; alleen expliciet false geeft x. */
+    metBeschermingsgeleider: z.boolean().optional(),
     /** Lengte van het tracé in meter; ontbrekend betekent nog niet opgemeten. */
     lengte_m: z.number().min(0).optional(),
-    plaatsing: z.enum(["inbouw", "opbouw", "buis", "grond"]).optional(),
+    brandreactieklasse: z.string().max(64).optional(),
+    aanleg: z.strictObject({ ligging: z.enum(["inbouw", "opbouw", "grond"]).optional(), inBuis: z.boolean() }).optional(),
   }),
   z.strictObject({
     ...basis,
     type: z.literal("contactdoos"),
+    aftakking: z.literal(true).optional(),
     aantal: positiefGeheel,
     randaarde: z.boolean(),
     kinderbeveiliging: z.boolean(),
@@ -124,20 +159,26 @@ export const NodeSchema = z.discriminatedUnion("type", [
     type: z.literal("lichtpunt"),
     aftakking: z.literal(true).optional(),
     aantal: positiefGeheel,
-    soort: z.enum(["standaard", "led", "tl", "spot", "noodverlichting"]).optional(),
+    soort: z.enum(["standaard", "wand", "led", "tl", "spot", "noodverlichting"]).optional(),
   }),
   z.strictObject({
     ...basis,
     type: z.literal("schakelaar"),
     aftakking: z.literal(true).optional(),
-    soort: z.enum(["enkel", "dubbel", "wissel", "kruis", "dimmer", "drukknop"]),
+    soort: z.enum(["enkel", "tweepolig", "dubbel", "wissel", "kruis", "dimmer", "drukknop"]),
     waterdicht: z.boolean(),
   }),
   z.strictObject({
     ...basis,
     type: z.literal("toestel"),
+    aftakking: z.literal(true).optional(),
     soort: ToestelsoortSchema,
     vermogen_W: z.number().optional(),
+    schijnbaarVermogen_kVA: positief.optional(),
+    aantalPanelen: positiefGeheel.optional(),
+    dcDetectie_mA: positief.optional(),
+    /** Expliciete bronkeuze; afwezig behoudt automatische nummering. */
+    puntReferentie: z.enum(["automatisch", "geen"]).optional(),
   }),
 ]);
 
@@ -162,6 +203,8 @@ export type PlanTekening = z.infer<typeof PlanTekeningSchema>;
 export const SituatiePaginaSchema = z.strictObject({
   id: z.string(),
   titel: z.string(),
+  referentie: z.boolean().optional(),
+  afdruk: z.strictObject({ papier: z.enum(["A4", "A3"]), orientatie: z.enum(["staand", "liggend"]), schaalNoemer: z.number().finite().positive().optional(), schaalmodus: z.enum(["passend", "gekalibreerd"]) }).optional(),
   tekening: PlanTekeningSchema.optional(),
   /** Factor ten opzichte van het oorspronkelijke formaat; ontbrekend betekent 1. */
   symboolSchaal: z.number().min(0.25).max(4).optional(),
@@ -171,6 +214,7 @@ export const SituatiePaginaSchema = z.strictObject({
       origineelBestandId: z.string(),
       rasterBestandId: z.string(),
       pdfPagina: z.number().optional(),
+      bronUitsnede: z.strictObject({ x: z.number().finite().min(0), y: z.number().finite().min(0), breedte: z.number().finite().positive(), hoogte: z.number().finite().positive(), rotatie: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]) }).optional(),
       breedte_px: z.number(),
       hoogte_px: z.number(),
       schaal: z.strictObject({ mmPerPx: z.number() }).optional(),
@@ -186,6 +230,7 @@ export const SituatiePaginaSchema = z.strictObject({
       labelOffset: z.strictObject({ x: z.number(), y: z.number() }).optional(),
     }),
   ),
+  afdekkingen: z.array(z.strictObject({ id: Id, x: z.number().finite().min(0), y: z.number().finite().min(0), breedte: z.number().finite().positive(), hoogte: z.number().finite().positive() })).optional(),
 });
 
 /** De talen van een dossier; dezelfde drie als `Taal` in @elentrik/arei en @elentrik/render. */
@@ -207,8 +252,10 @@ export const InstallatieDocumentSchema = z.strictObject({
     dossierTaal: TaalSchema.optional(),
     /** Afwezig bij oudere dossiers: toepasselijkheid moet nog worden gecontroleerd. */
     installatieContext: z.enum(["nieuw", "bestaand", "onbekend"]).optional(),
+    /** Afwezig: nog niets gemeten. Een oude editor (clientcompatibiliteit 2) mag dit niet wegschrijven. */
+    metingen: MetingenSchema.optional(),
   }),
-  voeding: z.strictObject({ stroomtype: StroomtypeSchema }),
+  voeding: z.strictObject({ stroomtype: StroomtypeSchema, frequentie_Hz: positief.optional() }),
   rootId: Id,
   nodes: z.record(Id, NodeSchema),
   situatie: z.strictObject({ paginas: z.array(SituatiePaginaSchema) }),
@@ -230,3 +277,6 @@ export type Ruimte = z.infer<typeof RuimteSchema>;
 export type Toestelsoort = z.infer<typeof ToestelsoortSchema>;
 export type Polen = z.infer<typeof PolenSchema>;
 export type Stroomtype = z.infer<typeof StroomtypeSchema>;
+export type Metingen = z.infer<typeof MetingenSchema>;
+export type TestResultaat = z.infer<typeof TestResultaatSchema>;
+export type DifferentieelTest = Pick<NodeVan<"differentieel">, "testResultaat" | "uitschakeltijd_ms">;
