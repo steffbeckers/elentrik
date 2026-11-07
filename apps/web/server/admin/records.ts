@@ -1,12 +1,12 @@
 import { and, asc, count, desc, eq, exists, gte, ilike, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AdminLijstQuery, AdminPagina } from "../../shared/admin/basis";
-import type { AdminGebruiker, AdminGebruikerDetail, AdminOrganisatie, AdminOrganisatieDetail, AdminProject } from "../../shared/admin/records";
+import type { AdminGebruiker, AdminGebruikerDetail, AdminOrganisatie, AdminOrganisatieDetail, AdminProject, AdminProjectDetail } from "../../shared/admin/records";
 import { gebruikAbonnementen, type AbonnementConfig } from "../abonnementen/config";
 import { leesStatus } from "../abonnementen/repo";
 import { haalBedrijf } from "../bedrijf/repo";
 import type { Db } from "../db";
-import { abonnementen, member, organization, projecten, user } from "../db/schema";
+import { abonnementen, member, organization, projectaankopen, projecten, user } from "../db/schema";
 import { nietGevondenFout } from "../fouten";
 import { PagineringSchema, parseAdmin } from "./invoer";
 import { versieToken } from "./mutaties";
@@ -108,8 +108,8 @@ export async function haalAdminGebruiker(db: Db, id: string): Promise<AdminGebru
     organisaties: await lijstAdminOrganisaties(db, { gebruikerId: id }) };
 }
 
-export function bedrijfsrechtenStaat(org: { vrijgesteld: boolean; proefEinde: Date }, abo: typeof abonnementen.$inferSelect | undefined) {
-  return { vrijgesteld: org.vrijgesteld, proefEinde: org.proefEinde.toISOString(),
+export function bedrijfsrechtenStaat(org: { vrijgesteld: boolean; onderwijs: boolean; proefEinde: Date }, abo: typeof abonnementen.$inferSelect | undefined) {
+  return { vrijgesteld: org.vrijgesteld, onderwijs: org.onderwijs, proefEinde: org.proefEinde.toISOString(),
     abonnementId: abo?.stripeAbonnementId ?? null, status: abo?.status ?? null, openCheckout: abo?.openCheckoutSessie ?? null };
 }
 
@@ -119,7 +119,7 @@ export async function haalAdminOrganisatie(db: Db, id: string, config: Abonnemen
   const installateur = await haalBedrijf(db, id);
   const [abo] = await db.select().from(abonnementen).where(eq(abonnementen.organisatieId, id));
   return { ...item, installateur, verwacht: versieToken({ naam: item.naam, installateur }),
-    toegangVerwacht: versieToken(bedrijfsrechtenStaat({ vrijgesteld: item.toegang.vrijgesteld, proefEinde: new Date(item.toegang.proefEinde!) }, abo)),
+    toegangVerwacht: versieToken(bedrijfsrechtenStaat({ vrijgesteld: item.toegang.vrijgesteld, onderwijs: item.toegang.onderwijs, proefEinde: new Date(item.toegang.proefEinde!) }, abo)),
     abonnement: { klantId: abo?.stripeKlantId ?? null, abonnementId: abo?.stripeAbonnementId ?? null, status: abo?.status ?? null,
       formule: abo?.formule ?? null, periodeEinde: iso(abo?.periodeEinde), opgezegd: abo?.opgezegdOpPeriodeEinde ?? false,
       bijgewerkt: iso(abo?.bijgewerkt), openCheckout: !!abo?.openCheckoutSessie,
@@ -127,8 +127,11 @@ export async function haalAdminOrganisatie(db: Db, id: string, config: Abonnemen
     gebruikers: await lijstAdminGebruikers(db, { organisatieId: id }), projectLijst: await lijstAdminProjecten(db, { organisatieId: id }) };
 }
 
-export async function haalAdminProject(db: Db, id: string): Promise<AdminProject> {
+export async function haalAdminProject(db: Db, id: string): Promise<AdminProjectDetail> {
   const item = (await lijstAdminProjecten(db, { exactId: id, verwijderd: "exact" })).items[0];
   if (!item) throw nietGevondenFout();
-  return item;
+  const [rij] = await db.select({ gekochtOp: projecten.gekochtOp, abonnementStempelOp: projecten.abonnementStempelOp }).from(projecten).where(eq(projecten.id, id));
+  const aankopen = await db.select().from(projectaankopen).where(eq(projectaankopen.projectId, id)).orderBy(desc(projectaankopen.aangemaakt), asc(projectaankopen.id));
+  return { ...item, gekochtOp: iso(rij?.gekochtOp), abonnementStempelOp: iso(rij?.abonnementStempelOp),
+    projectaankopen: aankopen.map((a) => ({ id: a.id, status: a.status, aangemaakt: a.aangemaakt.toISOString(), betaaldOp: iso(a.betaaldOp) })) };
 }

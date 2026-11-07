@@ -4,7 +4,7 @@ definePageMeta({ layout: 'admin', middleware: ['superuser'] });
 const { t } = useI18n(); const { datum } = useAdminDatums(); const api = useAdminApi();
 const { data, error, status, refresh } = useAdminGegevens('overzicht', api.overzicht);
 const tellers = ['gebruikers', 'organisaties', 'projecten'] as const;
-const aandacht = [{ key: 'proefEindigt', filter: { aandacht: 'proef' } }, { key: 'betaling', filter: { aandacht: 'betaling' } }, { key: 'alleenLezen', filter: { toegang: 'alleenLezen' } }] as const;
+const aandacht = [{ key: 'proefEindigt', filter: { aandacht: 'proef' } }, { key: 'betaling', filter: { aandacht: 'betaling' } }, { key: 'gratis', filter: { toegang: 'gratis' } }] as const;
 useHead({ title: () => `${t('admin.overzicht')} · ${t('admin.titel')}` });
 </script>
 <template>

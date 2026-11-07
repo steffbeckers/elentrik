@@ -59,9 +59,7 @@
     "archiefTonen": "Afficher les notes archivées",
     "geenNotities": "Aucune note dans cette sélection.",
     "waaromToegang": "Pourquoi cette entreprise a-t-elle accès ?",
-    "waaromAlleenLezen": "Pourquoi cette entreprise est-elle en lecture seule ?",
-    "schrijven": "Modification autorisée",
-    "alleenLezen": "Lecture seule",
+    "waaromGratis": "Pourquoi cette entreprise est-elle au niveau gratuit ?",
     "beoordeeldOp": "Évalué le {datum}",
     "rechtenUitleg": "L’appartenance, le rôle et les limites de stockage restent applicables séparément.",
     "proefEinde": "Fin de l’essai local (exclusive)",
@@ -70,7 +68,19 @@
     "vrijstelling": "Accès gratuit — sans abonnement",
     "ingeschakeld": "Activé",
     "uitgeschakeld": "Désactivé",
-    "proefVerlengen": "Prolonger la période d’essai",
+    "proefVerlengen": "Accès complet temporaire",
+    "onderwijs": "Statut enseignement",
+    "onderwijsStoppen": "Arrêter le statut enseignement",
+    "onderwijsGeven": "Accorder le statut enseignement",
+    "onderwijsUitleg": "Le statut enseignement donne un accès gratuit avec le filigrane « Version enseignement ». Incompatible avec l’accès gratuit sans filigrane.",
+    "onderwijsVerwijderenUitleg": "Les règles existantes de période d’essai et d’abonnement s’appliquent à nouveau. Cela ne lance ni nouvel essai ni paiement.",
+    "gekochtOp": "Acheté le",
+    "abonnementStempelOp": "Cachet d’abonnement le",
+    "projectaankopen": "Achats de projet",
+    "geenProjectaankopen": "Aucun achat de projet pour le moment.",
+    "aankoopAangemaakt": "Créé le {datum}",
+    "aankoopBetaald": "payé le {datum}",
+    "aankoopStatus": { "open": "Ouvert", "betaald": "Payé", "vervallen": "Expiré", "mislukt": "Échoué" },
     "vrijstellingStoppen": "Retirer l’accès gratuit",
     "vrijstellingGeven": "Accorder l’accès gratuit",
     "nieuweEinddatum": "Nouveau dernier jour d’essai",
@@ -135,7 +145,8 @@
       "abonnement": "Abonnement actif",
       "betalingsgratie": "Délai de paiement",
       "proef": "Essai local",
-      "alleenLezen": "Lecture seule"
+      "onderwijs": "Enseignement",
+      "gratis": "Niveau gratuit"
     },
     "redenen": {
       "uit": "Les restrictions de paiement sont désactivées globalement.",
@@ -143,13 +154,15 @@
       "actief": "L’abonnement Stripe enregistré donne accès.",
       "betaling-mislukt": "Un échec de paiement détermine l’accès ; le délai éventuel figure ci-dessous.",
       "proef": "La période d’essai locale donne accès.",
-      "proef-voorbij": "La période d’essai locale est terminée.",
+      "onderwijs": "Le statut enseignement est activé.",
+      "gratis": "Pas d’abonnement ni d’essai en cours : l’entreprise est au niveau gratuit.",
       "beeindigd": "L’abonnement est terminé et aucun essai local n’est valable."
     },
     "acties": {
       "gebruiker_naam": "Nom d’utilisateur corrigé",
       "organisatie_gegevens": "Coordonnées d’entreprise corrigées",
       "organisatie_vrijstelling": "Accès gratuit modifié",
+      "organisatie_onderwijs": "Statut enseignement modifié",
       "organisatie_proefperiode": "Période d’essai prolongée",
       "notitie_aangemaakt": "Note d’assistance ajoutée",
       "notitie_gewijzigd": "Note d’assistance modifiée",
@@ -161,7 +174,7 @@
     "aandacht": {
       "proefEindigt": "Essai se terminant dans les 7 jours",
       "betaling": "Paiement à vérifier",
-      "alleenLezen": "Entreprises en lecture seule"
+      "gratis": "Entreprises au niveau gratuit"
     },
     "auditFilters": {
       "doelId": "ID de l’enregistrement",
@@ -1461,6 +1474,7 @@
   "fouten": {
     "ADMIN_CORRECTIE_ONGELDIG": "Cette correction d’assistance a expiré, est terminée ou appartient à une autre connexion. Votre travail local est conservé. Démarrez une nouvelle correction pour enregistrer.",
     "ADMIN_STRIPE_BEVESTIGING": "Confirmez que les abonnements Stripe et les paiements en cours restent inchangés. Gérez-les séparément dans Stripe.",
+    "ADMIN_ONDERWIJS_VRIJSTELLING": "Une entreprise ne peut pas avoir à la fois l’accès gratuit et le statut enseignement. Arrêtez d’abord l’autre.",
     "ADMIN_PROEF_VERLENGEN": "Choisissez une date de fin postérieure à la période d’essai actuelle et à aujourd’hui.",
     "BEDRIJF_VRIJGESTELD": "Cette entreprise bénéficie d’un accès gratuit et ne peut pas souscrire un nouvel abonnement.",
     "onbekend": "Une erreur s'est produite. Veuillez réessayer.",

@@ -59,9 +59,7 @@
     "archiefTonen": "Show archived notes",
     "geenNotities": "No notes in this selection yet.",
     "waaromToegang": "Why does this company have access?",
-    "waaromAlleenLezen": "Why is this company read-only?",
-    "schrijven": "Editing allowed",
-    "alleenLezen": "Read-only",
+    "waaromGratis": "Why is this company on the free tier?",
     "beoordeeldOp": "Evaluated at {datum}",
     "rechtenUitleg": "Membership, user role and storage limits still apply separately.",
     "proefEinde": "Local trial end (exclusive)",
@@ -70,7 +68,19 @@
     "vrijstelling": "Free access — no subscription required",
     "ingeschakeld": "Enabled",
     "uitgeschakeld": "Disabled",
-    "proefVerlengen": "Extend trial",
+    "proefVerlengen": "Temporary full access",
+    "onderwijs": "Education status",
+    "onderwijsStoppen": "Stop education status",
+    "onderwijsGeven": "Grant education status",
+    "onderwijsUitleg": "Education status gives free access with an \"Education version\" watermark. Cannot be combined with free access without a watermark.",
+    "onderwijsVerwijderenUitleg": "The existing trial and subscription rules apply again. This does not start a new trial or payment.",
+    "gekochtOp": "Purchased on",
+    "abonnementStempelOp": "Subscription stamp on",
+    "projectaankopen": "Project purchases",
+    "geenProjectaankopen": "No project purchases yet.",
+    "aankoopAangemaakt": "Created {datum}",
+    "aankoopBetaald": "paid {datum}",
+    "aankoopStatus": { "open": "Open", "betaald": "Paid", "vervallen": "Expired", "mislukt": "Failed" },
     "vrijstellingStoppen": "Remove free access",
     "vrijstellingGeven": "Grant free access",
     "nieuweEinddatum": "New last trial day",
@@ -135,7 +145,8 @@
       "abonnement": "Active subscription",
       "betalingsgratie": "Payment grace",
       "proef": "Local trial",
-      "alleenLezen": "Read-only"
+      "onderwijs": "Education",
+      "gratis": "Free tier"
     },
     "redenen": {
       "uit": "Payment restrictions are disabled globally.",
@@ -143,13 +154,15 @@
       "actief": "The recorded Stripe subscription grants access.",
       "betaling-mislukt": "A failed payment determines access; any payment grace deadline is shown below.",
       "proef": "The local trial grants access.",
-      "proef-voorbij": "The local trial has ended.",
+      "onderwijs": "Education status is enabled.",
+      "gratis": "No subscription and no running trial: the company is on the free tier.",
       "beeindigd": "The subscription has ended and no local trial is valid."
     },
     "acties": {
       "gebruiker_naam": "User name corrected",
       "organisatie_gegevens": "Company details corrected",
       "organisatie_vrijstelling": "Free access changed",
+      "organisatie_onderwijs": "Education status changed",
       "organisatie_proefperiode": "Trial extended",
       "notitie_aangemaakt": "Support note added",
       "notitie_gewijzigd": "Support note updated",
@@ -161,7 +174,7 @@
     "aandacht": {
       "proefEindigt": "Trial ends within 7 days",
       "betaling": "Payment needs attention",
-      "alleenLezen": "Read-only companies"
+      "gratis": "Companies on the free tier"
     },
     "auditFilters": {
       "doelId": "Record ID",
@@ -1461,6 +1474,7 @@
   "fouten": {
     "ADMIN_CORRECTIE_ONGELDIG": "This support correction has expired, ended or belongs to another sign-in. Your local work is retained. Start a new correction to continue saving.",
     "ADMIN_STRIPE_BEVESTIGING": "Confirm that existing Stripe subscriptions and pending payments continue unchanged. Manage them separately in Stripe.",
+    "ADMIN_ONDERWIJS_VRIJSTELLING": "A company cannot have both free access and education status. Stop the other one first.",
     "ADMIN_PROEF_VERLENGEN": "Choose an end date later than the current trial and today.",
     "BEDRIJF_VRIJGESTELD": "This company has free access and cannot start a new subscription.",
     "onbekend": "Something went wrong. Please try again.",

@@ -1,10 +1,11 @@
 import { beforeAll, expect, test } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import type { Db } from "../server/db";
-import { adminRevisies, bestanden, organization, user } from "../server/db/schema";
+import { adminRevisies, bestanden, organization, projecten, projectaankopen, user } from "../server/db/schema";
 import { adminTestServer } from "./admin-hulp";
 import { bewaarAdminProject } from "../server/admin/projecten";
 import { startCorrectie, rondCorrectieAf } from "../server/admin/correcties";
+import { haalAdminProject } from "../server/admin/records";
 import { lijstAdminAudit, haalAdminAudit } from "../server/admin/audit";
 import { bewaarProject, haalProject, maakProject, verwijderProject } from "../server/projecten/repo";
 import { maakTestDb, maakTestOrganisatie } from "./db";
@@ -93,4 +94,19 @@ test("HTTP validates If-Match/body and revocation before reading project, file o
     expect((await h.stuur(`${path}/document`, a.cookie)).status).toBe(403);
     expect((await h.stuur(`/api/admin/bestanden/${crypto.randomUUID()}`, a.cookie)).status).toBe(403);
   } finally { await h.stop(); }
+});
+test("projectdetails tonen gekocht en stempel", async () => {
+  const org = await maakTestOrganisatie(db);
+  const p = await maakProject(db, org, { naam: "Gekocht", klantnaam: "Client", stroomtype: "3N400V" });
+  const leeg = await haalAdminProject(db, p.id);
+  expect(leeg).toMatchObject({ gekochtOp: null, abonnementStempelOp: null, projectaankopen: [] });
+  const gekocht = new Date("2026-10-01T10:00:00Z");
+  await db.update(projecten).set({ gekochtOp: gekocht, abonnementStempelOp: gekocht }).where(eq(projecten.id, p.id));
+  await db.insert(projectaankopen).values({ organisatieId: org, projectId: p.id, checkoutSessie: "cs_oud", status: "vervallen" });
+  await db.insert(projectaankopen).values({ organisatieId: org, projectId: p.id, checkoutSessie: "cs_betaald", status: "betaald", betaaldOp: gekocht });
+  const detail = await haalAdminProject(db, p.id);
+  expect(detail.gekochtOp).toBe(gekocht.toISOString());
+  expect(detail.abonnementStempelOp).toBe(gekocht.toISOString());
+  expect(detail.projectaankopen.map((a) => a.status).sort()).toEqual(["betaald", "vervallen"]);
+  expect(detail.projectaankopen.find((a) => a.status === "betaald")).toMatchObject({ betaaldOp: gekocht.toISOString() });
 });

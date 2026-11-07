@@ -59,9 +59,7 @@
     "archiefTonen": "Gearchiveerde notities tonen",
     "geenNotities": "Nog geen notities in deze selectie.",
     "waaromToegang": "Waarom heeft dit bedrijf toegang?",
-    "waaromAlleenLezen": "Waarom is dit bedrijf alleen-lezen?",
-    "schrijven": "Bewerken toegestaan",
-    "alleenLezen": "Alleen-lezen",
+    "waaromGratis": "Waarom is dit bedrijf op het gratis niveau?",
     "beoordeeldOp": "Beoordeeld op {datum}",
     "rechtenUitleg": "Lidmaatschap, gebruikersrol en opslaglimieten blijven afzonderlijk gelden.",
     "proefEinde": "Lokaal proefeinde (exclusief)",
@@ -70,7 +68,19 @@
     "vrijstelling": "Gratis toegang — geen abonnement nodig",
     "ingeschakeld": "Ingeschakeld",
     "uitgeschakeld": "Uitgeschakeld",
-    "proefVerlengen": "Proefperiode verlengen",
+    "proefVerlengen": "Tijdelijke volledige toegang",
+    "onderwijs": "Onderwijsstatus",
+    "onderwijsStoppen": "Onderwijsstatus stopzetten",
+    "onderwijsGeven": "Onderwijsstatus toekennen",
+    "onderwijsUitleg": "Onderwijs geeft gratis toegang met het watermerk \"Onderwijsversie\". Niet combineerbaar met gratis toegang zonder watermerk.",
+    "onderwijsVerwijderenUitleg": "De bestaande proef- en abonnementsregels worden opnieuw toegepast. Dit start geen nieuwe proef of betaling.",
+    "gekochtOp": "Gekocht op",
+    "abonnementStempelOp": "Abonnementsstempel op",
+    "projectaankopen": "Projectaankopen",
+    "geenProjectaankopen": "Nog geen projectaankopen.",
+    "aankoopAangemaakt": "Aangemaakt {datum}",
+    "aankoopBetaald": "betaald {datum}",
+    "aankoopStatus": { "open": "Open", "betaald": "Betaald", "vervallen": "Vervallen", "mislukt": "Mislukt" },
     "vrijstellingStoppen": "Gratis toegang stopzetten",
     "vrijstellingGeven": "Gratis toegang toekennen",
     "nieuweEinddatum": "Nieuwe laatste proefdag",
@@ -135,7 +145,8 @@
       "abonnement": "Actief abonnement",
       "betalingsgratie": "Betalingsgratie",
       "proef": "Lokale proef",
-      "alleenLezen": "Alleen-lezen"
+      "onderwijs": "Onderwijs",
+      "gratis": "Gratis niveau"
     },
     "redenen": {
       "uit": "Betalingsbeperkingen staan globaal uit.",
@@ -143,13 +154,15 @@
       "actief": "Het geregistreerde Stripe-abonnement geeft toegang.",
       "betaling-mislukt": "Een mislukte betaling bepaalt de toegang; de eventuele betalingsgratie staat hieronder.",
       "proef": "De lokale proefperiode geeft toegang.",
-      "proef-voorbij": "De lokale proefperiode is voorbij.",
+      "onderwijs": "Onderwijsstatus is ingeschakeld.",
+      "gratis": "Geen abonnement en geen lopende proef: het bedrijf werkt op het gratis niveau.",
       "beeindigd": "Het abonnement is beëindigd en er is geen geldige lokale proef."
     },
     "acties": {
       "gebruiker_naam": "Gebruikersnaam gecorrigeerd",
       "organisatie_gegevens": "Bedrijfsgegevens gecorrigeerd",
       "organisatie_vrijstelling": "Gratis toegang gewijzigd",
+      "organisatie_onderwijs": "Onderwijsstatus gewijzigd",
       "organisatie_proefperiode": "Proefperiode verlengd",
       "notitie_aangemaakt": "Supportnotitie toegevoegd",
       "notitie_gewijzigd": "Supportnotitie gewijzigd",
@@ -161,7 +174,7 @@
     "aandacht": {
       "proefEindigt": "Proef loopt binnen 7 dagen af",
       "betaling": "Betaling vraagt aandacht",
-      "alleenLezen": "Bedrijven met alleen-lezen toegang"
+      "gratis": "Bedrijven op het gratis niveau"
     },
     "auditFilters": {
       "doelId": "Record-ID",
@@ -1461,6 +1474,7 @@
   "fouten": {
     "ADMIN_CORRECTIE_ONGELDIG": "Deze supportcorrectie is verlopen, afgerond of hoort bij een andere aanmelding. Je lokale werk blijft bewaard. Start een nieuwe correctie om verder te bewaren.",
     "ADMIN_STRIPE_BEVESTIGING": "Bevestig dat bestaande Stripe-abonnementen en open betalingen blijven doorlopen. Beheer ze apart in Stripe.",
+    "ADMIN_ONDERWIJS_VRIJSTELLING": "Een bedrijf kan niet tegelijk gratis toegang en onderwijsstatus hebben. Stop eerst de andere.",
     "ADMIN_PROEF_VERLENGEN": "Kies een einddatum die later ligt dan de huidige proefperiode en vandaag.",
     "BEDRIJF_VRIJGESTELD": "Dit bedrijf heeft gratis toegang en kan geen nieuw abonnement afsluiten.",
     "onbekend": "Er ging iets mis. Probeer het opnieuw.",

@@ -1,8 +1,8 @@
 import { beforeAll, expect, test, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import type { Db } from "../server/db";
-import { abonnementen, organization, user } from "../server/db/schema";
-import { zetVrijstelling, verlengProef } from "../server/admin/bedrijfsrechten";
+import { abonnementen, adminAudit, organization, user } from "../server/db/schema";
+import { zetOnderwijs, zetVrijstelling, verlengProef } from "../server/admin/bedrijfsrechten";
 import { haalAdminOrganisatie } from "../server/admin/records";
 import { startCheckout } from "../server/abonnementen/beheer";
 import type { StripePoort } from "../server/abonnementen/stripe";
@@ -39,4 +39,27 @@ test("trial is extended only into the future without resetting trial-used or Str
   expect((await db.select().from(user).where(eq(user.id, "trial-user")))[0]!.proefGebruikt).toBe(true);
   await db.insert(abonnementen).values({ organisatieId: id, stripeKlantId: "cus_open", openCheckoutSessie: "cs_open" });
   await expect(verlengProef(db, actor, id, { ...await basis(id), gegevens: { einddatum: "2027-01-01", stripeBevestigd: false } }, nu)).rejects.toMatchObject({ statusCode: 400 });
+});
+test("onderwijs aanzetten schrijft audit en wijzigt niveau", async () => {
+  const id = await maakTestOrganisatie(db);
+  await db.update(organization).set({ proefEinde: new Date("2026-01-01") }).where(eq(organization.id, id));
+  const body = { ...await basis(id), gegevens: { onderwijs: true, stripeBevestigd: false } };
+  await zetOnderwijs(db, actor, id, body);
+  expect((await haalAdminOrganisatie(db, id, ADMIN_BILLING, nu)).toegang).toMatchObject({ niveau: "onderwijs", reden: "onderwijs", onderwijs: true });
+  const rijen = await db.select().from(adminAudit).where(eq(adminAudit.organisatieId, id));
+  expect(rijen.map((r) => r.actie)).toEqual(["organisatie.onderwijs"]);
+  await zetOnderwijs(db, actor, id, { ...await basis(id), gegevens: { onderwijs: false, stripeBevestigd: false } });
+  expect((await haalAdminOrganisatie(db, id, ADMIN_BILLING, nu)).toegang).toMatchObject({ niveau: "gratis", onderwijs: false });
+});
+test("onderwijs op vrijgesteld bedrijf: 409", async () => {
+  const id = await maakTestOrganisatie(db);
+  await db.update(organization).set({ vrijgesteld: true }).where(eq(organization.id, id));
+  await expect(zetOnderwijs(db, actor, id, { ...await basis(id), gegevens: { onderwijs: true, stripeBevestigd: false } })).rejects.toMatchObject({ statusCode: 409 });
+  expect((await db.select().from(organization).where(eq(organization.id, id)))[0]!.onderwijs).toBe(false);
+});
+test("vrijstelling op onderwijsbedrijf: 409", async () => {
+  const id = await maakTestOrganisatie(db);
+  await db.update(organization).set({ onderwijs: true }).where(eq(organization.id, id));
+  await expect(zetVrijstelling(db, actor, id, { ...await basis(id), gegevens: { vrijgesteld: true, stripeBevestigd: false } })).rejects.toMatchObject({ statusCode: 409 });
+  expect((await db.select().from(organization).where(eq(organization.id, id)))[0]!.vrijgesteld).toBe(false);
 });
