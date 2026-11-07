@@ -5,6 +5,8 @@ import {
   voegPaginaToe,
   voegToe,
   zetAchtergrond,
+  parseDocument,
+  pasPatchesToe,
   type InstallatieDocument,
   type NodeId,
 } from "@elentrik/model";
@@ -57,6 +59,24 @@ function puntIds(doc: InstallatieDocument, type: string): string[] {
 }
 
 describe("tePlaatsen", () => {
+  test("teller en aardingsonderdelen blijven na herladen plaatsbaar en verdwijnen alleen na plaatsing", () => {
+    const { doc, ids } = bouw();
+    const d = voegToe(doc, ids.bord!, { type: "aardingsonderbreker" });
+    const e = voegToe(d.doc, d.id, { type: "aardelektrode" });
+    const { doc: metP, paginaId } = metPagina(e.doc);
+    const geladen = parseDocument(JSON.parse(JSON.stringify(metP)));
+    const teller = Object.values(geladen.nodes).find(n => n.type === "teller")!.id;
+    const resterend = (d: InstallatieDocument) => tePlaatsen(d, analyseer(d)).flatMap(g => g.nodeIds);
+    expect(resterend(geladen)).toEqual(expect.arrayContaining([teller, d.id, e.id]));
+    let huidig = geladen;
+    for (const id of [teller, d.id, e.id]) {
+      const p = plaats(huidig, paginaId, id, { x: 20, y: 30, rotatie: 0 });
+      expect(resterend(p.doc)).not.toContain(id);
+      expect(resterend(pasPatchesToe(p.doc, p.inversePatches))).toContain(id);
+      huidig = p.doc;
+    }
+    expect(resterend(parseDocument(JSON.parse(JSON.stringify(huidig))))).not.toEqual(expect.arrayContaining([teller, d.id, e.id]));
+  });
   test("groepeert de niet-geplaatste punten per kring, in volgorde", () => {
     const { doc } = bouw();
     const groepen = tePlaatsen(doc, analyseer(doc));
@@ -88,7 +108,7 @@ describe("tePlaatsen", () => {
   test("punten zonder kring komen in de groep '—', na de kringen", () => {
     const { doc, cd } = losPunt();
     const groepen = tePlaatsen(doc, analyseer(doc));
-    expect(groepen.at(-1)).toEqual({ kringLabel: "—", nodeIds: [cd] });
+    expect(groepen.find(g => g.kringLabel === "—")).toEqual({ kringLabel: "—", nodeIds: [cd] });
   });
 
   test("volgorde van de groepen: kringen, dan '—', dan 'Verdeelborden'", () => {
@@ -107,6 +127,7 @@ describe("tePlaatsen", () => {
       { kringLabel: analyse.kringen[1]!.label, nodeIds: analyse.kringen[1]!.puntIds },
       { kringLabel: "—", nodeIds: [los.id] },
       { kringLabel: "Verdeelborden", nodeIds: [ids["bord"]] },
+      { kringLabel: "Installatieonderdelen", nodeIds: [teller.id] },
     ]);
   });
 

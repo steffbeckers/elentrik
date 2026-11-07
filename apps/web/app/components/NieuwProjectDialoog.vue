@@ -41,6 +41,7 @@ function valideer(waarden: typeof formulier) {
 
 async function maak() {
   bezig.value = true;
+  let nieuwId: string | undefined;
   try {
     const { id } = await api.maak({
       naam: formulier.naam.trim(),
@@ -49,6 +50,7 @@ async function maak() {
     });
     open.value = false;
     emit("aangemaakt", id);
+    nieuwId = id;
   } catch (fout) {
     if (await andereOrganisatie(fout)) return;
     // Geen schrijfrecht meer: de sessie is ververst, "Nieuw project" verdwijnt, de dialoog sluit.
@@ -60,6 +62,8 @@ async function maak() {
   } finally {
     bezig.value = false;
   }
+  // Een nieuw project opent meteen in de editor.
+  if (nieuwId !== undefined) await navigateTo(`/projecten/${nieuwId}`);
 }
 </script>
 

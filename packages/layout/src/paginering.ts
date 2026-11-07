@@ -22,7 +22,7 @@ function ankerOp(x: number, xVan: number, xTot: number, eerste: boolean, laatste
  * Een pagina van het schema. De elementen staan in strookcoördinaten; render past toe
  * `translate(-xVan)` en daarna `scale(schaal)`.
  */
-export type SchemaPagina = { index: number; xVan: number; xTot: number; schaal: number; elementen: SchemaElement[] };
+export type SchemaPagina = { index: number; xVan: number; xTot: number; yVan?: number; schaal: number; elementen: SchemaElement[] };
 
 export type Waarschuwing = { code: "SCHEMA_TE_HOOG" | "KRING_TE_BREED"; paginaIndex?: number };
 
@@ -46,11 +46,11 @@ export function opmaak(
  * wijs elk element toe aan een pagina. Horizontale
  * lijnen over een knip worden in stukken geknipt en krijgen aan beide kanten een vervolg.
  */
-export function pagineer(strook: Strook, papier: Papier): SchemaOpmaak {
+export function pagineer(strook: Strook, papier: Papier, vasteSchaal?: number): SchemaOpmaak {
   const ruimte = bruikbaar(papier);
   const waarschuwingen: Waarschuwing[] = [];
 
-  let schaal = Math.min(1, ruimte.hoogte / strook.hoogte);
+  let schaal = vasteSchaal ?? Math.min(1, ruimte.hoogte / strook.hoogte);
   if (schaal < MIN_SCHAAL) {
     schaal = MIN_SCHAAL;
     waarschuwingen.push({ code: "SCHEMA_TE_HOOG" });

@@ -56,6 +56,62 @@ describe("tabblad", () => {
 });
 
 describe("pagina's", () => {
+  test("afdekking toevoegen en verwijderen zijn aparte undo-stappen en alleen-lezen doet niets", () => {
+    const { editor, situatie } = opzet();
+    const id = situatie.voegPlanPaginaToe("Bron", ACHTERGROND);
+    const voor = JSON.parse(JSON.stringify(doc(editor)));
+    const stappen = editor.terug.length;
+    const vlak = situatie.voegAfdekkingToe({ x: 10, y: 20, breedte: 30, hoogte: 40 });
+    expect(vlak).toBeTruthy();
+    expect(editor.terug).toHaveLength(stappen + 1);
+    expect(situatie.actievePagina?.afdekkingen).toHaveLength(1);
+    situatie.verwijderAfdekking(vlak!);
+    expect(situatie.actievePagina?.afdekkingen ?? []).toEqual([]);
+    editor.ongedaanMaken();
+    expect(situatie.actievePagina?.afdekkingen).toHaveLength(1);
+    editor.ongedaanMaken();
+    expect(doc(editor)).toEqual(voor);
+    editor.opnieuw();
+    editor.zetAlleenLezen(true);
+    situatie.verwijderAfdekking(vlak!);
+    expect(situatie.voegAfdekkingToe({ x: 1, y: 1, breedte: 2, hoogte: 2 })).toBeNull();
+    expect(situatie.actievePagina?.afdekkingen).toHaveLength(1);
+    expect(situatie.actievePaginaId).toBe(id);
+  });
+  test("kwartslag draait de actieve selectie samen met behoud van posities en één undo-stap", () => {
+    const { editor, situatie } = opzet();
+    const eerste = situatie.voegPlanPaginaToe("Eerste", ACHTERGROND);
+    const [a, b, c] = punten(editor) as [NodeId, NodeId, NodeId];
+    situatie.plaatsNode(a, 100, 200);
+    situatie.plaatsNode(b, 300, 400);
+    editor.selectie = [b];
+    situatie.draaiSelectie(1);
+    situatie.zetLabelOffset(eerste, a, { x: -12, y: 34 });
+    const tweede = situatie.voegPlanPaginaToe("Tweede", ACHTERGROND);
+    situatie.plaatsNode(c, 500, 600);
+    situatie.actievePaginaId = eerste;
+    editor.selectie = [a, b, c];
+    const voor = JSON.parse(JSON.stringify(doc(editor)));
+    const stappen = editor.terug.length;
+
+    situatie.draaiSelectie(1, 90);
+    expect(plaatsingen(editor, eerste)).toEqual([
+      { nodeId: a, x: 100, y: 200, rotatie: 90, labelOffset: { x: -12, y: 34 } },
+      { nodeId: b, x: 300, y: 400, rotatie: 105 },
+    ]);
+    expect(plaatsingen(editor, tweede)[0]).toMatchObject({ rotatie: 0 });
+    expect(editor.terug).toHaveLength(stappen + 1);
+    const na = JSON.parse(JSON.stringify(doc(editor)));
+    editor.ongedaanMaken();
+    expect(doc(editor)).toEqual(voor);
+    editor.opnieuw();
+    expect(doc(editor)).toEqual(na);
+    editor.zetAlleenLezen(true);
+    situatie.draaiSelectie(-1, 90);
+    expect(doc(editor)).toEqual(na);
+    expect(editor.terug).toHaveLength(stappen + 1);
+  });
+
   test("opmaak blijft behouden bij verplaatsen, draaien, undo, redo en opnieuw laden", () => {
     const { editor, situatie } = opzet();
     const paginaId = situatie.voegPlanPaginaToe("Gelijkvloers", ACHTERGROND);
@@ -380,6 +436,23 @@ describe("alleen-lezen", () => {
     situatie.plaatsNode(punt!, 5, 6);
     expect(plaatsingen(editor, a)).toEqual([{ nodeId: punt, x: 5, y: 6, rotatie: 0 }]);
   });
+  test("de overlap-melding maakt alleen de eigen plaatsing ongedaan, niet een nieuwere", () => {
+    const { editor, situatie } = opzet();
+    situatie.voegPlanPaginaToe("Eerste", ACHTERGROND);
+    const [a, b] = punten(editor) as [NodeId, NodeId];
+    situatie.plaatsNode(a, 100, 200);
+    const eerste = editor.laatsteStap();
+    situatie.plaatsNode(b, 100, 200);
+    const tweede = editor.laatsteStap();
+    // Doorgaan-modus: het volgende punt staat er al voor de melding van het eerste wordt aangeklikt.
+    expect(editor.ongedaanMakenAlsLaatste(eerste)).toBe(false);
+    expect(editor.laatsteStap()).toBe(tweede);
+    expect(plaatsingen(editor, situatie.actievePaginaId!).map(p => p.nodeId)).toEqual([a, b]);
+    // De laatste plaatsing wel.
+    expect(editor.ongedaanMakenAlsLaatste(tweede)).toBe(true);
+    expect(plaatsingen(editor, situatie.actievePaginaId!).map(p => p.nodeId)).toEqual([a]);
+    expect(editor.ongedaanMakenAlsLaatste(undefined)).toBe(false);
+  });
 });
 
 test('getekend plan toevoegen en bewerken is undoable; alleen-lezen houdt bron en raster intact', () => {
@@ -401,4 +474,27 @@ test('getekend plan toevoegen en bewerken is undoable; alleen-lezen houdt bron e
   expect(situatie.bewaarTekening('Nieuw', ACHTERGROND, nieuw)).toBe('');
   expect(situatie.actievePagina?.tekening).toEqual(bron);
   expect(doc(editor).situatie.paginas).toHaveLength(1);
+});
+
+ test("meerdere planpaginas zijn samen één undo-stap en behouden bestaande plaatsingen", () => {
+  const { editor, situatie } = opzet();
+  const oud = situatie.voegPlanPaginaToe("Bestaand", ACHTERGROND);
+  const punt = punten(editor)[0]!;
+  situatie.plaatsNode(punt, 20, 30);
+  const voor = structuredClone(doc(editor));
+  const ids = situatie.voegPlanPaginasToe([{ titel: "Gelijkvloers", achtergrond: ACHTERGROND }, { titel: "Verdieping 1", achtergrond: ACHTERGROND }]);
+  expect(ids).toHaveLength(2);
+  expect(plaatsingen(editor, oud)).toHaveLength(1);
+  editor.ongedaanMaken();
+  expect(doc(editor)).toEqual(voor);
+ });
+
+test("ongeldige tweede pagina en alleen-lezen laten het document volledig ongemoeid", () => {
+ const { editor, situatie } = opzet();
+ const voor = structuredClone(doc(editor));
+ expect(() => situatie.voegPlanPaginasToe([{ titel: "Eerste", achtergrond: ACHTERGROND }, { titel: "Tweede", achtergrond: { ...ACHTERGROND, rasterBestandId: undefined as unknown as string } }])).toThrow();
+ expect(doc(editor)).toEqual(voor);
+ editor.alleenLezen = true;
+ expect(situatie.voegPlanPaginasToe([{ titel: "Geen toevoeging", achtergrond: ACHTERGROND }])).toEqual([]);
+ expect(doc(editor)).toEqual(voor);
 });

@@ -14,6 +14,7 @@ import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
 import { wachtOpHydratatie } from "./hulp/hydratatie";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 import { leesPdf } from "./hulp/pdf";
+import { bevestigSjabloonOpBord } from "./hulp/sjabloon";
 import { sjabloonRegex, vertaling } from "./hulp/teksten";
 import { E2E_URL } from "./omgeving";
 
@@ -123,6 +124,8 @@ test.describe("dossiertaal en pdf", () => {
       timeout: 30_000,
     });
     await page.getByRole("button", { name: vertaling("fr", "editor.sjablonen.kring-stopcontacten") }).click();
+  // Een sjabloon opent de invoegdialoog: de bestemming bevestigen.
+  await bevestigSjabloonOpBord(page);
 
     // Projectgegevens: de dossiertaal is Frans, de taal van de maker.
     await page.getByTestId("projectnaam").click();
@@ -182,6 +185,8 @@ test("een bevinding in de editor staat in de taal van de interface", async ({ pa
     timeout: 30_000,
   });
   await page.getByRole("button", { name: vertaling("fr", "editor.sjablonen.kring-stopcontacten") }).click();
+  // Een sjabloon opent de invoegdialoog: de bestemming bevestigen.
+  await bevestigSjabloonOpBord(page);
   // Een zevende contactdoos die er vijf telt: elf op één kring is een fout.
   await page.getByTestId("schema-canvas").locator('[data-testid^="plus-kring-einde-"]').click();
   await page.getByTestId("werkruimte-eigenschappen").click();

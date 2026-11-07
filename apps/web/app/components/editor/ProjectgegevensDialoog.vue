@@ -2,10 +2,14 @@
 import { StroomtypeSchema } from "@elentrik/model";
 import AdresVelden from "~/components/editor/AdresVelden.vue";
 import AlleenLezenMelding from "~/components/editor/AlleenLezenMelding.vue";
+import GenummerdeSectie from "~/components/editor/GenummerdeSectie.vue";
+import MetingenVelden from "~/components/editor/MetingenVelden.vue";
 import { leegAdresFormulier } from "~/editor/adres";
+import { KEUZELIJST_IN_DIALOOG } from "~/editor/keuzelijst";
 import {
   formulierUitProject,
   gegevensUitFormulier,
+  leegMetingenFormulier,
   valideerProjectFormulier,
   type ProjectFormulier,
 } from "~/editor/projectformulier";
@@ -32,10 +36,12 @@ const formulier = reactive<ProjectFormulier>({
   stroomtype: "2x230V",
   klant: leegAdresFormulier(),
   werf: leegAdresFormulier(),
+  werfZelfdeAlsKlant: true,
   ean: "",
   datum: "",
   dossierTaal: "nl",
   installatieContext: "onbekend",
+  metingen: leegMetingenFormulier(),
 });
 
 watch(open, (nuOpen) => {
@@ -67,52 +73,58 @@ function bewaar(): void {
         :state="formulier"
         :validate="valideer"
         :disabled="store.alleenLezen"
-        class="space-y-6"
+        class="space-y-8"
         @submit="bewaar"
       >
-        <div class="space-y-4">
-          <UFormField name="naam" :label="$t('editor.projectgegevens.naam')" required>
-            <UInput v-model="formulier.naam" class="w-full" autofocus />
+        <GenummerdeSectie :nummer="1" :titel="$t('editor.projectgegevens.klant.titel')" :uitleg="$t('editor.projectgegevens.klant.adresHulp')">
+          <UFormField name="klantNaam" :label="$t('editor.projectgegevens.klant.naam')">
+            <UInput v-model="formulier.klantNaam" class="w-full" autofocus data-testid="klant-naam" />
           </UFormField>
+          <AdresVelden v-model="formulier.klant" naam="klant" />
+        </GenummerdeSectie>
+
+        <GenummerdeSectie :nummer="2" :titel="$t('editor.projectgegevens.werf.titel')">
+          <UCheckbox
+            v-model="formulier.werfZelfdeAlsKlant"
+            :label="$t('editor.projectgegevens.werf.zelfdeAlsKlant')"
+            data-testid="werf-zelfde-als-klant"
+          />
+          <AdresVelden v-if="!formulier.werfZelfdeAlsKlant" v-model="formulier.werf" naam="werf" />
+          <UFormField name="ean" :label="$t('editor.projectgegevens.werf.ean')">
+            <UInput v-model="formulier.ean" class="w-full" inputmode="numeric" data-testid="werf-ean" />
+          </UFormField>
+        </GenummerdeSectie>
+
+        <GenummerdeSectie :nummer="3" :titel="$t('editor.projectgegevens.installatie.titel')">
           <UFormField name="stroomtype" :label="$t('editor.projectgegevens.stroomtype')">
-            <USelect v-model="formulier.stroomtype" :items="stroomtypes" class="w-full" />
+            <USelect v-model="formulier.stroomtype" :items="stroomtypes" :content="KEUZELIJST_IN_DIALOOG" class="w-full" />
+          </UFormField>
+          <UFormField name="frequentie_Hz" :label="$t('editor.projectgegevens.frequentie')">
+            <UInput v-model="formulier.frequentie_Hz" type="number" min="0.01" step="any" class="w-full" />
           </UFormField>
           <UFormField name="installatieContext" :label="$t('editor.projectgegevens.context.label')" :help="$t('editor.projectgegevens.context.hulp')">
-            <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext"
+            <USelect v-model="formulier.installatieContext" class="w-full" data-testid="installatiecontext" :content="KEUZELIJST_IN_DIALOOG"
               :items="['onbekend', 'nieuw', 'bestaand'].map(value => ({ value, label: $t(`editor.projectgegevens.context.${value}`) }))" />
+          </UFormField>
+        </GenummerdeSectie>
+
+        <MetingenVelden v-model="formulier.metingen" :nummer="4" />
+
+        <GenummerdeSectie :nummer="5" :titel="$t('editor.projectgegevens.dossier.titel')">
+          <UFormField name="naam" :label="$t('editor.projectgegevens.naam')" required>
+            <UInput v-model="formulier.naam" class="w-full" data-testid="project-naam" />
+          </UFormField>
+          <UFormField name="datum" :label="$t('editor.projectgegevens.datum.label')" required>
+            <UInput v-model="formulier.datum" type="date" class="w-full" data-testid="projectdatum" />
           </UFormField>
           <UFormField
             name="dossierTaal"
             :label="$t('editor.projectgegevens.dossierTaal.label')"
             :help="$t('editor.projectgegevens.dossierTaal.hulp')"
           >
-            <USelect v-model="formulier.dossierTaal" :items="dossierTalen" class="w-full" data-testid="dossiertaal" />
+            <USelect v-model="formulier.dossierTaal" :items="dossierTalen" :content="KEUZELIJST_IN_DIALOOG" class="w-full" data-testid="dossiertaal" />
           </UFormField>
-        </div>
-
-        <section class="space-y-4">
-          <h3 class="font-semibold">{{ $t("editor.projectgegevens.klant.titel") }}</h3>
-          <UFormField name="klantNaam" :label="$t('editor.projectgegevens.klant.naam')">
-            <UInput v-model="formulier.klantNaam" class="w-full" />
-          </UFormField>
-          <p class="text-sm text-muted">{{ $t("editor.projectgegevens.klant.adresHulp") }}</p>
-          <AdresVelden v-model="formulier.klant" naam="klant" />
-        </section>
-
-        <section class="space-y-4">
-          <h3 class="font-semibold">{{ $t("editor.projectgegevens.werf.titel") }}</h3>
-          <AdresVelden v-model="formulier.werf" naam="werf" />
-          <UFormField name="ean" :label="$t('editor.projectgegevens.werf.ean')">
-            <UInput v-model="formulier.ean" class="w-full" inputmode="numeric" data-testid="werf-ean" />
-          </UFormField>
-        </section>
-
-        <section class="space-y-4">
-          <h3 class="font-semibold">{{ $t("editor.projectgegevens.datum.titel") }}</h3>
-          <UFormField name="datum" :label="$t('editor.projectgegevens.datum.label')" required>
-            <UInput v-model="formulier.datum" type="date" class="w-full" data-testid="projectdatum" />
-          </UFormField>
-        </section>
+        </GenummerdeSectie>
       </UForm>
     </template>
     <template #footer>

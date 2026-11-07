@@ -10,6 +10,8 @@ const basis = { id: "n1", parentId: "n0", kinderen: [] as string[] };
 const MINIMAAL: Readonly<Record<NodeType, Node>> = {
   aansluiting: { ...basis, type: "aansluiting", parentId: null },
   teller: { ...basis, type: "teller" },
+  aardelektrode: { ...basis, type: "aardelektrode" },
+  aardingsonderbreker: { ...basis, type: "aardingsonderbreker" },
   differentieel: { ...basis, type: "differentieel", gevoeligheid_mA: 30, nominaal_A: 40, polen: 2, klasse: "A" },
   automaat: { ...basis, type: "automaat", nominaal_A: 16, polen: 1, curve: "B" },
   zekering: { ...basis, type: "zekering", nominaal_A: 20 },
@@ -25,8 +27,8 @@ const MINIMAAL: Readonly<Record<NodeType, Node>> = {
 const MODEL_TYPES: string[] = NodeSchema.options.map((optie) => optie.shape.type.value);
 
 describe("alle nodetypes", () => {
-  test("het model heeft 11 nodetypes, en de lijsten komen overeen", () => {
-    expect(MODEL_TYPES).toHaveLength(11);
+  test("het model heeft 13 nodetypes, en de lijsten komen overeen", () => {
+    expect(MODEL_TYPES).toHaveLength(13);
     expect([...MODEL_TYPES].sort()).toEqual(Object.keys(TOEGELATEN_KINDEREN).sort());
   });
 
@@ -49,8 +51,8 @@ describe("alle nodetypes", () => {
       const symbool = tekenSymbool(node);
       const { maat } = symbool;
       expect(maat.breedte).toBeLessThanOrEqual(KOLOM_BREEDTE_MM - 4);
-      expect(maat.in).toEqual({ x: maat.breedte / 2, y: maat.hoogte });
-      expect(maat.uit).toEqual({ x: maat.breedte / 2, y: 0 });
+      expect(maat.in).toEqual({ x: maat.breedte / 2, y: node.type === "aardelektrode" ? 0 : maat.hoogte });
+      expect(maat.uit).toEqual({ x: maat.breedte / 2, y: node.type === "aardelektrode" ? maat.hoogte : 0 });
       expect(buitenVak(symbool)).toEqual([]);
       expect(raakt(symbool, maat.in)).toBe(true);
       expect(raakt(symbool, maat.uit)).toBe(true);

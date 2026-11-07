@@ -5,6 +5,15 @@ const inhoud = { breedte: 1000, hoogte: 800 };
 const breed = { breedte: 900, hoogte: 600 };
 const smal = { breedte: 390, hoogte: 100 };
 
+test("planbediening behoudt absolute schaal en het schermanker linksboven bij paneelwissel", () => {
+  const passend = passendeWeergave(inhoud, breed, 20)!;
+  const nieuw = weergaveNaResize(passend, breed, smal, inhoud, 20, true);
+  expect(nieuw.b / smal.breedte).toBeCloseTo(passend.b / breed.breedte, 12);
+  expect(nieuw.h / smal.hoogte).toBeCloseTo(passend.h / breed.hoogte, 12);
+  expect(nieuw.x).toBe(passend.x);
+  expect(nieuw.y).toBe(passend.y);
+});
+
 test("een passend plan blijft volledig zichtbaar als opmaak het venster verkleint", () => {
   const passend = passendeWeergave(inhoud, breed, 20)!;
   expect(weergaveNaResize(passend, breed, smal, inhoud, 20)).toEqual(passendeWeergave(inhoud, smal, 20));

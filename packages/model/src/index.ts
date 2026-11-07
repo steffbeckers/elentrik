@@ -11,6 +11,8 @@ export {
   verwijder,
   verwijderEnkel,
   voegToe,
+  voegInVoor,
+  magInvoegenVoor,
   wijzigEigenschappen,
   type NodeInvoer,
   type OperatieResultaat,
@@ -20,6 +22,8 @@ export { verwijderAfwijking, voegAfwijkingToe, wijzigProject } from "./project";
 export type { ProjectWijziging } from "./project";
 export {
   PLAATSBARE_TYPES,
+  voegAfdekkingToe,
+  verwijderAfdekking,
   hernoemPagina,
   plaats,
   verplaatsPagina,
@@ -30,6 +34,8 @@ export {
   zetGetekendPlan,
   zetSchaal,
   zetPaginaOpmaak,
+  zetPaginaAfdruk,
+  zetReferentiePagina,
   zetLabelOffset,
 } from "./situatie";
 export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
@@ -37,6 +43,8 @@ export {
   NIEUWE_KRING_AUTOMAAT,
   SJABLONEN,
   STANDAARD,
+  doorsnedeVoorKring,
+  kringLeiding,
   VISUELE_VELDEN,
   nieuwProjectDocument,
   sjabloonVoor,
@@ -47,6 +55,12 @@ export {
   magToevoegen,
   voegOnderdeelToe,
   voegSjabloonToe,
+  voegLichtschakelingToe,
+  lichtschakelingLeiding,
+  type SjabloonDoel,
+  type DifferentieelInstellingen,
+  type LichtschakelingDoel,
+  type LichtschakelingOpties,
   type Aanknoping,
 } from "./toevoegen";
 export {
@@ -60,6 +74,7 @@ export {
   AdresSchema,
   AfwijkingSchema,
   InstallatieDocumentSchema,
+  MetingenSchema,
   NodeIdSchema,
   NodeSchema,
   PartijSchema,
@@ -70,10 +85,13 @@ export {
   type PlanTekening,
   StroomtypeSchema,
   TaalSchema,
+  TestResultaatSchema,
   ToestelsoortSchema,
   type Adres,
   type Afwijking,
+  type DifferentieelTest,
   type InstallatieDocument,
+  type Metingen,
   type Node,
   type NodeId,
   type NodeType,
@@ -85,5 +103,8 @@ export {
   type SituatiePagina,
   type Stroomtype,
   type Taal,
+  type TestResultaat,
   type Toestelsoort,
 } from "./schema";
+export { bepaalKringCodes, kringLetter, legKringCodesVast, hernummerKringen, voorbeeldHernummering, type Hernummering } from './referenties';
+export { dupliceerKring, behoudKringCodes } from './referenties';

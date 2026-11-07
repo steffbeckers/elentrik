@@ -1,15 +1,38 @@
 import type { NodeVan } from "@elentrik/model";
-import { lijn, rechthoek } from "./svg";
+import { cirkel, lijn, rechthoek } from "./svg";
 import type { Symbool } from "./types";
 
-/** Leiding: alleen een verticale lijn over de volle hoogte, 2 × 12 mm. Het label plaatst de layout. */
-export function tekenLeiding(_node: NodeVan<"leiding">): Symbool {
-  const breedte = 2;
-  const hoogte = 12;
+/** Placement marks follow FOD Economie table 2.23 C, rotated with the vertical conductor.
+ * Reference inspected 6 November 2026: FOD Economie, AREI Boek 1 version 07, pp.55-56 (effective 1 November 2026).
+ * Missing installation stays unmarked. Independent wall and conduit marks can be combined.
+ */
+export function tekenLeiding(node: NodeVan<"leiding">): Symbool {
+  const aanleg = node.aanleg;
+  const gemarkeerd =
+    !!aanleg && (aanleg.inBuis || aanleg.ligging !== undefined);
+  const breedte = gemarkeerd ? 6 : 2,
+    hoogte = 12;
   const x = breedte / 2;
+  let svg = lijn(x, hoogte, x, 0);
+  if (aanleg?.inBuis) svg += cirkel(5, 6, 0.85);
+  if (aanleg?.ligging === "inbouw" || aanleg?.ligging === "opbouw") {
+    const kap = aanleg.ligging === "opbouw" ? 1 : 5,
+      einde = aanleg.ligging === "opbouw" ? 2.2 : 3.8;
+    for (const y of [2, 9]) {
+      svg += lijn(kap, y, kap, y + 2);
+      for (const dy of [0, 1, 2]) svg += lijn(kap, y + dy, einde, y + dy);
+    }
+  } else if (aanleg?.ligging === "grond") {
+    for (const [xx, half] of [
+      [4, 1.6],
+      [5, 1],
+      [5.8, 0.4],
+    ])
+      svg += lijn(xx!, 6 - half!, xx!, 6 + half!);
+  }
   return {
     maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } },
-    svg: lijn(x, hoogte, x, 0),
+    svg,
   };
 }
 

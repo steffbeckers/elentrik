@@ -6,14 +6,19 @@
 //
 // Verhoog het getal als een oude client en de nieuwe server samen schade kunnen doen: een wijziging
 // van het formaat van een /api-verzoek of -antwoord, van een validatie, of van het documentmodel
-// (`SCHEMA_VERSIE` in packages/model). Een oude client stuurt documenten met het oude
-// `schemaVersion`, en de server weigert die (`z.literal(SCHEMA_VERSIE)`); alleen een nieuwe client
-// kan dus nog bewaren. Een wijziging van het model komt bovendien met een migratie in `MIGRATIES`,
-// zodat bestaande documenten leesbaar blijven. `test/clientversie.test.ts` pint beide getallen.
+// (`SCHEMA_VERSIE` in packages/model). De server migreert oude opgeslagen documenten en invoer,
+// maar dat maakt een oude editor niet veilig: zijn documentkopie mist nieuwe velden en onderdelen.
+// Versie 2 beschermt het schema-2-model (aanleg, bronparameters en plaatsbare infrastructuur)
+// tegen schrijfacties van client 1. De bestaande migratie 1 → 2 bewaart oude dossiers;
+// ze verleent een verouderde client geen schrijftoegang. Versie 3 beschermt de metingen
+// (`meta.metingen`, `testResultaat` en `uitschakeltijd_ms` per differentieel): ze zijn optioneel
+// binnen schema 2, dus oude dossiers blijven leesbaar zonder migratie, maar de documentkopie van
+// een editor van client 2 kent ze niet en zou ze bij bewaren wegschrijven.
+// `test/clientversie.test.ts` pint het paar.
 //
 // Expliciete import in de server en client (ruling E1): dit bestand importeert niets.
 
-export const CLIENT_COMPATIBILITEIT = 1;
+export const CLIENT_COMPATIBILITEIT = 3;
 
 /** Het verzoek van de client: zijn eigen getal. */
 export const CLIENT_HEADER = "x-elentrik-client";

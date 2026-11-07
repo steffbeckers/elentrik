@@ -33,7 +33,7 @@ describe("sjablonen volgens arei-2020@1", () => {
 
   test.each(gevallen)("$id ($stroomtype): geen fouten of waarschuwingen", ({ id, stroomtype }) => {
     const { doc, bordId } = bord(stroomtype);
-    const r = voegSjabloonToe(doc, bordId, id);
+    const r = voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:bordId}, id);
     expect(valideerStructuur(r.doc)).toEqual([]);
     const ernstig = controleer(r.doc, regelset).filter(
       (b) => b.ernst === "fout" || b.ernst === "waarschuwing",
@@ -44,7 +44,7 @@ describe("sjablonen volgens arei-2020@1", () => {
   test("alle sjablonen samen op één bord", () => {
     const { doc, bordId } = bord("2x230V");
     let huidig = doc;
-    for (const sjabloon of SJABLONEN) huidig = voegSjabloonToe(huidig, bordId, sjabloon.id).doc;
+    for (const sjabloon of SJABLONEN) huidig = voegSjabloonToe(huidig, {soort:"nieuw-op-bord",nodeId:bordId}, sjabloon.id).doc;
     const ernstig = controleer(huidig, regelset).filter(
       (b) => b.ernst === "fout" || b.ernst === "waarschuwing",
     );

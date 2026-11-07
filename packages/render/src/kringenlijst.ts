@@ -1,5 +1,5 @@
 import type { Analyse } from "@elentrik/arei";
-import { beveiligingLabel, leidingLabel } from "@elentrik/layout";
+import { beveiligingLabel, leidingLabel, technischeLabels } from "@elentrik/layout";
 import type { InstallatieDocument, Node, NodeId } from "@elentrik/model";
 import type { Teksten } from "./teksten/index";
 
@@ -56,7 +56,7 @@ function rij(
     nodeId,
     kring,
     kringOmschrijving: beveiligingId ? doc.nodes[beveiligingId]?.label ?? "" : "",
-    puntOmschrijving: node.label ?? "",
+    puntOmschrijving: [node.label, ...technischeLabels(node)].filter(Boolean).join(" · "),
     punt: analyse.puntLabels[nodeId] ?? "",
     type: typeTekst(node, teksten),
     ruimte: node.ruimteNaam?.trim() || (node.ruimte ? teksten.ruimtes[node.ruimte] : ""),

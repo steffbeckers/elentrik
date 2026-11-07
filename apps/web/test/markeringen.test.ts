@@ -1,6 +1,6 @@
 import type { Bevinding, Ernst } from "@elentrik/arei";
 import { describe, expect, test } from "vitest";
-import { markeringen } from "../app/editor/markeringen";
+import { markeringen, markeringVorm, MARKERING_SOORTEN } from "../app/editor/markeringen";
 
 function bevinding(ernst: Ernst, nodeIds: string[], afgeweken = false): Bevinding {
   return { regelId: "r", ernst, nodeIds, berichtSleutel: "k", parameters: {}, afgeweken };
@@ -37,5 +37,21 @@ describe("markeringen", () => {
     expect(m.get("a")).toBe("waarschuwing");
     expect(m.get("b")).toBe("fout");
     expect(m.get("c")).toBe("fout");
+  });
+});
+
+describe("markeringVorm", () => {
+  test("elke ernst heeft een eigen vorm en een eigen teken, niet alleen een kleur", () => {
+    const vormen = MARKERING_SOORTEN.map((soort) => markeringVorm(soort, 0, 0, 1));
+    expect(new Set(vormen.map((v) => v.vorm)).size).toBe(MARKERING_SOORTEN.length);
+    expect(new Set(vormen.map((v) => v.teken)).size).toBe(MARKERING_SOORTEN.length);
+    expect(MARKERING_SOORTEN).toEqual(["fout", "waarschuwing", "info", "afgeweken"]);
+  });
+
+  test("de vorm schaalt mee en ligt rond het middelpunt", () => {
+    const klein = markeringVorm("waarschuwing", 10, 20, 1).vorm;
+    const groot = markeringVorm("waarschuwing", 10, 20, 2).vorm;
+    expect(klein).not.toBe(groot);
+    expect(markeringVorm("waarschuwing", 11, 20, 1).vorm).not.toBe(klein);
   });
 });

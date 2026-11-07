@@ -3,7 +3,7 @@ import { tekenAutomaat, tekenDifferentieel, tekenZekering } from "./beveiliging"
 import { tekenLeiding, tekenVerdeelbord } from "./leiding";
 import { tekenContactdoos, tekenLichtpunt, tekenSchakelaar, tekenToestel } from "./punten";
 import type { Symbool } from "./types";
-import { tekenAansluiting, tekenTeller } from "./voeding";
+import { tekenAansluiting, tekenTeller, tekenAarding } from "./voeding";
 
 /**
  * Tekent het symbool van een node. Uitputtende `switch`: een nieuw nodetype geeft een
@@ -15,6 +15,9 @@ export function tekenSymbool(node: Node): Symbool {
       return tekenAansluiting(node);
     case "teller":
       return tekenTeller(node);
+    case "aardelektrode":
+    case "aardingsonderbreker":
+      return tekenAarding(node);
     case "differentieel":
       return tekenDifferentieel(node);
     case "automaat":

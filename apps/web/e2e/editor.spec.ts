@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { selecteerSchemaNode } from "./hulp/schema-selectie";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "editor" });
@@ -45,16 +46,14 @@ async function selecteerBij(page: Page, tekst: string) {
     const afstand = Math.hypot(m.x - tekstMidden.x, m.y - tekstMidden.y);
     if (afstand < beste.afstand) beste = { afstand, id: (await symbool.getAttribute("data-node-id"))! };
   }
-  await canvas.locator(`[data-node-id="${beste.id}"]`).click({ force: true });
-  await expect(page.getByTestId(`selectie-${beste.id}`)).toHaveCount(1);
+  await selecteerSchemaNode(page, beste.id);
   return beste.id;
 }
 
-/** Selecteert een node via zijn id (een leiding is een lijn zonder breedte, dus een geforceerde klik). */
+/** Selecteert een node via een werkelijk aanklikbaar symboolsegment. */
 async function selecteerOpId(page: Page, id: string) {
   await pasTeMaken(page);
-  await page.getByTestId("schema-canvas").locator(`[data-node-id="${id}"]`).click({ force: true });
-  await expect(page.getByTestId(`selectie-${id}`)).toHaveCount(1);
+  await selecteerSchemaNode(page, id);
 }
 
 test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({ page, request }) => {
@@ -71,9 +70,6 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   const nieuw = page.getByRole("dialog");
   await nieuw.getByLabel("Naam").fill(naam);
   await nieuw.getByRole("button", { name: "Aanmaken" }).click();
-  const rij = page.getByRole("row").filter({ hasText: naam });
-  await expect(rij).toHaveCount(1);
-  await rij.getByRole("link", { name: "Openen" }).click();
   await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
   const projectId = new URL(page.url()).pathname.split("/").pop()!;
 
@@ -90,15 +86,15 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   await expect(schemaTekst(page, "XVB 3G2,5")).toHaveCount(1);
   await expect(kringPlus).toHaveCount(1);
 
-  // 3. A1 bestaat al; twee extra contactdozen geven A2 en A3.
+  // 3. A1 bestaat al en is geselecteerd: C voegt meteen A2 toe, zonder extra klik, en de
+  // invoegbalk blijft dicht. De plusknop geeft daarna A3.
+  await expect(schemaTekst(page, "A1")).toHaveCount(1);
   await page.keyboard.press("c");
   await expect(page.getByTestId("onderdeel-contactdoos")).toHaveAttribute("aria-pressed", "true");
-  await expect(schemaTekst(page, "A1")).toHaveCount(1);
-  for (let i = 2; i <= 3; i++) {
-    await pasTeMaken(page);
-    await kringPlus.click();
-    await expect(schemaTekst(page, `A${i}`)).toHaveCount(1);
-  }
+  await expect(schemaTekst(page, "A2")).toHaveCount(1);
+  await expect(page.locator("#schema-invoegen")).toHaveCount(0);
+  await pasTeMaken(page);
+  await kringPlus.click();
   await expect(schemaTekst(page, "A3")).toHaveCount(1);
 
   // 4. Ctrl+Z haalt A3 weg; A2 staat er nog.
@@ -163,4 +159,117 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   await expect(page.getByTestId("veld-kabeltype")).toHaveValue(xssLabel);
 
   expect(dialogen).toEqual([]);
+});
+
+
+test("ongeldige nominale stroom blijft zichtbaar na blur en selectie verlaten", async ({ page, request }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Nieuw project" }).click();
+  const nieuw = page.getByRole("dialog");
+  const projectNaam = `${naam} ongeldige invoer`;
+  await nieuw.getByLabel("Naam").fill(projectNaam);
+  await nieuw.getByRole("button", { name: "Aanmaken" }).click();
+  await expect(page).toHaveURL(/\/projecten\/[0-9a-f-]+$/);
+  const projectId = new URL(page.url()).pathname.split("/").pop()!;
+  await pasTeMaken(page);
+  await page.getByTestId("schema-canvas").locator('[data-testid^="plus-rail-einde-"]').click();
+  const automaatId = await selecteerBij(page, "B16 2P");
+  await page.getByTestId("werkruimte-eigenschappen").click();
+  const stroom = page.getByTestId("veld-nominaal_A");
+  await expect(stroom).toHaveValue("16");
+  await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
+  await stroom.fill("-1");
+  await stroom.blur();
+  await expect(stroom).toHaveValue("-1");
+  await expect(page.getByText("Deze waarde is niet opgeslagen.", { exact: false })).toBeVisible();
+  await page.getByTestId("gebruiker-menu").click();
+  await page.getByTestId("taal-menu").click();
+  await page.getByRole("menuitemcheckbox", { name: "Français" }).click();
+  await expect(stroom).toHaveValue("-1");
+  await expect(page.getByText("Cette valeur n’est pas enregistrée.", { exact: false })).toBeVisible();
+  await page.getByTestId("gebruiker-menu").click();
+  await page.getByTestId("taal-menu").click();
+  await page.getByRole("menuitemcheckbox", { name: "Nederlands" }).click();
+  const antwoord = await request.get(`/api/projecten/${projectId}`);
+  expect(antwoord.ok()).toBe(true);
+  const doc = (await antwoord.json()).document;
+  // The saved valid value survives invalid drafts, blur and a language round-trip.
+  expect(doc.nodes[automaatId].nominaal_A).toBe(16);
+  await selecteerBij(page, "A1");
+  const melding = page.getByTestId("verlaten-concept");
+  await expect(melding).toContainText("-1");
+  await expect(page.getByTestId("veld-label")).toHaveValue("");
+  await melding.getByRole("button", { name: "Terug naar invoer" }).click();
+  await expect(stroom).toHaveValue("-1");
+  await stroom.focus();
+  await page.keyboard.press("Escape");
+  await expect(stroom).toHaveValue("16");
+  await expect(page.getByText("Deze waarde is niet opgeslagen.", { exact: false })).toHaveCount(0);
+});
+
+test("? toont de sneltoetsen en Ctrl+D dupliceert een kring met de volgende vrije letter", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", {
+    data: { naam: `${naam} sneltoetsen`, klantnaam: "Janssens", stroomtype: "2x230V" },
+  });
+  const { id } = (await antwoord.json()) as { id: string };
+  await page.goto(`/projecten/${id}`);
+  await page.waitForLoadState("networkidle");
+
+  // Twee kringen: A en B.
+  const canvas = page.getByTestId("schema-canvas");
+  const railPlus = canvas.locator('[data-testid^="plus-rail-einde-"]');
+  for (const kring of ["A1", "B1"]) {
+    await pasTeMaken(page);
+    await railPlus.click();
+    await expect(schemaTekst(page, kring)).toHaveCount(1);
+  }
+
+  // ? opent het overzicht; de knop Toetsenbordhulp opent hetzelfde.
+  await canvas.focus();
+  await page.keyboard.press("?");
+  const dialoog = page.getByRole("dialog", { name: "Sneltoetsen" });
+  await expect(dialoog).toBeVisible();
+  await expect(dialoog.getByText("De geselecteerde kring dupliceren met de eerste vrije letter")).toBeVisible();
+  // De sluitknop staat niet over de uitleg in de kop (de lange zin liep er eerst onder door).
+  const uitleg = await dialoog.getByText(/^De toetsen werken als de focus/).boundingBox();
+  const sluiten = await dialoog.getByRole("button").first().boundingBox();
+  expect(uitleg!.x + uitleg!.width).toBeLessThanOrEqual(sluiten!.x);
+  // In een open dialoog doen ? en Ctrl+D niets.
+  await page.keyboard.press("Control+d");
+  await expect(schemaTekst(page, "C1")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialoog).toHaveCount(0);
+  await page.getByRole("button", { name: "Toetsenbordhulp" }).click();
+  await expect(dialoog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialoog).toHaveCount(0);
+
+  // Tijdens het typen in een tekstveld gaan ? en Ctrl+D niet af.
+  await selecteerBij(page, "A1");
+  await page.getByTestId("werkruimte-eigenschappen").click();
+  const label = page.getByTestId("veld-label");
+  await label.fill("Keuken");
+  await label.press("?");
+  await label.press("Control+d");
+  await expect(label).toHaveValue("Keuken?");
+  await expect(dialoog).toHaveCount(0);
+  await expect(schemaTekst(page, "C1")).toHaveCount(0);
+  await label.blur();
+
+  // Ctrl+D op het canvas: kring A wordt gedupliceerd als C, de eerste vrije letter. A en B blijven.
+  await selecteerBij(page, "A1");
+  await page.keyboard.press("Control+d");
+  await expect(page.getByText("Kring A gedupliceerd als kring C.", { exact: true })).toBeVisible();
+  await expect(schemaTekst(page, "C1")).toHaveCount(1);
+  await expect(schemaTekst(page, "A1")).toHaveCount(1);
+  await expect(schemaTekst(page, "B1")).toHaveCount(1);
+  // Eén undo-stap.
+  await page.keyboard.press("Control+z");
+  await expect(schemaTekst(page, "C1")).toHaveCount(0);
+
+  // Zonder kring in de selectie: niets, met een korte melding waarom.
+  await canvas.click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Control+d");
+  await expect(page.getByText("Selecteer eerst een onderdeel van een kring om die kring te dupliceren.", { exact: true })).toBeVisible();
 });

@@ -35,6 +35,7 @@ De vertalingen zijn eigen werk (clean room). Ze nemen geen tekst of terminologie
 | bevinding | constat | finding |
 | afwijking | dérogation | deviation |
 | eigenaar / lid | propriétaire / membre | owner / member |
+| materiaallijst | liste du matériel | materials list |
 | proefperiode | période d'essai | free trial |
 
 In lopende zinnen mag het Engels "RCD" schrijven nadat de term eenmaal voluit is gebruikt, en in een smalle tabelkop of een korte AREI-melding. In het Frans blijft het "interrupteur différentiel" (de korte vorm "différentiel" alleen in een smalle kolomkop).
@@ -54,6 +55,7 @@ In lopende zinnen mag het Engels "RCD" schrijven nadat de term eenmaal voluit is
 | gevoeligheid | sensibilité | sensitivity |
 | polen | pôles | poles |
 | stroomtype | type de courant | current type |
+| 2 × 230 V (eenfasig) | 2 × 230 V (monophasé) | 2 × 230 V (single-phase) |
 | klasse (differentieel) | classe | class |
 | algemeen differentieel | interrupteur différentiel général | main RCD |
 | natte ruimte | local humide | wet room |
@@ -118,7 +120,7 @@ De veldnamen en keuzes van het paneel Eigenschappen (`velden.*` in de vertaalbes
 |---|---|---|
 | label | libellé | label |
 | ruimte (veld) | pièce | room |
-| kortsluitvermogen | pouvoir de coupure | breaking capacity |
+| onderbrekingsvermogen (Icn; veld `kortsluitvermogen_kA`) | pouvoir de coupure (Icn) | breaking capacity (Icn) |
 | aantal geleiders | nombre de conducteurs | number of conductors |
 | plaatsing | pose | installation method |
 | inbouw / opbouw | encastré / apparent | flush-mounted / surface-mounted |
@@ -171,6 +173,26 @@ De veldnamen en keuzes van het paneel Eigenschappen (`velden.*` in de vertaalbes
 
 De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term: de kolom van de kringenlijst is te smal voor "interrupteur différentiel" op A4. De cel zelf toont `30 mA type A`.
 
+## Metingen
+
+Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groep Test van een differentieel) en de bijlage van de pdf. Elentrik beoordeelt ze niet: er staan geen grenswaarden bij. De eenheden `Ω`, `MΩ` en `ms` blijven in elke taal dezelfde.
+
+| NL | FR | EN |
+|---|---|---|
+| metingen | mesures | measurements |
+| meetdatum | date de mesure | measurement date |
+| aardingsweerstand | résistance de dispersion | earth resistance |
+| isolatieweerstand | résistance d’isolement | insulation resistance |
+| meettoestel | appareil de mesure | measuring instrument |
+| opmerking | remarque | note |
+| niet ingevuld | non renseigné | not entered |
+| differentieeltests | tests des différentiels | RCD tests |
+| testresultaat | résultat du test | test result |
+| OK / niet OK / niet getest | OK / pas OK / non testé | OK / not OK / not tested |
+| uitschakeltijd | temps de déclenchement | tripping time |
+| test (groep) | test | test |
+| Geregistreerde meetwaarden; geen beoordeling door Elentrik. | Valeurs mesurées enregistrées ; aucune évaluation par Elentrik. | Recorded measured values; not assessed by Elentrik. |
+
 ## Gebruikers en abonnement
 
 | NL | FR | EN |
@@ -198,10 +220,23 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | NL | FR | EN |
 |---|---|---|
 | onderbord | tableau divisionnaire | sub-board |
+| beeldpunten van het plan (eenheid van de afdekvelden, zonder kalibratie; met kalibratie: cm) | pixels du plan | plan pixels |
 | onderdeel (in de editor) | élément | component |
 | sjabloon | modèle | template |
 | concept (lokaal) | brouillon | draft |
+| niet geëxporteerd (status in de projectlijst; niet "concept", dat is het lokale concept en de concept-PDF) | non exporté | not exported |
+| geëxporteerd (status in de projectlijst) | exporté | exported |
+| werf (kolom in de projectlijst: de gemeente) | chantier | site |
+| status | statut | status |
+| zojuist | à l’instant | just now |
 | eigenschappen | propriétés | properties |
+| Elektrisch / Uitvoering / Benaming en plan / Ruimte (groepen van het paneel Eigenschappen) | Électrique / Exécution / Désignation et plan / Local | Electrical / Construction / Name and plan / Room |
+| Kring en beveiliging / Eindpunten / Sjablonen en referenties (groepen van het paneel Onderdelen) | Circuit et protection / Points d’utilisation / Modèles et références | Circuit and protection / End points / Templates and references |
+| Meer… / Minder | Plus… / Moins | More… / Less |
+| projectnaam | nom du projet | project name |
+| werfadres | adresse du chantier | site address |
+| zelfde als klantadres | identique à l’adresse du client | same as customer address |
+| soort ruimte (sjabloon) | type de local | room type |
 | alleen lezen | lecture seule | read-only |
 | inloggen / uitloggen | se connecter / se déconnecter | sign in / sign out |
 | registreren | s'inscrire | sign up |
@@ -220,6 +255,16 @@ De kolomkoppen "différentiel" en "RCD" zijn bewust korter dan de volledige term
 | symbool | symbole | symbol |
 | combinatie (van varianten) | combinaison | combination |
 | AREI tabel 2.23 | RGIE tableau 2.23 | AREI table 2.23 |
+| sneltoetsen | raccourcis clavier | keyboard shortcuts |
+| toetsenbordhulp | aide clavier | keyboard help |
+| dupliceren (een kring) | dupliquer | duplicate |
+| invoegbalk | barre d'insertion | insert bar |
+| markering (op het schema of plan) | repère | marker |
+| ter info (melding, geen fout) | pour information | for information |
+| overlapt met | chevauche | overlaps |
+| Deze plaatsing kan niet meer ongedaan worden gemaakt (melding bij overlap, als er na de plaatsing al iets anders is gebeurd) | Ce placement ne peut plus être annulé | This placement can no longer be undone |
+| Doorgaan met volgend punt (modus) | Continuer avec le point suivant | Continue with the next point |
+| stop (een modus) | arrêter | stop |
 
 De rubrieken van tabel 2.23 (de symbolen) volgen in het Nederlands en het Frans de officiële tekst; het Engels is eigen vertaling:
 

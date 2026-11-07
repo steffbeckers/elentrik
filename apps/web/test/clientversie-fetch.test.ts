@@ -19,6 +19,44 @@ function verzonden(origineel: ReturnType<typeof maak>["origineel"]): Headers {
 }
 
 describe("omhulFetch", () => {
+  test.each([
+    ["/api/_nuxt_icon/lucide.json?icons=map", "public, max-age=604800, s-maxage=604800"],
+    ["/api/bestanden/oud-raster", "private, max-age=31536000, immutable"],
+    ["/api/admin/bestanden/oud-raster?gebruiker=test", "private, max-age=31536000, immutable"],
+  ])("een oude cacheheader van asset %s forceert geen nieuwe appversie", async (url, cache) => {
+    const { omhuld, bijServerversie, bijVereist } = maak(new Response("cached asset", { headers: {
+      "cache-control": cache, "x-elentrik-client-minimum": "99",
+    } }));
+    const antwoord = await omhuld(url);
+    expect(await antwoord.text()).toBe("cached asset");
+    expect(bijServerversie).not.toHaveBeenCalled();
+    expect(bijVereist).not.toHaveBeenCalled();
+  });
+
+  test("HEAD via Request op een asset is evenmin een actuele serverversie", async () => {
+    const { omhuld, bijServerversie } = maak(new Response(null, { headers: { "x-elentrik-client-minimum": "99" } }));
+    await omhuld(new Request(`${ORIGIN}/api/bestanden/raster`, { method: "HEAD" }));
+    expect(bijServerversie).not.toHaveBeenCalled();
+  });
+
+  test.each(["/api/projecten/x/bestanden", "/api/bestandenlijst", "/api/gezondheid"])("actuele API-route %s blijft een versiebron", async url => {
+    const { omhuld, bijServerversie } = maak(new Response("{}", { headers: { "x-elentrik-client-minimum": "99" } }));
+    await omhuld(url);
+    expect(bijServerversie).toHaveBeenCalledWith("99");
+  });
+
+  test("een mutatie op een assetroute blijft versiecontrole uitvoeren", async () => {
+    const { omhuld, bijServerversie } = maak(new Response("{}", { headers: { "x-elentrik-client-minimum": "99" } }));
+    await omhuld("/api/bestanden/raster", { method: "DELETE" });
+    expect(bijServerversie).toHaveBeenCalledWith("99");
+  });
+
+  test("een expliciete 426 op een assetroute wordt nooit genegeerd", async () => {
+    const { omhuld, bijVereist } = maak(() => new Response(JSON.stringify({ data: { code: "NIEUWE_VERSIE_VEREIST" } }), { status: 426 }));
+    await omhuld("/api/_nuxt_icon/lucide.json");
+    expect(bijVereist).toHaveBeenCalledOnce();
+  });
+
   test("een eigen /api-verzoek krijgt X-Elentrik-Client, met de bestaande headers", async () => {
     const { origineel, omhuld } = maak(new Response("{}"));
     await omhuld("/api/projecten", { headers: { "content-type": "application/json" }, method: "PUT" });

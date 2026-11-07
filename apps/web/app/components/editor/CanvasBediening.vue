@@ -1,6 +1,9 @@
 <script setup lang="ts">
-defineProps<{ percentage: number; kanFocus: boolean; hulp?: string }>();
+import { useEditorStore } from "~/stores/editor";
+
+defineProps<{ percentage: number; kanFocus: boolean }>();
 const emit = defineEmits<{ zoom: [factor: number]; passend: []; focus: [] }>();
+const store = useEditorStore();
 </script>
 <template>
   <div class="absolute bottom-3 right-3 flex items-center gap-0.5 rounded-md border border-neutral-300 bg-white p-1 text-neutral-900" role="group" :aria-label="$t('werkbaarheid.tekenen.zoom')" @pointerdown.stop @click.stop @keydown.stop @wheel.stop>
@@ -9,10 +12,8 @@ const emit = defineEmits<{ zoom: [factor: number]; passend: []; focus: [] }>();
     <button type="button" class="canvas-knop" :title="$t('werkbaarheid.tekenen.inzoomen')" :aria-label="$t('werkbaarheid.tekenen.inzoomen')" @click="emit('zoom', 1.25)"><UIcon name="i-lucide-plus" class="size-4" /></button>
     <button type="button" class="canvas-knop" :title="$t('editor.canvas.passendMaken')" :aria-label="$t('editor.canvas.passendMaken')" @click="emit('passend')"><UIcon name="i-lucide-scan" class="size-4" /></button>
     <button type="button" class="canvas-knop disabled:opacity-40" :disabled="!kanFocus" :title="$t('werkbaarheid.tekenen.focus')" :aria-label="$t('werkbaarheid.tekenen.focus')" @click="emit('focus')"><UIcon name="i-lucide-focus" class="size-4" /></button>
-    <UPopover v-if="hulp">
-      <button type="button" class="canvas-knop" :aria-label="$t('editor.werkruimte.toetsenbordhulp')"><UIcon name="i-lucide-circle-help" class="size-4" /></button>
-      <template #content><p class="max-w-72 p-3 text-sm">{{ hulp }}</p></template>
-    </UPopover>
+    <!-- Opent het sneltoetsenoverzicht, net als de toets ?. -->
+    <button type="button" class="canvas-knop" :title="$t('editor.sneltoetsen.openen')" :aria-label="$t('editor.werkruimte.toetsenbordhulp')" aria-haspopup="dialog" data-testid="sneltoetsen-openen" @click="store.sneltoetsenOpen = true"><UIcon name="i-lucide-keyboard" class="size-4" /></button>
   </div>
 </template>
 <style scoped>

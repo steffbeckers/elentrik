@@ -229,6 +229,8 @@
       }
     },
     "onderdelen": {
+      "aardelektrode": "Aardelektrode",
+      "aardingsonderbreker": "Aardingsonderbreker",
       "contactdoos": "Contactdoos",
       "lichtpunt": "Lichtpunt",
       "schakelaar": "Schakelaar",
@@ -239,6 +241,8 @@
       "onderbord": "Onderbord"
     },
     "types": {
+      "aardelektrode": "Aardelektrode",
+      "aardingsonderbreker": "Aardingsonderbreker",
       "aansluiting": "Aansluiting",
       "teller": "Teller",
       "differentieel": "Differentieel",
@@ -278,11 +282,16 @@
       "aantalWaarschuwingen": "{n} waarschuwing | {n} waarschuwingen",
       "ongedaanMaken": "Ongedaan maken (Ctrl+Z)",
       "opnieuw": "Opnieuw (Ctrl+Y)",
-      "exporteren": "Exporteren"
+      "exporteren": "Exporteren",
+      "aantalInfo": "{n} melding ter info | {n} meldingen ter info",
+      "bevindingenMetInfo": "{fouten}, {waarschuwingen} en {info}"
     },
     "kringenlijst": {
       "titel": "Kringenlijst",
-      "toetsenbord": "Punten per kring. Pijl omhoog en omlaag verplaatsen de focus; Enter selecteert het punt. Scroll horizontaal voor alle specificaties."
+      "toetsenbord": "Punten per kring. Pijl omhoog en omlaag verplaatsen de focus; Enter selecteert het punt. Scroll horizontaal voor alle specificaties.",
+      "omschrijvingBewerken": "Omschrijving van kring {kring} bewerken",
+      "omschrijvingHint": "Klik op de omschrijving van een kring of druk op F2 om ze te bewerken; Enter bewaart, Escape annuleert.",
+      "omschrijvingVeld": "Omschrijving van kring {kring}"
     },
     "status": {
       "opgeslagen": "Opgeslagen",
@@ -294,7 +303,12 @@
       "alleen-lezen": "Niet opgeslagen: alleen lezen, je werk blijft lokaal bewaard",
       "alleenLezen": "Alleen lezen",
       "opnieuwProberen": "Opnieuw proberen",
-      "verwijderd": "Project verwijderd"
+      "verwijderd": "Project verwijderd",
+      "kort": {
+        "opgeslagen": "Opgeslagen",
+        "bezig": "Bezig…",
+        "nietOpgeslagen": "Niet opgeslagen"
+      }
     },
     "verwijderd": {
       "melding": "Dit project werd verwijderd.",
@@ -312,8 +326,14 @@
     "onderdelenPaneel": {
       "titel": "Onderdelen",
       "toestelsoort": "Soort toestel",
-      "sjablonen": "Sjablonen",
-      "geenSneltoets": "—"
+      "sjablonen": "Sjablonen en referenties",
+      "geenSneltoets": "—",
+      "groepen": {
+        "kring": "Kring en beveiliging",
+        "eindpunten": "Eindpunten"
+      },
+      "meer": "Meer…",
+      "minder": "Minder"
     },
     "symbolen": {
       "openen": "Alle symbolen",
@@ -347,6 +367,8 @@
         "altijd": "Staat in elk schema."
       },
       "uitleg": {
+        "aardelektrode": "Aardelektrode, als eigen onderdeel van de aarding.",
+        "aardingsonderbreker": "Onderbreker in de aardverbinding.",
         "contactdoos": "Een contactdoos voor een stekker, met of zonder randaarde, kinderbeveiliging of waterdicht.",
         "lichtpunt": "Een vast lichtpunt, zoals een led, een TL, een spot of noodverlichting.",
         "schakelaar": "Bedient een lichtpunt: enkel, dubbel, wissel, kruis, dimmer of drukknop.",
@@ -368,13 +390,23 @@
       "badkamer": "Badkamer"
     },
     "eigenschappen": {
+      "groepen": {
+        "test": "Test",
+        "elektrisch": "Elektrisch",
+        "uitvoering": "Uitvoering",
+        "benaming": "Benaming en plan",
+        "ruimte": "Ruimte"
+      },
       "titel": "Eigenschappen",
       "leeg": "Selecteer een onderdeel op het schema.",
       "gemengd": "{aantal} onderdelen geselecteerd",
       "zelfdeType": "{aantal} × {type}",
       "verschillend": "—",
       "geen": "Geen",
-      "ongeldig": "Ongeldige waarde"
+      "ongeldig": "Deze waarde is niet opgeslagen. Corrigeer de invoer of druk op Escape om de opgeslagen waarde te herstellen.",
+      "conceptVerlaten": "Deze ongeldige invoer van een vorige selectie is niet opgeslagen.",
+      "terugNaarConcept": "Terug naar invoer",
+      "conceptHerstellen": "Opgeslagen waarden herstellen"
     },
     "bevindingen": {
       "titel": "Bevindingen",
@@ -398,7 +430,14 @@
         "beveiliging": "Bekijk beveiliging",
         "kring": "Bekijk kring"
       },
-      "afwijkingenPerPunt": "Afwijkingen per onderdeel"
+      "afwijkingenPerPunt": "Afwijkingen per onderdeel",
+      "legenda": {
+        "titel": "Markeringen op het schema en het plan",
+        "fout": "Fout",
+        "waarschuwing": "Waarschuwing",
+        "info": "Ter info, geen fout. Bijvoorbeeld een onvolledige leiding of een punt dat nog niet op het plan staat.",
+        "afgeweken": "Afgeweken: gemotiveerd aanvaard"
+      }
     },
     "afwijking": {
       "titel": "Afwijking motiveren",
@@ -407,8 +446,9 @@
       "bewaren": "Afwijking bewaren"
     },
     "projectgegevens": {
+      "frequentie": "Voedingsfrequentie (Hz)",
       "titel": "Projectgegevens",
-      "naam": "Naam",
+      "naam": "Projectnaam",
       "stroomtype": "Stroomtype",
       "dossierTaal": {
         "label": "Dossiertaal",
@@ -421,11 +461,11 @@
         "adresHulp": "Het adres van de klant is optioneel."
       },
       "werf": {
-        "titel": "Werf",
-        "ean": "EAN-code"
+        "titel": "Werfadres",
+        "ean": "EAN-code",
+        "zelfdeAlsKlant": "Zelfde als klantadres"
       },
       "datum": {
-        "titel": "Datum",
         "label": "Datum van het project"
       },
       "adres": {
@@ -439,7 +479,17 @@
       "fouten": {
         "naamVerplicht": "Geef het project een naam.",
         "adresVerplicht": "Verplicht voor een adres.",
-        "datumVerplicht": "Kies een datum."
+        "datumVerplicht": "Kies een datum.",
+        "meetwaardeOngeldig": "Geef een getal van 0 of meer, of laat het veld leeg."
+      },
+      "metingen": {
+        "titel": "Metingen",
+        "uitleg": "Geregistreerde meetwaarden; geen beoordeling door Elentrik.",
+        "datum": "Meetdatum",
+        "aardingsweerstand": "Aardingsweerstand",
+        "isolatieweerstand": "Isolatieweerstand",
+        "meettoestel": "Meettoestel",
+        "opmerking": "Opmerking"
       },
       "context": {
         "label": "Installatiecontext",
@@ -447,6 +497,12 @@
         "nieuw": "Nieuw / gewijzigd deel — huidige voorschriften",
         "bestaand": "Bestaand deel — overgangsbepalingen nakijken",
         "onbekend": "Nog te bepalen"
+      },
+      "installatie": {
+        "titel": "Installatie"
+      },
+      "dossier": {
+        "titel": "Dossier"
       }
     },
     "concept": {
@@ -483,12 +539,20 @@
     },
     "situatie": {
       "tePlaatsen": {
+        "installatie": "Installatieonderdelen",
         "titel": "Te plaatsen",
         "uitleg": "Sleep een punt naar het plan, of kies het en klik op het plan.",
         "allesGeplaatst": "Alle punten staan op een plan",
         "kring": "Kring {label}",
         "zonderKring": "Zonder kring",
-        "verdeelborden": "Verdeelborden"
+        "verdeelborden": "Verdeelborden",
+        "zoeken": "Zoeken op code, type of omschrijving",
+        "kringFilter": "Kring",
+        "alleKringen": "Alle kringen",
+        "doorgaan": "Doorgaan met volgend punt",
+        "geenResultaten": "Geen punten voor deze zoekopdracht of kring.",
+        "kringKlaar": "Alle punten van kring {label} staan op het plan",
+        "groepKlaar": "Alle punten van {groep} staan op het plan"
       },
       "paginas": {
         "titel": "Pagina's",
@@ -528,24 +592,38 @@
       "hint": {
         "plaatsen": "Klik op het plan om {label} te plaatsen.",
         "meten": "Klik twee punten op het plan aan.",
-        "annuleren": "Annuleren"
+        "annuleren": "Annuleren",
+        "stop": "Stop"
       },
       "verplaatst": "{label} verplaatst van {van} naar {naar}",
       "canvas": {
         "planNietGevonden": "Plan niet gevonden",
         "planOpnieuwKiezen": "Plan opnieuw kiezen",
         "werkbalk": "Selectie op het plan",
-        "draaiLinks": "Draai linksom (Shift+R)",
-        "draaiRechts": "Draai rechtsom (R)",
+        "opschonen": "Bron opschonen",
+        "afdekHulp": "Tik op twee tegenoverliggende hoeken om een oud symbool wit af te dekken. De bron blijft bewaard; controleer dat bouwlijnen zichtbaar blijven.",
+        "afdekTweedeHoek": "Tik op de tegenoverliggende hoek. Escape annuleert deze afdekking.",
+        "afdekking": "Afdekking",
+        "afdekNieuw": "Nieuwe afdekking",
+        "afdekNummer": "Afdekking {nummer}",
+        "afdekVerwijder": "Afdekking verwijderen",
+        "afdekAnnuleer": "Hoek annuleren",
+        "afdekKlaar": "Klaar",
+        "afdekInvoeren": "Afmetingen invoeren",
+        "afdekToevoegen": "Afdekking toevoegen",
+        "afdekVeld": { "x": "Links (beeldpunten van het plan)", "y": "Boven (beeldpunten van het plan)", "breedte": "Breedte (beeldpunten van het plan)", "hoogte": "Hoogte (beeldpunten van het plan)" },
+        "afdekVeldCm": { "x": "Links (cm)", "y": "Boven (cm)", "breedte": "Breedte (cm)", "hoogte": "Hoogte (cm)" },
+        "draaiLinks": "Draai 90° linksom",
+        "draaiRechts": "Draai 90° rechtsom",
         "vanPlanHalen": "Van plan halen",
         "kiesPunt": "Punt op plan",
         "kiesPuntLeeg": "Kies een punt",
         "tekenvlak": "Situatieplan: toetsenbordbediening",
-        "toetsenbord": "Kies een punt. Pijlen verplaatsen; Shift verfijnt naar 1 px. R draait, Delete haalt van het plan. Tab verlaat het tekenvlak.",
-        "plaatsToetsenbord": "Pijlen verplaatsen het kruis; Shift verfijnt naar 1 px. Enter bevestigt, Escape annuleert.",
-        "cursorPositie": "Positie: x {x}, y {y} px",
-        "bevestigMeetpunt": "Meetpunt bevestigen",
-        "bevestigPlaats": "Hier plaatsen"
+        "toetsenbord": "Kies een punt. Pijlen verplaatsen; Shift verfijnt naar 1 beeldpunt van het plan. R draait 15° rechtsom, Shift+R 15° linksom. De draaiknoppen draaien 90°. Delete haalt van het plan. Tab verlaat het tekenvlak.",
+        "plaatsToetsenbord": "Klik op het plan om het punt te plaatsen. Escape annuleert.",
+        "meetToetsenbord": "Pijlen verplaatsen het kruis; Shift verfijnt naar 1 beeldpunt van het plan. Enter bevestigt, Escape annuleert.",
+        "cursorPositie": "Positie: x {x}, y {y} (beeldpunten van het plan)",
+        "bevestigMeetpunt": "Meetpunt bevestigen"
       },
       "toevoegen": {
         "titel": "Plan toevoegen",
@@ -599,6 +677,12 @@
         "hint": "Klik om muren te tekenen. Escape stopt de muur. Selecteer een muur om de afmetingen aan te passen."
       },
       "opmaak": {
+        "afdrukBewerken": "Opmaak in afdruk bekijken",
+        "afdrukHint": "Bekijk en verschuif labels met de grootte die ze op papier krijgen.",
+        "afdrukPagina": "Planpagina",
+        "afdrukPunt": "Punt op afdruk",
+        "afdrukBewaren": "Opmaakwijzigingen worden automatisch in het project opgeslagen. De versie hierboven geldt voor dit voorbeeld; gebruik bij export dezelfde versie en afdrukinstellingen.",
+        "opnieuwLaden": "Voorbeeld opnieuw laden",
         "titel": "Planopmaak",
         "symbolen": "Symboolgrootte",
         "labels": "Labelgrootte",
@@ -613,7 +697,44 @@
         "ongeldigPercentage": "Vul een getal van 25 tot en met 400 in. De opgeslagen grootte is niet gewijzigd.",
         "ongeldigeOffset": "Vul een geldig getal in, bijvoorbeeld 0 of -15. De opgeslagen positie is niet gewijzigd.",
         "herstelInvoer": "Opgeslagen waarden herstellen"
-      }
+      },
+      "uitsnede": {
+        "naam": "Naam van de verdieping",
+        "verwijder": "Uitsnede verwijderen",
+        "x": "Links (%)",
+        "y": "Boven (%)",
+        "breedte": "Breedte (%)",
+        "hoogte": "Hoogte (%)",
+        "draai": "90° draaien",
+        "referentie": "Referentieblad, niet exporteren",
+        "uitleg": "Kies bronpagina’s en benoem elke uitsnede. Percentages worden gemeten vóór rotatie. Bijsnijden verwijdert geen oude elektrische symbolen.",
+        "extra": "Nog een uitsnede",
+        "kalibratie": "Stel de schaal in op elke nieuwe definitieve uitsnede. De oude kalibratie wordt niet overgenomen.",
+        "bestaandePunten": "Dit blad bevat punten. De uitsneden worden als nieuwe bladen toegevoegd; de bestaande punten blijven behouden."
+      },
+      "afdruk": {
+        "titel": "Afdrukinstellingen",
+        "papier": "Papier",
+        "orientatie": "Oriëntatie",
+        "staand": "Staand",
+        "liggend": "Liggend",
+        "schaal": "Afdrukschaal",
+        "passend": "Passend op papier",
+        "gekalibreerd": "Gekalibreerd op schaal",
+        "noemer": "Schaal 1 :",
+        "ontbreekt": "Kalibreer eerst deze definitieve uitsnede.",
+        "bewaren": "Instellingen bewaren",
+        "voorbeeld": "Afdrukvoorbeeld",
+        "uitleg": "Controleer op 100% de tekstgrootte en paginagrenzen. Technische tekst streeft naar minstens 2,5 mm; dit is geen wettelijke conformiteitscontrole.",
+        "zoom": "Voorbeeldzoom",
+        "passendMelding": "Passend op papier — de afdrukmaat volgt het gekozen papier.",
+        "kalibratieMelding": "Gekalibreerde afdruk — verdeeld over meerdere bladen indien nodig.",
+        "referentie": "Referentieblad — wordt niet afgedrukt."
+      },
+      "referentieUitleg": "Dit is een referentieblad: plaats hier geen definitieve punten. Het blad wordt niet geëxporteerd. Kies een planpagina om punten te plaatsen.",
+      "overlap": "Overlapt met {label}",
+      "ongedaanMaken": "Ongedaan maken",
+      "nietMeerOngedaan": "Deze plaatsing kan niet meer ongedaan worden gemaakt"
     },
     "export": {
       "titel": "Exporteren als PDF",
@@ -698,14 +819,108 @@
       "ja": "Ja",
       "nee": "Nee",
       "stuks": "stuk | stuks",
-      "m": "m"
+      "m": "m",
+      "csvKop": {
+        "materiaal": "Materiaal",
+        "uitvoering": "Uitvoering",
+        "eenheid": "Eenheid"
+      },
+      "csvDownloaden": "CSV downloaden"
     },
     "aftakkingen": {
       "titel": "Aftakkingen",
-      "hulp": "Kies een schakelaar of lichtpunt en selecteer de kringleiding. Voeg een aftakking toe en bouw verder met de plus rechts.",
+      "hulp": "Kies een leiding en een onderdeel om een horizontale samenstelling met één puntnummer te starten. Voeg rechts schakelaars, lichtpunten, contactdozen of toestellen toe.",
       "toevoegen": "Aftakking toevoegen",
       "uitbreiden": "{onderdeel} toevoegen aan aftakking",
       "bestemming": "Aftakking uitbreiden"
+    },
+    "invoegen": {
+      "sjabloonTitel": "Sjabloon invoegen",
+      "lichtTitel": "Lichtschakeling toevoegen",
+      "bestemming": "Bestemming",
+      "kiesBestemming": "Kies een geldig verdeelbord, differentieel of bestaande kring.",
+      "hergebruik": "Bestaande differentieel behouden:",
+      "nieuweDifferentieel": "Nieuwe differentieel (voorinstelling)",
+      "voorinstellingen": "Dit zijn voorinstellingen. Controleer de beveiliging en leiding voor deze installatie. De ruimteclassificatie blijft leeg.",
+      "voorinstellingenMetRuimte": "Dit zijn voorinstellingen. Controleer de beveiliging en leiding voor deze installatie.",
+      "onderdelen": "Toegevoegde onderdelen",
+      "ongeldigeWaarden": "Controleer de bestemming en de ingevoerde waarden.",
+      "toevoegen": "Toevoegen",
+      "schakeling": "Samenstelling",
+      "aantalLichtpunten": "Aantal afzonderlijke lichtpunten",
+      "lichtVoorbeeld": "Punt {punt}: {schakelaars} schakelaars en {lampen} afzonderlijk plaatsbare lichtpunten.",
+      "doelen": {
+        "nieuw-op-bord": "Nieuwe kring met differentieel",
+        "bestaande-differentieel": "Bestaande differentieel gebruiken",
+        "bestaande-kring": "Aftakking op bestaande kring"
+      },
+      "schakelingen": {
+        "enkel": "Enkelpolige schakelaar + lichtpunt",
+        "wissel": "Twee wisselschakelaars + lichtpunt",
+        "kruis": "Twee wisselschakelaars + kruisschakelaar + lichtpunt"
+      },
+      "annuleren": "Annuleren",
+      "ruimte": {
+        "label": "Soort ruimte",
+        "hulp": "Geldt voor de nieuwe punten van dit sjabloon."
+      }
+    },
+    "referenties": {
+      "titel": "Kringreferenties",
+      "behoudUitleg": "Bestaande kringcodes liggen vast: nieuwe kringen krijgen de eerste vrije letter en verschuiven niets. Leg ze hier expliciet vast voor oudere projecten.",
+      "behouden": "Bestaande referenties behouden",
+      "vastgelegd": "De huidige kringcodes zijn vastgelegd.",
+      "hernummeren": "Opnieuw nummeren",
+      "hernummerUitleg": "Hernummeren is een bewuste keuze: de letters volgen dan weer de volgorde op het bord. Controleer de voorgestelde codes. De punten op het situatieplan volgen dezelfde kringcodes.",
+      "huidig": "Huidige code",
+      "nieuw": "Nieuwe code",
+      "bevestigen": "Deze nummering toepassen",
+      "dupliceren": "Kring {code} dupliceren",
+      "vrijeCode": "Nieuwe vrije kringcode",
+      "codeOngeldig": "Gebruik een vrije code met hoofdletters A–Z.",
+      "maakKopie": "Kring met deze code toevoegen"
+    },
+    "invoegenVoor": {
+      "actie": "{onderdeel} vóór {doel} invoegen",
+      "selectie": "de selectie",
+      "uitleg": "Het bestaande onderdeel en zijn vervolg blijven behouden. Controleer daarna de nieuwe eigenschappen."
+    },
+    "sneltoetsen": {
+      "titel": "Sneltoetsen",
+      "beschrijving": "De toetsen werken als de focus niet in een tekstveld of een dialoog staat. Op een Mac gebruik je ⌘ in plaats van Ctrl.",
+      "openen": "Sneltoetsen tonen (?)",
+      "schema": "Eendraadschema",
+      "situatie": "Situatieschema",
+      "of": "of",
+      "spatie": "Spatie",
+      "kies": {
+        "contactdoos": "Contactdoos kiezen. Met een kring geselecteerd: meteen toevoegen na de selectie",
+        "lichtpunt": "Lichtpunt kiezen. Met een kring geselecteerd: meteen toevoegen na de selectie",
+        "schakelaar": "Schakelaar kiezen",
+        "toestel": "Toestel kiezen",
+        "differentieel": "Differentieel kiezen. Met een kring geselecteerd: meteen invoegen vóór de selectie",
+        "zekering": "Zekering kiezen",
+        "onderbord": "Onderbord kiezen"
+      },
+      "symbolen": "Het symbolenvenster openen",
+      "toevoegen": "Het gekozen onderdeel toevoegen bij de selectie",
+      "verwijder": "De selectie verwijderen",
+      "verwijderTak": "De selectie met haar hele tak verwijderen",
+      "navigeer": "Naar het volgende onderdeel of de naburige kring gaan",
+      "wisSelectie": "De selectie wissen en de invoegbalk sluiten",
+      "dupliceer": "De geselecteerde kring dupliceren met de eerste vrije letter",
+      "ongedaan": "Ongedaan maken",
+      "opnieuw": "Opnieuw",
+      "verschuifCanvas": "Ingedrukt houden en slepen om het tekenvlak te verschuiven",
+      "overzicht": "Dit overzicht openen",
+      "draai": "De selectie 15° rechtsom draaien",
+      "draaiTerug": "De selectie 15° linksom draaien",
+      "schuif": "De selectie verschuiven",
+      "schuifFijn": "De selectie per beeldpunt van het plan verschuiven",
+      "vanPlan": "De selectie van het plan halen. Ze blijft in het eendraadschema",
+      "annuleer": "Plaatsen of meten stoppen, anders de selectie wissen",
+      "dupliceerGeenKring": "Selecteer eerst een onderdeel van een kring om die kring te dupliceren.",
+      "dupliceerKlaar": "Kring {bron} gedupliceerd als kring {code}."
     }
   },
   "bedrijf": {
@@ -755,9 +970,20 @@
     "titel": "Projecten",
     "nieuw": "Nieuw project",
     "leeg": "Nog geen projecten. Maak je eerste project aan.",
+    "leegStappen": {
+      "klant": "Vul de klant en de werf in.",
+      "schema": "Bouw het eendraadschema op.",
+      "plan": "Plaats de punten op het situatieschema.",
+      "export": "Kijk de bevindingen na en exporteer het dossier als PDF."
+    },
+    "zojuist": "zojuist",
+    "status": {
+      "nietGeexporteerd": "Niet geëxporteerd",
+      "geexporteerd": "Geëxporteerd"
+    },
     "zoeken": {
       "label": "Projecten zoeken",
-      "placeholder": "Zoek op projectnaam of klant…",
+      "placeholder": "Zoek op projectnaam, klant of gemeente…",
       "wissen": "Zoekopdracht wissen",
       "geenResultaten": "Geen projecten gevonden. Pas je zoekopdracht aan."
     },
@@ -771,6 +997,8 @@
     "kolommen": {
       "naam": "Naam",
       "klant": "Klant",
+      "werf": "Werf",
+      "status": "Status",
       "gewijzigd": "Gewijzigd",
       "acties": "Acties"
     },
@@ -792,12 +1020,18 @@
       "aanmaken": "Aanmaken"
     },
     "stroomtypes": {
-      "2x230V": "2 × 230 V (één fase)",
+      "2x230V": "2 × 230 V (eenfasig)",
       "3x230V": "3 × 230 V (drie fasen)",
       "3N400V": "3N × 400 V (drie fasen en nul)"
     }
   },
   "velden": {
+    "aantalPanelen": {"label": "Aantal panelen"},
+    "schijnbaarVermogen_kVA": {"label": "Schijnbaar vermogen"},
+    "dcDetectie_mA": {"label": "DC-foutstroomdetectie"},
+    "puntReferentie": {"label": "Puntreferentie", "opties": {"automatisch": "Automatisch nummer", "geen": "Geen eigen nummer (bronkeuze)"}},
+    "testResultaat": {"label": "Testresultaat", "opties": {"ok": "OK", "niet_ok": "Niet OK", "niet_getest": "Niet getest"}},
+    "uitschakeltijd_ms": {"label": "Uitschakeltijd"},
     "label": {
       "label": "Label"
     },
@@ -820,7 +1054,7 @@
       "label": "Curve"
     },
     "kortsluitvermogen_kA": {
-      "label": "Kortsluitvermogen"
+      "label": "Onderbrekingsvermogen (Icn)"
     },
     "naam": {
       "label": "Naam"
@@ -881,7 +1115,17 @@
         "warmtepomp": "Warmtepomp",
         "laadpaal": "Laadpaal",
         "omvormer": "Omvormer",
-        "andere": "Andere"
+        "andere": "Andere",
+        "pvPaneel": "Fotovoltaïsch paneel",
+        "bel": "Bel",
+        "motor": "Motor",
+        "ventilator": "Ventilator",
+        "koelkast": "Koelkast",
+        "diepvriezer": "Diepvriezer",
+        "wand": "Wandlichtpunt",
+        "tweepolig": "Tweepolig",
+        "onbekendDrieblad": "Onbekend bronsymbool (drieblad)",
+        "deurbelMonitor": "Deurbel / monitor"
       }
     },
     "ruimteNaam": {
@@ -889,6 +1133,31 @@
     },
     "lengte_m": {
       "label": "Tracélengte"
+    },
+    "kringCode": {
+      "label": "Vaste kringcode"
+    },
+    "referentie": {
+      "label": "Toestelreferentie"
+    },
+    "brandreactieklasse": {
+      "label": "Brandreactieklasse"
+    },
+    "aanleg": {
+      "ligging": {
+        "label": "Ligging",
+        "opties": {
+          "inbouw": "In een wand",
+          "opbouw": "Op een wand",
+          "grond": "Ondergronds"
+        }
+      },
+      "inBuis": {
+        "label": "In buis"
+      }
+    },
+    "metBeschermingsgeleider": {
+      "label": "Met beschermingsgeleider (G)"
     }
   },
   "ruimtes": {
@@ -1002,7 +1271,9 @@
     "naam": {
       "veld": "Naam van het bedrijf",
       "bewaren": "Naam bewaren",
-      "bewaard": "De naam is bewaard."
+      "bewaard": "De naam is bewaard.",
+      "dossierHulp": "De naam en het logo op je dossiers stel je in bij {link}.",
+      "dossierHulpLid": "De naam en het logo op je dossiers staan in {link}."
     },
     "leden": {
       "titel": "Leden",
@@ -1224,6 +1495,9 @@
       "schema": "Eerste kring tekenen",
       "plan": "Een grondplan toevoegen | {aantal} ontbrekende plannen aanvullen",
       "plaatsen": "Nog 1 onderdeel op het plan plaatsen | Nog {aantal} onderdelen op het plan plaatsen",
+      "kiesOnderdeel": "Selecteer {naam} in het schema",
+      "aardingsweerstand": "Aardingsweerstand invullen",
+      "isolatieweerstand": "Isolatieweerstand invullen",
       "conceptUitleg": "Er ontbreken nog dossieronderdelen. Je kunt nu een concept exporteren en later verder afwerken.",
       "conceptExport": "Concept-PDF maken"
     },
@@ -1243,11 +1517,10 @@
     "wachtwoordTonen": "Wachtwoord tonen",
     "wachtwoordVerbergen": "Wachtwoord verbergen",
     "verlaten": "Je bedrijfsgegevens zijn nog niet opgeslagen. Wil je deze pagina verlaten en je wijzigingen verliezen?",
-    "logoDirect": "Het logo wordt meteen opgeslagen. Bewaar de andere bedrijfsgegevens met de knop onderaan.",
+    "logoDirect": "Het logo wordt meteen bewaard. De andere bedrijfsgegevens bewaar je met de knop onderaan.",
     "bewaren": "Bedrijfsgegevens opslaan…",
     "gewijzigd": "Niet-opgeslagen wijzigingen",
     "geenWijzigingen": "Geen niet-opgeslagen wijzigingen",
-    "organisatieNaam": "Deze organisatienaam herken je in de app. De bedrijfsnaam op je PDF beheer je bij Bedrijfsgegevens.",
     "rolTitel": "Rolwijziging bevestigen",
     "rolVraag": "Wil je {naam} de rol {rol} geven?",
     "eigenaarGevolg": "Een eigenaar beheert bedrijfsgegevens, leden, uitnodigingen en het abonnement, en kan projecten bewerken.",

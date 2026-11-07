@@ -74,16 +74,17 @@ describe("isNieuweVersieFout", () => {
 });
 
 describe("CLIENT_COMPATIBILITEIT en SCHEMA_VERSIE", () => {
-  // Een oude client stuurt documenten met het oude `schemaVersion` en de server weigert die
-  // (`z.literal(SCHEMA_VERSIE)`): een wijziging van het documentmodel hoort dus ook het
-  // compatibiliteitsgetal te verhogen. Deze test pint het paar, zodat een wijziging van het ene
-  // het andere laat nakijken.
-  test("het paar blijft bij elkaar (nu: schema 1, compatibiliteit 1)", () => {
+  // Migratie maakt oude dossiers leesbaar, maar beschermt niet tegen oude editors die nieuwe
+  // velden/onderdelen verliezen. Het aparte HTTP-contract blokkeert hun schrijfacties.
+  // Compatibiliteit 3: de metingen (meta.metingen, testResultaat en uitschakeltijd_ms per
+  // differentieel) zijn optioneel binnen schema 2, maar een editor van client 2 kent ze niet. Zijn
+  // documentkopie zou ze bij bewaren wegschrijven, dus de server weigert zijn schrijfacties.
+  test("het beoordeelde paar blijft bij elkaar (schema 2, compatibiliteit 3)", () => {
     expect(
       [SCHEMA_VERSIE, CLIENT_COMPATIBILITEIT],
       "Verhoog je SCHEMA_VERSIE (packages/model), controleer dan of CLIENT_COMPATIBILITEIT " +
         "(apps/web/shared/clientversie.ts) mee omhoog moet, en voeg een migratie toe in MIGRATIES; " +
         "verhoog je CLIENT_COMPATIBILITEIT, controleer dan SCHEMA_VERSIE. Pas daarna dit paar aan.",
-    ).toEqual([1, 1]);
+    ).toEqual([2, 3]);
   });
 });

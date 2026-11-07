@@ -260,10 +260,8 @@ async function verlaat() {
         </div>
       </div>
 
-      <p class="text-sm text-muted">{{ $t("werkbaarheidBeheer.organisatieNaam") }}</p>
-
-      <UCard v-if="isEigenaar">
-        <UForm :state="naamFormulier" :validate="valideerNaam" class="flex flex-wrap items-end gap-3" @submit="bewaarNaam">
+      <UCard>
+        <UForm v-if="isEigenaar" :state="naamFormulier" :validate="valideerNaam" class="flex flex-wrap items-end gap-3" @submit="bewaarNaam">
           <UFormField name="naam" :label="$t('organisatie.naam.veld')" class="min-w-0 flex-1 basis-56">
             <UInput v-model="naamFormulier.naam" class="w-full" data-testid="organisatie-naam" />
           </UFormField>
@@ -277,6 +275,14 @@ async function verlaat() {
             data-testid="organisatie-naam-bewaar"
           />
         </UForm>
+        <p :class="isEigenaar ? 'mt-3 text-sm text-muted' : 'text-sm text-muted'" data-testid="organisatie-dossier-hulp">
+          <!-- Een lid kan de bedrijfsgegevens niet wijzigen: alleen zeggen waar ze staan. -->
+          <i18n-t :keypath="isEigenaar ? 'organisatie.naam.dossierHulp' : 'organisatie.naam.dossierHulpLid'" scope="global">
+            <template #link>
+              <ULink to="/instellingen" class="font-medium text-primary underline underline-offset-4">{{ $t("menu.bedrijfsgegevens") }}</ULink>
+            </template>
+          </i18n-t>
+        </p>
       </UCard>
 
       <UCard>

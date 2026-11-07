@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { REGELSETS } from "@elentrik/arei";
+import AfdrukVoorbeeld from "./AfdrukVoorbeeld.vue";
+import AfdrukInstellingen from "../situatie/AfdrukInstellingen.vue";
+import type { SituatiePagina } from "@elentrik/model";
 import DossierChecklist from "~/components/editor/DossierChecklist.vue";
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useExportsApi } from "~/composables/useExportsApi";
@@ -56,6 +59,9 @@ const onderdelen = reactive<ExportOnderdelen>({
 });
 const papier = ref<Papierformaat>("A4");
 const versie = ref("");
+const voorbeeldOpen = ref(false);
+const afdrukOpen = ref(false);
+const afdrukPagina = ref<SituatiePagina>();
 
 const eerdere = ref<ExportInfo[]>([]);
 const lijstFout = ref(false);
@@ -281,6 +287,13 @@ const datumFormaat = computed(
             />
           </UFormField>
 
+          <div v-if="onderdelen.situatieschema && store.document?.situatie.paginas.length" class="space-y-2">
+            <div v-for="pagina in store.document.situatie.paginas" :key="pagina.id" class="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span>{{ pagina.titel }} <span v-if="pagina.referentie" class="text-muted">— {{ $t('editor.situatie.afdruk.referentie') }}</span></span>
+              <UButton v-if="!pagina.referentie" color="neutral" variant="outline" size="sm" :label="`${pagina.afdruk?.papier ?? papier} · ${$t(`editor.situatie.afdruk.${pagina.afdruk?.orientatie ?? 'liggend'}`)}`" @click="afdrukPagina = pagina; afdrukOpen = true" />
+            </div>
+          </div>
+          <UButton icon="i-lucide-scan-eye" color="neutral" variant="outline" :disabled="geenOnderdeel" :label="$t('editor.situatie.afdruk.voorbeeld')" data-testid="export-voorbeeld" @click="voorbeeldOpen = true" />
           <UFormField
             :label="$t('editor.export.versie')"
             :error="versieOngeldig ? $t('editor.export.versieOngeldig') : undefined"
@@ -353,4 +366,6 @@ const datumFormaat = computed(
       </div>
     </template>
   </UModal>
+  <AfdrukInstellingen v-model:open="afdrukOpen" :pagina="afdrukPagina" />
+  <AfdrukVoorbeeld v-model:open="voorbeeldOpen" :papier="papier" :onderdelen="onderdelen" :versie="versie" />
 </template>

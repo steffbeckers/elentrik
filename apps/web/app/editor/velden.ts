@@ -11,6 +11,7 @@
 // (een import gaf "does not provide an export named 'ruimtes'"), dus die controle draait in
 // test/velden.test.ts, die elke sleutel van elk schema afloopt.
 import { NodeSchema, type NodeType } from "@elentrik/model";
+import { veldWaarde } from "./werkconcept";
 
 export type Veld = {
   sleutel: string;
@@ -19,12 +20,21 @@ export type Veld = {
   soort: "getal" | "tekst" | "keuze" | "schakelaar";
   eenheid?: string;
   /** Zonder `labelSleutel` toont een optie haar waarde zelf: een getal (polen) of een symbool (curve B). */
+  suggesties?: string[];
+  /** Alleen een weergavestandaard; schrijft geen attribuut naar het document. */
+  standaard?: boolean | string;
   opties?: { waarde: string | number; labelSleutel?: string }[];
   min?: number;
   stap?: number;
   /** Het veld mag leeg; leegmaken stuurt `undefined`, wat de eigenschap verwijdert. */
   optioneel?: boolean;
+  /** De groep met een eigen kop in het paneel (`editor.eigenschappen.groepen.<groep>`). */
+  groep: VeldGroep;
 };
+
+/** De groepen van het paneel, in de volgorde waarin het ze toont. */
+export const VELDGROEPEN = ["elektrisch", "uitvoering", "benaming", "ruimte", "test"] as const;
+export type VeldGroep = (typeof VELDGROEPEN)[number];
 
 /** Een deelboom van een vertaalbestand. */
 type Boom = { [sleutel: string]: string | Boom };
@@ -40,7 +50,40 @@ const EENHEDEN: Readonly<Record<string, string>> = {
   kortsluitvermogen_kA: "kA",
   doorsnede_mm2: "mm²",
   vermogen_W: "W",
+  schijnbaarVermogen_kVA: "kVA",
+  dcDetectie_mA: "mA DC",
   lengte_m: "m",
+  uitschakeltijd_ms: "ms",
+};
+
+/**
+ * De groep per sleutel. Elektrisch: de beveiliging en de leiding (In, polen, curve, Icn, gevoeligheid...).
+ * Benaming en plan: hoe het onderdeel heet en op het plan staat. Ruimte: de soort ruimte. Test: de
+ * geregistreerde differentieeltest, nooit beoordeeld. Al de rest valt onder Uitvoering.
+ */
+const GROEPEN: Readonly<Record<string, VeldGroep>> = {
+  gevoeligheid_mA: "elektrisch",
+  nominaal_A: "elektrisch",
+  polen: "elektrisch",
+  klasse: "elektrisch",
+  curve: "elektrisch",
+  kortsluitvermogen_kA: "elektrisch",
+  kabeltype: "elektrisch",
+  doorsnede_mm2: "elektrisch",
+  aantalGeleiders: "elektrisch",
+  metBeschermingsgeleider: "elektrisch",
+  vermogen_W: "elektrisch",
+  schijnbaarVermogen_kVA: "elektrisch",
+  dcDetectie_mA: "elektrisch",
+  label: "benaming",
+  ruimteNaam: "benaming",
+  kringCode: "benaming",
+  referentie: "benaming",
+  naam: "benaming",
+  puntReferentie: "benaming",
+  ruimte: "ruimte",
+  testResultaat: "test",
+  uitschakeltijd_ms: "test",
 };
 
 /** Keuzes waarvan de waarde een technisch symbool is dat in elke taal hetzelfde blijft (type AC, curve B). */
@@ -72,6 +115,7 @@ type ZodVorm = {
   def: { type: string; innerType?: ZodVorm; options?: ZodVorm[] };
   options?: readonly (string | number)[];
   values?: Set<unknown>;
+  shape?: Record<string,ZodVorm>;
   minValue?: number | null;
   isInt?: boolean;
 };
@@ -92,7 +136,12 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
     optioneel = true;
     schema = schema.def.innerType;
   }
-  const veld: Veld = { sleutel, labelSleutel: vereis(boom, `velden.${sleutel}.label`), soort: "tekst" };
+  const veld: Veld = {
+    sleutel,
+    labelSleutel: vereis(boom, `velden.${sleutel}.label`),
+    soort: "tekst",
+    groep: GROEPEN[sleutel] ?? "uitvoering",
+  };
   const eenheid = EENHEDEN[sleutel];
   if (eenheid !== undefined) veld.eenheid = eenheid;
 
@@ -121,6 +170,9 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
     default:
       throw new Error(`velden.ts: geen veldsoort voor ${sleutel} (${schema.def.type})`);
   }
+  if (sleutel === "metBeschermingsgeleider") veld.standaard = true;
+  if (sleutel === "puntReferentie") veld.standaard = "automatisch";
+  if (sleutel === "brandreactieklasse") veld.suggesties = ["Eca", "Cca"];
   if (optioneel) veld.optioneel = true;
   return veld;
 }
@@ -141,7 +193,11 @@ export function bouwVelden(boom?: Boom): { GEMEENSCHAPPELIJK: Veld[]; VELDEN: Re
       const shape = variant.shape as unknown as Record<string, ZodVorm>;
       const eigen = Object.entries(shape)
         .filter(([sleutel]) => !STRUCTUUR.has(sleutel) && !(GEMEENSCHAPPELIJKE_SLEUTELS as readonly string[]).includes(sleutel))
-        .map(([sleutel, schema]) => veldVan(boom, sleutel, schema));
+        .flatMap(([sleutel, schema]) => {
+          if(sleutel !== "aanleg") return [veldVan(boom,sleutel,schema)];
+          const object=schema.def.innerType!;
+          return Object.entries(object.shape!).map(([deel,zod])=>({...veldVan(boom,`aanleg.${deel}`,zod),optioneel:true}));
+        });
       return [type, eigen];
     }),
   ) as Record<NodeType, Veld[]>;
@@ -149,3 +205,16 @@ export function bouwVelden(boom?: Boom): { GEMEENSCHAPPELIJK: Veld[]; VELDEN: Re
 }
 
 export const { GEMEENSCHAPPELIJK, VELDEN } = bouwVelden();
+
+/** Verbindt de optionele veldwaarde met dezelfde standaard die de gedeelde labels gebruiken. */
+export function veldWeergaveWaarde(node: unknown, veld: Pick<Veld, "sleutel" | "standaard">): unknown {
+  const waarde = veldWaarde(node, veld.sleutel);
+  return waarde === undefined ? veld.standaard : waarde;
+}
+
+/** De velden per groep, in de volgorde van `VELDGROEPEN`; binnen een groep in de volgorde van `velden`. Lege groepen vallen weg. */
+export function veldGroepen(velden: readonly Veld[]): { groep: VeldGroep; velden: Veld[] }[] {
+  return VELDGROEPEN.map((groep) => ({ groep, velden: velden.filter((v) => v.groep === groep) })).filter(
+    (g) => g.velden.length > 0,
+  );
+}

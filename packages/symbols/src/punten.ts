@@ -37,7 +37,7 @@ export function letterH(x: number, y: number): string {
  * - waterdicht: de letter h rechts van de boog;
  * - aantal > 1: een klein schuin streepje over de boog en het getal ernaast.
  */
-export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
+export function tekenContactdoos(node: NodeVan<"contactdoos">, horizontaal = false, einde = false): Symbool {
   const breedte = 14;
   const hoogte = 10;
   const x = breedte / 2;
@@ -46,7 +46,7 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
   const eindY = 4;
   const topY = eindY + r;
   let svg =
-    lijn(x, hoogte, x, 0) +
+    lijn(x, hoogte, x, horizontaal && einde ? eindY : 0) +
     // Sweep 0: van links naar rechts onderlangs, dus de bolle kant wijst naar `in` en de boog opent naar `uit`.
     pad(`M${getal(x - r)} ${getal(eindY)} A${getal(r)} ${getal(r)} 0 0 0 ${getal(x + r)} ${getal(eindY)}`);
   if (node.randaarde) svg += lijn(x - r - 1, topY, x + r + 1, topY, { data: { rol: "randaarde" } });
@@ -55,23 +55,24 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
       lijn(x - r, eindY, x - r - 1.2, eindY, { data: { rol: "kinderbeveiliging" } }) +
       lijn(x + r, eindY, x + r + 1.2, eindY, { data: { rol: "kinderbeveiliging" } });
   }
-  if (node.waterdicht) svg += letterH(x + r + 1.6, eindY + 1.5);
+  if (horizontaal) svg = `<g transform="translate(${hoogte} 0) rotate(90)">${svg}</g>`;
+  if (node.waterdicht) svg += horizontaal ? letterH(hoogte - eindY + 1, x + r + 2) : letterH(x + r + 1.6, eindY + 1.5);
   if (node.aantal > 1) {
     // Het streepje staat op de straal die 40° onder de horizontaal naar rechts wijst en kruist de
     // boog daar haaks; het getal staat erboven en erachter.
     const hoek = (40 * Math.PI) / 180;
     const [c, s] = [Math.cos(hoek), Math.sin(hoek)];
-    svg +=
-      lijn(x + (r - 0.8) * c, eindY + (r - 0.8) * s, x + (r + 0.8) * c, eindY + (r + 0.8) * s, {
+    const streep = lijn(x + (r - 0.8) * c, eindY + (r - 0.8) * s, x + (r + 0.8) * c, eindY + (r + 0.8) * s, {
         data: { rol: "aantal-streep" },
-      }) +
-      tekst(x + r + 0.4, eindY - 1.4, String(node.aantal), {
+      });
+    svg += (horizontaal ? `<g transform="translate(${hoogte} 0) rotate(90)">${streep}</g>` : streep) +
+      tekst(horizontaal ? hoogte - eindY + 1 : x + r + 0.4, horizontaal ? x - r - 1 : eindY - 1.4, String(node.aantal), {
         anker: "start",
         grootte: AANTAL_GROOTTE_MM,
         data: { rol: "aantal" },
       });
   }
-  return { maat: { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
+  return { maat: horizontaal ? { breedte: hoogte, hoogte: breedte, in: { x: 0, y: x }, uit: { x: einde ? hoogte - eindY : hoogte, y: x } } : { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } }, svg };
 }
 
 /**
@@ -79,6 +80,7 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">): Symbool {
  * toevoerleiding, zonder cirkel. De leiding loopt van `in` door het snijpunt van het kruis tot
  * `uit`; bij de projector loopt ze niet door de lamp, maar eindigt ze aan de onderkant van de
  * cirkel en begint ze weer aan de bovenkant. De soort verandert het kruis:
+ * - "wand": hetzelfde kruis met een afzonderlijke korte wandlijn;
  * - "tl": het fluorescentietoestel, een lijn dwars op de leiding met een streepje aan beide
  *   uiteinden, zonder kruis;
  * - "spot": de projector, een kruis in een cirkel (⊗) met een boog aan de kant van `in`;
@@ -138,6 +140,12 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">, horizontaal = false, 
         );
       break;
     }
+    case "wand":
+      // ACA maart 2025 p.29: kruis met een afzonderlijke korte wandlijn.
+      svg += kruis(arm) + (horizontaal
+        ? lijn(x - arm, cy + arm + 1, x + arm, cy + arm + 1, { data: { rol: "wand" } })
+        : lijn(x + arm + 1, cy - arm, x + arm + 1, cy + arm, { data: { rol: "wand" } }));
+      break;
     case "led":
       // Basislijn cy + 0,6: de tekst (1,8 mm) staat rechtop naast het kruis.
       svg += kruis(arm) + tekst(horizontaal ? x : x + 3, horizontaal ? 9.8 : cy + 0.6, "LED", { anker: horizontaal ? "middle" : "start", grootte: 1.8 });
@@ -180,6 +188,7 @@ function haak(x1: number, y1: number, x2: number, y2: number): string {
  * voeding weg (hier naar rechtsboven), onder 35° met de verticale lijn. Een haak is een streepje
  * haaks op het uiteinde van de hendel. De soort bepaalt de hendels:
  * - "enkel": het algemene symbool, één hendel zonder haak;
+ * - "tweepolig": een hendel met twee dwarse poolmarkeringen;
  * - "dubbel": de eenpolige omschakelaar (dubbele aansteking), twee hendels in een V naar `uit`,
  *   elk met een haak;
  * - "wissel": de eenpolige wisselschakelaar, twee hendels in tegengestelde richting (rechtsboven
@@ -214,6 +223,15 @@ export function tekenSchakelaar(node: NodeVan<"schakelaar">, horizontaal = false
     case "enkel":
       svg += hendel(1, -1, false);
       break;
+    case "tweepolig": {
+      // ACA maart 2025 p.28: een hendel met twee dwarse poolmarkeringen.
+      svg += hendel(1, -1, false);
+      for (const afstand of [r + buiten, r + buiten - 0.9]) {
+        const ex = x + afstand * s, ey = cy - afstand * c;
+        svg += lijn(ex, ey, ex + c, ey + s, { data: { rol: "pool-markering" } });
+      }
+      break;
+    }
     case "dubbel":
       svg += hendel(-1, -1, true) + hendel(1, -1, true);
       break;
@@ -241,8 +259,13 @@ export function tekenSchakelaar(node: NodeVan<"schakelaar">, horizontaal = false
 }
 
 /** Horizontale aansluitingen, met behoud van rechtopstaande symbolen en teksten. */
-export function tekenAftakkingSymbool(node: NodeVan<"lichtpunt"> | NodeVan<"schakelaar">, einde = false): Symbool {
-  return node.type === "lichtpunt" ? tekenLichtpunt(node, true, einde) : tekenSchakelaar(node, true, einde);
+export function tekenAftakkingSymbool(node: NodeVan<"lichtpunt"> | NodeVan<"schakelaar"> | NodeVan<"contactdoos"> | NodeVan<"toestel">, einde = false): Symbool {
+  switch (node.type) {
+    case "lichtpunt": return tekenLichtpunt(node, true, einde);
+    case "schakelaar": return tekenSchakelaar(node, true, einde);
+    case "contactdoos": return tekenContactdoos(node, true, einde);
+    case "toestel": return tekenToestel(node, true, einde);
+  }
 }
 
 /** Rol van de pictogramelementen in een toestel; het vierkant en de aansluitlijntjes hebben geen rol. */
@@ -266,20 +289,67 @@ const PICTO = { data: { rol: "picto" } } as const;
  *   het gelijkstroomteken (volle lijn boven een stippellijn) en rechtsonder het wisselstroomteken;
  * - "warmtepomp": de tekst "WP".
  */
-export function tekenToestel(node: NodeVan<"toestel">): Symbool {
+export function tekenToestel(node: NodeVan<"toestel">, horizontaal = false, einde = false): Symbool {
   const breedte = 12;
   const hoogte = 12;
   const x = breedte / 2;
   /** Het midden van het vierkant. */
   const y = hoogte / 2;
-  const maat = { breedte, hoogte, in: { x, y: hoogte }, uit: { x, y: 0 } };
+  const maat = { breedte, hoogte, in: horizontaal ? { x: 0, y } : { x, y: hoogte }, uit: horizontaal ? { x: einde ? 11 : breedte, y } : { x, y: 0 } };
+  const invoer = (rand = 1) => horizontaal ? lijn(0, y, rand, y) : lijn(x, hoogte, x, hoogte - rand);
+  const uitvoer = (rand = 1) => horizontaal ? (einde ? "" : lijn(breedte - rand, y, breedte, y)) : lijn(x, rand, x, 0);
   /** Het vierkant van het algemene symbool, met aansluitlijntjes van 1 mm onder en boven. */
-  const vierkant = lijn(x, hoogte, x, hoogte - 1) + rechthoek(1, 1, 10, 10) + lijn(x, 1, x, 0);
+  const vierkant = invoer() + rechthoek(1, 1, 10, 10) + uitvoer();
   /** Gevulde stip met straal 1,2 mm; `r` kan kleiner. */
   const stip = (cx: number, cy: number, r = 1.2) => cirkel(cx, cy, r, { gevuld: true, ...PICTO });
   switch (node.soort) {
     case "andere":
       return { maat, svg: vierkant };
+    case "onbekendDrieblad": {
+      // Visueel overgenomen uit ACA maart 2025 p.26 H3. Geen bewezen toestelidentiteit:
+      // AREI Boek 1 v07 p.60 tekent de ventilator als vierkant met twee lussen.
+      const bron = { data: { rol: "bron-drieblad" } };
+      const lobben = [0, 1, 2].map(i => {
+        const a = i * Math.PI * 2 / 3 - Math.PI / 2;
+        const cx = x + Math.cos(a) * 1.35, cy = y + Math.sin(a) * 1.35;
+        return cirkel(cx, cy, 1.35, bron);
+      }).join("");
+      return { maat, svg: invoer(2.5) + cirkel(x, y, 3.5, bron) + lobben + uitvoer(2.5) +
+        pad("M5 1.5 A4.6 4.6 0 0 0 5 10.5", bron) };
+    }
+    case "deurbelMonitor":
+      // ACA maart 2025 p.26 E1, caption "Deurbel / Monitor"; geen functie afgeleid als intercom.
+      return { maat, svg: vierkant + rechthoek(2, 2, 8, 6, PICTO) +
+        [2, 4.2, 6.4, 8.6].map(cx => rechthoek(cx, 9, 1.2, 1, PICTO)).join("") };
+    case "bel":
+      return { maat, svg: horizontaal
+        ? lijn(0, y, 4, y) + lijn(4, 2, 4, 10, PICTO) + pad("M4 2 A4 4 0 0 1 4 10", PICTO) + (einde ? "" : lijn(8, y, breedte, y))
+        : lijn(x, hoogte, x, 7) + lijn(2, 7, 10, 7, PICTO) + pad("M2 7 A4 4 0 0 1 10 7", PICTO) + lijn(x, 3, x, 0) };
+    case "motor":
+      return { maat, svg: invoer(1.5) + cirkel(x, y, 4.5, PICTO) + tekst(x, 7.2, "M", { anker: "middle", grootte: 3.5, ...PICTO }) + uitvoer(1.5) };
+    case "ventilator":
+      return { maat, svg: vierkant + cirkel(3.9, y, 2.1, PICTO) + cirkel(8.1, y, 2.1, PICTO) };
+    case "koelkast":
+    case "diepvriezer": {
+      // Eén respectievelijk drie sneeuwvlokken; bron: ACA-gids maart 2025, p. 29–30.
+      const vlok = (cx: number, straal: number) => {
+        let uit = "";
+        for (let i = 0; i < 6; i++) {
+          const hoek = i * Math.PI / 3;
+          const dx = Math.cos(hoek), dy = Math.sin(hoek);
+          const ex = cx + dx * straal, ey = y + dy * straal;
+          uit += lijn(cx, y, ex, ey, PICTO);
+          for (const kant of [-1, 1]) {
+            uit += lijn(ex, ey, cx + dx * straal * 0.65 - dy * straal * 0.22 * kant, y + dy * straal * 0.65 + dx * straal * 0.22 * kant, PICTO);
+          }
+        }
+        return uit;
+      };
+      return { maat, svg: vierkant + (node.soort === "koelkast" ? vlok(x, 3.3) : [3, 6, 9].map((cx) => vlok(cx, 1.3)).join("")) };
+    }
+    case "pvPaneel":
+      // Bron-symbool: paneel met invallende lichtpijlen (ACA-gids maart 2025, p. 30).
+      return { maat, svg: vierkant + lijn(3, 2, 6, 5, PICTO) + pad("M4.5 5 L6 5 L6 3.5", PICTO) + lijn(6, 2, 9, 5, PICTO) + pad("M7.5 5 L9 5 L9 3.5", PICTO) + lijn(1, 7, 11, 7, PICTO) };
     case "wasmachine":
       return { maat, svg: vierkant + cirkel(x, y, 3.8, PICTO) + stip(x, y, 1.3) };
     case "droogkast": {
@@ -319,13 +389,13 @@ export function tekenToestel(node: NodeVan<"toestel">): Symbool {
         const h = Math.sqrt(r * r - dx * dx);
         arcering += lijn(x + dx, y - h, x + dx, y + h, PICTO);
       }
-      return { maat, svg: lijn(x, hoogte, x, hoogte - 1) + cirkel(x, y, r) + arcering + lijn(x, 1, x, 0) };
+      return { maat, svg: invoer() + cirkel(x, y, r) + arcering + uitvoer() };
     }
     case "laadpaal":
       return {
         maat,
         svg:
-          lijn(x, hoogte, x, 11) +
+          (horizontaal ? lijn(0, y, 2.5, y) : lijn(x, hoogte, x, 11)) +
           // De voet, de zuil en het schermpje.
           rechthoek(1.5, 9.8, 8, 1.2, PICTO) +
           rechthoek(2.5, 2.5, 6, 7.3, PICTO) +
@@ -334,7 +404,7 @@ export function tekenToestel(node: NodeVan<"toestel">): Symbool {
           lijn(8.5, 8.2, 10.2, 8.2, PICTO) +
           lijn(10.2, 8.2, 10.2, 3.2, PICTO) +
           pad("M9.7 1.2 L10.7 1.2 L10.7 3.2 L9.7 3.2 Z", { gevuld: true, ...PICTO }) +
-          lijn(x, 2.5, x, 0),
+          (horizontaal ? (einde ? "" : lijn(8.5, y, breedte, y)) : lijn(x, 2.5, x, 0)),
       };
     case "omvormer": {
       // Het wisselstroomteken: een sinus van twee halve cirkels (r = 0,8), rechtsonder.

@@ -18,9 +18,9 @@ const APP = join(WEB, "app");
 /**
  * Woorden die in elke taal dezelfde zijn en dus letterlijk in een template mogen staan.
  * - merknamen: Elentrik, Stripe;
- * - eenheden: mm, mm², px, A, mA, kA, W, V. (Niet MB: een grootte met eenheid is een opgemaakt, vertaalbaar getal.)
+ * - eenheden: mm, mm², px, A, mA, kA, W, V, Ω, MΩ. (Niet MB: een grootte met eenheid is een opgemaakt, vertaalbaar getal.)
  */
-const UITZONDERINGEN: ReadonlySet<string> = new Set(["Elentrik", "Stripe", "mm", "mm²", "px", "A", "mA", "kA", "W", "V"]);
+const UITZONDERINGEN: ReadonlySet<string> = new Set(["Elentrik", "Stripe", "mm", "mm²", "px", "A", "mA", "kA", "W", "V", "Ω", "MΩ"]);
 
 /** Attributen die tekst voor de gebruiker dragen. */
 const TEKSTATTRIBUTEN = ["label", "title", "placeholder", "aria-label", "description", "alt"];

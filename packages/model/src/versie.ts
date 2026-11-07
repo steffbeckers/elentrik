@@ -1,1 +1,1 @@
-export const SCHEMA_VERSIE = 1 as const;
+export const SCHEMA_VERSIE = 2 as const;

@@ -30,6 +30,8 @@ export type CanvasWeergaveOpties = {
   marge: () => number;
   /** De maximale zoom (relatief aan de passende weergave); zonder deze optie `MAX_ZOOM`. */
   maxZoom?: (passend: Weergave, venster: Afmeting) => number;
+  /** Keep absolute plan scale and its top-left screen anchor when a panel changes the viewport. */
+  behoudSchaalBijResize?: boolean;
   /** Een eigen sleepbeweging van de component moet stoppen: een tweede vinger, of het venster verliest de focus. */
   onderbreek?: () => void;
 };
@@ -291,7 +293,7 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
       maakPassend();
     } else if (vorige.breedte > 0) {
       const inhoud = opties.inhoud();
-      if (inhoud) weergave.value = weergaveNaResize(weergave.value, vorige, grootte, inhoud, opties.marge());
+      if (inhoud) weergave.value = weergaveNaResize(weergave.value, vorige, grootte, inhoud, opties.marge(), opties.behoudSchaalBijResize);
     }
   }
 
