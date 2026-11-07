@@ -99,7 +99,7 @@ Deze punten blijven behouden en kunnen in de communicatie in de verf gezet worde
 - **Nut:** de geïmporteerde plattegrond wordt bewerkbaar in de OpenPlan3D-editor.
 - **Voorstel:** pas aanpakken na punt 9, met dezelfde controle-stap als bij punt 8.
 
-### 11. Projectbestanden van de bekendste desktoptool importeren — L
+### 11. Trikker-bestanden importeren — L
 
 - **Nut:** maakt overstappen van de bekendste desktoptool veel makkelijker. Verschillende webtools bieden dit al aan.
 - **Vandaag:** dit valt bewust buiten de MVP-scope ("competitor project import"). De beslissing moet dus expliciet herzien worden.
@@ -153,5 +153,5 @@ De proefperiode en een mogelijke gratis versie zijn verder uitgewerkt in `2026-1
 
 1. Een eerste plan met de punten 2, 3, 4 en 5: kleine aanvullingen op de projectgegevens en de editor.
 2. Punt 1, de leeslink, met een eigen spec voor privacy en beveiliging.
-3. Beslissingen nemen over punt 11 (import uit de desktoptool) en over het prijsmodel.
+3. Beslissingen nemen over punt 11 (Trikker-import) en over het prijsmodel.
 4. Een haalbaarheidsonderzoek voor punt 8 (schema-import), en afhankelijk van het resultaat de punten 9 en 10.
