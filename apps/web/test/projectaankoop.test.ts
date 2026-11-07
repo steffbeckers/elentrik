@@ -24,7 +24,7 @@ import {
 } from "../server/db/schema";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
 import { maakProject } from "../server/projecten/repo";
-import type { AbonnementOverzicht } from "../shared/abonnement";
+import { VRIJGAVE_LOOPT, type AbonnementOverzicht } from "../shared/abonnement";
 import { maakTestDb } from "./db";
 import { maakNepStripe, type NepStripe } from "./nep-stripe";
 import { beveiligdeRoutebestanden, routeUit } from "./routes";
@@ -389,6 +389,54 @@ describe("vrijgeven", () => {
   });
 });
 
+// --- Uitgestelde betaling ---------------------------------------------------------------------
+
+describe("een uitgestelde betaling die loopt", () => {
+  test("complete+unpaid en een tweede start: 409 VRIJGAVE_LOOPT, geen tweede Checkout; daarna async_payment_succeeded koopt het project", async () => {
+    const sessie = await start(project);
+    stripe.voltooiCheckoutZonderBetaling(sessie);
+    expect(await lever("checkout.session.completed", sessieObject(sessie))).toBe(200);
+
+    const antwoord = await vrijgeven(eigenaarA.cookie, project);
+    expect(antwoord.status).toBe(409);
+    expect(await code(antwoord)).toBe(VRIJGAVE_LOOPT);
+    expect(aanroepen("maakProjectCheckout")).toHaveLength(1);
+    expect(aanroepen("laatCheckoutVervallen")).toEqual([]);
+    expect(await aankopen(project)).toMatchObject([{ checkoutSessie: sessie, status: "open" }]);
+    expect(await gekochtOp(project)).toBeNull();
+
+    stripe.betaalCheckout(sessie);
+    expect(await lever("checkout.session.async_payment_succeeded", sessieObject(sessie))).toBe(200);
+    expect(await gekochtOp(project)).not.toBeNull();
+    expect(await aankopen(project)).toMatchObject([{ checkoutSessie: sessie, status: "betaald" }]);
+  });
+
+  test("een sessie die net tijdens het vervallen voltooid wordt: 409 VRIJGAVE_LOOPT, geen tweede Checkout", async () => {
+    const sessie = await start(project);
+    // Stripe weigert het vervallen van een sessie die de klant net voltooide (de poort negeert die 400).
+    stripe.laatCheckoutVervallen = async (id) => {
+      stripe.aanroepen.push({ methode: "laatCheckoutVervallen", invoer: id });
+      stripe.voltooiCheckoutZonderBetaling(id);
+    };
+    expect(await code(await vrijgeven(eigenaarA.cookie, project))).toBe(VRIJGAVE_LOOPT);
+    expect(aanroepen("maakProjectCheckout")).toHaveLength(1);
+    expect(await aankopen(project)).toMatchObject([{ checkoutSessie: sessie, status: "open" }]);
+  });
+
+  test("een vorige sessie die al vervallen is: rij vervallen, zonder expire, en een nieuwe sessie", async () => {
+    const eerste = await start(project);
+    stripe.checkouts.get(eerste)!.status = "expired";
+    const tweede = await start(project);
+    expect(tweede).not.toBe(eerste);
+    expect(aanroepen("laatCheckoutVervallen")).toEqual([]);
+    const lijst = await aankopen(project);
+    expect(lijst.map((a) => [a.checkoutSessie, a.status]).sort()).toEqual([
+      [eerste, "vervallen"],
+      [tweede, "open"],
+    ]);
+  });
+});
+
 // --- Webhook ---------------------------------------------------------------------------------
 
 describe("webhook", () => {
@@ -520,6 +568,7 @@ describe("synchroniseer", () => {
       abonnementId: "sub_1",
       metadata: { organisatieId: eigenaarA.organisatieId },
       betaalstatus: "paid",
+      status: "complete",
     });
     expect((await synchroniseer(eigenaarA.cookie, project, "cs_abonnement")).status).toBe(404);
     expect(await gekochtOp(project)).toBeNull();

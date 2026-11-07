@@ -1452,6 +1452,7 @@
     "PROJECT_LIMIET": "This change exceeds the limit of the free version and was not saved.",
     "PROJECT_AL_GEKOCHT": "This project has already been unlocked.",
     "VRIJGEVEN_NIET_NODIG": "This project does not need to be unlocked.",
+    "VRIJGAVE_LOOPT": "The payment for this project is still being processed. Please try again later.",
     "LAATSTE_EIGENAAR": "At least one owner must remain.",
     "AL_LID": "Someone with this address is already a member.",
     "AL_UITGENODIGD": "Someone with this address has already been invited.",

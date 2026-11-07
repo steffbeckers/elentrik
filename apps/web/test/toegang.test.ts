@@ -418,6 +418,7 @@ const TABEL: Record<string, Rij> = {
         abonnementId: null,
         metadata: { organisatieId: orgA, projectId: id, soort: "project" },
         betaalstatus: "unpaid",
+        status: "open",
       });
       return { methode: "POST", pad: `/api/projecten/${id}/vrijgave/synchroniseer`, json: { sessie: "cs_toegang_project" } };
     },
@@ -508,7 +509,7 @@ const TABEL: Record<string, Rij> = {
     // Een sessie van A's klant: A synchroniseert (200), B krijgt 404 omdat de sessie niet van B is.
     verzoek: async () => {
       const klantA = await zorgVoorKlanten();
-      nepStripe.checkouts.set("cs_toegang_a", { id: "cs_toegang_a", klantId: klantA, abonnementId: null, metadata: {}, betaalstatus: "unpaid" });
+      nepStripe.checkouts.set("cs_toegang_a", { id: "cs_toegang_a", klantId: klantA, abonnementId: null, metadata: {}, betaalstatus: "unpaid", status: "open" });
       return { methode: "POST", pad: "/api/abonnement/synchroniseer", json: { sessie: "cs_toegang_a" } };
     },
     andereOrganisatie: 404,

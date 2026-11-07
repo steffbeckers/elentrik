@@ -91,3 +91,5 @@ export const PROJECT_LIMIET = "PROJECT_LIMIET";
 export const PROJECT_AL_GEKOCHT = "PROJECT_AL_GEKOCHT";
 /** 409: het project hoeft niet vrijgegeven te worden (of er is geen projectprijs). */
 export const VRIJGEVEN_NIET_NODIG = "VRIJGEVEN_NIET_NODIG";
+/** 409: een uitgestelde betaling (SEPA, Bancontact) voor dit project loopt nog; een tweede zou dubbel laten betalen. */
+export const VRIJGAVE_LOOPT = "VRIJGAVE_LOOPT";

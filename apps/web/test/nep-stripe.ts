@@ -26,8 +26,10 @@ export type NepStripe = StripePoort & {
   faalCheckout: boolean;
   /** Gezet: `maakKlant` gooit deze fout (bv. een `StripeIdempotencyError`). */
   idempotentieFout: Error | null;
-  /** Zet een Checkout-sessie op betaald (`payment_status = paid`), zoals na een geslaagde betaling. */
+  /** Zet een Checkout-sessie op voltooid en betaald (`complete`, `paid`), zoals na een geslaagde betaling. */
   betaalCheckout(id: string): void;
+  /** Zet een Checkout-sessie op voltooid maar nog niet betaald (`complete`, `unpaid`): een uitgestelde betaling die loopt. */
+  voltooiCheckoutZonderBetaling(id: string): void;
 };
 
 export function maakNepStripe(): NepStripe {
@@ -68,6 +70,7 @@ export function maakNepStripe(): NepStripe {
         abonnementId: null,
         metadata: { organisatieId: i.organisatieId },
         betaalstatus: "unpaid",
+        status: "open",
       });
       return { id, url: `https://checkout.nep/${id}` };
     },
@@ -82,6 +85,7 @@ export function maakNepStripe(): NepStripe {
         abonnementId: null,
         metadata: { organisatieId: i.organisatieId, projectId: i.projectId, soort: "project" },
         betaalstatus: "unpaid",
+        status: "open",
       });
       return { id, url: `https://checkout.nep/${id}` };
     },
@@ -90,6 +94,14 @@ export function maakNepStripe(): NepStripe {
       const c = nep.checkouts.get(id);
       if (!c) throw new Error(`Checkout-sessie ${id} bestaat niet`);
       c.betaalstatus = "paid";
+      c.status = "complete";
+    },
+
+    voltooiCheckoutZonderBetaling(id) {
+      const c = nep.checkouts.get(id);
+      if (!c) throw new Error(`Checkout-sessie ${id} bestaat niet`);
+      c.betaalstatus = "unpaid";
+      c.status = "complete";
     },
 
     async haalCheckout(id) {
@@ -101,6 +113,9 @@ export function maakNepStripe(): NepStripe {
     async laatCheckoutVervallen(id) {
       nep.aanroepen.push({ methode: "laatCheckoutVervallen", invoer: id });
       nep.vervallen.add(id);
+      // Zoals Stripe: alleen een open sessie vervalt; een voltooide blijft voltooid.
+      const c = nep.checkouts.get(id);
+      if (c?.status === "open") c.status = "expired";
     },
 
     async maakPortaal(i) {

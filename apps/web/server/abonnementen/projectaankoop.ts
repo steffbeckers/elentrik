@@ -8,7 +8,7 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { H3Event } from "h3";
 import { z } from "zod";
-import { PROJECT_AL_GEKOCHT, VRIJGEVEN_NIET_NODIG } from "../../shared/abonnement";
+import { PROJECT_AL_GEKOCHT, VRIJGAVE_LOOPT, VRIJGEVEN_NIET_NODIG } from "../../shared/abonnement";
 import type { Taal } from "../../shared/taal";
 import { basisUrl } from "../auth/oorsprong";
 import { gebruikDb, type Db } from "../db";
@@ -108,9 +108,13 @@ export async function verwerkProjectsessie(
  * 1. Al gekocht: 409 `PROJECT_AL_GEKOCHT`. Staat het bedrijf niet op `gratis` (abonnement, ook in
  *    de betalingsgratie of de overgangsproef; onderwijs; vrijgesteld; abonnementen uit), of is er
  *    geen projectprijs: 409 `VRIJGEVEN_NIET_NODIG`.
- * 2. Een open aankoop: is haar sessie intussen betaald (de webhook loopt achter), dan wordt die
- *    eerst verwerkt en volgt `PROJECT_AL_GEKOCHT`, zonder tweede sessie (geen dubbele betaling).
- *    Anders vervalt ze, bij Stripe en hier.
+ * 2. Een open aankoop, volgens haar sessie bij Stripe (nooit een tweede sessie zolang er betaald
+ *    kan zijn: een project wordt nooit twee keer betaald):
+ *    - betaald (de webhook loopt achter): eerst verwerken, dan `PROJECT_AL_GEKOCHT`;
+ *    - `complete` maar nog niet betaald (een uitgestelde betaling, SEPA of Bancontact): de rij
+ *      blijft `open` en 409 `VRIJGAVE_LOOPT`; de webhook beslist later;
+ *    - `open`: laten vervallen bij Stripe en hier;
+ *    - vervallen of onbekend bij Stripe: hier vervallen.
  * 3. De Stripe-klant via dezelfde weg als `startCheckout` (onder het lock per organisatie): de
  *    bestaande rij in `abonnementen`, anders zoeken of maken en een rij toevoegen, zodat de webhook
  *    de klant herkent.
@@ -142,7 +146,13 @@ export async function startProjectaankoop(
       .from(projectaankopen)
       .where(and(eq(projectaankopen.projectId, i.projectId), eq(projectaankopen.status, "open")));
     if (open) {
-      const vorige = await stripe.haalCheckout(open.checkoutSessie);
+      let vorige = await stripe.haalCheckout(open.checkoutSessie);
+      if (vorige?.status === "open") {
+        await stripe.laatCheckoutVervallen(open.checkoutSessie);
+        // De klant kan de sessie net vóór het vervallen voltooid hebben (Stripe weigert dan het
+        // vervallen, en dat negeren we): opnieuw lezen, zodat er geen tweede betaling volgt.
+        vorige = await stripe.haalCheckout(open.checkoutSessie);
+      }
       if (vorige && isBetaald(vorige.betaalstatus)) {
         // De metadata van de eigen rij, niet die van Stripe: deze sessie is van dit project.
         const metadata = { organisatieId: open.organisatieId, projectId: open.projectId, soort: "project" };
@@ -150,7 +160,9 @@ export async function startProjectaankoop(
         // Geen throw: dat zou de verwerking terugdraaien.
         return "gekocht";
       }
-      if (vorige) await stripe.laatCheckoutVervallen(open.checkoutSessie);
+      // Alles behalve een vervallen sessie (of een die Stripe niet meer kent) kan nog betaald
+      // worden: `complete` met `unpaid` is een uitgestelde betaling die loopt.
+      if (vorige && vorige.status !== "expired") return "loopt";
       await tx.update(projectaankopen).set({ status: "vervallen" }).where(eq(projectaankopen.id, open.id));
     }
 
@@ -189,6 +201,7 @@ export async function startProjectaankoop(
     return { url: sessie.url };
   });
   if (resultaat === "gekocht") throw maakFout(409, "Dit project is al gekocht", PROJECT_AL_GEKOCHT);
+  if (resultaat === "loopt") throw maakFout(409, "De betaling voor dit project loopt nog", VRIJGAVE_LOOPT);
   if (resultaat === "niet-nodig") throw maakFout(409, "Dit project hoeft niet vrijgegeven te worden", VRIJGEVEN_NIET_NODIG);
   return resultaat;
 }

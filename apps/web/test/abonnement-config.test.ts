@@ -435,6 +435,7 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       customer: "cus_1",
       subscription: null,
       payment_status: "paid",
+      status: "complete",
       metadata: { organisatieId: "org_1", projectId: "p_1", soort: "project" },
     };
     expect(await poort().haalCheckout("cs_p")).toEqual({
@@ -443,6 +444,7 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       abonnementId: null,
       metadata: { organisatieId: "org_1", projectId: "p_1", soort: "project" },
       betaalstatus: "paid",
+      status: "complete",
     });
   });
 
@@ -780,6 +782,7 @@ describe("maakNepStripe", () => {
       abonnementId: null,
       metadata: { organisatieId: "org_1" },
       betaalstatus: "unpaid",
+      status: "open",
     });
     expect(await nep.haalCheckout("onbekend")).toBeNull();
     expect(nep.aanroepen.map((a) => a.methode)).toEqual(["maakKlant", "maakCheckout", "haalCheckout", "haalCheckout"]);

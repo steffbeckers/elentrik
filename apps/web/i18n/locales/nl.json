@@ -1452,6 +1452,7 @@
     "PROJECT_LIMIET": "Deze wijziging gaat boven de limiet van de gratis versie en werd niet bewaard.",
     "PROJECT_AL_GEKOCHT": "Dit project is al vrijgegeven.",
     "VRIJGEVEN_NIET_NODIG": "Dit project hoeft niet vrijgegeven te worden.",
+    "VRIJGAVE_LOOPT": "De betaling voor dit project wordt nog verwerkt. Probeer het later opnieuw.",
     "LAATSTE_EIGENAAR": "Er moet minstens één eigenaar blijven.",
     "AL_LID": "Dit adres is al lid.",
     "AL_UITGENODIGD": "Dit adres is al uitgenodigd.",

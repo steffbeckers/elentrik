@@ -39,12 +39,16 @@ export type StripePrijs = { id: string; bedrag: number; munt: string; interval: 
 /** De `payment_status` van een Checkout-sessie. */
 export type Betaalstatus = "paid" | "unpaid" | "no_payment_required";
 
+/** De `status` van een Checkout-sessie: `complete` met `unpaid` is een uitgestelde betaling die nog loopt. */
+export type Sessiestatus = "open" | "complete" | "expired";
+
 export type StripeCheckout = {
   id: string;
   klantId: string | null;
   abonnementId: string | null;
   metadata: Record<string, string>;
   betaalstatus: Betaalstatus | null;
+  status: Sessiestatus | null;
 };
 
 export interface StripePoort {
@@ -126,6 +130,13 @@ const BETAALSTATUSSEN: ReadonlySet<string> = new Set<Betaalstatus>(["paid", "unp
 /** Een bekende `payment_status`, anders null. */
 function leesBetaalstatus(waarde: unknown): Betaalstatus | null {
   return typeof waarde === "string" && BETAALSTATUSSEN.has(waarde) ? (waarde as Betaalstatus) : null;
+}
+
+const SESSIESTATUSSEN: ReadonlySet<string> = new Set<Sessiestatus>(["open", "complete", "expired"]);
+
+/** Een bekende sessiestatus, anders null. */
+function leesSessiestatus(waarde: unknown): Sessiestatus | null {
+  return typeof waarde === "string" && SESSIESTATUSSEN.has(waarde) ? (waarde as Sessiestatus) : null;
 }
 
 /** Alleen de tekstwaarden van de metadata. */
@@ -254,6 +265,7 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
           abonnementId: idVan(sessie.subscription),
           metadata: leesMetadata(sessie.metadata),
           betaalstatus: leesBetaalstatus(sessie.payment_status),
+          status: leesSessiestatus(sessie.status),
         };
       } catch (fout) {
         if (bestaatNiet(fout)) return null;

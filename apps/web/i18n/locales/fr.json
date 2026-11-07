@@ -1452,6 +1452,7 @@
     "PROJECT_LIMIET": "Cette modification dépasse la limite de la version gratuite et n'a pas été enregistrée.",
     "PROJECT_AL_GEKOCHT": "Ce projet est déjà débloqué.",
     "VRIJGEVEN_NIET_NODIG": "Ce projet n'a pas besoin d'être débloqué.",
+    "VRIJGAVE_LOOPT": "Le paiement de ce projet est encore en cours de traitement. Réessayez plus tard.",
     "LAATSTE_EIGENAAR": "Il doit rester au moins un propriétaire.",
     "AL_LID": "Une personne avec cette adresse est déjà membre.",
     "AL_UITGENODIGD": "Une personne avec cette adresse est déjà invitée.",
