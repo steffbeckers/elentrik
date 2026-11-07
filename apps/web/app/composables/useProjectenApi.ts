@@ -129,6 +129,13 @@ export function maakProjectenApi(haal: ProjectenFetch, opties: ProjectenApiOptie
         headers: { ...voorGebruiker, ...voorOrganisatie(opties.actieveOrganisatieId?.()).headers },
       }) as Promise<NieuwProjectUitDocument>,
 
+    /** "Dit project vrijgeven" (een eigenaar): de URL van Stripe Checkout voor de eenmalige betaling. */
+    vrijgeven: (id: string) => haal(`/api/projecten/${id}/vrijgeven`, { method: "POST" }) as Promise<{ url: string }>,
+
+    /** Terug uit Checkout: de betaling ophalen zonder op de webhook te wachten. */
+    synchroniseerVrijgave: (id: string, sessie: string) =>
+      haal(`/api/projecten/${id}/vrijgave/synchroniseer`, { method: "POST", body: { sessie } }) as Promise<{ gekocht: boolean }>,
+
     verwijder: async (id: string): Promise<void> => {
       await haal(`/api/projecten/${id}`, { method: "DELETE" });
     },

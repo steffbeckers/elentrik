@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LimietTeller from "~/components/editor/LimietTeller.vue";
 import ProjectgegevensDialoog from "~/components/editor/ProjectgegevensDialoog.vue";
 import type { AutosaveStatus } from "~/composables/useAutosave";
 import { useEditorStore } from "~/stores/editor";
@@ -151,6 +152,7 @@ onBeforeUnmount(() => smalQuery?.removeEventListener("change", volgSmal));
         @click="emit('opnieuwProberen')"
       />
 
+      <LimietTeller />
       <UButton
         color="neutral"
         variant="ghost"

@@ -9,7 +9,7 @@ export type EditorContext = {
   projecten: Pick<ProjectenApi, 'haal' | 'bewaar'>; bestanden: BestandenApi;
   exportLijst: (id: string) => Promise<ExportInfo[]>; bestandUrl: (id: string) => string;
   mogelijkheden: { schrijven: boolean; dupliceren: boolean; nieuwProject: boolean; exporteren: boolean };
-  klant?: Pick<ProjectenApi, 'dupliceer' | 'maakUitDocument'>;
+  klant?: Pick<ProjectenApi, 'dupliceer' | 'maakUitDocument' | 'vrijgeven' | 'synchroniseerVrijgave'>;
   support?: AdminProjectApi;
   bedrijfNaam?: string;
 };

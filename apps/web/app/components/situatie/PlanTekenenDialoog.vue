@@ -81,6 +81,8 @@ async function receive(event: MessageEvent) {
     }
     const id = situatie.bewaarTekening(titel.value.trim(), achtergrond, data.tekening, props.paginaId);
     if (id) { open.value = false; emit('klaar', id); }
+    // Over de gratis limiet: de dialoog sluit, zodat het limietvenster te zien is.
+    else if (editor.limietGeweigerd) open.value = false;
   } catch (error) {
     if (afbreker.signal.aborted || isAfgebroken(error) || token !== sessie.value) return;
     const key = await uploadFoutMelding(error, alleenLezen, () => { emit('verwijderd'); open.value = false; });

@@ -317,11 +317,31 @@
       "nieuwProject": "Save as new project",
       "terug": "Back to the projects"
     },
+    "limiet": {
+      "titel": "This project exceeds the free limit",
+      "uitleg": "A free project can contain at most {kringen} and {situatieschemas}. What you just tried to add has not been added.",
+      "prijs": "Unlock this project once for {prijs} excl. VAT ({incl} incl. 21% VAT). An unlocked project has no limits.",
+      "lid": "Ask the owner of your company to unlock this project.",
+      "vrijgeven": "Unlock this project",
+      "abonnement": "Take a subscription",
+      "sluiten": "Close",
+      "vrijgegeven": "This project has been unlocked",
+      "verwerking": "The payment is still being processed. The project will be unlocked as soon as it arrives.",
+      "teller": {
+        "label": "Free limit",
+        "kringen": "{n} of {max} circuit | {n} of {max} circuits",
+        "situatieschemas": "{n} of {max} layout plan | {n} of {max} layout plans"
+      }
+    },
+    "alleenLezenBalk": {
+      "titel": "Read-only",
+      "tekst": "This project was created during your subscription. You can view and export it. To edit it, unlock it or take a subscription again."
+    },
     "alleenLezen": {
-      "bewaardLokaal": "Your company has no active subscription. Your latest changes have not been saved, but they are kept locally.",
-      "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory.",
+      "bewaardLokaal": "This project is read-only. Your latest changes have not been saved, but they are kept locally.",
+      "nietBewaard": "This project is read-only. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory.",
       "dialoogTitel": "Read-only",
-      "dialoogBeschrijving": "Your company has no active subscription. Changes in this dialog can no longer be saved."
+      "dialoogBeschrijving": "This project is read-only. Changes in this dialog cannot be saved."
     },
     "onderdelenPaneel": {
       "titel": "Components",
@@ -748,7 +768,7 @@
         "onbewaard": "The project could not be saved. You can export as soon as it is saved.",
         "conflict": "The project has been changed elsewhere in the meantime. Resolve the conflict first.",
         "fout": "The server refused to save the project. Try saving again, then export.",
-        "alleen-lezen": "Your company has no active subscription, so your latest changes are only kept locally and will not be in the PDF. Reopen the project to export the last saved version."
+        "alleen-lezen": "This project is read-only, so your latest changes are only kept locally and will not be in the PDF. Reopen the project to export the last saved version."
       },
       "onderdelen": {
         "titel": "Contents",
@@ -977,6 +997,11 @@
       "export": "Review the findings and export the dossier as a PDF."
     },
     "zojuist": "just now",
+    "label": {
+      "gratis": "Free",
+      "vrijgegeven": "Unlocked",
+      "alleen-lezen": "Read-only"
+    },
     "status": {
       "nietGeexporteerd": "Not exported",
       "geexporteerd": "Exported"

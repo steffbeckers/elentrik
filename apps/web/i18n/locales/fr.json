@@ -317,11 +317,31 @@
       "nieuwProject": "Enregistrer comme nouveau projet",
       "terug": "Retour aux projets"
     },
+    "limiet": {
+      "titel": "Ce projet dépasse la limite gratuite",
+      "uitleg": "Un projet gratuit peut contenir au maximum {kringen} et {situatieschemas}. Ce que vous vouliez ajouter n'a pas été ajouté.",
+      "prijs": "Débloquez ce projet en une seule fois pour {prijs} hors TVA ({incl} TVA 21 % comprise). Un projet débloqué n'a plus de limites.",
+      "lid": "Demandez au propriétaire de votre entreprise de débloquer ce projet.",
+      "vrijgeven": "Débloquer ce projet",
+      "abonnement": "Prendre un abonnement",
+      "sluiten": "Fermer",
+      "vrijgegeven": "Ce projet est débloqué",
+      "verwerking": "Le paiement est encore en cours de traitement. Le projet sera débloqué dès sa réception.",
+      "teller": {
+        "label": "Limite gratuite",
+        "kringen": "{n} sur {max} circuit | {n} sur {max} circuits",
+        "situatieschemas": "{n} sur {max} plan de position | {n} sur {max} plans de position"
+      }
+    },
+    "alleenLezenBalk": {
+      "titel": "Lecture seule",
+      "tekst": "Ce projet a été créé pendant votre abonnement. Vous pouvez le consulter et l'exporter. Pour le modifier, débloquez-le ou reprenez un abonnement."
+    },
     "alleenLezen": {
-      "bewaardLokaal": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
-      "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire.",
+      "bewaardLokaal": "Ce projet est en lecture seule. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
+      "nietBewaard": "Ce projet est en lecture seule. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire.",
       "dialoogTitel": "Lecture seule",
-      "dialoogBeschrijving": "Votre entreprise n'a pas d'abonnement actif. Les modifications de cette boîte de dialogue ne peuvent plus être enregistrées."
+      "dialoogBeschrijving": "Ce projet est en lecture seule. Les modifications de cette boîte de dialogue ne peuvent pas être enregistrées."
     },
     "onderdelenPaneel": {
       "titel": "Éléments",
@@ -748,7 +768,7 @@
         "onbewaard": "Le projet n'a pas pu être enregistré. Vous pourrez exporter dès qu'il sera enregistré.",
         "conflict": "Le projet a été modifié ailleurs entre-temps. Résolvez d'abord le conflit.",
         "fout": "Le serveur a refusé d'enregistrer le projet. Réessayez de l'enregistrer, puis exportez.",
-        "alleen-lezen": "Votre entreprise n'a pas d'abonnement actif : vos dernières modifications ne sont conservées que localement et ne figureront pas dans le PDF. Rouvrez le projet pour exporter la dernière version enregistrée."
+        "alleen-lezen": "Ce projet est en lecture seule : vos dernières modifications ne sont conservées que localement et ne figureront pas dans le PDF. Rouvrez le projet pour exporter la dernière version enregistrée."
       },
       "onderdelen": {
         "titel": "Contenu",
@@ -977,6 +997,11 @@
       "export": "Vérifiez les constats et exportez le dossier en PDF."
     },
     "zojuist": "à l’instant",
+    "label": {
+      "gratis": "Gratuit",
+      "vrijgegeven": "Débloqué",
+      "alleen-lezen": "Lecture seule"
+    },
     "status": {
       "nietGeexporteerd": "Non exporté",
       "geexporteerd": "Exporté"

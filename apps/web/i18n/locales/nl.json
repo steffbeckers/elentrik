@@ -317,11 +317,31 @@
       "nieuwProject": "Bewaar als nieuw project",
       "terug": "Terug naar de projecten"
     },
+    "limiet": {
+      "titel": "Dit project gaat over de gratis limiet",
+      "uitleg": "Een gratis project mag maximaal {kringen} en {situatieschemas} bevatten. Wat je net wou toevoegen, is niet toegevoegd.",
+      "prijs": "Geef dit project eenmalig vrij voor {prijs} excl. btw ({incl} incl. 21 % btw). Een vrijgegeven project heeft geen limieten.",
+      "lid": "Vraag de eigenaar van je bedrijf om dit project vrij te geven.",
+      "vrijgeven": "Dit project vrijgeven",
+      "abonnement": "Een abonnement nemen",
+      "sluiten": "Sluiten",
+      "vrijgegeven": "Dit project is vrijgegeven",
+      "verwerking": "De betaling wordt nog verwerkt. Het project wordt vrijgegeven zodra ze binnen is.",
+      "teller": {
+        "label": "Gratis limiet",
+        "kringen": "{n} van {max} kring | {n} van {max} kringen",
+        "situatieschemas": "{n} van {max} situatieschema | {n} van {max} situatieschema's"
+      }
+    },
+    "alleenLezenBalk": {
+      "titel": "Alleen lezen",
+      "tekst": "Dit project is gemaakt tijdens je abonnement. Je kan het bekijken en exporteren. Om te bewerken geef je het vrij of neem je opnieuw een abonnement."
+    },
     "alleenLezen": {
-      "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
-      "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen.",
+      "bewaardLokaal": "Dit project is alleen-lezen. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
+      "nietBewaard": "Dit project is alleen-lezen. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen.",
       "dialoogTitel": "Alleen lezen",
-      "dialoogBeschrijving": "Je bedrijf heeft geen actief abonnement. Wijzigingen in deze dialoog kunnen niet meer bewaard worden."
+      "dialoogBeschrijving": "Dit project is alleen-lezen. Wijzigingen in deze dialoog kunnen niet bewaard worden."
     },
     "onderdelenPaneel": {
       "titel": "Onderdelen",
@@ -748,7 +768,7 @@
         "onbewaard": "Het project kon niet opgeslagen worden. Exporteren kan zodra het opgeslagen is.",
         "conflict": "Het project is intussen elders gewijzigd. Los eerst het conflict op.",
         "fout": "De server weigerde het project op te slaan. Probeer opnieuw op te slaan en exporteer daarna.",
-        "alleen-lezen": "Je bedrijf heeft geen actief abonnement, dus je laatste wijzigingen staan alleen lokaal en komen niet in de PDF. Open het project opnieuw om de laatst opgeslagen versie te exporteren."
+        "alleen-lezen": "Dit project is alleen-lezen, dus je laatste wijzigingen staan alleen lokaal en komen niet in de PDF. Open het project opnieuw om de laatst opgeslagen versie te exporteren."
       },
       "onderdelen": {
         "titel": "Onderdelen",
@@ -977,6 +997,11 @@
       "export": "Kijk de bevindingen na en exporteer het dossier als PDF."
     },
     "zojuist": "zojuist",
+    "label": {
+      "gratis": "Gratis",
+      "vrijgegeven": "Vrijgegeven",
+      "alleen-lezen": "Alleen-lezen"
+    },
     "status": {
       "nietGeexporteerd": "Niet geëxporteerd",
       "geexporteerd": "Geëxporteerd"

@@ -4,7 +4,7 @@ import type { SituatiePagina } from "@elentrik/model";
 import type { BestandenApi } from "../composables/useBestandenApi";
 import { httpStatus } from "../composables/useProjectenApi";
 import { foutCode } from "../sessie/fouten";
-import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
+import { PROJECT_ALLEEN_LEZEN, PROJECT_LIMIET } from "../../shared/abonnement";
 
 const OPSLAG_VOL = "OPSLAG_VOL";
 
@@ -98,9 +98,10 @@ export function foutSleutel(fout: unknown): UploadFoutSleutel {
 }
 
 /**
- * Wat een mislukte upload de gebruiker meldt. Een 402 `ABONNEMENT_VEREIST` (de organisatie mag niet
- * meer schrijven) gaat eerst langs `alleenLezen`, de bestaande alleen-lezenafhandeling (de sessie
- * opnieuw lezen en de alleen-lezenmelding tonen): dan is er niets meer te melden (null). Een 404
+ * Wat een mislukte upload de gebruiker meldt. Een 402 van de projecttoegang (`PROJECT_ALLEEN_LEZEN`:
+ * het project mag niet meer bewerkt worden, of `PROJECT_LIMIET`) gaat eerst langs `alleenLezen`, de
+ * bestaande afhandeling van een schrijfweigering (de sessie opnieuw lezen en de melding tonen): dan is
+ * er niets meer te melden (null). Een 404
  * (het project is verwijderd) gaat naar `verwijderd`, de verwijderd-toestand van de editor: ook null.
  * Anders de sleutel onder `editor.situatie.toevoegen.fout`.
  */
@@ -109,7 +110,9 @@ export async function uploadFoutMelding(
   alleenLezen: (fout: unknown) => Promise<unknown>,
   verwijderd?: () => void,
 ): Promise<UploadFoutSleutel | null> {
-  if (httpStatus(fout) === 402 && foutCode(fout) === ABONNEMENT_VEREIST && (await alleenLezen(fout))) return null;
+  const code = foutCode(fout);
+  const projecttoegang = code === PROJECT_ALLEEN_LEZEN || code === PROJECT_LIMIET;
+  if (httpStatus(fout) === 402 && projecttoegang && (await alleenLezen(fout))) return null;
   // Een 404 op het uploaden betekent dat het project elders verwijderd werd: de editor toont zijn
   // verwijderd-melding en er is niets algemeens meer te melden.
   if (httpStatus(fout) === 404 && verwijderd) {
