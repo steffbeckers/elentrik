@@ -1323,4 +1323,24 @@ describe("geen proefperiode meer (prijsmodel)", () => {
     const [rij] = await db.select({ gebruikt: user.proefGebruikt }).from(user).where(eq(user.id, eigenaar.id));
     expect(rij?.gebruikt).toBe(false);
   });
+
+  test("proefGebruikt is niet te zetten, niet bij de registratie en niet via update-user", async () => {
+    const kaper = nieuwAdres();
+    await expect(
+      auth.api.signUpEmail({
+        body: { name: "Jan", email: kaper, password: WACHTWOORD, proefGebruikt: true } as never,
+        headers: authHeaders(),
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(await db.select().from(user).where(eq(user.email, kaper))).toHaveLength(0);
+
+    const jan = await gebruiker();
+    for (const waarde of [true, false]) {
+      await expect(
+        auth.api.updateUser({ body: { proefGebruikt: waarde } as never, headers: authHeaders(jan.cookie) }),
+      ).rejects.toMatchObject({ statusCode: 400 });
+    }
+    const [rij] = await db.select({ gebruikt: user.proefGebruikt }).from(user).where(eq(user.id, jan.id));
+    expect(rij?.gebruikt).toBe(false);
+  });
 });
