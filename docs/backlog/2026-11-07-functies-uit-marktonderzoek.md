@@ -147,6 +147,8 @@ Te bespreken bij het afstellen van de Stripe-abonnementen. Er zijn nog geen prij
 - Een abonnement zonder automatische verlenging, als keuze naast verlenging.
 - Een gratis start voor bedrijven die jonger zijn dan een jaar.
 
+De proefperiode en een mogelijke gratis versie zijn verder uitgewerkt in `2026-11-07-proefperiode-en-gratis-versie.md`.
+
 ## Voorgestelde volgorde
 
 1. Een eerste plan met de punten 2, 3, 4 en 5: kleine aanvullingen op de projectgegevens en de editor.
