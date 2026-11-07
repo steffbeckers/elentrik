@@ -108,3 +108,4 @@ export {
 } from "./schema";
 export { bepaalKringCodes, kringLetter, legKringCodesVast, hernummerKringen, voorbeeldHernummering, type Hernummering } from './referenties';
 export { dupliceerKring, behoudKringCodes } from './referenties';
+export { telVoorLimiet, overschrijdtLimiet, type Limieten, type Telling } from "./limiet";
