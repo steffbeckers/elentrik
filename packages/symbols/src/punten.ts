@@ -31,7 +31,8 @@ export function letterH(x: number, y: number): string {
 /**
  * Contactdoos volgens F in AREI tabel 2.23, 14 × 10 mm. De voeding komt van onder (`in`) en raakt
  * de bolle kant van een halve cirkel (r = 3); de boog opent naar boven, naar `uit`, en de lijn loopt
- * door de boog tot `uit`.
+ * door de boog tot `uit`. Bij `einde` (laatste punt, geen volgend punt) stopt de lijn op de hoogte
+ * van de uiteinden van de boog.
  * - randaarde: een streep tegen de bolle kant, breder dan de boog;
  * - kinderbeveiliging: een voetje aan elk uiteinde van de boog, naar buiten;
  * - waterdicht: de letter h rechts van de boog;
@@ -46,7 +47,7 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">, horizontaal = fal
   const eindY = 4;
   const topY = eindY + r;
   let svg =
-    lijn(x, hoogte, x, horizontaal && einde ? eindY : 0) +
+    lijn(x, hoogte, x, einde ? eindY : 0) +
     // Sweep 0: van links naar rechts onderlangs, dus de bolle kant wijst naar `in` en de boog opent naar `uit`.
     pad(`M${getal(x - r)} ${getal(eindY)} A${getal(r)} ${getal(r)} 0 0 0 ${getal(x + r)} ${getal(eindY)}`);
   if (node.randaarde) svg += lijn(x - r - 1, topY, x + r + 1, topY, { data: { rol: "randaarde" } });

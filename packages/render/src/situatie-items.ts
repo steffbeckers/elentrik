@@ -52,7 +52,7 @@ export function situatieItems(
     if (!node) continue;
     items.push({
       nodeId: plaatsing.nodeId,
-      symbool: tekenSymbool(node),
+      symbool: tekenSymbool(node, { einde: true }),
       x: plaatsing.x,
       y: plaatsing.y,
       rotatie: plaatsing.rotatie,

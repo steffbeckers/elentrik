@@ -5,11 +5,19 @@ import { tekenContactdoos, tekenLichtpunt, tekenSchakelaar, tekenToestel } from 
 import type { Symbool } from "./types";
 import { tekenAansluiting, tekenTeller, tekenAarding } from "./voeding";
 
+export type SymboolOpties = {
+  /**
+   * De node is het laatste punt: er loopt geen leiding verder naar een volgend punt. De
+   * contactdoos laat de lijn dan in de boog stoppen in plaats van door te lopen tot `uit`.
+   */
+  einde?: boolean;
+};
+
 /**
  * Tekent het symbool van een node. Uitputtende `switch`: een nieuw nodetype geeft een
  * compilatiefout.
  */
-export function tekenSymbool(node: Node): Symbool {
+export function tekenSymbool(node: Node, opties: SymboolOpties = {}): Symbool {
   switch (node.type) {
     case "aansluiting":
       return tekenAansluiting(node);
@@ -29,7 +37,7 @@ export function tekenSymbool(node: Node): Symbool {
     case "leiding":
       return tekenLeiding(node);
     case "contactdoos":
-      return tekenContactdoos(node);
+      return tekenContactdoos(node, false, opties.einde ?? false);
     case "lichtpunt":
       return tekenLichtpunt(node);
     case "schakelaar":
