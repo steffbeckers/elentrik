@@ -104,7 +104,8 @@ export function maakStrook(doc: InstallatieDocument, analyse: Analyse = analysee
   const tekstenVanNode = new Map<NodeId, TekstElement[]>();
   for (const id of preOrder) {
     const node = doc.nodes[id]!;
-    const symbool = tekenSymbool(node);
+    // Zonder kind en zonder aftakking loopt de leiding niet verder naar een volgend punt.
+    const symbool = tekenSymbool(node, { einde: kinderenVan(id).length === 0 && !blokken.has(id) });
     symbolen.set(id, symbool);
     const puntLabel = Object.hasOwn(analyse.puntLabels, id) ? analyse.puntLabels[id] : undefined;
     const regels = teksten(node, symbool, kringLabelVan.get(id), puntLabel);

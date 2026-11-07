@@ -166,6 +166,16 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(Math.min(lang!.y1, lang!.y2)).toBe(0);
     });
 
+    test.each(contactdozen)("als laatste punt stopt de lijn in de boog: %s", (_naam, node) => {
+      const svg = tekenSymbool(node, { einde: true }).svg;
+      const b = boog(svg);
+      const stam = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
+      expect(stam).toHaveLength(1);
+      expect(Math.max(stam[0]!.y1, stam[0]!.y2)).toBe(10);
+      // De lijn stopt waar ze de bolle kant raakt: niets binnen of voorbij de boog.
+      expect(Math.min(stam[0]!.y1, stam[0]!.y2)).toBe(b.topY);
+    });
+
     test.each(contactdozen)("randaarde raakt de bolle kant: %s", (_naam, node) => {
       const svg = tekenSymbool(node).svg;
       const { randaarde } = node as NodeVan<"contactdoos">;
