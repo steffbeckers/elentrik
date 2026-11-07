@@ -17,7 +17,7 @@ const QuerySchema = PagineringSchema.extend({
   zoek: z.string().trim().max(200).default(""), exactId: z.string().max(200).optional(),
   organisatieId: z.string().max(200).optional(), gebruikerId: z.string().max(200).optional(),
   verwijderd: z.enum(["nee", "ja", "exact"]).default("nee"),
-  toegang: z.enum(["uit", "vrijgesteld", "abonnement", "betalingsgratie", "proef", "alleenLezen"]).optional(),
+  toegang: z.enum(["uit", "vrijgesteld", "onderwijs", "abonnement", "betalingsgratie", "proef", "gratis"]).optional(),
   status: z.string().max(50).optional(), aandacht: z.enum(["proef", "betaling"]).optional(),
   volgorde: z.enum(["naam", "gewijzigd"]).default("naam"),
 });
@@ -48,7 +48,7 @@ export async function lijstAdminGebruikers(db: Db, invoer: Record<string, unknow
 
 const organisatieKolommen = {
   id: organization.id, naam: organization.name, aangemaakt: organization.createdAt,
-  proefEinde: organization.proefEinde, vrijgesteld: organization.vrijgesteld,
+  proefEinde: organization.proefEinde, vrijgesteld: organization.vrijgesteld, onderwijs: organization.onderwijs,
   status: abonnementen.status, achterstalligSinds: abonnementen.achterstalligSinds,
   leden: sql<number>`(select count(*)::int from member where organization_id = ${organization.id})`,
   projecten: sql<number>`(select count(*)::int from projecten where organisatie_id = ${organization.id} and verwijderd is null)`,
@@ -74,7 +74,7 @@ export async function lijstAdminOrganisaties(db: Db, invoer: Record<string, unkn
     return { id: r.id, naam: r.naam, aangemaakt: r.aangemaakt.toISOString(), leden: Number(r.leden), projecten: Number(r.projecten),
       eigenaren: r.eigenaren, status: r.status, groep: r.groep,
       toegang: verklaarToegang({ nu, ingeschakeld: config.ingeschakeld, proefEinde: r.proefEinde, vrijgesteld: r.vrijgesteld,
-        abonnement: status ? { status, achterstalligSinds: r.achterstalligSinds } : null }) };
+        onderwijs: r.onderwijs, abonnement: status ? { status, achterstalligSinds: r.achterstalligSinds } : null }) };
   }), totaal: total!.n, pagina: q.pagina, perPagina: q.perPagina };
 }
 

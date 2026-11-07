@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import Stripe from "stripe";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { gebruikAbonnementen, leesAbonnementConfig, zetAbonnementen } from "../server/abonnementen/config";
+import { gebruikAbonnementen, leesAbonnementConfig, leesLimieten, zetAbonnementen } from "../server/abonnementen/config";
 import { leesWebhook, maakStripePoort } from "../server/abonnementen/stripe";
 import { maakNepStripe } from "./nep-stripe";
 
@@ -32,8 +32,9 @@ function vang(f: () => unknown): unknown {
 
 describe("leesAbonnementConfig", () => {
   test("zonder sleutel zijn abonnementen uit", () => {
-    expect(leesAbonnementConfig({})).toEqual({ ingeschakeld: false });
-    expect(leesAbonnementConfig({ STRIPE_GEHEIME_SLEUTEL: "  " })).toEqual({ ingeschakeld: false });
+    const limieten = { kringen: 5, situatieschemas: 1 };
+    expect(leesAbonnementConfig({})).toEqual({ ingeschakeld: false, limieten });
+    expect(leesAbonnementConfig({ STRIPE_GEHEIME_SLEUTEL: "  " })).toEqual({ ingeschakeld: false, limieten });
   });
 
   test("volledig: sleutel, prijzen, geheim en inbox", () => {
@@ -41,9 +42,47 @@ describe("leesAbonnementConfig", () => {
       ingeschakeld: true,
       sleutel: "sk_test_geheim",
       webhookGeheim: "whsec_test",
-      prijzen: { maand: "price_maand", jaar: "price_jaar" },
+      prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+      limieten: { kringen: 5, situatieschemas: 1 },
       boekhoudingInbox: "boekhouding@voorbeeld.be",
       apiBasis: null,
+    });
+  });
+
+  test("limieten standaard 5 en 1", () => {
+    expect(leesLimieten({})).toEqual({ kringen: 5, situatieschemas: 1 });
+    expect(leesLimieten({ GRATIS_MAX_KRINGEN: " ", GRATIS_MAX_SITUATIESCHEMAS: "" })).toEqual({
+      kringen: 5,
+      situatieschemas: 1,
+    });
+    expect(leesLimieten({ GRATIS_MAX_KRINGEN: "12", GRATIS_MAX_SITUATIESCHEMAS: "3" })).toEqual({
+      kringen: 12,
+      situatieschemas: 3,
+    });
+    // Ook met abonnementen uit staan de limieten in de config (ze worden dan niet toegepast).
+    expect(leesAbonnementConfig({ GRATIS_MAX_KRINGEN: "7" })).toEqual({
+      ingeschakeld: false,
+      limieten: { kringen: 7, situatieschemas: 1 },
+    });
+    expect(leesAbonnementConfig({ ...VOLLEDIG, GRATIS_MAX_SITUATIESCHEMAS: "2" })).toMatchObject({
+      limieten: { kringen: 5, situatieschemas: 2 },
+    });
+  });
+
+  test("GRATIS_MAX_KRINGEN=abc faalt met de naam", () => {
+    expect(() => leesLimieten({ GRATIS_MAX_KRINGEN: "abc" })).toThrow("GRATIS_MAX_KRINGEN");
+    expect(() => leesAbonnementConfig({ GRATIS_MAX_KRINGEN: "abc" })).toThrow("GRATIS_MAX_KRINGEN");
+    expect(() => leesAbonnementConfig({ ...VOLLEDIG, GRATIS_MAX_KRINGEN: "abc" })).toThrow("GRATIS_MAX_KRINGEN");
+    for (const ongeldig of ["0", "-1", "1.5", "5x", "1e3"]) {
+      expect(() => leesLimieten({ GRATIS_MAX_SITUATIESCHEMAS: ongeldig })).toThrow("GRATIS_MAX_SITUATIESCHEMAS");
+    }
+  });
+
+  test("STRIPE_PRIJS_PROJECT optioneel", () => {
+    expect(leesAbonnementConfig(VOLLEDIG)).toMatchObject({ prijzen: { project: null } });
+    expect(leesAbonnementConfig({ ...VOLLEDIG, STRIPE_PRIJS_PROJECT: "  " })).toMatchObject({ prijzen: { project: null } });
+    expect(leesAbonnementConfig({ ...VOLLEDIG, STRIPE_PRIJS_PROJECT: "price_project" })).toMatchObject({
+      prijzen: { maand: "price_maand", jaar: "price_jaar", project: "price_project" },
     });
   });
 

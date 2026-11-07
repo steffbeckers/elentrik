@@ -213,9 +213,9 @@ export const organization = pgTable(
     createdAt: timestamp("created_at").notNull(),
     metadata: text("metadata"),
     /**
-     * Tot wanneer de organisatie gratis mag schrijven. De code zet het bij het aanmaken
-     * (`kenProefperiodeToe`); de default is het vangnet voor een rechtstreekse insert. Sinds het
-     * prijsmodel is er geen proefperiode meer: de default is `now()`.
+     * Einde van de overgangsproef: tot dan telt het bedrijf als niveau `abonnement` (spec 4.8).
+     * Sinds het prijsmodel is er geen proefperiode meer: beide aanmaakpaden zetten het op het
+     * moment van aanmaken, en de default `now()` is het vangnet voor een rechtstreekse insert.
      */
     proefEinde: timestamp("proef_einde", { withTimezone: true }).notNull().default(sql`now()`),
     /** Altijd schrijfrecht zonder abonnement; alleen via SQL te zetten. */

@@ -23,9 +23,9 @@ test("overview groups are exclusive and match the actual access precedence", asy
   }
   const result = await adminOverzicht(db, ADMIN_BILLING, nu);
   expect(result.aantallen.organisaties).toBe(5);
-  expect(result.toegang).toEqual({ vrijgesteld: 1, abonnement: 1, betalingsgratie: 1, proef: 1, alleenLezen: 1, uit: 0 });
+  expect(result.toegang).toEqual({ vrijgesteld: 1, onderwijs: 0, abonnement: 1, betalingsgratie: 1, proef: 1, gratis: 1, uit: 0 });
   expect(result.aandacht.proefEindigt.items).toHaveLength(1);
-  const off = await adminOverzicht(db, { ingeschakeld: false }, nu);
+  const off = await adminOverzicht(db, { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, nu);
   expect(off.toegang.uit).toBe(5);
   expect(off.aandacht.proefEindigt.items).toEqual([]);
   expect(off.aandacht.betaling.items).toEqual([]);

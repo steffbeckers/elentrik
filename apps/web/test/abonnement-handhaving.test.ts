@@ -38,7 +38,8 @@ const INGESCHAKELD: AbonnementConfig = {
   ingeschakeld: true,
   sleutel: "sk_test_nep",
   webhookGeheim: null,
-  prijzen: { maand: "price_maand", jaar: "price_jaar" },
+  prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+  limieten: { kringen: 5, situatieschemas: 1 },
   boekhoudingInbox: null,
   apiBasis: null,
 };
@@ -213,21 +214,9 @@ describe("alleen-lezen zonder schrijfrecht", () => {
     return { projecten: rijen.length, versies: rijen.map((r) => r.versie).sort() };
   }
 
-  test("een verlopen proef geeft 402 op de vijf schrijfroutes en verandert niets", async () => {
-    schakelIn();
-    await zetProefEinde(eigenaar.organisatieId, new Date(Date.now() - DAG_MS));
-    const verzoeken = await schrijfVerzoeken();
-    const voor = await tel();
-
-    for (const [naam, verzoek] of Object.entries(verzoeken)) {
-      const antwoord = await stuur(verzoek, eigenaar.cookie);
-      expect(antwoord.status, naam).toBe(402);
-      const body = (await antwoord.json()) as { data?: { code?: string; reden?: string } };
-      expect(body.data?.code, naam).toBe("ABONNEMENT_VEREIST");
-      expect(body.data?.reden, naam).toBe("proef-voorbij");
-    }
-    expect(await tel()).toEqual(voor);
-  });
+  // Prijsmodel: een bedrijf is nooit meer volledig alleen-lezen; taak 4 vervangt deze 402 door de
+  // handhaving per project (PROJECT_ALLEEN_LEZEN en PROJECT_LIMIET).
+  test.todo("een verlopen proef geeft 402 op de vijf schrijfroutes en verandert niets");
 
   test("dezelfde organisatie mag nog lezen, exporteren, verwijderen en beheren", async () => {
     schakelIn();
@@ -275,7 +264,7 @@ describe("alleen-lezen zonder schrijfrecht", () => {
   });
 
   test("met abonnementen uit krijgt niemand een 402", async () => {
-    zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+    zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
     await zetProefEinde(eigenaar.organisatieId, new Date(Date.now() - DAG_MS));
     for (const [naam, verzoek] of Object.entries(await schrijfVerzoeken())) {
       expect((await stuur(verzoek, eigenaar.cookie)).status, naam).not.toBe(402);
@@ -295,10 +284,10 @@ describe("alleen-lezen zonder schrijfrecht", () => {
 describe("GET /api/mij", () => {
   type MijAntwoord = {
     gebruiker: { proefGebruikt: boolean };
-    organisaties: { id: string; toegang: { schrijven: boolean; reden: string; proefEinde: string | null; achterstalligTot: string | null } }[];
+    organisaties: { id: string; toegang: { niveau: string; reden: string; proefEinde: string | null; achterstalligTot: string | null } }[];
   };
 
-  test("geeft per organisatie de toegang en of de proefperiode gebruikt is", async () => {
+  test("geeft per organisatie de toegang; proefGebruikt wordt niet meer gezet", async () => {
     schakelIn();
     const einde = new Date(Date.now() - DAG_MS);
     await zetProefEinde(eigenaar.organisatieId, einde);
@@ -306,12 +295,12 @@ describe("GET /api/mij", () => {
     expect(antwoord.status).toBe(200);
     const body = (await antwoord.json()) as MijAntwoord;
     expect(body.organisaties.find((o) => o.id === eigenaar.organisatieId)?.toegang).toEqual({
-      schrijven: false,
-      reden: "proef-voorbij",
+      niveau: "gratis",
+      reden: "gratis",
       proefEinde: einde.toISOString(),
       achterstalligTot: null,
     });
-    expect(body.gebruiker.proefGebruikt).toBe(true);
+    expect(body.gebruiker.proefGebruikt).toBe(false);
   });
 
   test("een past_due-organisatie krijgt achterstalligTot: achterstalligSinds + 14 dagen", async () => {
@@ -326,17 +315,17 @@ describe("GET /api/mij", () => {
     const body = (await (await stuur({ methode: "GET", pad: "/api/mij" }, eigenaar.cookie)).json()) as MijAntwoord;
     await db.delete(abonnementen).where(eq(abonnementen.organisatieId, eigenaar.organisatieId));
     expect(body.organisaties.find((o) => o.id === eigenaar.organisatieId)?.toegang).toMatchObject({
-      schrijven: true,
+      niveau: "abonnement",
       reden: "betaling-mislukt",
       achterstalligTot: new Date(sinds.getTime() + 14 * DAG_MS).toISOString(),
     });
   });
 
-  test("met abonnementen uit mag elke organisatie schrijven", async () => {
-    zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+  test("met abonnementen uit staat elke organisatie op niveau uit", async () => {
+    zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
     const body = (await (await stuur({ methode: "GET", pad: "/api/mij" }, eigenaar.cookie)).json()) as MijAntwoord;
     expect(body.organisaties[0]?.toegang).toEqual({
-      schrijven: true,
+      niveau: "uit",
       reden: "uit",
       proefEinde: null,
       achterstalligTot: null,
@@ -373,7 +362,7 @@ describe("toegangVoor", () => {
     await zetProefEinde(organisatieId, new Date(Date.now() - DAG_MS));
     await db.insert(abonnementen).values({ organisatieId, stripeKlantId: "cus_rommel", status: "rommel" });
     const toegang = await toegangVoor(db, organisatieId, INGESCHAKELD);
-    expect(toegang).toMatchObject({ schrijven: false, reden: "proef-voorbij" });
+    expect(toegang).toMatchObject({ niveau: "gratis", reden: "gratis" });
     expect((await haalAbonnementRij(db, organisatieId))?.stripeKlantId).toBe("cus_rommel");
   });
 
@@ -391,7 +380,7 @@ describe("toegangVoor", () => {
       achterstalligSinds: sinds,
     });
     expect(await toegangVoor(db, organisatieId, INGESCHAKELD, nu)).toMatchObject({
-      schrijven: true,
+      niveau: "abonnement",
       reden: "betaling-mislukt",
       achterstalligTot: new Date(sinds.getTime() + 14 * DAG_MS).toISOString(),
     });
@@ -403,8 +392,8 @@ describe("toegangVoor", () => {
     expect((await toegangVoor(db, "bestaat-niet", INGESCHAKELD, nu)).achterstalligTot).toBeNull();
   });
 
-  test("een onbekende organisatie krijgt nooit schrijfrecht", async () => {
-    expect(await toegangVoor(db, "bestaat-niet", INGESCHAKELD)).toMatchObject({ schrijven: false });
+  test("een onbekende organisatie krijgt nooit meer dan de gratis versie", async () => {
+    expect(await toegangVoor(db, "bestaat-niet", INGESCHAKELD)).toMatchObject({ niveau: "gratis", reden: "gratis" });
   });
 });
 

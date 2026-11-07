@@ -48,7 +48,7 @@ test("another administrator edits and archives while preserving creator and stal
 test("follow-up enters at Brussels midnight and disappears after date clearing or archive", async () => {
   const org = await maakTestOrganisatie(db);
   const note = await maakNotitie(db, actor, { mutatieId: crypto.randomUUID(), organisatieId: org, projectId: null, tekst: "Terugbellen", opvolgdatum: "2027-03-29" });
-  const overview = (date: string) => adminOverzicht(db, { ingeschakeld: false }, new Date(date));
+  const overview = (date: string) => adminOverzicht(db, { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, new Date(date));
   expect((await overview("2027-03-28T21:59:59Z")).opvolging.items).toEqual([]);
   expect((await overview("2027-03-28T22:00:00Z")).opvolging.items[0]?.id).toBe(note.id);
   const cleared = await wijzigNotitie(db, actor, note.id, { mutatieId: crypto.randomUUID(), reden: "Geen opvolging nodig", verwacht: note.verwacht, gegevens: { tekst: note.tekst, opvolgdatum: null, gearchiveerd: false } });

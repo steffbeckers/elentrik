@@ -71,17 +71,20 @@ async function haalPrijs(stripe: StripePoort, prijsId: string, nu: number): Prom
   return prijs;
 }
 
-/** De prijzen van beide formules, of null als Stripe ze niet geeft: de pagina blijft dan werken. */
+/**
+ * De prijzen van beide formules, of null als Stripe ze niet geeft: de pagina blijft dan werken.
+ * De projectprijs volgt in taak 6 van het prijsmodel; tot dan is ze null.
+ */
 async function haalPrijzen(
   { config, stripe }: Ingeschakeld,
   nu: number,
-): Promise<{ maand: Prijs; jaar: Prijs } | null> {
+): Promise<{ maand: Prijs; jaar: Prijs; project: Prijs | null } | null> {
   try {
     const [maand, jaar] = await Promise.all([
       haalPrijs(stripe, config.prijzen.maand, nu),
       haalPrijs(stripe, config.prijzen.jaar, nu),
     ]);
-    return { maand, jaar };
+    return { maand, jaar, project: null };
   } catch {
     return null;
   }

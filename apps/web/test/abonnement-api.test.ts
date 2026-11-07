@@ -26,7 +26,8 @@ const INGESCHAKELD: AbonnementConfig = {
   ingeschakeld: true,
   sleutel: "sk_test_nep",
   webhookGeheim: null,
-  prijzen: { maand: "price_maand", jaar: "price_jaar" },
+  prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+  limieten: { kringen: 5, situatieschemas: 1 },
   boekhoudingInbox: null,
   apiBasis: null,
 };
@@ -543,7 +544,7 @@ describe("synchroniseer", () => {
     expect(tekst).not.toContain("sub_");
     expect(JSON.parse(tekst)).toMatchObject({
       ingeschakeld: true,
-      schrijven: true,
+      niveau: "abonnement",
       reden: "actief",
       status: "active",
       formule: "jaar",
@@ -579,7 +580,7 @@ describe("GET /api/abonnement", () => {
     expect(lid).toEqual((await metEigenaar.json()) as AbonnementOverzicht);
     expect(lid).toMatchObject({
       ingeschakeld: true,
-      schrijven: true,
+      niveau: "abonnement",
       reden: "actief",
       status: "trialing",
       formule: "maand",
@@ -590,12 +591,13 @@ describe("GET /api/abonnement", () => {
     expect(lid.prijzen).toEqual({
       maand: { bedrag: 1500, munt: "eur", interval: "month" },
       jaar: { bedrag: 15000, munt: "eur", interval: "year" },
+      project: null,
     });
   });
 
   test("zonder klant: heeftKlant is onwaar en de proef loopt", async () => {
     const lid = (await (await overzicht(lidA.cookie)).json()) as AbonnementOverzicht;
-    expect(lid).toMatchObject({ heeftKlant: false, status: null, formule: null, reden: "proef", schrijven: true });
+    expect(lid).toMatchObject({ heeftKlant: false, status: null, formule: null, reden: "proef", niveau: "abonnement" });
     expect(lid.proefEinde).not.toBeNull();
     expect(lid.achterstalligTot).toBeNull();
   });
@@ -612,7 +614,7 @@ describe("GET /api/abonnement", () => {
     const lid = (await (await overzicht(lidA.cookie)).json()) as AbonnementOverzicht;
     expect(lid).toMatchObject({
       reden: "betaling-mislukt",
-      schrijven: true,
+      niveau: "abonnement",
       achterstalligTot: new Date(sinds.getTime() + 14 * 24 * 3600 * 1000).toISOString(),
     });
   });
@@ -653,7 +655,7 @@ describe("GET /api/abonnement", () => {
 
 describe("abonnementen uit", () => {
   beforeEach(() => {
-    zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+    zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
   });
 
   test("de POST's geven 409 ABONNEMENTEN_UIT", async () => {
@@ -667,12 +669,12 @@ describe("abonnementen uit", () => {
     }
   });
 
-  test("GET geeft ingeschakeld: false, met schrijfrecht", async () => {
+  test("GET geeft ingeschakeld: false, met niveau uit", async () => {
     const antwoord = await overzicht(lidA.cookie);
     expect(antwoord.status).toBe(200);
     expect((await antwoord.json()) as AbonnementOverzicht).toEqual({
       ingeschakeld: false,
-      schrijven: true,
+      niveau: "uit",
       reden: "uit",
       proefEinde: null,
       achterstalligTot: null,

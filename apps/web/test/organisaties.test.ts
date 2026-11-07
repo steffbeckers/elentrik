@@ -21,8 +21,8 @@ import { maakTestDb } from "./db";
 import { API, AUTH_ROUTE, beveiligdeRoutebestanden, routeUit } from "./routes";
 
 const WACHTWOORD = "lang-genoeg-1";
-// Abonnementen staan uit in deze tests: elke organisatie mag schrijven, zonder proefperiode.
-const UIT = { schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null };
+// Abonnementen staan uit in deze tests: elke organisatie staat op niveau uit, zonder proefperiode.
+const UIT = { niveau: "uit", reden: "uit", proefEinde: null, achterstalligTot: null };
 
 let db: Db;
 let auth: Auth;
@@ -195,7 +195,7 @@ beforeAll(async () => {
   vi.stubEnv("BETTER_AUTH_URL", "http://127.0.0.1:3000");
   zetVerzender(verzamelaar);
   // Abonnementen uit, ongeacht de omgeving van de ontwikkelaar (STRIPE_GEHEIME_SLEUTEL).
-  zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+  zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
   db = await maakTestDb();
   auth = maakAuth(db);
   zetDb(db);
@@ -238,7 +238,7 @@ describe("GET /api/mij", () => {
 
     const mij = await json(stuur("GET", "/api/mij", eigenaar.cookie));
     expect(mij).toEqual({
-      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, superuser: false, proefGebruikt: true, taal: "nl" },
+      gebruiker: { id: eigenaar.id, naam: eigenaar.email.split("@")[0], email: eigenaar.email, superuser: false, proefGebruikt: false, taal: "nl" },
       organisaties: expect.arrayContaining([
         { id: org, naam: "Bedrijf", rol: "eigenaar", toegang: UIT },
         { id: tweede, naam: "Ander bedrijf", rol: "lid", toegang: UIT },
@@ -260,7 +260,8 @@ describe("GET /api/mij", () => {
         ingeschakeld: true,
         sleutel: "sk_test_nep",
         webhookGeheim: null,
-        prijzen: { maand: "price_maand", jaar: "price_jaar" },
+        prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+        limieten: { kringen: 5, situatieschemas: 1 },
         boekhoudingInbox: null,
         apiBasis: null,
       },
@@ -273,7 +274,7 @@ describe("GET /api/mij", () => {
         actieveOrganisatieId: null,
       });
     } finally {
-      zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+      zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
     }
   });
 
@@ -1295,5 +1296,31 @@ describe("sessie na het wisselen", () => {
     await stuur("POST", "/api/organisaties/actief", a.cookie, { organisatieId: orgB });
     const sessies = await db.select({ actief: session.activeOrganizationId }).from(session).where(eq(session.userId, a.id));
     expect(sessies.map((s) => s.actief)).toContain(orgB);
+  });
+});
+
+describe("geen proefperiode meer (prijsmodel)", () => {
+  async function proefEnAanmaak(id: string) {
+    const [rij] = await db
+      .select({ proefEinde: organization.proefEinde, aangemaakt: organization.createdAt })
+      .from(organization)
+      .where(eq(organization.id, id));
+    return rij!;
+  }
+
+  test("registratie en Better Auth zetten proefEinde op het moment van aanmaken, zonder proefGebruikt", async () => {
+    const eigenaar = await gebruiker("Nieuw bedrijf");
+    const eerste = await proefEnAanmaak(await organisatieVan(eigenaar.id));
+    expect(eerste.proefEinde.getTime()).toBe(eerste.aangemaakt.getTime());
+
+    const tweede = await auth.api.createOrganization({
+      body: { name: "Tweede bedrijf", slug: `tweede-${crypto.randomUUID()}` },
+      headers: authHeaders(eigenaar.cookie),
+    });
+    const via = await proefEnAanmaak(tweede!.id);
+    expect(via.proefEinde.getTime()).toBe(via.aangemaakt.getTime());
+
+    const [rij] = await db.select({ gebruikt: user.proefGebruikt }).from(user).where(eq(user.id, eigenaar.id));
+    expect(rij?.gebruikt).toBe(false);
   });
 });

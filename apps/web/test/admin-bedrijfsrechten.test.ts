@@ -21,12 +21,12 @@ test("free access requires Stripe acknowledgement and removal restores subscript
   const body = { ...await basis(id), gegevens: { vrijgesteld: true, stripeBevestigd: false } };
   await expect(zetVrijstelling(db, actor, id, body)).rejects.toMatchObject({ statusCode: 400 });
   await zetVrijstelling(db, actor, id, { ...body, gegevens: { vrijgesteld: true, stripeBevestigd: true } });
-  expect((await haalAdminOrganisatie(db, id, ADMIN_BILLING, nu)).toegang).toMatchObject({ schrijven: true, reden: "vrijgesteld" });
+  expect((await haalAdminOrganisatie(db, id, ADMIN_BILLING, nu)).toegang).toMatchObject({ niveau: "vrijgesteld", reden: "vrijgesteld" });
   const stripe = { zoekKlant: vi.fn(), maakCheckout: vi.fn() } as unknown as StripePoort;
   await expect(startCheckout(db, stripe, { maand: "price_m", jaar: "price_y" }, { organisatieId: id, formule: "maand", eigenaarEmail: "a@test.be", locale: "nl" }, nu)).rejects.toMatchObject({ statusCode: 409, data: { code: "BEDRIJF_VRIJGESTELD" } });
   expect(stripe.maakCheckout).not.toHaveBeenCalled();
   await zetVrijstelling(db, actor, id, { ...await basis(id), gegevens: { vrijgesteld: false, stripeBevestigd: true } });
-  expect((await haalAdminOrganisatie(db, id, ADMIN_BILLING, nu)).toegang.schrijven).toBe(false);
+  expect((await haalAdminOrganisatie(db, id, ADMIN_BILLING, nu)).toegang).toMatchObject({ niveau: "gratis", reden: "betaling-mislukt" });
   expect(await db.select().from(abonnementen)).toEqual(before);
 });
 test("trial is extended only into the future without resetting trial-used or Stripe", async () => {

@@ -24,7 +24,7 @@ export type AdminOverzicht = {
   beoordeeldOp: string; billing: boolean;
   aantallen: { gebruikers: number; organisaties: number; projecten: number; nieuweGebruikers: number; nieuweOrganisaties: number; gewijzigdeProjecten: number };
   toegang: Record<AdminToegangGroep, number>;
-  aandacht: { proefEindigt: AdminPagina<AdminOrganisatie>; betaling: AdminPagina<AdminOrganisatie>; alleenLezen: AdminPagina<AdminOrganisatie> };
+  aandacht: { proefEindigt: AdminPagina<AdminOrganisatie>; betaling: AdminPagina<AdminOrganisatie>; gratis: AdminPagina<AdminOrganisatie> };
   recenteProjecten: AdminProject[]; recenteCorrecties: AdminAuditItem[];
   opvolging: AdminPagina<AdminNotitie>;
 };
