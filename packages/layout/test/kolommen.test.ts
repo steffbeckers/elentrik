@@ -56,10 +56,10 @@ describe("maakStrook: een keten", () => {
       if (!m) throw new Error("geen stam");
       return Number(m[1]);
     };
-    // Een volgend punt: de lijn loopt door tot `uit`. Het laatste punt: ze stopt bij de uiteinden van de boog.
+    // Een volgend punt: de lijn loopt door tot `uit`. Het laatste punt: ze stopt op de boog.
     expect(stamTop(dozen[0]!)).toBe(0);
     expect(stamTop(dozen[1]!)).toBe(0);
-    expect(stamTop(dozen[2]!)).toBe(4);
+    expect(stamTop(dozen[2]!)).toBe(7);
   });
 
   test("elke node staat in kolom 0 en de breedte is een kolom plus marges", () => {

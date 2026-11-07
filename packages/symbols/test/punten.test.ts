@@ -172,8 +172,8 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       const stam = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
       expect(stam).toHaveLength(1);
       expect(Math.max(stam[0]!.y1, stam[0]!.y2)).toBe(10);
-      // Niets boven de uiteinden van de boog: de lijn loopt niet door naar een volgend punt.
-      expect(Math.min(stam[0]!.y1, stam[0]!.y2)).toBe(b.eindY);
+      // De lijn stopt waar ze de bolle kant raakt: niets binnen of voorbij de boog.
+      expect(Math.min(stam[0]!.y1, stam[0]!.y2)).toBe(b.topY);
     });
 
     test.each(contactdozen)("randaarde raakt de bolle kant: %s", (_naam, node) => {
