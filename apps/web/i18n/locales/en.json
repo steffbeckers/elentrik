@@ -1351,7 +1351,8 @@
       "betalingMislukt": "Your last payment failed.",
       "betalingMisluktTot": "Your last payment failed. Sort out your payment before {datum}.",
       "beeindigd": "Your subscription has ended.",
-      "proefVoorbij": "This company has no ongoing free trial. Choose a subscription to edit projects."
+      "gratis": "You are using the free version of Elentrik.",
+      "onderwijs": "Education account: no limits, exports with a watermark."
     },
     "datumOnbekend": "a later date",
     "formules": {
@@ -1360,7 +1361,8 @@
     },
     "per": {
       "maand": "per month",
-      "jaar": "per year"
+      "jaar": "per year",
+      "project": "per project"
     },
     "exclBtw": "excl. VAT ({incl} incl. 21% VAT)",
     "korting": "−{percentage}%",
@@ -1369,12 +1371,30 @@
     "betalingRegelen": "Sort out payment",
     "lid": "Ask an owner of your company to arrange the subscription.",
     "prijzenOntbreken": "Prices could not be loaded",
+    "onderwijs": "Education account: no limits, exports with a watermark",
+    "gratis": {
+      "titel": "Free",
+      "kringen": "{n} circuit | {n} circuits",
+      "situatieschemas": "{n} layout plan | {n} layout plans",
+      "tekst": "Each free project can contain at most {kringen} and {situatieschemas}. Exports of a free project carry the watermark “Free version”."
+    },
+    "projectBlok": {
+      "titel": "Per project",
+      "tekst": "If a project needs more than the free limits, you unlock it once. You do that from the editor, inside the project itself. An unlocked project has no limits."
+    },
+    "kaartenBlok": {
+      "titel": "Subscription",
+      "tekst": "With a subscription, all limits and watermarks disappear."
+    },
+    "weigering": {
+      "limiet": "This project exceeds the free limit.",
+      "alleenLezen": "This project is read-only. Unlock it or take a subscription to edit it."
+    },
     "banner": {
       "proef": "{n} free day left. | {n} free days left.",
       "kies": "Choose a subscription",
       "betaling": "Your last payment failed. Sort out your payment before {datum}.",
-      "betalingZonderDatum": "Your last payment failed. Sort out your payment soon, or your company will no longer be able to edit projects.",
-      "alleenLezen": "Your company has no active subscription. You can view and export projects, but not edit them."
+      "betalingZonderDatum": "Your last payment failed. Sort out your payment soon, or your company will no longer be able to edit projects."
     }
   },
   "menu": {

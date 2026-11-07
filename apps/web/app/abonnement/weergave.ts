@@ -5,7 +5,8 @@
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
 import {
-  ABONNEMENT_VEREIST,
+  PROJECT_ALLEEN_LEZEN,
+  PROJECT_LIMIET,
   type AbonnementOverzicht,
   type AbonnementStatus,
   type Formule,
@@ -47,7 +48,7 @@ export function datumTekst(iso: string, taal: Taal): string {
 }
 
 export type Banner = {
-  soort: "proef" | "betaling" | "alleen-lezen";
+  soort: "proef" | "betaling";
   dagen?: number;
   /** Bij "betaling": tot wanneer de betaling geregeld moet zijn (ISO), als dat bekend is. */
   tot?: string;
@@ -60,19 +61,14 @@ const KIES = "abonnement.banner.kies";
 const REGELEN = "abonnement.betalingRegelen";
 
 /**
- * Welke banner bovenaan de app past bij de toegang van de actieve organisatie, of null.
- * - proef: alleen een eigenaar, als de proef nog hoogstens 7 dagen loopt;
- * - betaling: een eigenaar, bij schrijfrecht en een mislukte betaling, met de datum waarvoor ze geregeld moet zijn;
- * - alleen-lezen: iedereen zonder schrijfrecht, met een knop voor een eigenaar.
+ * Welke banner bovenaan de app past bij de toegang van de actieve organisatie, of null. Alleen een
+ * eigenaar, en alleen zolang het bedrijf volledige toegang heeft (niveau abonnement):
+ * - betaling: bij een mislukte betaling, met de datum waarvoor ze geregeld moet zijn;
+ * - proef: tijdens de overgangsproef, in de laatste 7 dagen.
+ * Een gratis bedrijf krijgt geen banner: de limieten staan in de editor.
  */
 export function bannerVoor(toegang: Toegang, rol: Rol | null, nu: Date): Banner | null {
-  const eigenaar = rol === "eigenaar";
-  if (!toegang.schrijven) {
-    if (!eigenaar) return { soort: "alleen-lezen", knop: false };
-    // Na een mislukte betaling kiest de eigenaar niets nieuws: hij regelt de betaling.
-    return { soort: "alleen-lezen", knop: true, knopSleutel: toegang.reden === "betaling-mislukt" ? REGELEN : KIES };
-  }
-  if (!eigenaar) return null;
+  if (rol !== "eigenaar" || toegang.niveau !== "abonnement") return null;
   if (toegang.reden === "betaling-mislukt") {
     return toegang.achterstalligTot
       ? { soort: "betaling", tot: toegang.achterstalligTot, knop: true, knopSleutel: REGELEN }
@@ -99,16 +95,18 @@ export function statusTekstSleutel(o: AbonnementOverzicht): string {
     case "actief":
       return o.opgezegd ? "abonnement.status.opgezegd" : "abonnement.status.actief";
     case "betaling-mislukt":
-      // Met schrijfrecht en een bekende einddatum: "... vóór {datum}"; anders alleen de mededeling.
-      return o.schrijven && o.achterstalligTot
+      // Binnen de gratie (volledige toegang) en met een bekende einddatum: "... vóór {datum}"; anders alleen de mededeling.
+      return o.niveau === "abonnement" && o.achterstalligTot
         ? "abonnement.status.betalingMisluktTot"
         : "abonnement.status.betalingMislukt";
     case "proef":
       return "abonnement.status.proef";
     case "beeindigd":
       return "abonnement.status.beeindigd";
+    case "onderwijs":
+      return "abonnement.status.onderwijs";
     default:
-      return "abonnement.status.proefVoorbij";
+      return "abonnement.status.gratis";
   }
 }
 
@@ -123,51 +121,82 @@ const LOPEND: ReadonlySet<AbonnementStatus> = new Set([
 ]);
 
 export type PaginaWeergave = {
-  /** De sleutel van de statusregel; null als de melding al zegt wat er te zeggen valt (abonnementen uit). */
+  /** De sleutel van de statusregel; null als de melding al zegt wat er te zeggen valt (abonnementen uit, onderwijs). */
   statusSleutel: string | null;
-  /** Wat de pagina in plaats van knoppen zegt: een lid, abonnementen uit, of prijzen die ontbreken. */
-  melding: "lid" | "uit" | "prijzen" | null;
-  /** De kaarten Maandelijks en Jaarlijks, voor een eigenaar zonder lopend abonnement. */
-  kaarten: { formule: Formule; prijs: { excl: string; incl: string }; korting: number | null }[];
+  /** Wat de pagina in plaats van knoppen zegt: een lid, abonnementen uit, onderwijs, of prijzen die ontbreken. */
+  melding: "lid" | "uit" | "prijzen" | "onderwijs" | null;
+  blokken: {
+    /** De limieten van de gratis versie; null als ze niet gelden (abonnement, onderwijs, vrijgesteld, uit). */
+    gratis: { kringen: number; situatieschemas: number } | null;
+    /** De projectprijs, uitgelegd vanuit de editor; null zonder gratis blok of zonder projectprijs. */
+    project: { prijs: { excl: string; incl: string } } | null;
+    /** De kaarten Maandelijks en Jaarlijks, voor een eigenaar zonder lopend abonnement. */
+    kaarten: { formule: Formule; prijs: { excl: string; incl: string }; korting: number | null }[];
+  };
   /** De sleutel van de beheerknop, voor een eigenaar met een abonnement. */
   beheer: "abonnement.beheren" | "abonnement.betalingRegelen" | null;
 };
 
 /** Wat /abonnement toont voor dit overzicht en deze rol; de bedragen in de taal. */
 export function paginaWeergave(o: AbonnementOverzicht, rol: Rol | null, taal: Taal): PaginaWeergave {
-  const weergave: PaginaWeergave = { statusSleutel: statusTekstSleutel(o), melding: null, kaarten: [], beheer: null };
+  const geenBlokken = { gratis: null, project: null, kaarten: [] };
+  const weergave: PaginaWeergave = {
+    statusSleutel: statusTekstSleutel(o),
+    melding: null,
+    blokken: geenBlokken,
+    beheer: null,
+  };
   // "Betalen is nog niet ingesteld." staat één keer: in de melding, niet ook in de statusregel.
   if (!o.ingeschakeld) return { ...weergave, statusSleutel: null, melding: "uit" };
-  if (rol !== "eigenaar") return { ...weergave, melding: "lid" };
+  // Een onderwijsbedrijf heeft niets te kiezen; de melding zegt alles.
+  if (o.niveau === "onderwijs") return { ...weergave, statusSleutel: null, melding: "onderwijs" };
+  // De gratis versie en de projectprijs gelden zolang het bedrijf geen abonnement heeft.
+  const toonGratis = (o.niveau === "gratis" || o.reden === "proef") && o.limieten !== null;
+  const gratis = toonGratis ? o.limieten : null;
+  const project = toonGratis && o.prijzen?.project ? { prijs: prijsTekst(o.prijzen.project, taal) } : null;
+  if (rol !== "eigenaar") return { ...weergave, melding: "lid", blokken: { gratis, project, kaarten: [] } };
   if (o.status !== null && LOPEND.has(o.status)) {
     const betalingRegelen = o.status === "past_due" || o.status === "unpaid";
     return { ...weergave, beheer: betalingRegelen ? "abonnement.betalingRegelen" : "abonnement.beheren" };
   }
   // Een vrijgesteld bedrijf hoeft niets te kiezen: alleen de status, geen kaarten en geen prijzenmelding.
   if (o.reden === "vrijgesteld") return weergave;
-  if (!o.prijzen) return { ...weergave, melding: "prijzen" };
+  if (!o.prijzen) return { ...weergave, melding: "prijzen", blokken: { gratis, project: null, kaarten: [] } };
   const { maand, jaar } = o.prijzen;
   return {
     ...weergave,
-    kaarten: [
-      { formule: "maand", prijs: prijsTekst(maand, taal), korting: null },
-      { formule: "jaar", prijs: prijsTekst(jaar, taal), korting: jaarKorting(maand, jaar) },
-    ],
+    blokken: {
+      gratis,
+      project,
+      kaarten: [
+        { formule: "maand", prijs: prijsTekst(maand, taal), korting: null },
+        { formule: "jaar", prijs: prijsTekst(jaar, taal), korting: jaarKorting(maand, jaar) },
+      ],
+    },
   };
 }
 
 /**
- * Was de fout een 402 ABONNEMENT_VEREIST (de organisatie mag niet meer schrijven)? Dan de sessie
- * opnieuw lezen, zodat de app alleen-lezen toont, en true teruggeven: de aanroeper toont de
- * alleen-lezenmelding in plaats van een generieke fout. Een mislukte `laad` verandert daar niets
- * aan. Een andere fout: false.
+ * Was de fout een 402 van de projecttoegang?
+ * - `PROJECT_LIMIET` (het bewaren overschrijdt de gratis limiet): "limiet"; de aanroeper toont het
+ *   limietvenster of een melding;
+ * - `PROJECT_ALLEEN_LEZEN` (het project is gestempeld en niet vrijgegeven): "alleen-lezen"; de sessie
+ *   wordt opnieuw gelezen, want het niveau van het bedrijf kan intussen veranderd zijn. Een mislukte
+ *   `laad` verandert daar niets aan.
+ * Een andere fout: false.
  */
-export async function behandelSchrijfweigering(fout: unknown, laad: () => Promise<void>): Promise<boolean> {
-  if (foutStatus(fout) !== 402 || foutCode(fout) !== ABONNEMENT_VEREIST) return false;
+export async function behandelSchrijfweigering(
+  fout: unknown,
+  laad: () => Promise<void>,
+): Promise<"limiet" | "alleen-lezen" | false> {
+  if (foutStatus(fout) !== 402) return false;
+  const code = foutCode(fout);
+  if (code === PROJECT_LIMIET) return "limiet";
+  if (code !== PROJECT_ALLEEN_LEZEN) return false;
   try {
     await laad();
   } catch {
     // De melding volstaat; de volgende navigatie leest de sessie opnieuw.
   }
-  return true;
+  return "alleen-lezen";
 }

@@ -109,11 +109,8 @@ const autosave = useAutosave({
 /** De organisatie van het project; de pagina kan bij een andere dan de actieve organisatie horen. */
 const projectOrganisatieId = ref<string | null>(null);
 
-/** Mag de organisatie van dit project schrijven? Onbekend (nog niet geladen of niet in de sessie) is ja: de server beslist. */
-const organisatieSchrijft = computed(() => {
-  const organisatie = sessie.organisaties.find((o) => o.id === projectOrganisatieId.value);
-  return organisatie ? organisatie.toegang.schrijven : true;
-});
+/** Tijdelijk (taak 9 vervangt dit door de projecttoegang): een organisatie blokkeert het schrijven niet meer als geheel, de server beslist per project. */
+const organisatieSchrijft = computed(() => true);
 
 /**
  * De editor is alleen-lezen als de organisatie niet (meer) mag schrijven volgens de sessie, of als

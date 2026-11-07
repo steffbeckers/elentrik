@@ -1,4 +1,5 @@
 // Gedeelde types en foutcodes voor abonnementen, voor server en client.
+import type { Limieten } from "@elentrik/model";
 
 export type Formule = "maand" | "jaar";
 
@@ -76,6 +77,8 @@ export type AbonnementOverzicht = {
    * `STRIPE_PRIJS_PROJECT`.
    */
   prijzen: { maand: Prijs; jaar: Prijs; project: Prijs | null } | null;
+  /** De limieten van de gratis versie; null als abonnementen uit staan. */
+  limieten: Limieten | null;
 };
 
 // Foutcodes in `data.code`.

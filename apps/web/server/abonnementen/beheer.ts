@@ -114,6 +114,7 @@ export async function maakOverzicht(
       opgezegd: false,
       heeftKlant: false,
       prijzen: null,
+      limieten: null,
     };
   }
   const rij = await haalAbonnementRij(db, organisatieId);
@@ -126,6 +127,7 @@ export async function maakOverzicht(
     opgezegd: rij?.opgezegdOpPeriodeEinde ?? false,
     heeftKlant: rij !== null,
     prijzen: await haalPrijzen({ config, stripe }, nu.getTime()),
+    limieten: config.limieten,
   };
 }
 

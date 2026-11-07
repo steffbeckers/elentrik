@@ -1351,7 +1351,8 @@
       "betalingMislukt": "Votre dernier paiement a échoué.",
       "betalingMisluktTot": "Votre dernier paiement a échoué. Réglez votre paiement avant le {datum}.",
       "beeindigd": "Votre abonnement a pris fin.",
-      "proefVoorbij": "Cette entreprise n'a pas de période d'essai gratuite en cours. Choisissez un abonnement pour modifier des projets."
+      "gratis": "Vous utilisez la version gratuite d'Elentrik.",
+      "onderwijs": "Compte éducation : pas de limites, exports avec filigrane."
     },
     "datumOnbekend": "une date ultérieure",
     "formules": {
@@ -1360,7 +1361,8 @@
     },
     "per": {
       "maand": "par mois",
-      "jaar": "par an"
+      "jaar": "par an",
+      "project": "par projet"
     },
     "exclBtw": "hors TVA ({incl} TVA 21 % comprise)",
     "korting": "−{percentage} %",
@@ -1369,12 +1371,30 @@
     "betalingRegelen": "Régler le paiement",
     "lid": "Demandez à un propriétaire de votre entreprise de gérer l'abonnement.",
     "prijzenOntbreken": "Les prix n'ont pas pu être chargés",
+    "onderwijs": "Compte éducation : pas de limites, exports avec filigrane",
+    "gratis": {
+      "titel": "Gratuit",
+      "kringen": "{n} circuit | {n} circuits",
+      "situatieschemas": "{n} plan de position | {n} plans de position",
+      "tekst": "Chaque projet gratuit peut contenir au maximum {kringen} et {situatieschemas}. Les exports d’un projet gratuit portent le filigrane « Version gratuite »."
+    },
+    "projectBlok": {
+      "titel": "Par projet",
+      "tekst": "Si un projet dépasse les limites gratuites, vous le débloquez en une seule fois. Cela se fait depuis l’éditeur, dans le projet lui-même. Un projet débloqué n’a plus de limites."
+    },
+    "kaartenBlok": {
+      "titel": "Abonnement",
+      "tekst": "Avec un abonnement, toutes les limites et tous les filigranes disparaissent."
+    },
+    "weigering": {
+      "limiet": "Ce projet dépasse la limite gratuite.",
+      "alleenLezen": "Ce projet est en lecture seule. Débloquez-le ou prenez un abonnement pour le modifier."
+    },
     "banner": {
       "proef": "Encore {n} jour gratuit. | Encore {n} jours gratuits.",
       "kies": "Choisir un abonnement",
       "betaling": "Votre dernier paiement a échoué. Réglez votre paiement avant le {datum}.",
-      "betalingZonderDatum": "Votre dernier paiement a échoué. Réglez rapidement votre paiement, sinon votre entreprise ne pourra bientôt plus modifier de projets.",
-      "alleenLezen": "Votre entreprise n'a pas d'abonnement actif. Vous pouvez consulter et exporter des projets, mais pas les modifier."
+      "betalingZonderDatum": "Votre dernier paiement a échoué. Réglez rapidement votre paiement, sinon votre entreprise ne pourra bientôt plus modifier de projets."
     }
   },
   "menu": {

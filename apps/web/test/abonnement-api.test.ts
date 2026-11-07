@@ -593,6 +593,7 @@ describe("GET /api/abonnement", () => {
       jaar: { bedrag: 15000, munt: "eur", interval: "year" },
       project: null,
     });
+    expect(lid.limieten).toEqual({ kringen: 5, situatieschemas: 1 });
   });
 
   test("zonder klant: heeftKlant is onwaar en de proef loopt", async () => {
@@ -684,6 +685,7 @@ describe("abonnementen uit", () => {
       opgezegd: false,
       heeftKlant: false,
       prijzen: null,
+      limieten: null,
     });
   });
 });

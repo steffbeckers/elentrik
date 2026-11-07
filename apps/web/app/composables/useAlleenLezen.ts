@@ -1,17 +1,22 @@
-// Een schrijfactie kreeg 402 ABONNEMENT_VEREIST: de organisatie mag niet meer schrijven. De sessie
-// wordt opnieuw gelezen (de app wordt alleen-lezen) en een melding legt uit wat er aan de hand is,
-// in plaats van een generieke fout. Geeft true als de fout zo behandeld werd; anders meldt de
-// aanroeper de fout zelf.
+// Een schrijfactie kreeg 402 PROJECT_LIMIET (het project gaat over de gratis limiet) of
+// PROJECT_ALLEEN_LEZEN (het project is gestempeld en niet vrijgegeven). Een melding legt uit wat er
+// aan de hand is, in plaats van een generieke fout. Geeft "limiet" of "alleen-lezen" als de fout zo
+// behandeld werd (waar, dus); anders false en meldt de aanroeper de fout zelf.
 import { behandelSchrijfweigering } from "~/abonnement/weergave";
 import { useSessieStore } from "~/stores/sessie";
 
-export function useAlleenLezen(): (fout: unknown) => Promise<boolean> {
+export function useAlleenLezen(): (fout: unknown) => Promise<"limiet" | "alleen-lezen" | false> {
   const sessie = useSessieStore();
   const toast = useToast();
   const { t } = useI18n();
-  return async function alleenLezen(fout: unknown): Promise<boolean> {
+  return async function alleenLezen(fout: unknown): Promise<"limiet" | "alleen-lezen" | false> {
     const behandeld = await behandelSchrijfweigering(fout, () => sessie.laad());
-    if (behandeld) toast.add({ title: t("abonnement.banner.alleenLezen"), color: "warning" });
+    if (behandeld) {
+      toast.add({
+        title: t(behandeld === "limiet" ? "abonnement.weigering.limiet" : "abonnement.weigering.alleenLezen"),
+        color: "warning",
+      });
+    }
     return behandeld;
   };
 }

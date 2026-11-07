@@ -106,7 +106,7 @@ export function foutSleutel(fout: unknown): UploadFoutSleutel {
  */
 export async function uploadFoutMelding(
   fout: unknown,
-  alleenLezen: (fout: unknown) => Promise<boolean>,
+  alleenLezen: (fout: unknown) => Promise<unknown>,
   verwijderd?: () => void,
 ): Promise<UploadFoutSleutel | null> {
   if (httpStatus(fout) === 402 && foutCode(fout) === ABONNEMENT_VEREIST && (await alleenLezen(fout))) return null;

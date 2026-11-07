@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { AbonnementOverzicht, Toegang } from "../shared/abonnement";
 import {
   bannerVoor,
+  behandelSchrijfweigering,
   datumTekst,
   jaarKorting,
   paginaWeergave,
@@ -16,7 +17,7 @@ const DAG = 24 * 3600 * 1000;
 
 function toegang(wijziging: Partial<Toegang> = {}): Toegang {
   return {
-    schrijven: true,
+    niveau: "abonnement",
     reden: "proef",
     proefEinde: new Date(NU.getTime() + 3 * DAG).toISOString(),
     achterstalligTot: null,
@@ -27,7 +28,7 @@ function toegang(wijziging: Partial<Toegang> = {}): Toegang {
 function overzicht(wijziging: Partial<AbonnementOverzicht> = {}): AbonnementOverzicht {
   return {
     ingeschakeld: true,
-    schrijven: true,
+    niveau: "abonnement",
     reden: "proef",
     proefEinde: new Date(NU.getTime() + 3 * DAG).toISOString(),
     achterstalligTot: null,
@@ -37,6 +38,7 @@ function overzicht(wijziging: Partial<AbonnementOverzicht> = {}): AbonnementOver
     opgezegd: false,
     heeftKlant: false,
     prijzen: null,
+    limieten: { kringen: 5, situatieschemas: 1 },
     ...wijziging,
   };
 }
@@ -99,33 +101,34 @@ describe("bannerVoor", () => {
     expect(bannerVoor({ ...t, achterstalligTot: null }, "eigenaar", NU)).toEqual({ soort: "betaling", knop: true, knopSleutel: "abonnement.betalingRegelen" });
   });
 
-  test("alleen-lezen: een lid zonder knop, een eigenaar met knop", () => {
-    const t = toegang({ schrijven: false, reden: "proef-voorbij" });
-    expect(bannerVoor(t, "lid", NU)).toEqual({ soort: "alleen-lezen", knop: false });
-    expect(bannerVoor(t, "eigenaar", NU)).toEqual({
-      soort: "alleen-lezen",
+  test("geen alleen-lezenbanner meer bij gratis", () => {
+    for (const rol of ["eigenaar", "lid", null] as const) {
+      expect(bannerVoor(toegang({ niveau: "gratis", reden: "gratis", proefEinde: null }), rol, NU)).toBeNull();
+      expect(bannerVoor(toegang({ niveau: "gratis", reden: "beeindigd", proefEinde: null }), rol, NU)).toBeNull();
+    }
+  });
+
+  test("proefbanner alleen tijdens de overgangsproef", () => {
+    const binnen = new Date(NU.getTime() + 3 * DAG).toISOString();
+    expect(bannerVoor(toegang({ reden: "proef", proefEinde: binnen }), "eigenaar", NU)).toEqual({
+      soort: "proef",
+      dagen: 3,
       knop: true,
       knopSleutel: "abonnement.banner.kies",
     });
-    // Ook een mislukte betaling zonder schrijfrecht is alleen-lezen.
-    expect(bannerVoor(toegang({ schrijven: false, reden: "betaling-mislukt" }), "eigenaar", NU)).toEqual({
-      soort: "alleen-lezen",
-      knop: true,
-      knopSleutel: "abonnement.betalingRegelen",
-    });
+    // Een gratis bedrijf met een oude proefdatum krijgt geen proefbanner.
+    expect(bannerVoor(toegang({ niveau: "gratis", reden: "gratis", proefEinde: binnen }), "eigenaar", NU)).toBeNull();
   });
 
-  test("alleen-lezen na een mislukte betaling: de knop zegt Betaling regelen; anders Kies een abonnement", () => {
-    const onbetaald = toegang({ schrijven: false, reden: "betaling-mislukt" });
-    expect(bannerVoor(onbetaald, "eigenaar", NU)?.knopSleutel).toBe("abonnement.betalingRegelen");
-    expect(bannerVoor(onbetaald, "lid", NU)).toEqual({ soort: "alleen-lezen", knop: false });
-    const voorbij = toegang({ schrijven: false, reden: "proef-voorbij" });
-    expect(bannerVoor(voorbij, "eigenaar", NU)?.knopSleutel).toBe("abonnement.banner.kies");
+  test("een mislukte betaling voorbij de gratie (niveau gratis) geeft geen banner", () => {
+    expect(
+      bannerVoor(toegang({ niveau: "gratis", reden: "betaling-mislukt", proefEinde: null }), "eigenaar", NU),
+    ).toBeNull();
   });
 
   test("uit, vrijgesteld en actief: geen banner", () => {
-    expect(bannerVoor({ schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null }, "eigenaar", NU)).toBeNull();
-    expect(bannerVoor(toegang({ reden: "vrijgesteld" }), "eigenaar", NU)).toBeNull();
+    expect(bannerVoor({ niveau: "uit", reden: "uit", proefEinde: null, achterstalligTot: null }, "eigenaar", NU)).toBeNull();
+    expect(bannerVoor(toegang({ niveau: "vrijgesteld", reden: "vrijgesteld" }), "eigenaar", NU)).toBeNull();
     expect(bannerVoor(toegang({ reden: "actief" }), "eigenaar", NU)).toBeNull();
   });
 });
@@ -152,14 +155,15 @@ describe("statusTekstSleutel", () => {
     );
     expect(
       statusTekstSleutel(
-        overzicht({ schrijven: false, reden: "betaling-mislukt", status: "unpaid", achterstalligTot: NU.toISOString() }),
+        overzicht({ niveau: "gratis", reden: "betaling-mislukt", status: "unpaid", achterstalligTot: NU.toISOString() }),
       ),
     ).toBe("abonnement.status.betalingMislukt");
-    expect(statusTekstSleutel(overzicht({ schrijven: false, reden: "beeindigd", status: "canceled" }))).toBe(
+    expect(statusTekstSleutel(overzicht({ niveau: "gratis", reden: "beeindigd", status: "canceled" }))).toBe(
       "abonnement.status.beeindigd",
     );
-    expect(statusTekstSleutel(overzicht({ schrijven: false, reden: "proef-voorbij" }))).toBe(
-      "abonnement.status.proefVoorbij",
+    expect(statusTekstSleutel(overzicht({ niveau: "gratis", reden: "gratis" }))).toBe("abonnement.status.gratis");
+    expect(statusTekstSleutel(overzicht({ niveau: "onderwijs", reden: "onderwijs" }))).toBe(
+      "abonnement.status.onderwijs",
     );
   });
 });
@@ -180,18 +184,6 @@ describe("statusAantal (meervoud van de statusregel)", () => {
     const [een, meer] = nl.abonnement.status.proef.split("|").map((s) => s.trim());
     expect(een).toContain("nog {dagen} dag,");
     expect(meer).toContain("nog {dagen} dagen,");
-  });
-});
-
-describe("de exporttekst in alleen-lezen", () => {
-  test("stelt niet voor te betalen om te exporteren: de laatst opgeslagen versie kan er wel uit", () => {
-    const nl = JSON.parse(readFileSync(new URL("../i18n/locales/nl.json", import.meta.url), "utf8")) as {
-      editor: { export: { geblokkeerd: Record<string, string> } };
-    };
-    const tekst = nl.editor.export.geblokkeerd["alleen-lezen"]!;
-    expect(tekst).toContain("laatst opgeslagen versie");
-    expect(tekst).toContain("alleen lokaal");
-    expect(tekst).not.toMatch(/na het kiezen van een abonnement/);
   });
 });
 
@@ -222,16 +214,19 @@ describe("paginaWeergave", () => {
   const prijzen = {
     maand: { bedrag: 1500, munt: "eur", interval: "month" as const },
     jaar: { bedrag: 15000, munt: "eur", interval: "year" as const },
+    project: null,
   };
+  const metProject = { ...prijzen, project: { bedrag: 2500, munt: "eur", interval: "eenmalig" as const } };
+  const gratis = { niveau: "gratis" as const, reden: "gratis" as const, proefEinde: null };
 
   test("een eigenaar in de proef krijgt de kaarten Maandelijks en Jaarlijks", () => {
     const w = paginaWeergave(overzicht({ prijzen }), "eigenaar", "nl");
-    expect(w.kaarten.map((k) => k.formule)).toEqual(["maand", "jaar"]);
+    expect(w.blokken.kaarten.map((k) => k.formule)).toEqual(["maand", "jaar"]);
   });
 
   test("een vrijgesteld bedrijf: geen kaarten, geen melding en de status 'hoeft niet te betalen'", () => {
     const w = paginaWeergave(overzicht({ reden: "vrijgesteld", proefEinde: null, prijzen }), "eigenaar", "nl");
-    expect(w.kaarten).toEqual([]);
+    expect(w.blokken.kaarten).toEqual([]);
     expect(w.melding).toBeNull();
     expect(w.beheer).toBeNull();
     expect(w.statusSleutel).toBe("abonnement.status.vrijgesteld");
@@ -244,6 +239,70 @@ describe("paginaWeergave", () => {
   test("een vrijgesteld bedrijf zonder prijzen toont ook niet 'prijzen ontbreken'", () => {
     const w = paginaWeergave(overzicht({ reden: "vrijgesteld", prijzen: null }), "eigenaar", "nl");
     expect(w.melding).toBeNull();
-    expect(w.kaarten).toEqual([]);
+    expect(w.blokken.kaarten).toEqual([]);
+  });
+
+  test("pagina toont projectblok met prijs", () => {
+    const w = paginaWeergave(overzicht({ ...gratis, prijzen: metProject }), "eigenaar", "nl");
+    expect(w.blokken.gratis).toEqual({ kringen: 5, situatieschemas: 1 });
+    expect(w.blokken.project).toEqual({ prijs: prijsTekst(metProject.project, "nl") });
+    expect(gewoon(w.blokken.project!.prijs.excl)).toBe("€ 25,00");
+    expect(gewoon(w.blokken.project!.prijs.incl)).toBe("€ 30,25");
+    expect(w.blokken.kaarten.map((k) => k.formule)).toEqual(["maand", "jaar"]);
+  });
+
+  test("zonder projectprijs geen projectblok, wel het gratis blok", () => {
+    const w = paginaWeergave(overzicht({ ...gratis, prijzen }), "eigenaar", "nl");
+    expect(w.blokken.project).toBeNull();
+    expect(w.blokken.gratis).not.toBeNull();
+  });
+
+  test("een lid ziet de blokken zonder kaarten", () => {
+    const w = paginaWeergave(overzicht({ ...gratis, prijzen: metProject }), "lid", "nl");
+    expect(w.melding).toBe("lid");
+    expect(w.blokken.gratis).not.toBeNull();
+    expect(w.blokken.kaarten).toEqual([]);
+  });
+
+  test("een lopend abonnement toont geen gratis- of projectblok", () => {
+    const w = paginaWeergave(
+      overzicht({ niveau: "abonnement", reden: "actief", status: "active", formule: "maand", prijzen: metProject }),
+      "eigenaar",
+      "nl",
+    );
+    expect(w.blokken.gratis).toBeNull();
+    expect(w.blokken.project).toBeNull();
+    expect(w.beheer).toBe("abonnement.beheren");
+  });
+
+  test("onderwijs: melding onderwijs zonder kaarten", () => {
+    for (const rol of ["eigenaar", "lid"] as const) {
+      const w = paginaWeergave(overzicht({ niveau: "onderwijs", reden: "onderwijs", prijzen: metProject }), rol, "nl");
+      expect(w.melding).toBe("onderwijs");
+      expect(w.blokken).toEqual({ gratis: null, project: null, kaarten: [] });
+      expect(w.statusSleutel).toBeNull();
+    }
+  });
+});
+
+describe("behandelSchrijfweigering", () => {
+  const fout = (status: number, code: string) => ({ status, data: { statusCode: status, data: { code } } });
+
+  test("schrijfweigering PROJECT_LIMIET geeft 'limiet'", async () => {
+    const laad = vi.fn(async () => {});
+    expect(await behandelSchrijfweigering(fout(402, "PROJECT_LIMIET"), laad)).toBe("limiet");
+  });
+
+  test("PROJECT_ALLEEN_LEZEN geeft 'alleen-lezen' en leest de sessie opnieuw", async () => {
+    const laad = vi.fn(async () => {});
+    expect(await behandelSchrijfweigering(fout(402, "PROJECT_ALLEEN_LEZEN"), laad)).toBe("alleen-lezen");
+    expect(laad).toHaveBeenCalledTimes(1);
+  });
+
+  test("het oude ABONNEMENT_VEREIST en andere fouten zijn niet behandeld", async () => {
+    const laad = vi.fn(async () => {});
+    expect(await behandelSchrijfweigering(fout(402, "ABONNEMENT_VEREIST"), laad)).toBe(false);
+    expect(await behandelSchrijfweigering(fout(500, "PROJECT_LIMIET"), laad)).toBe(false);
+    expect(await behandelSchrijfweigering({ status: 500 }, laad)).toBe(false);
   });
 });

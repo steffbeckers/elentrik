@@ -15,9 +15,6 @@ const sessie = useSessieStore();
 const alleenLezen = useAlleenLezen();
 const { taal } = useTaal();
 
-// Zonder schrijfrecht (spec 4.4) zijn aanmaken en dupliceren verborgen; de server weigert ze met 402.
-const kanSchrijven = computed(() => sessie.toegang.schrijven);
-
 // Enkel op de client geladen: de relatieve tijden hangen van het huidige moment af. Een andere
 // actieve organisatie (de organisatiekeuze) laadt de lijst van die organisatie.
 const { data: projecten, status, error, refresh } = useAsyncData("projecten", () => api.lijst(), {
@@ -122,7 +119,7 @@ async function bevestigVerwijderen() {
       <div class="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <h1 class="text-2xl font-semibold">{{ $t("projecten.titel") }}</h1>
         <div class="flex flex-wrap gap-2">
-          <UButton v-if="kanSchrijven && !leeg" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
+          <UButton v-if="!leeg" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
         </div>
       </div>
 
@@ -165,7 +162,7 @@ async function bevestigVerwijderen() {
         <ol class="list-decimal space-y-1 ps-5 text-muted">
           <li v-for="stap in leegStappen" :key="stap">{{ $t(`projecten.leegStappen.${stap}`) }}</li>
         </ol>
-        <UButton v-if="kanSchrijven" icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
+        <UButton icon="i-lucide-plus" :label="$t('projecten.nieuw')" @click="nieuwOpen = true" />
       </section>
       <UTable
         v-else
@@ -210,7 +207,6 @@ async function bevestigVerwijderen() {
               :title="$t('projecten.acties.openen')"
             />
             <UButton
-              v-if="kanSchrijven"
               icon="i-lucide-copy"
               color="neutral"
               variant="ghost"

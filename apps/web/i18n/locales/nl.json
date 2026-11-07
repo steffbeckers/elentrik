@@ -1351,7 +1351,8 @@
       "betalingMislukt": "Je laatste betaling is mislukt.",
       "betalingMisluktTot": "Je laatste betaling is mislukt. Regel je betaling vóór {datum}.",
       "beeindigd": "Je abonnement is beëindigd.",
-      "proefVoorbij": "Dit bedrijf heeft geen lopende gratis proefperiode. Kies een abonnement om projecten te bewerken."
+      "gratis": "Je gebruikt de gratis versie van Elentrik.",
+      "onderwijs": "Onderwijsaccount: geen limieten, exports met watermerk."
     },
     "datumOnbekend": "een latere datum",
     "formules": {
@@ -1360,7 +1361,8 @@
     },
     "per": {
       "maand": "per maand",
-      "jaar": "per jaar"
+      "jaar": "per jaar",
+      "project": "per project"
     },
     "exclBtw": "excl. btw ({incl} incl. 21 % btw)",
     "korting": "−{percentage} %",
@@ -1369,12 +1371,30 @@
     "betalingRegelen": "Betaling regelen",
     "lid": "Vraag een eigenaar van je bedrijf om het abonnement te regelen.",
     "prijzenOntbreken": "Prijzen konden niet geladen worden",
+    "onderwijs": "Onderwijsaccount: geen limieten, exports met watermerk",
+    "gratis": {
+      "titel": "Gratis",
+      "kringen": "{n} kring | {n} kringen",
+      "situatieschemas": "{n} situatieschema | {n} situatieschema's",
+      "tekst": "Elk gratis project mag maximaal {kringen} en {situatieschemas} bevatten. Exports van een gratis project krijgen het watermerk “Gratis versie”."
+    },
+    "projectBlok": {
+      "titel": "Per project",
+      "tekst": "Heeft een project meer nodig dan de gratis limieten, dan geef je het eenmalig vrij. Dat doe je vanuit de editor, in het project zelf. Een vrijgegeven project heeft geen limieten."
+    },
+    "kaartenBlok": {
+      "titel": "Abonnement",
+      "tekst": "Met een abonnement verdwijnen alle limieten en watermerken."
+    },
+    "weigering": {
+      "limiet": "Dit project gaat over de gratis limiet.",
+      "alleenLezen": "Dit project is alleen-lezen. Geef het vrij of neem een abonnement om het te bewerken."
+    },
     "banner": {
       "proef": "Nog {n} dag gratis. | Nog {n} dagen gratis.",
       "kies": "Kies een abonnement",
       "betaling": "Je laatste betaling is mislukt. Regel je betaling vóór {datum}.",
-      "betalingZonderDatum": "Je laatste betaling is mislukt. Regel je betaling snel, anders kan je bedrijf straks geen projecten meer bewerken.",
-      "alleenLezen": "Je bedrijf heeft geen actief abonnement. Je kan projecten bekijken en exporteren, maar niet bewerken."
+      "betalingZonderDatum": "Je laatste betaling is mislukt. Regel je betaling snel, anders kan je bedrijf straks geen projecten meer bewerken."
     }
   },
   "menu": {
