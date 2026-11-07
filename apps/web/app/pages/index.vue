@@ -177,6 +177,15 @@ async function bevestigVerwijderen() {
           <ULink :to="`/projecten/${row.original.id}`" class="font-medium text-primary underline-offset-4 hover:underline">
             {{ row.original.naam }}
           </ULink>
+          <UBadge
+            v-if="row.original.label"
+            :color="row.original.label === 'alleen-lezen' ? 'warning' : row.original.label === 'vrijgegeven' ? 'success' : 'neutral'"
+            variant="subtle"
+            size="sm"
+            class="ml-2 align-middle"
+            :label="$t(`projecten.label.${row.original.label}`)"
+            :data-testid="`projectlabel-${row.original.id}`"
+          />
         </template>
         <template #acties-header>
           <span class="sr-only">{{ $t("projecten.kolommen.acties") }}</span>
