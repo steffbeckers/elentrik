@@ -63,6 +63,9 @@ export const SERVER_FOUTCODES = [
   "ABONNEMENT_BESTAAT",
   "GEEN_KLANT",
   "ABONNEMENTEN_UIT",
+  // Handhaving per project (402, server/abonnementen/handhaving.ts)
+  "PROJECT_ALLEEN_LEZEN",
+  "PROJECT_LIMIET",
   // Organisatie en uitnodigingen
   "LAATSTE_EIGENAAR",
   "AL_LID",

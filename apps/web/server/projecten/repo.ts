@@ -124,6 +124,28 @@ export async function lijstProjecten(
 }
 
 /**
+ * Opties voor een schrijfactie op een project uit een klantroute. `stempel`: het tijdstip voor
+ * `abonnement_stempel_op` (spec 4.4), gezet in dezelfde schrijfactie en alleen als het veld nog
+ * leeg is. Zonder `stempel` blijft het veld ongewijzigd (een nieuw project: leeg).
+ */
+export type SchrijfOpties = { stempel?: Date };
+
+/** Het startdocument van een nieuw project; de route toetst het aan de limiet vóór `maakProject`. */
+export function documentVoorNieuwProject(invoer: {
+  klantnaam: string;
+  stroomtype: Stroomtype;
+  dossierTaal?: Taal;
+}): InstallatieDocument {
+  return nieuwProjectDocument({
+    klantNaam: invoer.klantnaam,
+    stroomtype: invoer.stroomtype,
+    ...(invoer.dossierTaal !== undefined
+      ? { dossierTaal: invoer.dossierTaal }
+      : {}),
+  });
+}
+
+/**
  * Een nieuw project in `organisatieId` (de actieve organisatie van de aanvrager). De dossiertaal
  * is de taal van de aanvrager; zonder taal blijft het veld weg (dat betekent nl).
  */
@@ -136,14 +158,9 @@ export async function maakProject(
     stroomtype: Stroomtype;
     dossierTaal?: Taal;
   },
+  opties?: SchrijfOpties,
 ): Promise<{ id: string; versie: number }> {
-  const document = nieuwProjectDocument({
-    klantNaam: invoer.klantnaam,
-    stroomtype: invoer.stroomtype,
-    ...(invoer.dossierTaal !== undefined
-      ? { dossierTaal: invoer.dossierTaal }
-      : {}),
-  });
+  const document = documentVoorNieuwProject(invoer);
   const [rij] = await db
     .insert(projecten)
     .values({
@@ -151,9 +168,15 @@ export async function maakProject(
       naam: invoer.naam,
       klantnaam: invoer.klantnaam,
       document,
+      ...stempelBijAanmaken(opties),
     })
     .returning({ id: projecten.id, versie: projecten.versie });
   return rij!;
+}
+
+/** De stempel van een nieuw project: nooit `gekocht_op`, alleen `abonnement_stempel_op` als gevraagd. */
+function stempelBijAanmaken(opties?: SchrijfOpties): { abonnementStempelOp?: Date } {
+  return opties?.stempel ? { abonnementStempelOp: opties.stempel } : {};
 }
 
 export async function haalProject(
@@ -181,7 +204,11 @@ export async function haalProject(
   };
 }
 
-function valideerDocument(invoer: unknown): InstallatieDocument {
+/**
+ * Migreert en valideert een document. Een ongeldig document geeft ProjectFout ONGELDIG. Ook voor
+ * de routes die een document aan de limiet toetsen vóór het bewaren.
+ */
+export function valideerDocument(invoer: unknown): InstallatieDocument {
   let document: InstallatieDocument;
   try {
     document = migreer(invoer);
@@ -217,6 +244,7 @@ export async function bewaarProject(
     voor: { naam: string; versie: number; document: InstallatieDocument },
     na: { naam: string; versie: number; document: InstallatieDocument },
   ) => Promise<void>,
+  opties?: SchrijfOpties,
 ): Promise<{ versie: number }> {
   const document = valideerDocument(invoer.document);
 
@@ -249,6 +277,12 @@ export async function bewaarProject(
         document,
         versie: sql`${projecten.versie} + 1`,
         gewijzigd: sql`now()`,
+        // Alleen als het veld nog leeg is: de eerste stempel blijft staan.
+        ...(opties?.stempel
+          ? {
+              abonnementStempelOp: sql`coalesce(${projecten.abonnementStempelOp}, ${opties.stempel.toISOString()}::timestamptz)`,
+            }
+          : {}),
       })
       .where(
         and(vanOrganisatie(organisatieId, id), eq(projecten.versie, versie)),
@@ -429,6 +463,7 @@ export async function dupliceerProject(
   organisatieId: string,
   id: string,
   extraBestandIds: string[] = [],
+  opties?: SchrijfOpties,
 ): Promise<{ id: string; bestandIds: Record<string, string> }> {
   const bron = await haalProject(db, organisatieId, id);
   if (!bron) throw new ProjectFout("NIET_GEVONDEN");
@@ -462,6 +497,8 @@ export async function dupliceerProject(
         naam: `${bron.naam} (kopie)`,
         klantnaam: bron.klantnaam,
         document,
+        // Een kopie start als nieuw project: nooit `gekocht_op`, alleen een eigen stempel.
+        ...stempelBijAanmaken(opties),
       });
       if (kopieen.nieuweRijen.length > 0)
         await tx.insert(bestanden).values(kopieen.nieuweRijen);
@@ -492,6 +529,7 @@ export async function maakProjectUitDocument(
   opslag: BestandOpslag,
   organisatieId: string,
   invoer: { naam: string; document: unknown },
+  opties?: SchrijfOpties,
 ): Promise<{
   id: string;
   versie: number;
@@ -531,6 +569,7 @@ export async function maakProjectUitDocument(
           naam: invoer.naam,
           klantnaam: document.meta.klant.naam,
           document,
+          ...stempelBijAanmaken(opties),
         })
         .returning({ versie: projecten.versie });
       if (kopieen.nieuweRijen.length > 0)

@@ -1448,6 +1448,8 @@
     "ABONNEMENT_BESTAAT": "Dit bedrijf heeft al een abonnement.",
     "GEEN_KLANT": "Dit bedrijf heeft nog geen betaalgegevens. Kies eerst een abonnement.",
     "ABONNEMENTEN_UIT": "Betalen is nog niet ingesteld.",
+    "PROJECT_ALLEEN_LEZEN": "Dit project is alleen-lezen. Je kan het bekijken en exporteren, maar niet meer bewerken.",
+    "PROJECT_LIMIET": "Deze wijziging gaat boven de limiet van de gratis versie en werd niet bewaard.",
     "LAATSTE_EIGENAAR": "Er moet minstens één eigenaar blijven.",
     "AL_LID": "Dit adres is al lid.",
     "AL_UITGENODIGD": "Dit adres is al uitgenodigd.",

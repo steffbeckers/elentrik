@@ -1,5 +1,5 @@
 import { setResponseStatus } from "h3";
-import { vereisSchrijfrecht } from "../../../abonnementen/handhaving";
+import { vereisProjectBewerking } from "../../../abonnementen/handhaving";
 import { bewaarBestand } from "../../../bestanden/repo";
 import { gebruikOpslag } from "../../../bestanden/opslag";
 import { gebruikDb } from "../../../db";
@@ -9,7 +9,8 @@ import { defineBeveiligdeHandler, vereisProjecttoegang } from "../../../utils/to
 
 export default defineBeveiligdeHandler(async (event) => {
   const { project } = await vereisProjecttoegang(event, projectId(event));
-  await vereisSchrijfrecht(project.organisatieId);
+  // Zonder document: alleen of het project bewerkt mag worden (geen limiet, geen stempel).
+  await vereisProjectBewerking(project.id);
   const db = gebruikDb();
   const { soort, data } = await leesPlanUpload(event, { db, organisatieId: project.organisatieId });
   const info = await metBestandFouten(() =>

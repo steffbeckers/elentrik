@@ -1448,6 +1448,8 @@
     "ABONNEMENT_BESTAAT": "Cette entreprise a déjà un abonnement.",
     "GEEN_KLANT": "Cette entreprise n'a pas encore de données de paiement. Choisissez d'abord un abonnement.",
     "ABONNEMENTEN_UIT": "Le paiement n'est pas encore configuré.",
+    "PROJECT_ALLEEN_LEZEN": "Ce projet est en lecture seule. Vous pouvez le consulter et l'exporter, mais plus le modifier.",
+    "PROJECT_LIMIET": "Cette modification dépasse la limite de la version gratuite et n'a pas été enregistrée.",
     "LAATSTE_EIGENAAR": "Il doit rester au moins un propriétaire.",
     "AL_LID": "Une personne avec cette adresse est déjà membre.",
     "AL_UITGENODIGD": "Une personne avec cette adresse est déjà invitée.",
