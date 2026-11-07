@@ -99,6 +99,13 @@
       "when": 1793736117877,
       "tag": "0013_admin_correcties",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794065842951,
+      "tag": "0014_prijsmodel",
+      "breakpoints": true
     }
   ]
 }
