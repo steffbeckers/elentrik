@@ -733,7 +733,8 @@
       },
       "referentieUitleg": "This is a reference sheet: final points cannot be placed here and the sheet is excluded from export. Choose a plan page to place points.",
       "overlap": "Overlaps {label}",
-      "ongedaanMaken": "Undo"
+      "ongedaanMaken": "Undo",
+      "nietMeerOngedaan": "This placement can no longer be undone"
     },
     "export": {
       "titel": "Export as PDF",
@@ -977,7 +978,7 @@
     },
     "zojuist": "just now",
     "status": {
-      "concept": "Draft",
+      "nietGeexporteerd": "Not exported",
       "geexporteerd": "Exported"
     },
     "zoeken": {

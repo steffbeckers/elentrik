@@ -99,9 +99,14 @@ test("metingen invullen in Projectgegevens, bewaren en na herladen terugzien", a
   await dialoog.getByRole("button", { name: "Bewaren" }).click();
   await expect(dialoog.getByText("Geef een getal van 0 of meer, of laat het veld leeg.")).toBeVisible();
   await expect(dialoog).toBeVisible();
+  // Tekst die geen getal is, wordt niet stil een leeg veld: ook dat is een fout bij het veld.
+  await dialoog.getByTestId("meting-aardingsweerstand").fill("abc");
+  await dialoog.getByRole("button", { name: "Bewaren" }).click();
+  await expect(dialoog.getByText("Geef een getal van 0 of meer, of laat het veld leeg.")).toBeVisible();
+  await expect(dialoog).toBeVisible();
 
   await dialoog.getByTestId("meting-datum").fill("2026-11-05");
-  await dialoog.getByTestId("meting-aardingsweerstand").fill("28.5");
+  await dialoog.getByTestId("meting-aardingsweerstand").fill("28,5");
   await dialoog.getByTestId("meting-isolatieweerstand").fill("250");
   await dialoog.getByTestId("meting-meettoestel").fill("Fluke 1664 FC");
   await dialoog.getByTestId("meting-opmerking").fill("Gemeten met open hoofdschakelaar");

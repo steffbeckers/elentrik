@@ -733,7 +733,8 @@
       },
       "referentieUitleg": "Ceci est une feuille de référence : aucun point définitif ne peut y être placé. Elle est exclue de l’export. Choisissez une page de plan pour placer des points.",
       "overlap": "Chevauche {label}",
-      "ongedaanMaken": "Annuler"
+      "ongedaanMaken": "Annuler",
+      "nietMeerOngedaan": "Ce placement ne peut plus être annulé"
     },
     "export": {
       "titel": "Exporter en PDF",
@@ -977,7 +978,7 @@
     },
     "zojuist": "à l’instant",
     "status": {
-      "concept": "Brouillon",
+      "nietGeexporteerd": "Non exporté",
       "geexporteerd": "Exporté"
     },
     "zoeken": {

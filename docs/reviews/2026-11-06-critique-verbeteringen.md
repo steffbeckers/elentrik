@@ -33,7 +33,7 @@ Vervolg op de critique van de volledige app (`apps/web/.impeccable/critique/2026
 | `#e2e8f0` in `AfdrukVoorbeeld.vue` | Vervangen door een semantische kleur. Het voorbeeld volgt ook een wissel van licht naar donker terwijl het open staat. |
 | Plan-editor altijd licht, 12 hardgecodeerde kleuren en 13px | Bewust licht, als papier. Kleuren en de kleine tekstmaat zijn benoemde tokens (`--plan-papier`, `--plan-inkt`, `--plan-tekst-klein` …) in `style.css`, zonder visueel verschil. DESIGN.md heeft een sectie Plan-editor. |
 | Geen doorverwijzing na een nieuw project; "Gewijzigd: over 6 sec." | Na Aanmaken opent het project meteen. Een tijd in de toekomst (klokverschil) toont "zojuist". |
-| Geen status per project in de lijst | Kolommen Werf (gemeente van het werfadres, anders van de klant) en Status (Geëxporteerd met datum, of Concept). Zoeken vindt ook de gemeente. |
+| Geen status per project in de lijst | Kolommen Werf (gemeente van het werfadres, anders van de klant) en Status (Geëxporteerd met datum, of Niet geëxporteerd; niet "Concept", want dat is het lokale concept en de concept-PDF). Zoeken vindt ook de gemeente. |
 | Geen eerste-gebruiksbegeleiding | De lege projectlijst toont de vier stappen van het werk en de knop Nieuw project. Geen rondleiding of modal. |
 | Conflictdialoog zegt niet wie of wanneer | Ongewijzigd. De server kent de laatste auteur van een wijziging niet (het 409-antwoord bevat alleen de versie). |
 | De kringenlijst is alleen-lezen | De omschrijving van een kring is in de lijst te bewerken: klik of F2, Enter of verlaten bewaart, Escape annuleert. Het loopt via dezelfde store-actie als het Eigenschappenpaneel, dus ongedaan maken werkt. |
@@ -46,6 +46,9 @@ Vervolg op de critique van de volledige app (`apps/web/.impeccable/critique/2026
 - **Bestaande projecten krijgen twee nieuwe open checklistpunten** (aardings- en isolatieweerstand) en blijven concept tot die weerstanden ingevuld zijn.
 - **Clientcompatibiliteit 3.** De meetvelden zijn optioneel binnen documentschema 2; oude documenten blijven leesbaar zonder migratie. De server weigert schrijfacties van een oudere editor (426), zodat die de metingen niet stil kan wegschrijven. Open tabbladen van de vorige versie vragen bij de uitrol om te herladen.
 - **Metingen staan in de bijlage, niet in de cartouche.** De cartouche blijft 30 mm hoog, zodat geschaalde plannen niet over meer bladen gaan. Zonder bijlage komt een korte slotpagina Metingen; zo'n export telt één pagina meer.
+- **De cartouche kan tot 1 mm hoger worden dan 30 mm.** De hoogte wordt naar boven afgerond plus een speling (`SPELING_MM`) tegen afbreken; bij een lang adres of lange namen wint de tekeruimte dus tot 1 mm minder.
+- **De plan-editor krijgt bij het starten de interfacetaal mee** (`zetMaatTaal` / `formatteerMaat`), zodat maten in de editor de decimale komma of punt van die taal gebruiken.
+- **De PDF-tabel met differentieeltests gebruikt dezelfde naam als de editor** ("Differentieel A · 30 mA", of de plaats in het bord); alleen bij gelijke namen komt het bord of het bovenliggende onderdeel erbij. De tabel is breder (tot 190 mm) om omslaan te beperken.
 - **Een kring met 6 contactdozen splitst nog op A4 liggend.** Het schema is ongeveer 190 mm hoog en de tekenruimte 151 mm. Kleiner tekenen kan niet zonder onder de 2,5 mm tekst te gaan. Een staand blad of A3 voor het eendraadschema is een productkeuze die openblijft. Een heel lang klant- en werfadres maakt de cartouche ongeveer 34 mm hoog; een klein schema kan dan ook splitsen.
 - **De 🏠 in de lege staat van de plan-editor blijft.** Ze staat in de vendorcode (`FloorPlanCanvas.svelte`), die niet gewijzigd wordt. DESIGN.md vermeldt dit. Ook de getallen op de liniaal van de vendorcode houden een punt.
 - **Maten in px op een plan zonder schaal** heten "beeldpunten van het plan". Een schaal wordt niet verzonnen.
@@ -75,6 +78,6 @@ Visueel gecontroleerd op 1440 en 390 px breed, in licht en donker: de lege proje
 - Op een smal scherm drukten de doorgaan-chip en Stop de uitleg "Klik op het plan om A1 te plaatsen." samen tot één woord per regel, en het einde viel weg. De uitleg breekt nu naar een eigen regel.
 - In het venster Sneltoetsen stond de sluitknop over het einde van de uitleg in de kop. De koptekst blijft nu vrij van de knop.
 
-Niet aangepast, want niet nieuw: de projectlijst scrolt op een smal scherm opzij, zodat Gewijzigd en de acties buiten beeld vallen. Dat deed de tabel al voor deze branch; de nieuwe kolommen Werf en Status maken het wel breder. Het afdrukvoorbeeld van het standaardsjabloon splitst op A4 liggend, zoals hierboven beschreven.
+De projectlijst verbergt de kolommen Werf en Status onder 640 px (`sm`), zodat de acties op 390 px in beeld blijven (e2e-controle in `projecten.spec.ts`). Het afdrukvoorbeeld van het standaardsjabloon splitst op A4 liggend, zoals hierboven beschreven.
 
 De e2e-specs draaien tegen de eigen database `elentrik_e2e` op poort 3100, nooit tegen de echte gegevens.

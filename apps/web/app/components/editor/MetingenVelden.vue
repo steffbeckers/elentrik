@@ -27,9 +27,8 @@ defineProps<{ nummer: number }>();
       <UFormField name="metingen.aardingsweerstand_ohm" :label="$t('editor.projectgegevens.metingen.aardingsweerstand')" class="col-span-2 sm:col-span-1">
         <UInput
           v-model="metingen.aardingsweerstand_ohm"
-          type="number"
-          min="0"
-          step="any"
+          type="text"
+          inputmode="decimal"
           class="w-full"
           data-testid="meting-aardingsweerstand"
           :ui="{ trailing: 'pointer-events-none' }"
@@ -40,9 +39,8 @@ defineProps<{ nummer: number }>();
       <UFormField name="metingen.isolatieweerstand_MOhm" :label="$t('editor.projectgegevens.metingen.isolatieweerstand')" class="col-span-2 sm:col-span-1">
         <UInput
           v-model="metingen.isolatieweerstand_MOhm"
-          type="number"
-          min="0"
-          step="any"
+          type="text"
+          inputmode="decimal"
           class="w-full"
           data-testid="meting-isolatieweerstand"
           :ui="{ trailing: 'pointer-events-none' }"

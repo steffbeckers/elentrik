@@ -224,7 +224,7 @@ Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groe
 | onderdeel (in de editor) | élément | component |
 | sjabloon | modèle | template |
 | concept (lokaal) | brouillon | draft |
-| concept (status in de projectlijst: nog niet geëxporteerd) | brouillon | draft |
+| niet geëxporteerd (status in de projectlijst; niet "concept", dat is het lokale concept en de concept-PDF) | non exporté | not exported |
 | geëxporteerd (status in de projectlijst) | exporté | exported |
 | werf (kolom in de projectlijst: de gemeente) | chantier | site |
 | status | statut | status |
@@ -262,6 +262,7 @@ Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groe
 | markering (op het schema of plan) | repère | marker |
 | ter info (melding, geen fout) | pour information | for information |
 | overlapt met | chevauche | overlaps |
+| Deze plaatsing kan niet meer ongedaan worden gemaakt (melding bij overlap, als er na de plaatsing al iets anders is gebeurd) | Ce placement ne peut plus être annulé | This placement can no longer be undone |
 | Doorgaan met volgend punt (modus) | Continuer avec le point suivant | Continue with the next point |
 | stop (een modus) | arrêter | stop |
 

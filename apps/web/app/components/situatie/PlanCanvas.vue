@@ -319,11 +319,15 @@ function plaatsOp(nodeId: NodeId, punt: Positie): void {
   emit("geplaatst", nodeId, uitkomst.van);
   // Alleen een waarschuwing, geen snap: de plaatsing blijft staan tot de gebruiker ze ongedaan maakt.
   if (overlap) {
+    // In Doorgaan-modus staat het volgende punt vaak al, voor de melding wordt aangeklikt: dan is deze plaatsing niet meer de laatste stap.
+    const stap = editor.laatsteStap();
     toast.add({
       title: t("editor.situatie.overlap", { label: overlap.label || keuzeLabels.value.get(overlap.nodeId) || overlap.nodeId }),
       color: "warning",
       icon: "i-lucide-layers",
-      actions: [{ label: t("editor.situatie.ongedaanMaken"), color: "neutral", variant: "outline", onClick: () => editor.ongedaanMaken() }],
+      actions: [{ label: t("editor.situatie.ongedaanMaken"), color: "neutral", variant: "outline", onClick: () => {
+        if (!editor.ongedaanMakenAlsLaatste(stap)) toast.add({ title: t("editor.situatie.nietMeerOngedaan"), color: "neutral", icon: "i-lucide-info" });
+      } }],
     });
   }
 }

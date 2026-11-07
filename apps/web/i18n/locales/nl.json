@@ -733,7 +733,8 @@
       },
       "referentieUitleg": "Dit is een referentieblad: plaats hier geen definitieve punten. Het blad wordt niet geëxporteerd. Kies een planpagina om punten te plaatsen.",
       "overlap": "Overlapt met {label}",
-      "ongedaanMaken": "Ongedaan maken"
+      "ongedaanMaken": "Ongedaan maken",
+      "nietMeerOngedaan": "Deze plaatsing kan niet meer ongedaan worden gemaakt"
     },
     "export": {
       "titel": "Exporteren als PDF",
@@ -977,7 +978,7 @@
     },
     "zojuist": "zojuist",
     "status": {
-      "concept": "Concept",
+      "nietGeexporteerd": "Niet geëxporteerd",
       "geexporteerd": "Geëxporteerd"
     },
     "zoeken": {

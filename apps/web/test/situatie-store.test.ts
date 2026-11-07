@@ -436,6 +436,23 @@ describe("alleen-lezen", () => {
     situatie.plaatsNode(punt!, 5, 6);
     expect(plaatsingen(editor, a)).toEqual([{ nodeId: punt, x: 5, y: 6, rotatie: 0 }]);
   });
+  test("de overlap-melding maakt alleen de eigen plaatsing ongedaan, niet een nieuwere", () => {
+    const { editor, situatie } = opzet();
+    situatie.voegPlanPaginaToe("Eerste", ACHTERGROND);
+    const [a, b] = punten(editor) as [NodeId, NodeId];
+    situatie.plaatsNode(a, 100, 200);
+    const eerste = editor.laatsteStap();
+    situatie.plaatsNode(b, 100, 200);
+    const tweede = editor.laatsteStap();
+    // Doorgaan-modus: het volgende punt staat er al voor de melding van het eerste wordt aangeklikt.
+    expect(editor.ongedaanMakenAlsLaatste(eerste)).toBe(false);
+    expect(editor.laatsteStap()).toBe(tweede);
+    expect(plaatsingen(editor, situatie.actievePaginaId!).map(p => p.nodeId)).toEqual([a, b]);
+    // De laatste plaatsing wel.
+    expect(editor.ongedaanMakenAlsLaatste(tweede)).toBe(true);
+    expect(plaatsingen(editor, situatie.actievePaginaId!).map(p => p.nodeId)).toEqual([a]);
+    expect(editor.ongedaanMakenAlsLaatste(undefined)).toBe(false);
+  });
 });
 
 test('getekend plan toevoegen en bewerken is undoable; alleen-lezen houdt bron en raster intact', () => {

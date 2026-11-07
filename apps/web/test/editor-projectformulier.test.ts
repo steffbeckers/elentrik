@@ -176,6 +176,16 @@ describe("metingen", () => {
     expect(gegevensUitFormulier(f).metingen).toEqual({ datum: "2026-11-05", aardingsweerstand_ohm: 28.5, isolatieweerstand_MOhm: 0, meettoestel: "Fluke 1664" });
   });
 
+  test("een decimale komma wordt gelezen; een meetwaarde die geen getal is, wordt nooit stil leeg", () => {
+    const f = startFormulier();
+    const met = (aarding: string, isolatie = "") => ({ ...f, metingen: { ...f.metingen, aardingsweerstand_ohm: aarding, isolatieweerstand_MOhm: isolatie } });
+    expect(valideerProjectFormulier(met("28,5", " 250,25 "))).toEqual([]);
+    expect(gegevensUitFormulier(met("28,5", " 250,25 ")).metingen).toEqual({ aardingsweerstand_ohm: 28.5, isolatieweerstand_MOhm: 250.25 });
+    for (const fout of ["28,5x", "1,2,3", "12 ohm", "--1", "1e"]) {
+      expect(valideerProjectFormulier(met(fout))).toEqual([{ name: "metingen.aardingsweerstand_ohm", fout: "meetwaardeOngeldig" }]);
+    }
+  });
+
   test("een negatieve of onleesbare meetwaarde is een fout bij het veld", () => {
     const f = startFormulier();
     expect(valideerProjectFormulier({ ...f, metingen: { ...f.metingen, aardingsweerstand_ohm: "-1", isolatieweerstand_MOhm: "abc" } })).toEqual([

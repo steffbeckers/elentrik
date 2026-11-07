@@ -257,6 +257,18 @@ export const useEditorStore = defineStore("editor", () => {
     zetDocument(doc);
   }
 
+  /** De bovenste undo-stap, om er later bij `ongedaanMakenAlsLaatste` naar te verwijzen. */
+  function laatsteStap(): Stap | undefined {
+    return terug.value.at(-1);
+  }
+
+  /** Maakt alleen `stap` ongedaan, en alleen als ze nog bovenaan staat; anders blijft alles zoals het is. */
+  function ongedaanMakenAlsLaatste(stap: Stap | undefined): boolean {
+    if (!stap || terug.value.at(-1) !== stap) return false;
+    ongedaanMaken();
+    return true;
+  }
+
   function opnieuw(): void {
     if (alleenLezen.value) return;
     const stap = vooruit.value.at(-1);
@@ -643,6 +655,8 @@ export const useEditorStore = defineStore("editor", () => {
     pasToeMetBehoud,
     sluitGroep,
     ongedaanMaken,
+    laatsteStap,
+    ongedaanMakenAlsLaatste,
     opnieuw,
     voegToe,
     kanVoorSelectieInvoegen,

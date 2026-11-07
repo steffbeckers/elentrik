@@ -54,12 +54,13 @@ const leegStappen = ["klant", "schema", "plan", "export"] as const;
 const exportDatum = computed(() => new Intl.DateTimeFormat(LOCALES[taal.value], { dateStyle: "short" }));
 
 const kolommen = computed<TableColumn<ProjectInLijst>[]>(() => [
-  { accessorKey: "naam", header: t("projecten.kolommen.naam") },
-  { accessorKey: "klantnaam", header: t("projecten.kolommen.klant") },
-  { accessorKey: "werfGemeente", header: t("projecten.kolommen.werf") },
-  { id: "status", header: t("projecten.kolommen.status") },
-  { accessorKey: "gewijzigd", header: t("projecten.kolommen.gewijzigd") },
-  { id: "acties" },
+  { accessorKey: "naam", header: t("projecten.kolommen.naam"), meta: { class: { td: "whitespace-normal break-words" } } },
+  { accessorKey: "klantnaam", header: t("projecten.kolommen.klant"), meta: { class: { td: "whitespace-normal break-words" } } },
+  // Onder `sm` verdwijnen Werf en Status, zodat de rijacties op een telefoon in beeld blijven.
+  { accessorKey: "werfGemeente", header: t("projecten.kolommen.werf"), meta: { class: { th: "hidden sm:table-cell", td: "hidden sm:table-cell" } } },
+  { id: "status", header: t("projecten.kolommen.status"), meta: { class: { th: "hidden sm:table-cell", td: "hidden sm:table-cell" } } },
+  { accessorKey: "gewijzigd", header: t("projecten.kolommen.gewijzigd"), meta: { class: { td: "whitespace-normal" } } },
+  { id: "acties", meta: { class: { th: "px-2 sm:px-4", td: "px-2 sm:px-4" } } },
 ]);
 
 const nieuwOpen = ref(false);
@@ -196,7 +197,7 @@ async function bevestigVerwijderen() {
               {{ exportDatum.format(new Date(row.original.laatsteExport)) }}
             </time>
           </span>
-          <UBadge v-else color="neutral" variant="subtle" :label="$t('projecten.status.concept')" />
+          <UBadge v-else color="neutral" variant="subtle" :label="$t('projecten.status.nietGeexporteerd')" />
         </template>
         <template #acties-cell="{ row }">
           <div class="flex justify-end gap-1">
