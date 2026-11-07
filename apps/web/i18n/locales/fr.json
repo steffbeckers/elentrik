@@ -1450,6 +1450,8 @@
     "ABONNEMENTEN_UIT": "Le paiement n'est pas encore configuré.",
     "PROJECT_ALLEEN_LEZEN": "Ce projet est en lecture seule. Vous pouvez le consulter et l'exporter, mais plus le modifier.",
     "PROJECT_LIMIET": "Cette modification dépasse la limite de la version gratuite et n'a pas été enregistrée.",
+    "PROJECT_AL_GEKOCHT": "Ce projet est déjà débloqué.",
+    "VRIJGEVEN_NIET_NODIG": "Ce projet n'a pas besoin d'être débloqué.",
     "LAATSTE_EIGENAAR": "Il doit rester au moins un propriétaire.",
     "AL_LID": "Une personne avec cette adresse est déjà membre.",
     "AL_UITGENODIGD": "Une personne avec cette adresse est déjà invitée.",

@@ -52,8 +52,11 @@ export type Projecttoegang = {
   gestempeld: boolean;
 };
 
-/** Een prijs van Stripe: het bedrag in de kleinste munteenheid (cent). */
-export type Prijs = { bedrag: number; munt: string; interval: "month" | "year" };
+/**
+ * Een prijs van Stripe: het bedrag in de kleinste munteenheid (cent). `eenmalig` is een prijs zonder
+ * herhaling (de projectprijs).
+ */
+export type Prijs = { bedrag: number; munt: string; interval: "month" | "year" | "eenmalig" };
 
 /** Wat de client over het abonnement van de actieve organisatie mag weten (geen Stripe-id's). */
 export type AbonnementOverzicht = {

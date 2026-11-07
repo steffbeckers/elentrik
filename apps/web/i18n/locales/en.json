@@ -1450,6 +1450,8 @@
     "ABONNEMENTEN_UIT": "Payment has not been set up yet.",
     "PROJECT_ALLEEN_LEZEN": "This project is read-only. You can view and export it, but no longer edit it.",
     "PROJECT_LIMIET": "This change exceeds the limit of the free version and was not saved.",
+    "PROJECT_AL_GEKOCHT": "This project has already been unlocked.",
+    "VRIJGEVEN_NIET_NODIG": "This project does not need to be unlocked.",
     "LAATSTE_EIGENAAR": "At least one owner must remain.",
     "AL_LID": "Someone with this address is already a member.",
     "AL_UITGENODIGD": "Someone with this address has already been invited.",

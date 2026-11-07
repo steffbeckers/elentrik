@@ -1450,6 +1450,8 @@
     "ABONNEMENTEN_UIT": "Betalen is nog niet ingesteld.",
     "PROJECT_ALLEEN_LEZEN": "Dit project is alleen-lezen. Je kan het bekijken en exporteren, maar niet meer bewerken.",
     "PROJECT_LIMIET": "Deze wijziging gaat boven de limiet van de gratis versie en werd niet bewaard.",
+    "PROJECT_AL_GEKOCHT": "Dit project is al vrijgegeven.",
+    "VRIJGEVEN_NIET_NODIG": "Dit project hoeft niet vrijgegeven te worden.",
     "LAATSTE_EIGENAAR": "Er moet minstens één eigenaar blijven.",
     "AL_LID": "Dit adres is al lid.",
     "AL_UITGENODIGD": "Dit adres is al uitgenodigd.",

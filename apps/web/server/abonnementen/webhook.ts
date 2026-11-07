@@ -1,6 +1,7 @@
 // Verwerkt een Stripe-gebeurtenis: synchroniseert de abonnementsrij met wat Stripe zegt, beeindigt
 // een abonnement waarvan de eerste betaling mislukte en stuurt betaalde facturen door naar de
-// boekhouding. Elke stap is idempotent: Stripe stuurt events opnieuw bij een fout.
+// boekhouding. Een Checkout-sessie voor één project (`metadata.soort = "project"`) koopt dat project
+// (projectaankoop.ts). Elke stap is idempotent: Stripe stuurt events opnieuw bij een fout.
 //
 // Er wordt niets uit de payload of de configuratie gelogd, alleen het type van een genegeerd event.
 //
@@ -12,6 +13,7 @@ import { gebruikDb, type Db } from "../db";
 import { abonnementen, stripeEvents } from "../db/schema";
 import { stuurFactuurDoor } from "./boekhouding";
 import { gebruikAbonnementen, type AbonnementConfig } from "./config";
+import { verwerkProjectsessie, type Projectuitkomst } from "./projectaankoop";
 import { leesWebhook, type Gebeurtenis, type StripePoort } from "./stripe";
 import { synchroniseerKlant } from "./synchronisatie";
 
@@ -25,6 +27,20 @@ const SYNCHRONISEER: ReadonlySet<string> = new Set([
   "invoice.paid",
   "invoice.payment_failed",
   "checkout.session.async_payment_failed",
+  "checkout.session.async_payment_succeeded",
+  "checkout.session.expired",
+]);
+
+/**
+ * Wat een event voor een projectsessie betekent. `completed` telt alleen met `payment_status = paid`
+ * (Bancontact of SEPA kan uitgesteld zijn: dan volgt `async_payment_succeeded`); dat controleert
+ * `verwerkProjectsessie`.
+ */
+const PROJECTUITKOMST: ReadonlyMap<string, Projectuitkomst> = new Map([
+  ["checkout.session.completed", "betaald"],
+  ["checkout.session.async_payment_succeeded", "betaald"],
+  ["checkout.session.async_payment_failed", "mislukt"],
+  ["checkout.session.expired", "vervallen"],
 ]);
 
 /**
@@ -47,6 +63,16 @@ async function klantBekend(db: Db, klantId: string): Promise<boolean> {
     .from(abonnementen)
     .where(eq(abonnementen.stripeKlantId, klantId));
   return rij !== undefined;
+}
+
+/** Hoort de klant bij precies deze organisatie? */
+async function klantVan(db: Db, klantId: string, organisatieId: string | undefined): Promise<boolean> {
+  if (!organisatieId) return false;
+  const [rij] = await db
+    .select({ organisatieId: abonnementen.organisatieId })
+    .from(abonnementen)
+    .where(eq(abonnementen.stripeKlantId, klantId));
+  return rij?.organisatieId === organisatieId;
 }
 
 async function beeindig(stripe: StripePoort, klantId: string | null, abonnementId: string): Promise<void> {
@@ -73,6 +99,15 @@ export async function verwerkGebeurtenis(
   if (!g.klantId) {
     console.info("Stripe-webhook: event zonder klant genegeerd", { type: g.type });
     return;
+  }
+  const uitkomst = PROJECTUITKOMST.get(g.type);
+  if (uitkomst && g.objectId && g.metadata.soort === "project") {
+    // De klant van de sessie moet de klant van de organisatie uit de metadata zijn.
+    if (await klantVan(db, g.klantId, g.metadata.organisatieId)) {
+      await verwerkProjectsessie(db, { id: g.objectId, metadata: g.metadata, betaalstatus: g.betaalstatus }, uitkomst);
+    } else {
+      console.info("Stripe-webhook: projectsessie van een andere klant genegeerd", { type: g.type });
+    }
   }
   if (mislukteEersteBetaling(g) && g.abonnementId && (await klantBekend(db, g.klantId))) {
     await beeindig(stripe, g.klantId, g.abonnementId);

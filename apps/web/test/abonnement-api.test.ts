@@ -391,7 +391,7 @@ describe("checkout", () => {
     // De eigenaar rondt Checkout af, maar de rij loopt nog achter (geen webhook, geen synchroniseer).
     expect((await checkout(eigenaarA.cookie)).status).toBe(200);
     const klantId = stripe.checkouts.get("cs_nep_1")!.klantId!;
-    stripe.checkouts.set("cs_nep_1", { id: "cs_nep_1", klantId, abonnementId: "sub_betaald" });
+    stripe.checkouts.set("cs_nep_1", { id: "cs_nep_1", klantId, abonnementId: "sub_betaald", metadata: {}, betaalstatus: "paid" });
     stripe.abonnementen.set(klantId, [
       {
         id: "sub_betaald",
@@ -428,7 +428,7 @@ describe("checkout", () => {
   test("een voltooide sessie waarvan het abonnement al beeindigd is, laat een nieuwe checkout toe", async () => {
     await checkout(eigenaarA.cookie);
     const klantId = stripe.checkouts.get("cs_nep_1")!.klantId!;
-    stripe.checkouts.set("cs_nep_1", { id: "cs_nep_1", klantId, abonnementId: "sub_oud" });
+    stripe.checkouts.set("cs_nep_1", { id: "cs_nep_1", klantId, abonnementId: "sub_oud", metadata: {}, betaalstatus: "paid" });
     stripe.abonnementen.set(klantId, [
       { id: "sub_oud", klantId, status: "canceled", prijsId: "price_maand", periodeEinde: null, opgezegdOpPeriodeEinde: false, aangemaakt: new Date() },
     ]);

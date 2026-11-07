@@ -33,9 +33,19 @@ export type StripeFactuur = {
   reden: string | null;
 };
 
-export type StripePrijs = { id: string; bedrag: number; munt: string; interval: "month" | "year" };
+/** `eenmalig`: een prijs zonder `recurring` (de projectprijs). */
+export type StripePrijs = { id: string; bedrag: number; munt: string; interval: "month" | "year" | "eenmalig" };
 
-export type StripeCheckout = { id: string; klantId: string | null; abonnementId: string | null };
+/** De `payment_status` van een Checkout-sessie. */
+export type Betaalstatus = "paid" | "unpaid" | "no_payment_required";
+
+export type StripeCheckout = {
+  id: string;
+  klantId: string | null;
+  abonnementId: string | null;
+  metadata: Record<string, string>;
+  betaalstatus: Betaalstatus | null;
+};
 
 export interface StripePoort {
   /**
@@ -57,6 +67,19 @@ export interface StripePoort {
     succesUrl: string;
     annuleerUrl: string;
     /** De taal van de gebruiker; Stripe kent nl, fr en en. */
+    locale: Taal;
+  }): Promise<{ id: string; url: string }>;
+  /**
+   * Een Checkout-sessie in modus `payment` voor één project (de projectprijs, eenmalig), met een
+   * factuur (`invoice_creation`) en metadata `{ organisatieId, projectId, soort: "project" }`.
+   */
+  maakProjectCheckout(i: {
+    klantId: string;
+    prijsId: string;
+    organisatieId: string;
+    projectId: string;
+    succesUrl: string;
+    annuleerUrl: string;
     locale: Taal;
   }): Promise<{ id: string; url: string }>;
   haalCheckout(id: string): Promise<StripeCheckout | null>;
@@ -97,6 +120,19 @@ function idVan(waarde: Id): string | null {
  * of backslash, dus de query blijft veilig.
  */
 export const ORGANISATIE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+const BETAALSTATUSSEN: ReadonlySet<string> = new Set<Betaalstatus>(["paid", "unpaid", "no_payment_required"]);
+
+/** Een bekende `payment_status`, anders null. */
+function leesBetaalstatus(waarde: unknown): Betaalstatus | null {
+  return typeof waarde === "string" && BETAALSTATUSSEN.has(waarde) ? (waarde as Betaalstatus) : null;
+}
+
+/** Alleen de tekstwaarden van de metadata. */
+function leesMetadata(waarde: unknown): Record<string, string> {
+  if (!waarde || typeof waarde !== "object") return {};
+  return Object.fromEntries(Object.entries(waarde).filter((e): e is [string, string] => typeof e[1] === "string"));
+}
 
 function bestaatNiet(fout: unknown): boolean {
   return fout instanceof Stripe.errors.StripeError && (fout.code === "resource_missing" || fout.statusCode === 404);
@@ -188,10 +224,37 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
       return { id: sessie.id, url: sessie.url };
     },
 
+    async maakProjectCheckout(i) {
+      const metadata = { organisatieId: i.organisatieId, projectId: i.projectId, soort: "project" };
+      const sessie = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer: i.klantId,
+        line_items: [{ price: i.prijsId, quantity: 1 }],
+        automatic_tax: { enabled: true },
+        tax_id_collection: { enabled: true },
+        billing_address_collection: "required",
+        customer_update: { address: "auto", name: "auto" },
+        invoice_creation: { enabled: true, invoice_data: { metadata } },
+        payment_intent_data: { metadata },
+        metadata,
+        success_url: i.succesUrl,
+        cancel_url: i.annuleerUrl,
+        locale: i.locale,
+      });
+      if (!sessie.url) throw new Error("Stripe gaf geen Checkout-URL");
+      return { id: sessie.id, url: sessie.url };
+    },
+
     async haalCheckout(id) {
       try {
         const sessie = await stripe.checkout.sessions.retrieve(id);
-        return { id: sessie.id, klantId: idVan(sessie.customer), abonnementId: idVan(sessie.subscription) };
+        return {
+          id: sessie.id,
+          klantId: idVan(sessie.customer),
+          abonnementId: idVan(sessie.subscription),
+          metadata: leesMetadata(sessie.metadata),
+          betaalstatus: leesBetaalstatus(sessie.payment_status),
+        };
       } catch (fout) {
         if (bestaatNiet(fout)) return null;
         throw fout;
@@ -261,11 +324,14 @@ export function maakStripePoort(config: Extract<AbonnementConfig, { ingeschakeld
 
     async haalPrijs(id) {
       const prijs = await stripe.prices.retrieve(id);
-      const interval = prijs.recurring?.interval;
-      if (prijs.unit_amount === null || (interval !== "month" && interval !== "year")) {
-        throw new Error(`De prijs ${id} is geen maand- of jaarprijs met een vast bedrag`);
+      // Zonder `recurring` is het een eenmalige prijs (de projectprijs).
+      const herhaling: string = prijs.recurring ? prijs.recurring.interval : "eenmalig";
+      const interval: StripePrijs["interval"] | null =
+        herhaling === "month" || herhaling === "year" || herhaling === "eenmalig" ? herhaling : null;
+      if (prijs.unit_amount === null || interval === null) {
+        throw new Error(`De prijs ${id} is geen maand-, jaar- of eenmalige prijs met een vast bedrag`);
       }
-      return { id: prijs.id, bedrag: prijs.unit_amount, munt: prijs.currency, interval: interval === "year" ? "year" : "month" };
+      return { id: prijs.id, bedrag: prijs.unit_amount, munt: prijs.currency, interval };
     },
   };
 }
@@ -277,6 +343,10 @@ export type Gebeurtenis = {
   objectId: string | null;
   abonnementId: string | null;
   reden: string | null;
+  /** De metadata van een Checkout-sessie; leeg voor elk ander object. */
+  metadata: Record<string, string>;
+  /** De `payment_status` van een Checkout-sessie; null voor elk ander object. */
+  betaalstatus: Betaalstatus | null;
 };
 
 type GebeurtenisObject = {
@@ -286,6 +356,8 @@ type GebeurtenisObject = {
   subscription?: Id;
   billing_reason?: string | null;
   cancellation_details?: { reason?: string | null } | null;
+  metadata?: unknown;
+  payment_status?: unknown;
   parent?: { subscription_details?: { subscription?: Id } | null } | null;
 };
 
@@ -303,6 +375,8 @@ export function leesWebhook(rauw: string, handtekening: string, geheim: string):
   const o = (gebeurtenis.data?.object ?? {}) as GebeurtenisObject;
   let abonnementId: string | null = null;
   let reden: string | null = null;
+  let metadata: Record<string, string> = {};
+  let betaalstatus: Betaalstatus | null = null;
   switch (o.object) {
     case "subscription":
       abonnementId = o.id ?? null;
@@ -314,6 +388,8 @@ export function leesWebhook(rauw: string, handtekening: string, geheim: string):
       break;
     case "checkout.session":
       abonnementId = idVan(o.subscription);
+      metadata = leesMetadata(o.metadata);
+      betaalstatus = leesBetaalstatus(o.payment_status);
       break;
   }
   return {
@@ -323,5 +399,7 @@ export function leesWebhook(rauw: string, handtekening: string, geheim: string):
     objectId: o.id ?? null,
     abonnementId,
     reden,
+    metadata,
+    betaalstatus,
   };
 }

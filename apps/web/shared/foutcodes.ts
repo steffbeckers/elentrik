@@ -66,6 +66,9 @@ export const SERVER_FOUTCODES = [
   // Handhaving per project (402, server/abonnementen/handhaving.ts)
   "PROJECT_ALLEEN_LEZEN",
   "PROJECT_LIMIET",
+  // Betalen per project (409, server/abonnementen/projectaankoop.ts)
+  "PROJECT_AL_GEKOCHT",
+  "VRIJGEVEN_NIET_NODIG",
   // Organisatie en uitnodigingen
   "LAATSTE_EIGENAAR",
   "AL_LID",

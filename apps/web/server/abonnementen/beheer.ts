@@ -73,18 +73,21 @@ async function haalPrijs(stripe: StripePoort, prijsId: string, nu: number): Prom
 
 /**
  * De prijzen van beide formules, of null als Stripe ze niet geeft: de pagina blijft dan werken.
- * De projectprijs volgt in taak 6 van het prijsmodel; tot dan is ze null.
+ * `project` is null zonder `STRIPE_PRIJS_PROJECT`, of als Stripe alleen die prijs niet geeft: dan
+ * toont de UI alleen het abonnement.
  */
 async function haalPrijzen(
   { config, stripe }: Ingeschakeld,
   nu: number,
 ): Promise<{ maand: Prijs; jaar: Prijs; project: Prijs | null } | null> {
+  const projectId = config.prijzen.project;
   try {
-    const [maand, jaar] = await Promise.all([
+    const [maand, jaar, project] = await Promise.all([
       haalPrijs(stripe, config.prijzen.maand, nu),
       haalPrijs(stripe, config.prijzen.jaar, nu),
+      projectId ? haalPrijs(stripe, projectId, nu).catch(() => null) : null,
     ]);
-    return { maand, jaar, project: null };
+    return { maand, jaar, project };
   } catch {
     return null;
   }
@@ -145,7 +148,7 @@ export function trialEindeVoor(proefEinde: Date, nu: Date): Date | null {
  * Maakt de Stripe-klant. Kent Stripe de idempotency key al met andere gegevens (een eerdere poging met een
  * ander e-mailadres), dan bestaat de klant al: nog één keer zoeken en die hergebruiken, anders de fout doorgeven.
  */
-async function maakKlantOfZoek(
+export async function maakKlantOfZoek(
   stripe: StripePoort,
   i: { organisatieId: string; email: string; naam: string },
 ): Promise<string> {

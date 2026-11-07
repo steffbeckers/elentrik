@@ -400,6 +400,31 @@ const TABEL: Record<string, Rij> = {
     lid: 201,
     eigenaar: 201,
   },
+  "POST /api/projecten/:id/vrijgeven": {
+    // Alleen een eigenaar. Zonder projectprijs (INGESCHAKELD) is er niets vrij te geven: 409; de
+    // inhoud staat in test/projectaankoop.test.ts.
+    verzoek: () => projectVerzoek("POST", "/vrijgeven"),
+    andereOrganisatie: 404,
+    lid: 403,
+    eigenaar: 409,
+  },
+  "POST /api/projecten/:id/vrijgave/synchroniseer": {
+    // Een projectsessie van A: A synchroniseert (200, nog niet betaald), B krijgt 404.
+    verzoek: async () => {
+      const id = await projectIn(orgA);
+      nepStripe.checkouts.set("cs_toegang_project", {
+        id: "cs_toegang_project",
+        klantId: "cus_toegang_a",
+        abonnementId: null,
+        metadata: { organisatieId: orgA, projectId: id, soort: "project" },
+        betaalstatus: "unpaid",
+      });
+      return { methode: "POST", pad: `/api/projecten/${id}/vrijgave/synchroniseer`, json: { sessie: "cs_toegang_project" } };
+    },
+    andereOrganisatie: 404,
+    lid: 403,
+    eigenaar: 200,
+  },
   "GET /api/projecten/:id/exports": {
     verzoek: () => projectVerzoek("GET", "/exports"),
     andereOrganisatie: 404,
@@ -483,7 +508,7 @@ const TABEL: Record<string, Rij> = {
     // Een sessie van A's klant: A synchroniseert (200), B krijgt 404 omdat de sessie niet van B is.
     verzoek: async () => {
       const klantA = await zorgVoorKlanten();
-      nepStripe.checkouts.set("cs_toegang_a", { id: "cs_toegang_a", klantId: klantA, abonnementId: null });
+      nepStripe.checkouts.set("cs_toegang_a", { id: "cs_toegang_a", klantId: klantA, abonnementId: null, metadata: {}, betaalstatus: "unpaid" });
       return { methode: "POST", pad: "/api/abonnement/synchroniseer", json: { sessie: "cs_toegang_a" } };
     },
     andereOrganisatie: 404,
