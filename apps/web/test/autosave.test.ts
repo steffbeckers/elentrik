@@ -60,6 +60,8 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
     // Het dubbel op de server heeft zijn eigen document-id.
     document: id === "kopie1" ? { ...startDocument(), id: KOPIE_DOC_ID } : startDocument(),
     versie: 7,
+    toegang: { bewerken: true, limiet: false, watermerk: null, gekocht: false, gestempeld: false },
+    limieten: null,
   }));
   const dupliceer = vi.fn<NonNullable<AutosaveOpties["dupliceer"]>>(async (_id, _bestandIds) => ({ id: "kopie1" }));
   const naarProject = vi.fn(async (_id: string) => {});

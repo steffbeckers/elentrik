@@ -776,3 +776,69 @@ describe("synchroniseerKlant", () => {
     expect(waarschuw).toHaveBeenCalledWith("dubbel abonnement", { organisatieId });
   });
 });
+
+// --- Projecttoegang en label in de API-antwoorden ---------------------------------------------
+
+describe("projecttoegang in de antwoorden", () => {
+  async function zetGratis() {
+    await db.delete(abonnementen).where(eq(abonnementen.organisatieId, eigenaar.organisatieId));
+    await db
+      .update(organization)
+      .set({ proefEinde: new Date(Date.now() - DAG_MS), vrijgesteld: false, onderwijs: false })
+      .where(eq(organization.id, eigenaar.organisatieId));
+  }
+
+  afterEach(async () => {
+    await zetGratis();
+  });
+
+  test("GET project geeft toegang en limieten", async () => {
+    schakelIn();
+    await zetGratis();
+    const id = await projectIn(eigenaar.organisatieId);
+    const antwoord = await stuur({ methode: "GET", pad: `/api/projecten/${id}` }, eigenaar.cookie);
+    expect(antwoord.status).toBe(200);
+    expect(await antwoord.json()).toMatchObject({
+      id,
+      toegang: { bewerken: true, limiet: true, watermerk: "gratis", gekocht: false, gestempeld: false },
+      limieten: { kringen: 5, situatieschemas: 1 },
+    });
+
+    zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
+    const uit = await (await stuur({ methode: "GET", pad: `/api/projecten/${id}` }, eigenaar.cookie)).json();
+    expect(uit.limieten).toBeNull();
+    expect(uit.toegang).toMatchObject({ bewerken: true, limiet: false, watermerk: null });
+  });
+
+  test("lijst: labels gratis, vrijgegeven en alleen-lezen bij gratis bedrijf; null bij abonnement", async () => {
+    schakelIn();
+    await zetGratis();
+    const gratis = await projectIn(eigenaar.organisatieId);
+    const vrijgegeven = await projectIn(eigenaar.organisatieId);
+    const alleenLezen = await projectIn(eigenaar.organisatieId);
+    await db.update(projecten).set({ gekochtOp: new Date() }).where(eq(projecten.id, vrijgegeven));
+    await db.update(projecten).set({ abonnementStempelOp: new Date() }).where(eq(projecten.id, alleenLezen));
+
+    const labels = async () => {
+      const lijst = (await (await stuur({ methode: "GET", pad: "/api/projecten" }, eigenaar.cookie)).json()) as {
+        id: string;
+        label: string | null;
+      }[];
+      return new Map(lijst.map((p) => [p.id, p.label]));
+    };
+    const gratisLabels = await labels();
+    expect(gratisLabels.get(gratis)).toBe("gratis");
+    expect(gratisLabels.get(vrijgegeven)).toBe("vrijgegeven");
+    expect(gratisLabels.get(alleenLezen)).toBe("alleen-lezen");
+
+    await db.insert(abonnementen).values({
+      organisatieId: eigenaar.organisatieId,
+      stripeKlantId: "cus_label",
+      stripeAbonnementId: "sub_label",
+      status: "active",
+      formule: "maand",
+    });
+    const metAbonnement = await labels();
+    for (const id of [gratis, vrijgegeven, alleenLezen]) expect(metAbonnement.get(id)).toBeNull();
+  });
+});

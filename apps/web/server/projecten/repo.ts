@@ -20,7 +20,9 @@ import {
   isNull,
   sql,
 } from "drizzle-orm";
-import type { Project, ProjectInLijst, ProjectSamenvatting } from "../../shared/projecten";
+import type { Bedrijfsniveau } from "../../shared/abonnement";
+import type { Project, ProjectInLijst, ProjectLabel, ProjectSamenvatting } from "../../shared/projecten";
+import { bepaalProjecttoegang } from "../abonnementen/toegang";
 import type { Db, Tx } from "../db";
 import type { BestandOpslag } from "../bestanden/opslag";
 import { controleerOpslagruimte } from "../bestanden/opslagruimte";
@@ -88,9 +90,21 @@ const werfGemeente = sql<string | null>`coalesce(
  * het tijdstip van de laatste export. Eén query: de exports komen uit een gegroepeerde subquery
  * over de projecten van dezelfde organisatie, geen query per project.
  */
+/** Het label van een project in de lijst: alleen bij niveau `gratis` (spec 4.7). */
+function labelVoor(niveau: Bedrijfsniveau, gekocht: boolean, gestempeld: boolean): ProjectLabel | null {
+  if (niveau !== "gratis") return null;
+  if (!bepaalProjecttoegang(niveau, { gekocht, gestempeld }).bewerken) return "alleen-lezen";
+  return gekocht ? "vrijgegeven" : "gratis";
+}
+
+/**
+ * De projecten van een organisatie voor de lijst. `niveau` is het bedrijfsniveau (eenmaal per verzoek
+ * bepaald, geen vraag per project); zonder niveau krijgt geen enkel project een label.
+ */
 export async function lijstProjecten(
   db: Db,
   organisatieId: string,
+  niveau: Bedrijfsniveau = "uit",
 ): Promise<ProjectInLijst[]> {
   const laatsteExports = db
     .select({
@@ -111,15 +125,18 @@ export async function lijstProjecten(
       gewijzigd: projecten.gewijzigd,
       werfGemeente,
       laatsteExport: laatsteExports.laatste,
+      gekochtOp: projecten.gekochtOp,
+      stempelOp: projecten.abonnementStempelOp,
     })
     .from(projecten)
     .leftJoin(laatsteExports, eq(laatsteExports.projectId, projecten.id))
     .where(and(eq(projecten.organisatieId, organisatieId), leeft))
     .orderBy(desc(projecten.gewijzigd));
-  return rijen.map((rij) => ({
+  return rijen.map(({ gekochtOp, stempelOp, ...rij }) => ({
     ...rij,
     gewijzigd: rij.gewijzigd.toISOString(),
     laatsteExport: rij.laatsteExport ?? null,
+    label: labelVoor(niveau, gekochtOp !== null, stempelOp !== null),
   }));
 }
 
@@ -179,11 +196,14 @@ function stempelBijAanmaken(opties?: SchrijfOpties): { abonnementStempelOp?: Dat
   return opties?.stempel ? { abonnementStempelOp: opties.stempel } : {};
 }
 
+/** Een project zoals de opslag het geeft; de GET-route voegt `toegang` en `limieten` toe. */
+export type ProjectZonderToegang = Omit<Project, "toegang" | "limieten">;
+
 export async function haalProject(
   db: Db,
   organisatieId: string,
   id: string,
-): Promise<Project | null> {
+): Promise<ProjectZonderToegang | null> {
   const [rij] = await db
     .select({
       id: projecten.id,
