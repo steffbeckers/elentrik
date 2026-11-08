@@ -47,19 +47,26 @@ export function watermerkVoor(
 
 /**
  * "Dit project vrijgeven": eerst het werk bewaren zoals het nu is (binnen de limiet), dan Checkout
- * vragen en doorsturen. De geweigerde operatie wordt daarna niet opnieuw uitgevoerd. Is het project
- * intussen al vrij (409 `PROJECT_AL_GEKOCHT`) of hoeft het niet meer (409 `VRIJGEVEN_NIET_NODIG`), dan
- * wordt de toegang opnieuw geladen. Andere fouten (bv. 409 `VRIJGAVE_LOOPT`) gaan naar de aanroeper.
+ * vragen en doorsturen. De geweigerde operatie wordt daarna niet opnieuw uitgevoerd. Staat het werk
+ * lokaal in het concept (`conceptBewaard`), dan is het vertrek naar Checkout bevestigd
+ * (`bevestigVertrek`): de browser vraagt dan niet of de gebruiker de pagina wil verlaten, en bij de
+ * terugkeer biedt de editor het concept aan. Staat het werk alleen in het geheugen, dan blijft die vraag.
+ * Is het project intussen al vrij (409 `PROJECT_AL_GEKOCHT`) of hoeft het niet meer (409
+ * `VRIJGEVEN_NIET_NODIG`), dan wordt de toegang opnieuw geladen. Andere fouten (bv. 409
+ * `VRIJGAVE_LOOPT`) gaan naar de aanroeper.
  */
 export async function geefProjectVrij(opties: {
   nuOpslaan: () => Promise<void>;
   vrijgeven: () => Promise<{ url: string }>;
+  conceptBewaard: () => Promise<boolean>;
+  bevestigVertrek: () => void;
   navigeer: (url: string) => unknown;
   herlaad: () => Promise<unknown>;
 }): Promise<"doorgestuurd" | "al-vrij"> {
   await opties.nuOpslaan();
   try {
     const { url } = await opties.vrijgeven();
+    if (await opties.conceptBewaard().catch(() => false)) opties.bevestigVertrek();
     await opties.navigeer(url);
     return "doorgestuurd";
   } catch (fout) {
@@ -94,4 +101,30 @@ export async function verwerkVrijgave(
   }
   await opties.verwijderQuery();
   return gekocht ? "vrijgegeven" : "verwerking";
+}
+
+/**
+ * Het lokale document elders bewaren: een kopie bij een conflict (`bewaarAlsKopie`) of een nieuw
+ * project na het verwijderen (`bewaarAlsNieuwProject`). Het concept blijft staan tot dat gelukt is.
+ * - "gelukt": de autosave navigeert zelf naar de kopie of het nieuwe project;
+ * - "limiet": 402 `PROJECT_LIMIET` (bv. een kopie van een project boven de gratis limiet). Er kan geen
+ *   project van gemaakt worden: de aanroeper biedt de download van het lokale document aan;
+ * - "geweigerd": een andere weigering (402 `PROJECT_ALLEEN_LEZEN`), al gemeld door `behandelWeigering`;
+ * - "fout": een andere fout, gemeld via `meldFout`.
+ */
+export async function bewaarElders(opties: {
+  actie: () => Promise<void>;
+  behandelWeigering: (fout: unknown) => Promise<"limiet" | "alleen-lezen" | false>;
+  meldFout: (fout: unknown) => void;
+}): Promise<"gelukt" | "limiet" | "geweigerd" | "fout"> {
+  try {
+    await opties.actie();
+    return "gelukt";
+  } catch (fout) {
+    const weigering = await opties.behandelWeigering(fout);
+    if (weigering === "limiet") return "limiet";
+    if (weigering) return "geweigerd";
+    opties.meldFout(fout);
+    return "fout";
+  }
 }

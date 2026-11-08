@@ -35,7 +35,7 @@ import LimietDialoog from "./LimietDialoog.vue";
 import type { Prijs } from "../../../shared/abonnement";
 import { prijsTekst } from "~/abonnement/weergave";
 import { useAbonnementApi } from "~/composables/useAbonnementApi";
-import { geefProjectVrij, limietKnoppen, toonAlleenLezenBalk, verwerkVrijgave } from "~/editor/limiet";
+import { bewaarElders, geefProjectVrij, limietKnoppen, toonAlleenLezenBalk, verwerkVrijgave } from "~/editor/limiet";
 import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
@@ -215,7 +215,8 @@ const vrijgaveBezig = ref(false);
 
 /**
  * "Dit project vrijgeven": eerst het werk bewaren zoals het nu is (binnen de limiet), dan naar
- * Checkout. De geweigerde operatie wordt na de terugkeer niet opnieuw uitgevoerd.
+ * Checkout. De geweigerde operatie wordt na de terugkeer niet opnieuw uitgevoerd. Staat het werk in
+ * het concept, dan vraagt de browser niet of de gebruiker de pagina wil verlaten (`vertrekBevestigd`).
  */
 async function vrijgeven(): Promise<void> {
   const klant = context.klant;
@@ -225,6 +226,10 @@ async function vrijgeven(): Promise<void> {
     const uitkomst = await geefProjectVrij({
       nuOpslaan: () => autosave.nuOpslaan().catch(() => {}),
       vrijgeven: () => klant.vrijgeven(id),
+      conceptBewaard: () => autosave.wachtOpConcept(),
+      bevestigVertrek: () => {
+        vertrekBevestigd = true;
+      },
       navigeer: (url) => navigateTo(url, { external: true }),
       herlaad: herlaadToegang,
     });
@@ -347,9 +352,15 @@ async function verwerpConcept(): Promise<void> {
 
 const conflictOpen = ref(false);
 const conflictBezig = ref(false);
+/**
+ * De kopie kreeg 402 `PROJECT_LIMIET` (een gratis project boven de limiet): de dialoog biedt dan de
+ * download van het lokale document aan in plaats van de kopie. Geldt tot het conflict opgelost is.
+ */
+const kopieOverLimiet = ref(false);
 
 watch(autosave.status, (status) => {
   conflictOpen.value = status === "conflict";
+  if (status !== "conflict") kopieOverLimiet.value = false;
 });
 
 // De server weigerde het document met een bekende foutcode (bv. PLANBESTAND_ONBEKEND): de vertaalde reden.
@@ -360,10 +371,14 @@ watch(autosave.fout, (fout) => {
 async function losConflictOp(actie: () => Promise<void>): Promise<void> {
   conflictBezig.value = true;
   try {
-    await actie();
-  } catch (fout) {
-    // Een kopie maken kan 402 geven: dan alleen-lezen, geen generieke fout.
-    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
+    // Een kopie maken kan 402 geven: dan de melding, geen generieke fout. Het concept blijft staan; bij
+    // `PROJECT_LIMIET` kan er geen kopie komen en biedt de dialoog de download aan.
+    const uitkomst = await bewaarElders({
+      actie,
+      behandelWeigering: behandelSchrijfweigering,
+      meldFout: (fout) => toast.add({ title: vertaalFout(fout, t), color: "error" }),
+    });
+    if (uitkomst === "limiet") kopieOverLimiet.value = true;
   } finally {
     conflictBezig.value = false;
   }
@@ -372,6 +387,8 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
 // --- Project elders verwijderd -----------------------------------------------------
 
 const nieuwProjectBezig = ref(false);
+/** Het nieuwe project kreeg 402 `PROJECT_LIMIET`: de melding biedt dan de download van het lokale document aan. */
+const nieuwProjectOverLimiet = ref(false);
 
 /**
  * "Terug naar de projecten" in de melding is een uitdrukkelijke keuze om het werk los te laten: alleen
@@ -386,21 +403,29 @@ function terugNaarProjecten(klik: MouseEvent): void {
 
 /** Bij een mislukte conceptschrijfactie (status onbewaard) staat het werk alleen nog in het geheugen. */
 const verwijderdUitleg = computed(() =>
-  autosave.status.value === "onbewaard" ? t("editor.verwijderd.uitlegNietLokaal") : t("editor.verwijderd.uitleg"),
+  nieuwProjectOverLimiet.value
+    ? t("editor.verwijderd.uitlegLimiet")
+    : autosave.status.value === "onbewaard"
+      ? t("editor.verwijderd.uitlegNietLokaal")
+      : t("editor.verwijderd.uitleg"),
 );
 
 /**
  * Het project werd elders verwijderd: het lokale document wordt een nieuw project (met de plannen van
- * het bedrijf). Een 402 geeft de alleen-lezenmelding, een andere fout een toast; de editor blijft dan
- * staan zoals hij was, met het concept lokaal.
+ * het bedrijf). Een 402 geeft de melding van de weigering, een andere fout een toast; de editor blijft
+ * dan staan zoals hij was, met het concept lokaal. Bij 402 `PROJECT_LIMIET` (het document gaat over de
+ * gratis limiet) kan er geen nieuw project komen: de melding biedt dan de download aan.
  */
 async function bewaarAlsNieuwProject(): Promise<void> {
   if (!context.mogelijkheden.nieuwProject || nieuwProjectBezig.value) return;
   nieuwProjectBezig.value = true;
   try {
-    await autosave.bewaarAlsNieuwProject();
-  } catch (fout) {
-    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
+    const uitkomst = await bewaarElders({
+      actie: autosave.bewaarAlsNieuwProject,
+      behandelWeigering: behandelSchrijfweigering,
+      meldFout: (fout) => toast.add({ title: vertaalFout(fout, t), color: "error" }),
+    });
+    if (uitkomst === "limiet") nieuwProjectOverLimiet.value = true;
   } finally {
     nieuwProjectBezig.value = false;
   }
@@ -440,6 +465,8 @@ function toonBevindingen(): void { werkruimte.value?.toonBevindingen(); }
 function bijVerlaten(event: BeforeUnloadEvent): void {
   // Een bedoelde herlading met het werk in het concept (een nieuwe versie): niets vragen.
   if (versieStore.zonderWaarschuwing) return;
+  // Een bevestigd vertrek (bv. naar Checkout met het werk in het concept): niet nog eens vragen.
+  if (vertrekBevestigd) return;
   if (waarschuwBijVerlaten(autosave.status.value)) event.preventDefault();
 }
 
@@ -724,12 +751,22 @@ onBeforeUnmount(() => {
       >
         <template #actions>
           <UButton
+            v-if="nieuwProjectOverLimiet"
+            size="xs"
+            color="error"
+            icon="i-lucide-download"
+            :label="$t('admin.support.download')"
+            :disabled="!lokaalDocumentBeschikbaar"
+            data-testid="verwijderd-download"
+            @click="downloadLokaal"
+          />
+          <UButton
+            v-else-if="context.mogelijkheden.nieuwProject"
             size="xs"
             color="error"
             icon="i-lucide-copy-plus"
             :label="$t('editor.verwijderd.nieuwProject')"
             :loading="nieuwProjectBezig"
-            v-if="context.mogelijkheden.nieuwProject"
             data-testid="verwijderd-nieuw-project"
             @click="bewaarAlsNieuwProject"
           />
@@ -930,11 +967,11 @@ onBeforeUnmount(() => {
     <ConflictDialoog
       v-model:open="conflictOpen"
       :bezig="conflictBezig"
-      :kopie-toegestaan="context.mogelijkheden.dupliceren"
+      :kopie-toegestaan="context.mogelijkheden.dupliceren && !kopieOverLimiet"
       @download="downloadLokaal"
       :lokale-wijzigingen="autosave.conflict.value?.lokaleWijzigingen ?? true"
       @serverversie="losConflictOp(autosave.laadServerversie)"
-      @kopie="context.mogelijkheden.dupliceren && losConflictOp(autosave.bewaarAlsKopie)"
+      @kopie="context.mogelijkheden.dupliceren && !kopieOverLimiet && losConflictOp(autosave.bewaarAlsKopie)"
     />
   </div>
 </template>

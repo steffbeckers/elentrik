@@ -400,6 +400,42 @@ describe("useAutosave", () => {
     expect(autosave.status.value).toBe("conflict");
   });
 
+  describe("402 PROJECT_LIMIET bij een kopie (gratis bedrijf, bron boven de limiet)", () => {
+    const limietFout = () =>
+      Object.assign(new Error("Limiet"), { statusCode: 402, data: { data: { code: "PROJECT_LIMIET" } } });
+
+    test("het dupliceren geweigerd: de fout komt door, het concept blijft, geen navigatie, het conflict blijft", async () => {
+      const { store, bewaar, dupliceer, naarProject, autosave } = opzet();
+      bewaar.mockRejectedValueOnce(new ConflictFout(5));
+      wijzig(store, "Lokaal");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      const fout = limietFout();
+      dupliceer.mockRejectedValueOnce(fout);
+
+      await expect(autosave.bewaarAlsKopie()).rejects.toBe(fout);
+
+      expect(naarProject).not.toHaveBeenCalled();
+      expect(autosave.status.value).toBe("conflict");
+      expect((await conceptVan("p1"))?.naam).toBe("Lokaal");
+    });
+
+    test("het bewaren in de kopie geweigerd: de fout komt door, het concept van het origineel blijft", async () => {
+      const { store, bewaar, naarProject, autosave } = opzet();
+      bewaar.mockRejectedValueOnce(new ConflictFout(5));
+      wijzig(store, "Lokaal");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      const fout = limietFout();
+      bewaar.mockRejectedValueOnce(fout);
+
+      await expect(autosave.bewaarAlsKopie()).rejects.toBe(fout);
+
+      expect(naarProject).not.toHaveBeenCalled();
+      expect((await conceptVan("p1"))?.naam).toBe("Lokaal");
+    });
+  });
+
   test("bewaarAlsKopie zonder lokale wijzigingen, maar met een wijziging tijdens het dupliceren: die gaat mee naar de kopie", async () => {
     const { store, bewaar, dupliceer, naarProject, autosave } = opzet();
     autosave.meldConflict(7);
@@ -1694,6 +1730,18 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     await expect(autosave.bewaarAlsNieuwProject()).rejects.toBe(opslagVol);
 
     expect(vertaalFout(opslagVol, (sleutel) => sleutel)).toBe("fouten.OPSLAG_VOL");
+    expect(autosave.status.value).toBe("verwijderd");
+    expect(naarProject).not.toHaveBeenCalled();
+    expect((await conceptVan("p1"))?.naam).toBe("a");
+  });
+
+  test("402 PROJECT_LIMIET bij het maken (verwijderd project boven de limiet): de fout komt door, het concept blijft", async () => {
+    const { maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    const fout = Object.assign(new Error("Limiet"), { statusCode: 402, data: { data: { code: "PROJECT_LIMIET" } } });
+    maakNieuw.mockRejectedValueOnce(fout);
+
+    await expect(autosave.bewaarAlsNieuwProject()).rejects.toBe(fout);
+
     expect(autosave.status.value).toBe("verwijderd");
     expect(naarProject).not.toHaveBeenCalled();
     expect((await conceptVan("p1"))?.naam).toBe("a");

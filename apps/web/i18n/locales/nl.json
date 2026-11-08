@@ -327,6 +327,7 @@
       "melding": "Dit project werd verwijderd.",
       "uitleg": "Je wijzigingen staan nog lokaal. Bewaar ze als nieuw project, of ga terug naar de projecten.",
       "uitlegNietLokaal": "Je wijzigingen konden ook niet lokaal bewaard worden en staan alleen nog in het geheugen. Bewaar ze nu als nieuw project en sluit dit venster niet.",
+      "uitlegLimiet": "Als nieuw project gaat dit werk over de gratis limiet. Je wijzigingen staan nog lokaal: download ze als bestand, of ga terug naar de projecten.",
       "nieuwProject": "Bewaar als nieuw project",
       "terug": "Terug naar de projecten"
     },

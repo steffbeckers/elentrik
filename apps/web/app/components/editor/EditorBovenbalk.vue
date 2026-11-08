@@ -152,7 +152,7 @@ onBeforeUnmount(() => smalQuery?.removeEventListener("change", volgSmal));
         @click="emit('opnieuwProberen')"
       />
 
-      <LimietTeller />
+      <LimietTeller :compact="smal" />
       <UButton
         color="neutral"
         variant="ghost"
