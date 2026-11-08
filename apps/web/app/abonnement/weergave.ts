@@ -52,6 +52,8 @@ export type Banner = {
   dagen?: number;
   /** Bij "betaling": tot wanneer de betaling geregeld moet zijn (ISO), als dat bekend is. */
   tot?: string;
+  /** Bij "betaling": de gratie is voorbij en het bedrijf is al teruggevallen op de gratis versie. */
+  naGratie?: true;
   knop: boolean;
   /** De i18n-sleutel van de knop (alleen met `knop`). */
   knopSleutel?: "abonnement.banner.kies" | "abonnement.betalingRegelen";
@@ -62,18 +64,22 @@ const REGELEN = "abonnement.betalingRegelen";
 
 /**
  * Welke banner bovenaan de app past bij de toegang van de actieve organisatie, of null. Alleen een
- * eigenaar, en alleen zolang het bedrijf volledige toegang heeft (niveau abonnement):
- * - betaling: bij een mislukte betaling, met de datum waarvoor ze geregeld moet zijn;
- * - proef: tijdens de overgangsproef, in de laatste 7 dagen.
- * Een gratis bedrijf krijgt geen banner: de limieten staan in de editor.
+ * eigenaar:
+ * - betaling: bij een mislukte betaling, op elk niveau. Binnen de gratie (niveau abonnement) met de
+ *   datum waarvoor ze geregeld moet zijn, als die bekend is; daarna (niveau gratis) zonder datum en
+ *   met `naGratie`, want het bedrijf is dan al teruggevallen op de gratis versie;
+ * - proef: tijdens de overgangsproef (niveau abonnement), in de laatste 7 dagen.
+ * Een gratis bedrijf krijgt verder geen banner: de limieten staan in de editor.
  */
 export function bannerVoor(toegang: Toegang, rol: Rol | null, nu: Date): Banner | null {
-  if (rol !== "eigenaar" || toegang.niveau !== "abonnement") return null;
+  if (rol !== "eigenaar") return null;
   if (toegang.reden === "betaling-mislukt") {
+    if (toegang.niveau !== "abonnement") return { soort: "betaling", naGratie: true, knop: true, knopSleutel: REGELEN };
     return toegang.achterstalligTot
       ? { soort: "betaling", tot: toegang.achterstalligTot, knop: true, knopSleutel: REGELEN }
       : { soort: "betaling", knop: true, knopSleutel: REGELEN };
   }
+  if (toegang.niveau !== "abonnement") return null;
   if (toegang.reden === "proef" && toegang.proefEinde !== null) {
     const dagen = dagenTot(toegang.proefEinde, nu);
     if (dagen >= 1 && dagen <= PROEF_BANNER_DAGEN) return { soort: "proef", dagen, knop: true, knopSleutel: KIES };
@@ -157,7 +163,11 @@ export function paginaWeergave(o: AbonnementOverzicht, rol: Rol | null, taal: Ta
   if (rol !== "eigenaar") return { ...weergave, melding: "lid", blokken: { gratis, project, kaarten: [] } };
   if (o.status !== null && LOPEND.has(o.status)) {
     const betalingRegelen = o.status === "past_due" || o.status === "unpaid";
-    return { ...weergave, beheer: betalingRegelen ? "abonnement.betalingRegelen" : "abonnement.beheren" };
+    const beheer = betalingRegelen ? "abonnement.betalingRegelen" : "abonnement.beheren";
+    // Voorbij de gratie (past_due of unpaid, niveau gratis) gelden de gratis versie en de projectprijs
+    // weer: dezelfde blokken als een lid ziet, zonder kaarten (het abonnement loopt nog via het portaal).
+    if (o.niveau === "gratis") return { ...weergave, beheer, blokken: { gratis, project, kaarten: [] } };
+    return { ...weergave, beheer };
   }
   // Een vrijgesteld bedrijf hoeft niets te kiezen: alleen de status, geen kaarten en geen prijzenmelding.
   if (o.reden === "vrijgesteld") return weergave;

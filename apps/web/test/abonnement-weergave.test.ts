@@ -92,7 +92,7 @@ describe("bannerVoor", () => {
     expect(bannerVoor(toegang(), null, NU)).toBeNull();
   });
 
-  test("betaling: alleen voor een eigenaar, en alleen met schrijfrecht, met de datum", () => {
+  test("betaling binnen de gratie: alleen voor een eigenaar, met de datum", () => {
     const tot = new Date(NU.getTime() + 10 * DAG).toISOString();
     const t = toegang({ reden: "betaling-mislukt", proefEinde: null, achterstalligTot: tot });
     expect(bannerVoor(t, "eigenaar", NU)).toEqual({ soort: "betaling", tot, knop: true, knopSleutel: "abonnement.betalingRegelen" });
@@ -120,10 +120,16 @@ describe("bannerVoor", () => {
     expect(bannerVoor(toegang({ niveau: "gratis", reden: "gratis", proefEinde: binnen }), "eigenaar", NU)).toBeNull();
   });
 
-  test("een mislukte betaling voorbij de gratie (niveau gratis) geeft geen banner", () => {
-    expect(
-      bannerVoor(toegang({ niveau: "gratis", reden: "betaling-mislukt", proefEinde: null }), "eigenaar", NU),
-    ).toBeNull();
+  test("een mislukte betaling voorbij de gratie (niveau gratis): banner voor de eigenaar, zonder datum", () => {
+    const voorbij = new Date(NU.getTime() - 2 * DAG).toISOString();
+    const verwacht = { soort: "betaling", naGratie: true, knop: true, knopSleutel: "abonnement.betalingRegelen" };
+    // past_due na 14 dagen: de datum ligt in het verleden en wordt niet getoond.
+    const pastDue = toegang({ niveau: "gratis", reden: "betaling-mislukt", proefEinde: null, achterstalligTot: voorbij });
+    expect(bannerVoor(pastDue, "eigenaar", NU)).toEqual(verwacht);
+    // unpaid: geen datum.
+    expect(bannerVoor({ ...pastDue, achterstalligTot: null }, "eigenaar", NU)).toEqual(verwacht);
+    expect(bannerVoor(pastDue, "lid", NU)).toBeNull();
+    expect(bannerVoor(pastDue, null, NU)).toBeNull();
   });
 
   test("uit, vrijgesteld en actief: geen banner", () => {
@@ -184,6 +190,39 @@ describe("statusAantal (meervoud van de statusregel)", () => {
     const [een, meer] = nl.abonnement.status.proef.split("|").map((s) => s.trim());
     expect(een).toContain("nog {dagen} dag,");
     expect(meer).toContain("nog {dagen} dagen,");
+  });
+});
+
+describe("de bannerteksten bij een mislukte betaling", () => {
+  type Banner = { banner: { betalingZonderDatum: string; betalingNaGratie: string } };
+  const talen = Object.fromEntries(
+    (["nl", "fr", "en"] as const).map((taal) => [
+      taal,
+      (JSON.parse(readFileSync(new URL(`../i18n/locales/${taal}.json`, import.meta.url), "utf8")) as { abonnement: Banner })
+        .abonnement.banner,
+    ]),
+  ) as Record<"nl" | "fr" | "en", Banner["banner"]>;
+
+  test("zonder datum: de terugval op de gratis versie, niet meer 'geen projecten bewerken'", () => {
+    expect(talen.nl.betalingZonderDatum).toBe(
+      "Je laatste betaling is mislukt. Regel je betaling snel, anders valt je bedrijf terug op de gratis versie en worden projecten uit je abonnement alleen-lezen.",
+    );
+    expect(talen.fr.betalingZonderDatum).toContain("version gratuite");
+    expect(talen.en.betalingZonderDatum).toContain("free version");
+  });
+
+  test("na de gratie: het bedrijf gebruikt de gratis versie al", () => {
+    expect(talen.nl.betalingNaGratie).toContain("Je bedrijf gebruikt nu de gratis versie");
+    expect(talen.fr.betalingNaGratie).toContain("version gratuite");
+    expect(talen.en.betalingNaGratie).toContain("free version");
+  });
+
+  test("geen tekst zegt nog dat het bedrijf niets meer kan bewerken", () => {
+    for (const banner of Object.values(talen)) {
+      for (const tekst of [banner.betalingZonderDatum, banner.betalingNaGratie]) {
+        expect(tekst).not.toMatch(/geen projecten meer|ne pourra bientôt plus|no longer be able/);
+      }
+    }
   });
 });
 
@@ -273,6 +312,32 @@ describe("paginaWeergave", () => {
     expect(w.blokken.gratis).toBeNull();
     expect(w.blokken.project).toBeNull();
     expect(w.beheer).toBe("abonnement.beheren");
+  });
+
+  test("een eigenaar met past_due of unpaid voorbij de gratie (niveau gratis) ziet de gratis- en projectblokken", () => {
+    for (const status of ["past_due", "unpaid"] as const) {
+      const w = paginaWeergave(
+        overzicht({ niveau: "gratis", reden: "betaling-mislukt", proefEinde: null, status, prijzen: metProject }),
+        "eigenaar",
+        "nl",
+      );
+      expect(w.beheer).toBe("abonnement.betalingRegelen");
+      expect(w.blokken).toEqual({
+        gratis: { kringen: 5, situatieschemas: 1 },
+        project: { prijs: prijsTekst(metProject.project, "nl") },
+        kaarten: [],
+      });
+    }
+  });
+
+  test("een eigenaar met past_due binnen de gratie (niveau abonnement) ziet geen blokken", () => {
+    const w = paginaWeergave(
+      overzicht({ niveau: "abonnement", reden: "betaling-mislukt", proefEinde: null, status: "past_due", prijzen: metProject }),
+      "eigenaar",
+      "nl",
+    );
+    expect(w.beheer).toBe("abonnement.betalingRegelen");
+    expect(w.blokken).toEqual({ gratis: null, project: null, kaarten: [] });
   });
 
   test("onderwijs: melding onderwijs zonder kaarten", () => {

@@ -164,7 +164,7 @@ Een bedrijf staat zo nooit meer volledig op alleen-lezen. Een `past_due` die lan
 
 **Gekocht of gestempeld gaat vóór onderwijs** (mijn keuze). Dat kan alleen voorkomen bij een project van vóór de onderwijsstatus. Zo behoudt een eerder betaald of gestempeld dossier zijn export zonder watermerk, en kan een school een oud dossier niet ombouwen tot een nieuw dossier zonder watermerk. Bewaren onder niveau `onderwijs` stempelt nooit.
 
-Een gratis project dat al boven de limiet zit, kan bijvoorbeeld bestaan na het intrekken van de status onderwijs of de vrijstelling. Zo'n project blijft bewerkbaar, maar het bewaren lukt alleen als het resultaat binnen de limiet valt. Wie kringen verwijdert, raakt er dus weer onder. Er komt geen aparte status "alleen-lezen boven de limiet" (mijn keuze).
+Een gratis project dat al boven de limiet zit, kan bijvoorbeeld bestaan na het intrekken van de status onderwijs of de vrijstelling. Zo'n project blijft bewerkbaar en bewaren lukt zolang geen telling stijgt: een soort mag boven de limiet blijven zolang ze niet hoger wordt dan in de opgeslagen versie (`overschrijdtLimiet`). Alleen een wijziging die een soort boven de limiet nog hoger maakt, wordt geweigerd. Wie kringen verwijdert, raakt er dus geleidelijk weer onder. Er komt geen aparte status "alleen-lezen boven de limiet" (mijn keuze).
 
 ### 4.4 Handhaving op de server
 
@@ -269,6 +269,7 @@ Een gratis project dat al boven de limiet zit, kan bijvoorbeeld bestaan na het i
 ### 4.8 Overgang (migratie)
 
 - **Elk bestaand, niet-verwijderd project met een organisatie** krijgt `abonnement_stempel_op = moment van de migratie`.
+- **Een project zonder organisatie** (van vóór de organisaties) krijgt de stempel bij de eenmalige overname door de eerste organisatie, als het er nog geen heeft.
 - **Bestaande bedrijven** behouden `proef_einde`. Wie nog in de proef zit, telt tot dat moment als niveau `abonnement`, met stempels op wat bewaard wordt. Daarna gelden de nieuwe regels.
 - **Nieuwe bedrijven** krijgen `proef_einde = now()`, als default en in beide aanmaakpaden.
 - **Het verlengen van de proef in het beheerscherm** blijft bestaan (mijn keuze). Het werkt als "tijdelijke volledige toegang" en is handig voor een demo of een partner. De labels in het beheerscherm worden daaraan aangepast.

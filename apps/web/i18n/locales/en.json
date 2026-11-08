@@ -1432,7 +1432,8 @@
       "proef": "{n} free day left. | {n} free days left.",
       "kies": "Choose a subscription",
       "betaling": "Your last payment failed. Sort out your payment before {datum}.",
-      "betalingZonderDatum": "Your last payment failed. Sort out your payment soon, or your company will no longer be able to edit projects."
+      "betalingZonderDatum": "Your last payment failed. Sort out your payment soon, or your company will fall back to the free version and projects from your subscription will become read-only.",
+      "betalingNaGratie": "Your last payment failed. Your company now uses the free version and projects from your subscription are read-only. Sort out your payment to edit everything again."
     }
   },
   "menu": {

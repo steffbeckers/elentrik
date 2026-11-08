@@ -1432,7 +1432,8 @@
       "proef": "Encore {n} jour gratuit. | Encore {n} jours gratuits.",
       "kies": "Choisir un abonnement",
       "betaling": "Votre dernier paiement a échoué. Réglez votre paiement avant le {datum}.",
-      "betalingZonderDatum": "Votre dernier paiement a échoué. Réglez rapidement votre paiement, sinon votre entreprise ne pourra bientôt plus modifier de projets."
+      "betalingZonderDatum": "Votre dernier paiement a échoué. Réglez rapidement votre paiement, sinon votre entreprise repassera à la version gratuite et les projets de votre abonnement passeront en lecture seule.",
+      "betalingNaGratie": "Votre dernier paiement a échoué. Votre entreprise utilise désormais la version gratuite et les projets de votre abonnement sont en lecture seule. Réglez votre paiement pour tout modifier à nouveau."
     }
   },
   "menu": {
