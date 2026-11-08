@@ -1,10 +1,11 @@
 import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 // Abonnementen end-to-end, tegen een nep-Stripe op poort 3199 (zie hulp/nep-stripe.ts en
-// global-setup.ts). De server draait met Stripe aan, dus elke nieuwe organisatie krijgt een proef.
-// Een verlopen proef zetten we rechtstreeks in de e2e-database.
+// global-setup.ts). De server draait met Stripe aan. Een nieuwe organisatie start gratis, zonder
+// proef; de overgangsproef (en het einde ervan) zetten we rechtstreeks in de e2e-database. Wat
+// tijdens de proef bewaard wordt, is gestempeld en wordt na de proef alleen-lezen.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import type { Mij } from "../shared/mij";
-import { metE2eDatabase, zetProefEinde, zetVrijgesteld } from "./hulp/database";
+import { metE2eDatabase, stempelProject, zetProefEinde, zetVrijgesteld } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker, maakTestgebruiker, uniekAdres } from "./hulp/inloggen";
 import { E2E_STRIPE_URL, E2E_URL } from "./omgeving";
@@ -20,11 +21,15 @@ async function organisatieId(request: APIRequestContext): Promise<string> {
 
 test.describe.configure({ mode: "serial" });
 
-test("formules: twee kaarten met bedragen en korting, en Kies bij Jaarlijks gaat naar de nep-Stripe", async ({
+test("formules: gratis, per project en twee kaarten met bedragen en korting, en Kies bij Jaarlijks gaat naar de nep-Stripe", async ({
   page,
 }) => {
   await ga(page, "/abonnement");
-  await expect(page.getByTestId("abonnement-status")).toContainText("Gratis proefperiode: nog");
+  await expect(page.getByTestId("abonnement-status")).toHaveText("Je gebruikt de gratis versie van Elentrik.");
+  await expect(page.getByTestId("abonnement-blok-gratis")).toContainText(
+    "Elk gratis project mag maximaal 5 kringen en 1 situatieschema bevatten.",
+  );
+  await expect(page.getByTestId("abonnement-blok-project")).toContainText("25,00");
 
   const maand = page.getByTestId("abonnement-kaart-maand");
   const jaar = page.getByTestId("abonnement-kaart-jaar");
@@ -71,10 +76,16 @@ test("een lid ziet op /abonnement geen knoppen", async ({ page, browser, playwri
   }
 });
 
-test("verlopen proef: alleen-lezen met banner, zonder Nieuw project, geen wijzigingen, wel exporteren", async ({
+test("verlopen proef: het gestempelde project is alleen-lezen met de balk, Nieuw project blijft, geen wijzigingen, wel exporteren", async ({
   page,
   request,
 }) => {
+  const thuis = await organisatieId(request);
+  // De overgangsproef loopt: volledige toegang, en wat bewaard wordt, krijgt een stempel.
+  await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
+  await ga(page, "/abonnement");
+  await expect(page.getByTestId("abonnement-status")).toContainText("Gratis proefperiode: nog");
+
   // Een project met een kring, gemaakt zolang de proef nog loopt.
   const aangemaakt = await request.post("/api/projecten", {
     data: { naam: `Abonnement ${run} verlopen`, klantnaam: "Janssens", stroomtype: "2x230V" },
@@ -94,18 +105,20 @@ test("verlopen proef: alleen-lezen met banner, zonder Nieuw project, geen wijzig
   const voor = (await (await request.get(`/api/projecten/${id}`)).json()) as { versie: number; document: unknown };
 
   // De proef van gisteren.
-  await zetProefEinde(await organisatieId(request), new Date(Date.now() - DAG_MS));
+  await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
 
-  // De projectenlijst: de alleen-lezenbanner en geen "Nieuw project".
+  // De projectenlijst: geen banner voor het hele bedrijf, "Nieuw project" blijft (een nieuw project
+  // is gratis), en het gestempelde project heeft het label "Alleen-lezen".
   await ga(page, "/");
-  await expect(page.getByTestId("abonnement-banner-alleen-lezen")).toBeVisible();
   await expect(page.getByRole("row").filter({ hasText: `Abonnement ${run} verlopen` })).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Nieuw project" })).toHaveCount(0);
+  await expect(page.getByTestId(`projectlabel-${id}`)).toHaveText("Alleen-lezen");
+  await expect(page.getByRole("button", { name: "Nieuw project" })).toBeVisible();
+  await expect(page.locator('[data-testid^="abonnement-banner-"]')).toHaveCount(0);
 
-  // Het project opent, maar de knoppen om iets toe te voegen zijn uitgeschakeld.
+  // Het project opent met de alleen-lezenbalk, en de knoppen om iets toe te voegen zijn uitgeschakeld.
   await ga(page, `/projecten/${id}`);
   await expect(page.getByTestId("schema-canvas")).toBeVisible();
-  await expect(page.getByTestId("abonnement-banner-alleen-lezen")).toBeVisible();
+  await expect(page.getByTestId("alleen-lezen-balk")).toContainText("Dit project is gemaakt tijdens je abonnement.");
   const sjabloon = page.getByRole("button", { name: "Kring stopcontacten" });
   await expect(sjabloon).toBeDisabled();
   await expect(page.getByTestId("onderdeel-contactdoos")).toBeDisabled();
@@ -127,9 +140,10 @@ test("verlopen proef: alleen-lezen met banner, zonder Nieuw project, geen wijzig
   // Ook op de server verandert er niets: een schrijfpoging geeft 402.
   const put = await request.put(`/api/projecten/${id}`, {
     headers: { "If-Match": String(voor.versie) },
-    data: { naam: `Abonnement ${run} verlopen` },
+    data: { naam: `Abonnement ${run} verlopen`, document: voor.document },
   });
   expect(put.status()).toBe(402);
+  expect(await put.text()).toContain("PROJECT_ALLEEN_LEZEN");
   const na = (await (await request.get(`/api/projecten/${id}`)).json()) as { versie: number; document: unknown };
   expect(na.versie).toBe(voor.versie);
   expect(na.document).toEqual(voor.document);
@@ -144,11 +158,12 @@ test("verlopen proef: alleen-lezen met banner, zonder Nieuw project, geen wijzig
   await expect(dialoog.getByTestId("export-rij-V1")).toBeVisible();
 });
 
-test("een dialoog die openstaat bij de overgang naar alleen-lezen blijft open met een melding", async ({
+test("een dialoog die openstaat als het bewaren alleen-lezen terugkrijgt, blijft open met een melding", async ({
   page,
   request,
 }) => {
   const thuis = await organisatieId(request);
+  // Gemaakt tijdens de overgangsproef: het project is gestempeld.
   await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
   const aangemaakt = await request.post("/api/projecten", {
     data: { naam: `Abonnement ${run} overgang`, klantnaam: "Peeters", stroomtype: "2x230V" },
@@ -159,28 +174,47 @@ test("een dialoog die openstaat bij de overgang naar alleen-lezen blijft open me
   try {
     await ga(page, `/projecten/${id}`);
     await expect(page.getByTestId("schema-canvas")).toBeVisible();
+
+    // De proef loopt af terwijl de editor openstaat. De editor merkt dat bij het volgende bewaren
+    // (402 PROJECT_ALLEEN_LEZEN). Dat bewaren houden we vast tot de dialoog openstaat.
+    await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
+    let laatDoor!: () => void;
+    const poort = new Promise<void>((klaar) => (laatDoor = klaar));
+    await page.route(`**/api/projecten/${id}`, async (route) => {
+      if (route.request().method() === "PUT") await poort;
+      await route.continue();
+    });
+    const bewaren = page.waitForResponse(
+      (r) => r.url().endsWith(`/api/projecten/${id}`) && r.request().method() === "PUT",
+    );
+    await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+    await bevestigSjabloonOpBord(page);
+
     await page.getByTestId("projectnaam").click();
     const dialoog = page.getByRole("dialog");
     await expect(dialoog.getByRole("button", { name: "Bewaren" })).toBeVisible();
     await expect(dialoog.getByTestId("dialoog-alleen-lezen")).toHaveCount(0);
 
-    // Het abonnement vervalt en de sessie wordt opnieuw gelezen terwijl de dialoog openstaat.
-    await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
-    await keerTerugInTabblad(page);
+    laatDoor();
+    expect((await bewaren).status()).toBe(402);
 
     await expect(dialoog).toBeVisible();
-    await expect(dialoog.getByTestId("dialoog-alleen-lezen")).toContainText("kunnen niet meer bewaard worden");
+    await expect(dialoog.getByTestId("dialoog-alleen-lezen")).toContainText("kunnen niet bewaard worden");
     await expect(dialoog.getByRole("button", { name: "Bewaren" })).toHaveCount(0);
     await expect(dialoog.getByLabel("Projectnaam")).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("alleen-lezen-balk")).toBeVisible();
   } finally {
-    await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
+    await page.unrouteAll({ behavior: "ignoreErrors" });
     await request.delete(`/api/projecten/${id}`);
   }
 });
 
 test("conceptdialoog die alleen-lezen wordt: 'Later' sluit zonder het concept te wissen", async ({ page, request }) => {
   const thuis = await organisatieId(request);
-  await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
+  // Gratis, zonder proef: het project heeft een limiet, en dan leest de editor bij het terugkeren in
+  // het tabblad de projecttoegang opnieuw.
+  await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
   const gebruikerId = ((await (await request.get("/api/mij")).json()) as { gebruiker: { id: string } }).gebruiker.id;
   const aangemaakt = await request.post("/api/projecten", {
     data: { naam: `Abonnement ${run} later`, klantnaam: "Peeters", stroomtype: "2x230V" },
@@ -234,9 +268,10 @@ test("conceptdialoog die alleen-lezen wordt: 'Later' sluit zonder het concept te
     await expect(dialoog.getByRole("button", { name: "Concept laden" })).toBeEnabled();
     await expect(dialoog.getByTestId("concept-later")).toHaveCount(0);
 
-    // Het abonnement vervalt terwijl de dialoog openstaat: laden kan niet meer, "Later" wel.
-    await zetProefEinde(thuis, new Date(Date.now() - DAG_MS));
-    await keerTerugInTabblad(page);
+    // Het project blijkt intussen gestempeld (bewaard tijdens een abonnement dat voorbij is) en dus
+    // alleen-lezen, terwijl de dialoog openstaat: laden kan niet meer, "Later" wel.
+    await stempelProject(id);
+    await keerTerugInTabblad(page, id);
     await expect(dialoog.getByRole("button", { name: "Concept laden" })).toHaveCount(0);
     await expect(dialoog.getByRole("button", { name: "Verwerpen" })).toBeVisible();
     await dialoog.getByTestId("concept-later").click();
@@ -244,7 +279,6 @@ test("conceptdialoog die alleen-lezen wordt: 'Later' sluit zonder het concept te
     await expect(dialoog).toHaveCount(0);
     expect(await staatInArchief()).toBe(true);
   } finally {
-    await zetProefEinde(thuis, new Date(Date.now() + 20 * DAG_MS));
     await request.delete(`/api/projecten/${id}`);
   }
 });
@@ -260,14 +294,19 @@ test("een vrijgesteld bedrijf ziet op /abonnement geen Kies-kaarten, alleen de s
 });
 
 /**
- * De gebruiker komt terug in het tabblad: de editor leest dan de sessie opnieuw (een `focus` op het
- * venster, zoals bij het terugkeren uit een ander tabblad). Zo volgt de pagina een abonnement dat
- * intussen in de database veranderde, zonder in de interne toestand van de app te grijpen.
+ * De gebruiker komt terug in het tabblad: de editor leest dan de sessie en, bij een beperkt project
+ * (met limiet of alleen-lezen), de projecttoegang opnieuw (een `focus` op het venster, zoals bij het
+ * terugkeren uit een ander tabblad). Zo volgt de pagina wat intussen in de database veranderde,
+ * zonder in de interne toestand van de app te grijpen.
  */
-async function keerTerugInTabblad(page: Page): Promise<void> {
+async function keerTerugInTabblad(page: Page, projectId: string): Promise<void> {
   const sessie = page.waitForResponse((r) => r.url().endsWith("/api/mij") && r.request().method() === "GET");
+  const toegang = page.waitForResponse(
+    (r) => r.url().endsWith(`/api/projecten/${projectId}`) && r.request().method() === "GET",
+  );
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   expect((await sessie).ok()).toBe(true);
+  expect((await toegang).ok()).toBe(true);
 }
 
 async function controleerVrijgesteld(page: Page): Promise<void> {

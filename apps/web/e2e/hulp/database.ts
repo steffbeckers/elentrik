@@ -26,3 +26,22 @@ export async function zetProefEinde(organisatieId: string, datum: Date): Promise
 export async function zetVrijgesteld(organisatieId: string): Promise<void> {
   await metE2eDatabase((sql) => sql`update organization set vrijgesteld = true where id = ${organisatieId}`);
 }
+
+/**
+ * Zet of wist de status onderwijs van een organisatie (geen limieten, altijd een watermerk). Een
+ * bedrijf is nooit tegelijk vrijgesteld en onderwijs: aanzetten wist dus ook de vrijstelling.
+ */
+export async function zetOnderwijs(organisatieId: string, aan = true): Promise<void> {
+  await metE2eDatabase((sql) =>
+    aan
+      ? sql`update organization set onderwijs = true, vrijgesteld = false where id = ${organisatieId}`
+      : sql`update organization set onderwijs = false where id = ${organisatieId}`,
+  );
+}
+
+/** Stempelt een project alsof het tijdens een abonnement bewaard werd (`abonnement_stempel_op`). */
+export async function stempelProject(projectId: string, datum: Date = new Date()): Promise<void> {
+  await metE2eDatabase(
+    (sql) => sql`update projecten set abonnement_stempel_op = ${datum.toISOString()} where id = ${projectId}`,
+  );
+}

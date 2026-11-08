@@ -342,8 +342,8 @@
       "verwerking": "The payment is still being processed. The project will be unlocked as soon as it arrives.",
       "teller": {
         "label": "Free limit",
-        "kringen": "{n} of {max} circuit | {n} of {max} circuits",
-        "situatieschemas": "{n} of {max} layout plan | {n} of {max} layout plans"
+        "kringen": "{aantal} of {max} circuit | {aantal} of {max} circuits",
+        "situatieschemas": "{aantal} of {max} layout plan | {aantal} of {max} layout plans"
       }
     },
     "alleenLezenBalk": {

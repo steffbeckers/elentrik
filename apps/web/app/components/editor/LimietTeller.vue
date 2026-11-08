@@ -12,8 +12,9 @@ const regels = computed(() => {
   if (!store.toegang?.limiet || !limieten || !telling) return [];
   return (["kringen", "situatieschemas"] as const).map((soort) => ({
     soort,
-    // De meervoudsvorm volgt het maximum: "1 van 1 situatieschema", "3 van 5 kringen".
-    tekst: t(`editor.limiet.teller.${soort}`, { n: telling[soort], max: limieten[soort] }, limieten[soort]),
+    // De meervoudsvorm volgt het maximum: "1 van 1 situatieschema", "3 van 5 kringen". Het aantal heet
+    // `aantal`, niet `n`: vue-i18n vervangt een `n` van 0 door het meervoudsgetal (het maximum).
+    tekst: t(`editor.limiet.teller.${soort}`, { aantal: telling[soort], max: limieten[soort] }, limieten[soort]),
     vol: telling[soort] >= limieten[soort],
   }));
 });

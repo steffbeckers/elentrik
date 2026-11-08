@@ -187,8 +187,9 @@ Een gratis project dat al boven de limiet zit, kan bijvoorbeeld bestaan na het i
 
 ### 4.5 Betalen per project
 
-**`POST /api/projecten/[id]/vrijgeven`** (alleen een eigenaar, met `x-elentrik-organisatie`):
+**`POST /api/projecten/[id]/vrijgeven`** (alleen een eigenaar van de organisatie van het project):
 
+- **Organisatie:** de vrijgaveroutes (`vrijgeven` en `vrijgave/synchroniseer`) halen de organisatie uit het project, niet uit de header `x-elentrik-organisatie` (beslist met de gebruiker).
 - **Weigeringen:**
   - het project is al gekocht: 409 `PROJECT_AL_GEKOCHT`;
   - het bedrijf is `onderwijs` of `vrijgesteld`, of abonnementen staan uit: 409 `VRIJGEVEN_NIET_NODIG` (mijn keuze: er valt niets vrij te geven);

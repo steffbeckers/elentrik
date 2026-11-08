@@ -145,13 +145,14 @@ async function wisUitDatabase(sql: OpruimSql, spoor: E2eSpoor): Promise<string[]
 
   if (!emails.length && !orgLijst.length && !projectLijst.length && !instellingen.length) return [];
 
-  // Eén transactie, in de volgorde van de vreemde sleutels: exports, snapshots, bestanden,
+  // Eén transactie, in de volgorde van de vreemde sleutels: exports, snapshots, projectaankopen, bestanden,
   // projecten, dan wat aan de organisatie hangt, de organisatie (leden en uitnodigingen gaan mee
   // via cascade) en ten slotte de gebruiker (sessies en accounts gaan mee).
   await sql.begin(async (tx) => {
     if (projectLijst.length) {
       await tx`delete from exports where project_id in ${tx(projectLijst)}`;
       await tx`delete from snapshots where project_id in ${tx(projectLijst)}`;
+      await tx`delete from projectaankopen where project_id in ${tx(projectLijst)}`;
     }
     if (bestandIds.length) await tx`delete from bestanden where id in ${tx(bestandIds)}`;
     if (projectLijst.length) await tx`delete from projecten where id in ${tx(projectLijst)}`;

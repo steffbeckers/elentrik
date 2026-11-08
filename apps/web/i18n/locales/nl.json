@@ -342,8 +342,8 @@
       "verwerking": "De betaling wordt nog verwerkt. Het project wordt vrijgegeven zodra ze binnen is.",
       "teller": {
         "label": "Gratis limiet",
-        "kringen": "{n} van {max} kring | {n} van {max} kringen",
-        "situatieschemas": "{n} van {max} situatieschema | {n} van {max} situatieschema's"
+        "kringen": "{aantal} van {max} kring | {aantal} van {max} kringen",
+        "situatieschemas": "{aantal} van {max} situatieschema | {aantal} van {max} situatieschema's"
       }
     },
     "alleenLezenBalk": {

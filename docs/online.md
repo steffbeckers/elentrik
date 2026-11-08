@@ -493,7 +493,8 @@ Stripe-dashboard (eenmalig, met de hand)". Doe die in testmodus, en later nog ee
 ### In testmodus
 
 1. In het Stripe-dashboard, testmodus: twee terugkerende prijzen (maand en jaar, in EUR en **exclusief** btw).
-   Hun id's (`price_...`) komen in `STRIPE_PRIJS_MAAND` en `STRIPE_PRIJS_JAAR`.
+   Hun id's (`price_...`) komen in `STRIPE_PRIJS_MAAND` en `STRIPE_PRIJS_JAAR`. Optioneel een eenmalige prijs
+   (EUR, **exclusief** btw) om één project vrij te geven: haar id komt in `STRIPE_PRIJS_PROJECT`.
 2. **Webhook-eindpunt** aanmaken (Ontwikkelaars, Webhooks, **Eindpunt toevoegen**; de naam kan per versie licht
    verschillen) op:
 
@@ -948,6 +949,9 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 | `STRIPE_WEBHOOK_GEHEIM` | bij Stripe | Het ondertekeningsgeheim van het eindpunt `https://elentrik.app/api/stripe/webhook` (`whsec_...`). |
 | `STRIPE_PRIJS_MAAND` | bij Stripe | Het id van de maandprijs (`price_...`). |
 | `STRIPE_PRIJS_JAAR` | bij Stripe | Het id van de jaarprijs (`price_...`). |
+| `STRIPE_PRIJS_PROJECT` | nee | Het id van de eenmalige prijs om één project vrij te geven (`price_...`, zonder herhaling, exclusief btw). Leeg: geen knop om een project vrij te geven, alleen het abonnement. |
+| `GRATIS_MAX_KRINGEN` | nee | Het maximum aantal kringen per gratis project, een positief geheel getal. Leeg: 5. Een ongeldige waarde laat de start mislukken. |
+| `GRATIS_MAX_SITUATIESCHEMAS` | nee | Het maximum aantal situatieschema's per gratis project, een positief geheel getal. Leeg: 1. Een ongeldige waarde laat de start mislukken. |
 | `BOEKHOUDING_INBOX` | nee | Het adres van de boekhouding, voor een kopie van elke betaalde factuur. Leeg: geen kopie. |
 
 ### Noodstop
@@ -978,6 +982,7 @@ deze variabelen zet je in `.env`; de rest staat vast in `compose.yaml`.
 | `STAGING_STRIPE_WEBHOOK_GEHEIM` | bij Stripe | Het ondertekeningsgeheim van het testeindpunt voor staging (`whsec_...`). |
 | `STAGING_STRIPE_PRIJS_MAAND` | bij Stripe | Het id van de maandprijs in de testmodus (`price_...`). |
 | `STAGING_STRIPE_PRIJS_JAAR` | bij Stripe | Het id van de jaarprijs in de testmodus (`price_...`). |
+| `STAGING_STRIPE_PRIJS_PROJECT` | nee | Het id van de eenmalige projectprijs in de testmodus (`price_...`). Leeg: geen knop om een project vrij te geven. |
 
 ### Door `compose.yaml` zelf gezet (niet in `.env`)
 
@@ -1071,6 +1076,7 @@ STAGING_STRIPE_GEHEIME_SLEUTEL=
 STAGING_STRIPE_WEBHOOK_GEHEIM=
 STAGING_STRIPE_PRIJS_MAAND=
 STAGING_STRIPE_PRIJS_JAAR=
+STAGING_STRIPE_PRIJS_PROJECT=
 ```
 
 ### Stap 4. Stripe (alleen testmodus)

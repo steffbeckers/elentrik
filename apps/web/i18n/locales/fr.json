@@ -342,8 +342,8 @@
       "verwerking": "Le paiement est encore en cours de traitement. Le projet sera débloqué dès sa réception.",
       "teller": {
         "label": "Limite gratuite",
-        "kringen": "{n} sur {max} circuit | {n} sur {max} circuits",
-        "situatieschemas": "{n} sur {max} plan de position | {n} sur {max} plans de position"
+        "kringen": "{aantal} sur {max} circuit | {aantal} sur {max} circuits",
+        "situatieschemas": "{aantal} sur {max} plan de position | {aantal} sur {max} plans de position"
       }
     },
     "alleenLezenBalk": {
