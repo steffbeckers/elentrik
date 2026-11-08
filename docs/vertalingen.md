@@ -204,6 +204,9 @@ Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groe
 | abonnement | abonnement | subscription |
 | proefperiode | période d'essai | free trial |
 | formule | formule | plan |
+| gratis versie | version gratuite | free version |
+| (een project) vrijgeven | débloquer (un projet) | unlock (a project) |
+| alleen-lezen | lecture seule | read-only |
 | project | projet | project |
 | dossier | dossier | dossier |
 | dossiertaal | langue du dossier | dossier language |

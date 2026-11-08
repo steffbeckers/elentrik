@@ -7,7 +7,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import {
   createApp,
   createRouter,
@@ -24,7 +24,7 @@ import { bewaarBedrijf, bewaarLogo, haalBedrijf } from "../server/bedrijf/repo";
 import { maakLokaleOpslag, zetOpslag, type BestandOpslag } from "../server/bestanden/opslag";
 import { bewaarBestand, haalBestand } from "../server/bestanden/repo";
 import { type Db, zetDb } from "../server/db";
-import { abonnementen, bedrijfsinstellingen, bestanden, invitation, member, projecten, session, user } from "../server/db/schema";
+import { abonnementen, bedrijfsinstellingen, bestanden, invitation, member, organization, projecten, session, user } from "../server/db/schema";
 import { maakExport } from "../server/exports/repo";
 import { type Mail, type Verzender, zetVerzender } from "../server/mail/verzend";
 import { registratieLimiet } from "../server/organisaties/leden";
@@ -46,13 +46,16 @@ vi.mock("../server/pdf/gotenberg", async (origineel) => ({
 
 const WACHTWOORD = "lang-genoeg-1";
 
-// Abonnementen aan, met de nep-poort: de testorganisaties zitten binnen hun proef, dus de
-// bestaande rijen van de tabel blijven gelijk.
+// Abonnementen aan, met de nep-poort. Een nieuw bedrijf staat meteen op de gratis versie (proefEinde
+// is het moment van aanmaken); de beforeAll zet de proef van A en B daarom in de toekomst (niveau
+// `abonnement`), zodat de limieten van de gratis versie deze toegangstests niet raken en de
+// bestaande rijen van de tabel gelijk blijven.
 const INGESCHAKELD: AbonnementConfig = {
   ingeschakeld: true,
   sleutel: "sk_test_nep",
   webhookGeheim: "whsec_toegang_test",
-  prijzen: { maand: "price_maand", jaar: "price_jaar" },
+  prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+  limieten: { kringen: 5, situatieschemas: 1 },
   boekhoudingInbox: null,
   apiBasis: null,
 };
@@ -279,6 +282,10 @@ beforeAll(async () => {
   eigenaarB = await gebruiker("eigenaar-b@voorbeeld.be", "Bedrijf B");
   orgA = await organisatieVan(eigenaarA.id);
   orgB = await organisatieVan(eigenaarB.id);
+  await db
+    .update(organization)
+    .set({ proefEinde: new Date(Date.now() + 365 * 24 * 3600 * 1000) })
+    .where(inArray(organization.id, [orgA, orgB]));
   const lidId = await registreer("lid-a@voorbeeld.be");
   await wordLid(lidId, orgA, "member");
   lidA = { id: lidId, cookie: await inloggen("lid-a@voorbeeld.be") };
@@ -393,6 +400,32 @@ const TABEL: Record<string, Rij> = {
     lid: 201,
     eigenaar: 201,
   },
+  "POST /api/projecten/:id/vrijgeven": {
+    // Alleen een eigenaar. Zonder projectprijs (INGESCHAKELD) is er niets vrij te geven: 409; de
+    // inhoud staat in test/projectaankoop.test.ts.
+    verzoek: () => projectVerzoek("POST", "/vrijgeven"),
+    andereOrganisatie: 404,
+    lid: 403,
+    eigenaar: 409,
+  },
+  "POST /api/projecten/:id/vrijgave/synchroniseer": {
+    // Een projectsessie van A: A synchroniseert (200, nog niet betaald), B krijgt 404.
+    verzoek: async () => {
+      const id = await projectIn(orgA);
+      nepStripe.checkouts.set("cs_toegang_project", {
+        id: "cs_toegang_project",
+        klantId: "cus_toegang_a",
+        abonnementId: null,
+        metadata: { organisatieId: orgA, projectId: id, soort: "project" },
+        betaalstatus: "unpaid",
+        status: "open",
+      });
+      return { methode: "POST", pad: `/api/projecten/${id}/vrijgave/synchroniseer`, json: { sessie: "cs_toegang_project" } };
+    },
+    andereOrganisatie: 404,
+    lid: 403,
+    eigenaar: 200,
+  },
   "GET /api/projecten/:id/exports": {
     verzoek: () => projectVerzoek("GET", "/exports"),
     andereOrganisatie: 404,
@@ -476,7 +509,7 @@ const TABEL: Record<string, Rij> = {
     // Een sessie van A's klant: A synchroniseert (200), B krijgt 404 omdat de sessie niet van B is.
     verzoek: async () => {
       const klantA = await zorgVoorKlanten();
-      nepStripe.checkouts.set("cs_toegang_a", { id: "cs_toegang_a", klantId: klantA, abonnementId: null });
+      nepStripe.checkouts.set("cs_toegang_a", { id: "cs_toegang_a", klantId: klantA, abonnementId: null, metadata: {}, betaalstatus: "unpaid", status: "open" });
       return { methode: "POST", pad: "/api/abonnement/synchroniseer", json: { sessie: "cs_toegang_a" } };
     },
     andereOrganisatie: 404,

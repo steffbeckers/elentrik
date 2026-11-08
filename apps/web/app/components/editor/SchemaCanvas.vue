@@ -217,6 +217,8 @@ function kies(onderdeel: Onderdeel): void {
 function dupliceer(): void {
   let uitkomst: ReturnType<typeof store.dupliceerSelectieKring> = null;
   if (!voerUit(() => (uitkomst = store.dupliceerSelectieKring()))) return;
+  // Over de gratis limiet: het limietvenster zegt het al.
+  if (!uitkomst && store.limietGeweigerd) return;
   if (uitkomst) toast.add({ title: t("editor.sneltoetsen.dupliceerKlaar", uitkomst), color: "success", icon: "i-lucide-copy" });
   else toast.add({ title: t("editor.sneltoetsen.dupliceerGeenKring"), color: "neutral", icon: "i-lucide-info" });
 }

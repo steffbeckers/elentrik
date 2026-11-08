@@ -2,11 +2,20 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { fileURLToPath } from "node:url";
 import type { Mij } from "../shared/mij";
 import type { InstallatieDocument } from "@elentrik/model";
-import { zetProefEinde } from "./hulp/database";
+import { stempelProject, zetProefEinde } from "./hulp/database";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "situatie" });
+
+const DAG_MS = 24 * 3600 * 1000;
+
+// Volledige toegang (een lopende overgangsproef): deze tests gebruiken meer dan één situatieschema,
+// wat de gratis versie niet toelaat. De globale e2e-limieten blijven ongemoeid (prijsmodel.spec).
+test.beforeEach(async ({ request }) => {
+  const mij = (await (await request.get("/api/mij")).json()) as Mij;
+  await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * DAG_MS));
+});
 
 // Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Situatie ${Date.now()}`;
@@ -590,26 +599,31 @@ test("pagina wisselen stopt de keuze; smalle schermen behouden de paneelroute", 
 
 test("alleen-lezen worden stopt een gekozen punt en blokkeert doorplaatsen", async ({ page, request }) => {
   test.setTimeout(120_000);
-  await maakProjectMetContactdozen(page, `${naam} alleen lezen`);
+  const mij = (await (await request.get("/api/mij")).json()) as Mij;
+  // Gratis (de proef is voorbij): het project heeft een limiet, dus de editor leest de projecttoegang
+  // opnieuw bij het terugkeren in het tabblad. Eén plan en twee kringen vallen binnen de limiet.
+  await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() - DAG_MS));
+  const projectId = await maakProjectMetContactdozen(page, `${naam} alleen lezen`);
   await page.getByTestId("tab-situatieschema").click();
   await voegPlanToe(page, PLAN_PNG, { leeg: true });
   await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
   await page.getByTestId("te-plaatsen-doorgaan").click();
   await page.getByTestId("te-plaatsen-A1").click();
-  const mij = (await (await request.get("/api/mij")).json()) as Mij;
-  const dag = 24 * 3600 * 1000;
   try {
-    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() - dag));
-    const sessie = page.waitForResponse(r => r.url().endsWith("/api/mij") && r.request().method() === "GET");
+    // Het project blijkt gestempeld (bewaard tijdens een abonnement dat voorbij is): alleen-lezen.
+    await stempelProject(projectId);
+    const toegang = page.waitForResponse(
+      (r) => r.url().endsWith(`/api/projecten/${projectId}`) && r.request().method() === "GET",
+    );
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-    expect((await sessie).ok()).toBe(true);
-    await expect(page.getByTestId("abonnement-banner-alleen-lezen")).toBeVisible();
+    expect((await toegang).ok()).toBe(true);
+    await expect(page.getByTestId("alleen-lezen-balk")).toBeVisible();
     await expect(page.getByTestId("te-plaatsen-A1")).toBeDisabled();
     await expect(page.getByTestId("te-plaatsen-doorgaan")).toBeDisabled();
     await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
     await expect(planSymbolen(page)).toHaveCount(0);
   } finally {
-    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * dag));
+    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * DAG_MS));
   }
 });
 

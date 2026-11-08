@@ -2,6 +2,7 @@
 import { printHtml } from "@elentrik/render";
 import type { Partij } from "@elentrik/model";
 import { useBedrijfApi } from "~/composables/useBedrijfApi";
+import { watermerkVoor } from "~/editor/limiet";
 import { useEditorStore } from "~/stores/editor";
 import type { ExportOnderdelen, Papierformaat } from "../../../shared/exports";
 const open = defineModel<boolean>('open', { default: false });
@@ -49,11 +50,14 @@ watch(open, waarde => {
 const html = computed(() => {
  const doc = editor.document;
  if (!open.value || !doc || !editor.analyse || !bedrijf.value) return '';
+ // Hetzelfde watermerk als de export (gratis of onderwijs), uit de projecttoegang; de server blijft de bron.
+ const watermerk = watermerkVoor(editor.toegang, doc.meta.dossierTaal ?? 'nl');
  const afbeeldingen = Object.fromEntries(doc.situatie.paginas.flatMap(p => p.achtergrond ? [[p.achtergrond.rasterBestandId, `/api/bestanden/${p.achtergrond.rasterBestandId}`]] : []));
  try {
   const r = printHtml(doc, editor.analyse, editor.bevindingen, {
    papier: props.papier, onderdelen: props.onderdelen, versieLabel: props.versie, datum: doc.meta.datum || new Date().toISOString().slice(0, 10), taal: doc.meta.dossierTaal ?? 'nl', installateur: bedrijf.value, afbeeldingen,
    ...(bedrijf.value.logoBestandId ? { logo: `/api/bestanden/${bedrijf.value.logoBestandId}` } : {}),
+   ...(watermerk ? { watermerk } : {}),
   });
   return r.html.replace('</style>', `@media screen{:root{${tafelVariabelen.value}}html,body{background:var(--afdruk-tafel)}body{zoom:${zoom.value / 100}}.pagina{background:white;margin:12px;outline:1px solid var(--afdruk-bladrand)}}</style>`);
  } catch { return ''; }

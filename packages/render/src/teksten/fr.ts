@@ -117,4 +117,6 @@ export const FR: Teksten = {
   },
   geenKringen: "Aucun circuit",
   watermerk: { titel: "STAGING", ondertitel: "Document non valable" },
+  watermerkGratis: { titel: "Version gratuite", ondertitel: "Pas un dossier officiel" },
+  watermerkOnderwijs: { titel: "Version enseignement", ondertitel: "Pas un dossier officiel" },
 };

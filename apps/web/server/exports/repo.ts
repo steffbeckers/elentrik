@@ -8,6 +8,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { herkenSoort } from "../../shared/bestandsinhoud";
 import type { ExportInfo, ExportInvoer } from "../../shared/exports";
 import { isStaging, leesOmgeving } from "../../shared/omgeving";
+import type { Watermerk } from "../../shared/abonnement";
+import { projecttoegangVoor } from "../abonnementen/repo";
+import type { AbonnementConfig } from "../abonnementen/config";
 import { haalBedrijf } from "../bedrijf/repo";
 import { STANDAARD_DOWNLOADNAAM } from "../bestanden/headers";
 import type { BestandOpslag } from "../bestanden/opslag";
@@ -25,7 +28,14 @@ export type ExportDeps = {
   nu?: () => Date;
   /** De omgevingsvariabelen; standaard `process.env`, op het moment van de aanroep. Staging zet een watermerk op de pdf. */
   env?: Record<string, string | undefined>;
+  /** Het watermerk van de versie (gratis of onderwijs), uit de projecttoegang. Dat gaat voor het watermerk van staging. */
+  watermerk?: Watermerk;
 };
+
+/** Het watermerk van de versie voor een project; null zonder Stripe, voor een betaald of gestempeld project, of een onbekend project. */
+export async function watermerkVoorProject(db: Db, projectId: string, config: AbonnementConfig): Promise<Watermerk> {
+  return (await projecttoegangVoor(db, projectId, config))?.toegang.watermerk ?? null;
+}
 
 type MeeTeGeven = PdfInvoer["bestanden"][number];
 
@@ -192,7 +202,13 @@ export async function maakExport(
     versieLabel: invoer.versieLabel,
     datum: doc.meta.datum.trim() !== "" ? doc.meta.datum : lokaleDatum(nu),
     taal,
-    ...(staging ? { watermerk: TEKSTEN[taal].watermerk } : {}),
+    ...(deps.watermerk === "gratis"
+      ? { watermerk: TEKSTEN[taal].watermerkGratis }
+      : deps.watermerk === "onderwijs"
+        ? { watermerk: TEKSTEN[taal].watermerkOnderwijs }
+        : staging
+          ? { watermerk: TEKSTEN[taal].watermerk }
+          : {}),
     installateur,
     afbeeldingen,
     ...(logo !== undefined ? { logo } : {}),

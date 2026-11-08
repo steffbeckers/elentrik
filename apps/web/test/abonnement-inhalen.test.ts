@@ -21,7 +21,8 @@ const CONFIG: AbonnementConfig = {
   ingeschakeld: true,
   sleutel: "sk_test_nep_alleen_voor_tests",
   webhookGeheim: "whsec_nep",
-  prijzen: { maand: "price_maand", jaar: "price_jaar" },
+  prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+  limieten: { kringen: 5, situatieschemas: 1 },
   boekhoudingInbox: INBOX,
   apiBasis: null,
 };
@@ -262,7 +263,7 @@ describe("betaalde facturen van de laatste 7 dagen", () => {
 describe("uitgeschakeld", () => {
   test("abonnementen uit: niets doen en de poort niet aanroepen", async () => {
     await rij({ status: "active", bijgewerkt: new Date(NU.getTime() - 5 * DAG_MS) });
-    expect(await haalGemisteMeldingenIn(db, stripe, { ingeschakeld: false }, NU, zonderLock)).toEqual({
+    expect(await haalGemisteMeldingenIn(db, stripe, { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, NU, zonderLock)).toEqual({
       gesynchroniseerd: 0,
       doorgestuurd: 0,
     });

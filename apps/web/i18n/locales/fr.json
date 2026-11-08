@@ -59,9 +59,7 @@
     "archiefTonen": "Afficher les notes archivées",
     "geenNotities": "Aucune note dans cette sélection.",
     "waaromToegang": "Pourquoi cette entreprise a-t-elle accès ?",
-    "waaromAlleenLezen": "Pourquoi cette entreprise est-elle en lecture seule ?",
-    "schrijven": "Modification autorisée",
-    "alleenLezen": "Lecture seule",
+    "waaromGratis": "Pourquoi cette entreprise est-elle au niveau gratuit ?",
     "beoordeeldOp": "Évalué le {datum}",
     "rechtenUitleg": "L’appartenance, le rôle et les limites de stockage restent applicables séparément.",
     "proefEinde": "Fin de l’essai local (exclusive)",
@@ -70,7 +68,19 @@
     "vrijstelling": "Accès gratuit — sans abonnement",
     "ingeschakeld": "Activé",
     "uitgeschakeld": "Désactivé",
-    "proefVerlengen": "Prolonger la période d’essai",
+    "proefVerlengen": "Accès complet temporaire",
+    "onderwijs": "Statut enseignement",
+    "onderwijsStoppen": "Arrêter le statut enseignement",
+    "onderwijsGeven": "Accorder le statut enseignement",
+    "onderwijsUitleg": "Le statut enseignement donne un accès gratuit avec le filigrane « Version enseignement ». Incompatible avec l’accès gratuit sans filigrane.",
+    "onderwijsVerwijderenUitleg": "Les règles existantes de période d’essai et d’abonnement s’appliquent à nouveau. Cela ne lance ni nouvel essai ni paiement.",
+    "gekochtOp": "Acheté le",
+    "abonnementStempelOp": "Cachet d’abonnement le",
+    "projectaankopen": "Achats de projet",
+    "geenProjectaankopen": "Aucun achat de projet pour le moment.",
+    "aankoopAangemaakt": "Créé le {datum}",
+    "aankoopBetaald": "payé le {datum}",
+    "aankoopStatus": { "open": "Ouvert", "betaald": "Payé", "vervallen": "Expiré", "mislukt": "Échoué" },
     "vrijstellingStoppen": "Retirer l’accès gratuit",
     "vrijstellingGeven": "Accorder l’accès gratuit",
     "nieuweEinddatum": "Nouveau dernier jour d’essai",
@@ -135,7 +145,8 @@
       "abonnement": "Abonnement actif",
       "betalingsgratie": "Délai de paiement",
       "proef": "Essai local",
-      "alleenLezen": "Lecture seule"
+      "onderwijs": "Enseignement",
+      "gratis": "Niveau gratuit"
     },
     "redenen": {
       "uit": "Les restrictions de paiement sont désactivées globalement.",
@@ -143,13 +154,15 @@
       "actief": "L’abonnement Stripe enregistré donne accès.",
       "betaling-mislukt": "Un échec de paiement détermine l’accès ; le délai éventuel figure ci-dessous.",
       "proef": "La période d’essai locale donne accès.",
-      "proef-voorbij": "La période d’essai locale est terminée.",
+      "onderwijs": "Le statut enseignement est activé.",
+      "gratis": "Pas d’abonnement ni d’essai en cours : l’entreprise est au niveau gratuit.",
       "beeindigd": "L’abonnement est terminé et aucun essai local n’est valable."
     },
     "acties": {
       "gebruiker_naam": "Nom d’utilisateur corrigé",
       "organisatie_gegevens": "Coordonnées d’entreprise corrigées",
       "organisatie_vrijstelling": "Accès gratuit modifié",
+      "organisatie_onderwijs": "Statut enseignement modifié",
       "organisatie_proefperiode": "Période d’essai prolongée",
       "notitie_aangemaakt": "Note d’assistance ajoutée",
       "notitie_gewijzigd": "Note d’assistance modifiée",
@@ -161,7 +174,7 @@
     "aandacht": {
       "proefEindigt": "Essai se terminant dans les 7 jours",
       "betaling": "Paiement à vérifier",
-      "alleenLezen": "Entreprises en lecture seule"
+      "gratis": "Entreprises au niveau gratuit"
     },
     "auditFilters": {
       "doelId": "ID de l’enregistrement",
@@ -314,14 +327,35 @@
       "melding": "Ce projet a été supprimé.",
       "uitleg": "Vos modifications sont toujours conservées localement. Enregistrez-les comme nouveau projet ou retournez aux projets.",
       "uitlegNietLokaal": "Vos modifications n'ont pas pu être conservées localement non plus et ne sont plus qu'en mémoire. Enregistrez-les maintenant comme nouveau projet et ne fermez pas cette fenêtre.",
+      "uitlegLimiet": "Comme nouveau projet, ce travail dépasse la limite gratuite. Vos modifications sont encore conservées localement : téléchargez-les sous forme de fichier, ou revenez aux projets.",
       "nieuwProject": "Enregistrer comme nouveau projet",
       "terug": "Retour aux projets"
     },
+    "limiet": {
+      "titel": "Ce projet dépasse la limite gratuite",
+      "uitleg": "Un projet gratuit peut contenir au maximum {kringen} et {situatieschemas}. Ce que vous vouliez ajouter n'a pas été ajouté.",
+      "prijs": "Débloquez ce projet en une seule fois pour {prijs} hors TVA ({incl} TVA 21 % comprise). Un projet débloqué n'a plus de limites.",
+      "lid": "Demandez au propriétaire de votre entreprise de débloquer ce projet.",
+      "vrijgeven": "Débloquer ce projet",
+      "abonnement": "Prendre un abonnement",
+      "sluiten": "Fermer",
+      "vrijgegeven": "Ce projet est débloqué",
+      "verwerking": "Le paiement est encore en cours de traitement. Le projet sera débloqué dès sa réception.",
+      "teller": {
+        "label": "Limite gratuite",
+        "kringen": "{aantal} sur {max} circuit | {aantal} sur {max} circuits",
+        "situatieschemas": "{aantal} sur {max} plan de position | {aantal} sur {max} plans de position"
+      }
+    },
+    "alleenLezenBalk": {
+      "titel": "Lecture seule",
+      "tekst": "Ce projet a été créé pendant votre abonnement. Vous pouvez le consulter et l'exporter. Pour le modifier, débloquez-le ou reprenez un abonnement."
+    },
     "alleenLezen": {
-      "bewaardLokaal": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
-      "nietBewaard": "Votre entreprise n'a pas d'abonnement actif. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire.",
+      "bewaardLokaal": "Ce projet est en lecture seule. Vos dernières modifications n'ont pas été enregistrées, mais restent conservées localement.",
+      "nietBewaard": "Ce projet est en lecture seule. Vos dernières modifications n'ont pu être ni enregistrées ni conservées localement. Ne fermez pas cette fenêtre : elles n'existent plus qu'en mémoire.",
       "dialoogTitel": "Lecture seule",
-      "dialoogBeschrijving": "Votre entreprise n'a pas d'abonnement actif. Les modifications de cette boîte de dialogue ne peuvent plus être enregistrées."
+      "dialoogBeschrijving": "Ce projet est en lecture seule. Les modifications de cette boîte de dialogue ne peuvent pas être enregistrées."
     },
     "onderdelenPaneel": {
       "titel": "Éléments",
@@ -748,7 +782,7 @@
         "onbewaard": "Le projet n'a pas pu être enregistré. Vous pourrez exporter dès qu'il sera enregistré.",
         "conflict": "Le projet a été modifié ailleurs entre-temps. Résolvez d'abord le conflit.",
         "fout": "Le serveur a refusé d'enregistrer le projet. Réessayez de l'enregistrer, puis exportez.",
-        "alleen-lezen": "Votre entreprise n'a pas d'abonnement actif : vos dernières modifications ne sont conservées que localement et ne figureront pas dans le PDF. Rouvrez le projet pour exporter la dernière version enregistrée."
+        "alleen-lezen": "Ce projet est en lecture seule : vos dernières modifications ne sont conservées que localement et ne figureront pas dans le PDF. Rouvrez le projet pour exporter la dernière version enregistrée."
       },
       "onderdelen": {
         "titel": "Contenu",
@@ -977,6 +1011,11 @@
       "export": "Vérifiez les constats et exportez le dossier en PDF."
     },
     "zojuist": "à l’instant",
+    "label": {
+      "gratis": "Gratuit",
+      "vrijgegeven": "Débloqué",
+      "alleen-lezen": "Lecture seule"
+    },
     "status": {
       "nietGeexporteerd": "Non exporté",
       "geexporteerd": "Exporté"
@@ -1351,7 +1390,8 @@
       "betalingMislukt": "Votre dernier paiement a échoué.",
       "betalingMisluktTot": "Votre dernier paiement a échoué. Réglez votre paiement avant le {datum}.",
       "beeindigd": "Votre abonnement a pris fin.",
-      "proefVoorbij": "Cette entreprise n'a pas de période d'essai gratuite en cours. Choisissez un abonnement pour modifier des projets."
+      "gratis": "Vous utilisez la version gratuite d'Elentrik.",
+      "onderwijs": "Compte éducation : pas de limites, exports avec filigrane."
     },
     "datumOnbekend": "une date ultérieure",
     "formules": {
@@ -1360,7 +1400,8 @@
     },
     "per": {
       "maand": "par mois",
-      "jaar": "par an"
+      "jaar": "par an",
+      "project": "par projet"
     },
     "exclBtw": "hors TVA ({incl} TVA 21 % comprise)",
     "korting": "−{percentage} %",
@@ -1369,12 +1410,31 @@
     "betalingRegelen": "Régler le paiement",
     "lid": "Demandez à un propriétaire de votre entreprise de gérer l'abonnement.",
     "prijzenOntbreken": "Les prix n'ont pas pu être chargés",
+    "onderwijs": "Compte éducation : pas de limites, exports avec filigrane",
+    "gratis": {
+      "titel": "Gratuit",
+      "kringen": "{n} circuit | {n} circuits",
+      "situatieschemas": "{n} plan de position | {n} plans de position",
+      "tekst": "Chaque projet gratuit peut contenir au maximum {kringen} et {situatieschemas}. Les exports d’un projet gratuit portent le filigrane « Version gratuite »."
+    },
+    "projectBlok": {
+      "titel": "Par projet",
+      "tekst": "Si un projet dépasse les limites gratuites, vous le débloquez en une seule fois. Cela se fait depuis l’éditeur, dans le projet lui-même. Un projet débloqué n’a plus de limites."
+    },
+    "kaartenBlok": {
+      "titel": "Abonnement",
+      "tekst": "Avec un abonnement, toutes les limites et tous les filigranes disparaissent."
+    },
+    "weigering": {
+      "limiet": "Ce projet dépasse la limite gratuite.",
+      "alleenLezen": "Ce projet est en lecture seule. Débloquez-le ou prenez un abonnement pour le modifier."
+    },
     "banner": {
       "proef": "Encore {n} jour gratuit. | Encore {n} jours gratuits.",
       "kies": "Choisir un abonnement",
       "betaling": "Votre dernier paiement a échoué. Réglez votre paiement avant le {datum}.",
-      "betalingZonderDatum": "Votre dernier paiement a échoué. Réglez rapidement votre paiement, sinon votre entreprise ne pourra bientôt plus modifier de projets.",
-      "alleenLezen": "Votre entreprise n'a pas d'abonnement actif. Vous pouvez consulter et exporter des projets, mais pas les modifier."
+      "betalingZonderDatum": "Votre dernier paiement a échoué. Réglez rapidement votre paiement, sinon votre entreprise repassera à la version gratuite et les projets de votre abonnement passeront en lecture seule.",
+      "betalingNaGratie": "Votre dernier paiement a échoué. Votre entreprise utilise désormais la version gratuite et les projets de votre abonnement sont en lecture seule. Réglez votre paiement pour tout modifier à nouveau."
     }
   },
   "menu": {
@@ -1416,6 +1476,7 @@
   "fouten": {
     "ADMIN_CORRECTIE_ONGELDIG": "Cette correction d’assistance a expiré, est terminée ou appartient à une autre connexion. Votre travail local est conservé. Démarrez une nouvelle correction pour enregistrer.",
     "ADMIN_STRIPE_BEVESTIGING": "Confirmez que les abonnements Stripe et les paiements en cours restent inchangés. Gérez-les séparément dans Stripe.",
+    "ADMIN_ONDERWIJS_VRIJSTELLING": "Une entreprise ne peut pas avoir à la fois l’accès gratuit et le statut enseignement. Arrêtez d’abord l’autre.",
     "ADMIN_PROEF_VERLENGEN": "Choisissez une date de fin postérieure à la période d’essai actuelle et à aujourd’hui.",
     "BEDRIJF_VRIJGESTELD": "Cette entreprise bénéficie d’un accès gratuit et ne peut pas souscrire un nouvel abonnement.",
     "onbekend": "Une erreur s'est produite. Veuillez réessayer.",
@@ -1448,6 +1509,11 @@
     "ABONNEMENT_BESTAAT": "Cette entreprise a déjà un abonnement.",
     "GEEN_KLANT": "Cette entreprise n'a pas encore de données de paiement. Choisissez d'abord un abonnement.",
     "ABONNEMENTEN_UIT": "Le paiement n'est pas encore configuré.",
+    "PROJECT_ALLEEN_LEZEN": "Ce projet est en lecture seule. Vous pouvez le consulter et l'exporter, mais plus le modifier.",
+    "PROJECT_LIMIET": "Cette modification dépasse la limite de la version gratuite et n'a pas été enregistrée.",
+    "PROJECT_AL_GEKOCHT": "Ce projet est déjà débloqué.",
+    "VRIJGEVEN_NIET_NODIG": "Ce projet n'a pas besoin d'être débloqué.",
+    "VRIJGAVE_LOOPT": "Le paiement de ce projet est encore en cours de traitement. Réessayez plus tard.",
     "LAATSTE_EIGENAAR": "Il doit rester au moins un propriétaire.",
     "AL_LID": "Une personne avec cette adresse est déjà membre.",
     "AL_UITGENODIGD": "Une personne avec cette adresse est déjà invitée.",

@@ -18,7 +18,6 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 import { magicLink, organization } from "better-auth/plugins";
 import { memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { and, eq } from "drizzle-orm";
-import { kenProefperiodeToe } from "../abonnementen/proef";
 import { isPlaatshouder } from "../config/plaatshouders";
 import { type Db, gebruikDb } from "../db";
 import * as schema from "../db/schema";
@@ -110,8 +109,8 @@ function verstuur(soort: MailSoort, mail: Mail, aan: string): void {
  *   anders 400 (en geen account).
  * - `laatsteOrganisatieId` nooit: de server zet het bij het wisselen (`input: false` weigert het
  *   al bij de registratie; dit weigert het ook uitdrukkelijk via /update-user).
- * - `proefGebruikt` nooit, om dezelfde reden: de server zet het bij het aanmaken van het eerste
- *   eigen bedrijf.
+ * - `proefGebruikt` nooit: het is een kolom van de oude proefperiode die niet meer gelezen wordt
+ *   (prijsmodel, spec 4.2), maar een gebruiker mag ze nog steeds niet zetten.
  * - `taal` nooit: de registratie neemt ze uit de header `x-elentrik-taal` (zie `databaseHooks`),
  *   het wijzigen gaat via PUT /api/mij/taal.
  */
@@ -406,10 +405,13 @@ export function maakAuth(db: Db = gebruikDb()) {
           beforeCreateOrganization: async ({ organization }) => {
             eisGeldigeNaam(organization.name);
           },
-          // Het eerste bedrijf dat iemand zelf aanmaakt krijgt de proefperiode, elk volgend niet
-          // (spec 4.1). De registratie doet hetzelfde in richtEersteOrganisatieIn.
-          afterCreateOrganization: async ({ organization, user }) => {
-            await kenProefperiodeToe(db, { organisatieId: organization.id, gebruikerId: user.id, nu: new Date() });
+          // Geen proefperiode meer (prijsmodel, spec 4.2): `proef_einde` is het moment van
+          // aanmaken. De registratie doet hetzelfde in richtEersteOrganisatieIn.
+          afterCreateOrganization: async ({ organization: nieuw }) => {
+            await db
+              .update(schema.organization)
+              .set({ proefEinde: nieuw.createdAt })
+              .where(eq(schema.organization.id, nieuw.id));
           },
           beforeUpdateOrganization: async ({ organization }) => {
             if (organization.name === undefined) return;

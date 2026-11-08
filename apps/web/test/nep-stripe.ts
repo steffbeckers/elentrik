@@ -26,6 +26,10 @@ export type NepStripe = StripePoort & {
   faalCheckout: boolean;
   /** Gezet: `maakKlant` gooit deze fout (bv. een `StripeIdempotencyError`). */
   idempotentieFout: Error | null;
+  /** Zet een Checkout-sessie op voltooid en betaald (`complete`, `paid`), zoals na een geslaagde betaling. */
+  betaalCheckout(id: string): void;
+  /** Zet een Checkout-sessie op voltooid maar nog niet betaald (`complete`, `unpaid`): een uitgestelde betaling die loopt. */
+  voltooiCheckoutZonderBetaling(id: string): void;
 };
 
 export function maakNepStripe(): NepStripe {
@@ -60,19 +64,58 @@ export function maakNepStripe(): NepStripe {
       nep.aanroepen.push({ methode: "maakCheckout", invoer: i });
       if (nep.faalCheckout) throw new Error("Stripe is niet bereikbaar");
       const id = `cs_nep_${++checkoutTeller}`;
-      nep.checkouts.set(id, { id, klantId: i.klantId, abonnementId: null });
+      nep.checkouts.set(id, {
+        id,
+        klantId: i.klantId,
+        abonnementId: null,
+        metadata: { organisatieId: i.organisatieId },
+        betaalstatus: "unpaid",
+        status: "open",
+      });
       return { id, url: `https://checkout.nep/${id}` };
+    },
+
+    async maakProjectCheckout(i) {
+      nep.aanroepen.push({ methode: "maakProjectCheckout", invoer: i });
+      if (nep.faalCheckout) throw new Error("Stripe is niet bereikbaar");
+      const id = `cs_nep_${++checkoutTeller}`;
+      nep.checkouts.set(id, {
+        id,
+        klantId: i.klantId,
+        abonnementId: null,
+        metadata: { organisatieId: i.organisatieId, projectId: i.projectId, soort: "project" },
+        betaalstatus: "unpaid",
+        status: "open",
+      });
+      return { id, url: `https://checkout.nep/${id}` };
+    },
+
+    betaalCheckout(id) {
+      const c = nep.checkouts.get(id);
+      if (!c) throw new Error(`Checkout-sessie ${id} bestaat niet`);
+      c.betaalstatus = "paid";
+      c.status = "complete";
+    },
+
+    voltooiCheckoutZonderBetaling(id) {
+      const c = nep.checkouts.get(id);
+      if (!c) throw new Error(`Checkout-sessie ${id} bestaat niet`);
+      c.betaalstatus = "unpaid";
+      c.status = "complete";
     },
 
     async haalCheckout(id) {
       nep.aanroepen.push({ methode: "haalCheckout", invoer: id });
       const c = nep.checkouts.get(id);
-      return c ? { ...c } : null;
+      return c ? { ...c, metadata: { ...c.metadata } } : null;
     },
 
     async laatCheckoutVervallen(id) {
       nep.aanroepen.push({ methode: "laatCheckoutVervallen", invoer: id });
       nep.vervallen.add(id);
+      // Zoals Stripe: alleen een open sessie vervalt; een voltooide blijft voltooid.
+      const c = nep.checkouts.get(id);
+      if (c?.status === "open") c.status = "expired";
     },
 
     async maakPortaal(i) {

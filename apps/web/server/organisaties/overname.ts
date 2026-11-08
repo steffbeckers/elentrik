@@ -40,9 +40,11 @@ export async function neemBestaandeGegevensOver(
     // Twee gelijktijdige overnames lopen na elkaar; de tweede vindt dan niets meer.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('elentrik:overname'))`);
 
+    // Deze projecten bestonden vóór het prijsmodel, net als de projecten die migratie 0014 stempelde
+    // (spec 4.7): ze krijgen de stempel bij de overname, tenzij ze er al een hebben.
     const gekoppeld = await tx
       .update(projecten)
-      .set({ organisatieId })
+      .set({ organisatieId, abonnementStempelOp: sql`coalesce(${projecten.abonnementStempelOp}, now())` })
       .where(isNull(projecten.organisatieId))
       .returning({ id: projecten.id });
 

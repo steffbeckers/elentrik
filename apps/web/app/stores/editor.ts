@@ -19,7 +19,9 @@ import {
   type DifferentieelInstellingen,
   type LichtschakelingDoel,
   type LichtschakelingOpties,
+  overschrijdtLimiet,
   pasPatchesToe,
+  telVoorLimiet,
   verwijder,
   verwijderAfwijking,
   verwijderEnkel,
@@ -31,6 +33,7 @@ import {
   type Aanknoping,
   type Adres,
   type InstallatieDocument,
+  type Limieten,
   type Metingen,
   type Node,
   type NodeId,
@@ -40,6 +43,7 @@ import {
   type Ruimte,
   type ProjectWijziging,
   type Stroomtype,
+  type Telling,
   type Toestelsoort,
   type Voorinstelling,
 } from "@elentrik/model";
@@ -51,6 +55,7 @@ import { zelfdeAdres } from "../editor/adres";
 import { dupliceerMetVrijeCode } from "../editor/dupliceren";
 import { bordVanNode } from "../editor/schema-navigatie";
 import { samengevoegd } from "../editor/resultaten";
+import type { Projecttoegang } from "../../shared/abonnement";
 import type { Taal } from "../../shared/taal";
 import { useSessieStore } from "./sessie";
 
@@ -129,8 +134,23 @@ export const useEditorStore = defineStore("editor", () => {
    * exporteren blijven werken. De pagina zet dit (`zetAlleenLezen`), `laad` raakt het niet aan.
    */
   const alleenLezen = ref(false);
+  /**
+   * De limieten van de gratis versie die de editor bewaakt, of null (geen controle: abonnementen uit,
+   * een project zonder limiet, of het beheerscherm). De pagina zet dit (`zetLimiet`), `laad` raakt het niet aan.
+   */
+  const limieten = ref<Limieten | null>(null);
+  /**
+   * De telling die een geweigerde operatie zou geven: gezet als `pasToe` een resultaat weigert omdat
+   * het over de limiet gaat. Het limietvenster hangt hieraan; `wisLimietGeweigerd` sluit het.
+   */
+  const limietGeweigerd = ref<Telling | null>(null);
+  /** Wat het bedrijf met het geladen project mag (watermerk, teller); null zolang de pagina het niet zette. */
+  const toegang = ref<Projecttoegang | null>(null);
   /** Na `sluitGroep` (of undo/redo) begint de volgende `pasToe` altijd een nieuwe stap. */
   let groepGesloten = true;
+
+  /** De kringen en situatieschema's van het document, voor de limiet en de teller. */
+  const telling = computed<Telling | null>(() => (document.value ? telVoorLimiet(document.value) : null));
 
   const analyse = computed<Analyse | null>(() =>
     document.value ? analyseer(document.value) : null,
@@ -171,6 +191,32 @@ export const useEditorStore = defineStore("editor", () => {
     alleenLezen.value = waarde;
   }
 
+  function zetLimiet(waarde: Limieten | null): void {
+    limieten.value = waarde;
+  }
+
+  function wisLimietGeweigerd(): void {
+    limietGeweigerd.value = null;
+  }
+
+  function zetToegang(waarde: Projecttoegang | null): void {
+    toegang.value = waarde;
+  }
+
+  /**
+   * Gaat één extra `soort` over de limiet? Dan opent het limietvenster (`limietGeweigerd`) en geeft dit
+   * false; anders true. Voor een actie die eerst iets oplaadt of een dialoog opent (een plan toevoegen),
+   * zodat de gebruiker geen werk doet dat `pasToe` daarna toch weigert.
+   */
+  function controleerToevoegen(soort: keyof Telling): boolean {
+    const huidig = telling.value;
+    if (!limieten.value || !huidig) return true;
+    const na = { ...huidig, [soort]: huidig[soort] + 1 };
+    if (!overschrijdtLimiet(huidig, na, limieten.value)) return true;
+    limietGeweigerd.value = na;
+    return false;
+  }
+
   /** Telt een wijziging die buiten de store is gebeurd (bv. een geladen concept), zodat de autosave ze bewaart. */
   function markeerGewijzigd(): void {
     if (alleenLezen.value) return;
@@ -193,6 +239,7 @@ export const useEditorStore = defineStore("editor", () => {
     sneltoetsenOpen.value = false;
     laatsteDifferentieel.value = {};
     tabblad.value = "eendraadschema";
+    limietGeweigerd.value = null;
     terug.value = [];
     vooruit.value = [];
     gewijzigdSindsOpslaan.value = 0;
@@ -210,11 +257,24 @@ export const useEditorStore = defineStore("editor", () => {
    * Zet het resultaat van een operatie als nieuw document en leegt `vooruit`. Heeft de
    * laatste stap dezelfde `groep`, dan komen de patches in die stap; anders volgt een
    * nieuwe stap. Een resultaat zonder patches verandert niets.
+   *
+   * Met limieten (`zetLimiet`) weigert dit een resultaat dat een limiet overschrijdt
+   * (`overschrijdtLimiet`): het document en beide stapels blijven dan ongewijzigd en
+   * `limietGeweigerd` krijgt de telling van het resultaat. Minder kringen mag altijd, ook boven de
+   * limiet; undo en redo herstellen een eerdere staat en gaan niet langs deze controle. Geeft true
+   * als het resultaat is toegepast.
    */
-  function pasToe(resultaat: OperatieResultaat, groep?: string): void {
-    if (alleenLezen.value) return;
+  function pasToe(resultaat: OperatieResultaat, groep?: string): boolean {
+    if (alleenLezen.value) return false;
     vereisDocument();
-    if (resultaat.patches.length === 0) return;
+    if (resultaat.patches.length === 0) return false;
+    if (limieten.value) {
+      const na = telVoorLimiet(resultaat.doc);
+      if (overschrijdtLimiet(telling.value, na, limieten.value)) {
+        limietGeweigerd.value = na;
+        return false;
+      }
+    }
 
     const laatste = terug.value.at(-1);
     if (!groepGesloten && groep !== undefined && laatste?.groep === groep) {
@@ -233,13 +293,17 @@ export const useEditorStore = defineStore("editor", () => {
     groepGesloten = false;
     vooruit.value = [];
     zetDocument(resultaat.doc);
+    return true;
   }
 
-  /** Past een toevoegende operatie toe en legt de codes van bestaande kringen vast, in één undo-stap. */
-  function pasToeMetBehoud(resultaat: OperatieResultaat): void {
-    if (alleenLezen.value) return;
+  /**
+   * Past een toevoegende operatie toe en legt de codes van bestaande kringen vast, in één undo-stap.
+   * Geeft true als ze is toegepast (niet in alleen-lezen en niet over de limiet).
+   */
+  function pasToeMetBehoud(resultaat: OperatieResultaat): boolean {
+    if (alleenLezen.value) return false;
     const voor = vereisDocument();
-    pasToe(samengevoegd(voor, [resultaat, behoudCodes(voor, resultaat.doc)]));
+    return pasToe(samengevoegd(voor, [resultaat, behoudCodes(voor, resultaat.doc)]));
   }
 
   function sluitGroep(): void {
@@ -312,7 +376,7 @@ export const useEditorStore = defineStore("editor", () => {
       onderdeel.value,
       voorinstelling.value,
     );
-    pasToeMetBehoud(r);
+    if (!pasToeMetBehoud(r)) return;
     if (aanknoping.soort === "rail-einde") onthoudDifferentieel(doc, aanknoping.nodeId);
     selectie.value = [r.ids[r.ids.length - 1]!];
   }
@@ -327,7 +391,7 @@ export const useEditorStore = defineStore("editor", () => {
   function voegVoorSelectieIn(): void {
     if (!kanVoorSelectieInvoegen.value) return;
     const r = voegInVoor(vereisDocument(), selectie.value[0]!, STANDAARD[onderdeel.value]);
-    pasToeMetBehoud(r); selectie.value = [r.id];
+    if (pasToeMetBehoud(r)) selectie.value = [r.id];
   }
 
   const kanAftakkingToevoegen = computed(() => {
@@ -350,14 +414,16 @@ export const useEditorStore = defineStore("editor", () => {
     if (!doel) throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "kies een sjabloonbestemming" });
     const doc = vereisDocument();
     const r = voegSjabloonToeAanDoc(doc, doel, sjabloonId, instellingen, ruimte);
-    pasToeMetBehoud(r); selectie.value = [r.id];
+    if (!pasToeMetBehoud(r)) return;
+    selectie.value = [r.id];
     if (doel.soort === "bestaande-differentieel") onthoudDifferentieel(doc, doel.nodeId);
   }
   function voegLichtschakelingToe(doel: LichtschakelingDoel, opties: LichtschakelingOpties, instellingen?: DifferentieelInstellingen): void {
     if (alleenLezen.value) return;
     const doc = vereisDocument();
     const r = voegLichtToe(doc, doel, opties, instellingen);
-    pasToeMetBehoud(r); selectie.value = [r.id];
+    if (!pasToeMetBehoud(r)) return;
+    selectie.value = [r.id];
     if (doel.soort === "bestaande-differentieel") onthoudDifferentieel(doc, doel.nodeId);
   }
   function legKringCodesVast(): void { if (!alleenLezen.value) pasToe(legCodesVast(vereisDocument())); }
@@ -459,7 +525,7 @@ export const useEditorStore = defineStore("editor", () => {
     const doelId = [selectie.value[0]!, kring].find((id) => magInvoegenVoor(doc, id, invoer));
     if (doelId === undefined) return false;
     const r = voegInVoor(doc, doelId, invoer);
-    pasToeMetBehoud(r);
+    if (!pasToeMetBehoud(r)) return false;
     selectie.value = [r.id];
     return true;
   }
@@ -467,7 +533,8 @@ export const useEditorStore = defineStore("editor", () => {
   /**
    * Ctrl+D: dupliceert de kring van de selectie met de eerste vrije letter (`dupliceerKring`), als
    * één undo-stap waarin de bestaande codes vast blijven, en selecteert de kopie. Geeft de codes van
-   * bron en kopie, of null als de selectie geen kring is.
+   * bron en kopie, of null als de selectie geen kring is of de kopie over de limiet gaat
+   * (`limietGeweigerd`).
    */
   function dupliceerSelectieKring(): { code: string; bron: string } | null {
     if (alleenLezen.value) return null;
@@ -475,7 +542,7 @@ export const useEditorStore = defineStore("editor", () => {
     const kring = kringVanSelectie();
     if (!doc || kring === undefined) return null;
     const { resultaat, code } = dupliceerMetVrijeCode(doc, kring);
-    pasToeMetBehoud(resultaat);
+    if (!pasToeMetBehoud(resultaat)) return null;
     selectie.value = [resultaat.id];
     return { code, bron: bepaalKringCodes(doc)[kring] ?? "" };
   }
@@ -641,6 +708,10 @@ export const useEditorStore = defineStore("editor", () => {
     gewijzigdSindsOpslaan,
     laadGeneratie,
     alleenLezen,
+    limieten,
+    limietGeweigerd,
+    toegang,
+    telling,
     analyse,
     bevindingen,
     opmaak,
@@ -650,6 +721,10 @@ export const useEditorStore = defineStore("editor", () => {
     aantalInfo,
     laad,
     zetAlleenLezen,
+    zetLimiet,
+    wisLimietGeweigerd,
+    zetToegang,
+    controleerToevoegen,
     markeerGewijzigd,
     pasToe,
     pasToeMetBehoud,

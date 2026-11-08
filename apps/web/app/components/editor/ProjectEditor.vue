@@ -31,10 +31,15 @@ import TePlaatsenPaneel from "~/components/situatie/TePlaatsenPaneel.vue";
 import SjabloonInvoegenDialoog from "./SjabloonInvoegenDialoog.vue";
 import LichtschakelingDialoog from "./LichtschakelingDialoog.vue";
 import KringReferentiesDialoog from "./KringReferentiesDialoog.vue";
+import LimietDialoog from "./LimietDialoog.vue";
+import type { Prijs } from "../../../shared/abonnement";
+import { prijsTekst } from "~/abonnement/weergave";
+import { useAbonnementApi } from "~/composables/useAbonnementApi";
+import { bewaarElders, geefProjectVrij, limietKnoppen, toonAlleenLezenBalk, verwerkVrijgave } from "~/editor/limiet";
 import { nieuwsteConcept, wisAangebodenConcept, type AangebodenConcept } from "~/composables/concepten";
 import { useAlleenLezen } from "~/composables/useAlleenLezen";
 import { useAutosave, waarschuwBijVerlaten } from "~/composables/useAutosave";
-import { httpStatus } from "~/composables/useProjectenApi";
+import { httpStatus, type Project } from "~/composables/useProjectenApi";
 import { useNodeTekst } from "~/composables/useNodeTekst";
 import { useSessieHerstel } from "~/composables/useSessieHerstel";
 import {
@@ -59,6 +64,7 @@ const support = context.support;
 const admin = context.modus === "admin";
 
 const route = useRoute();
+const router = useRouter();
 // Een ander id geeft een nieuwe pagina-instantie (NuxtPage sleutelt op het pad).
 const id = context.projectId;
 const store = useEditorStore();
@@ -75,6 +81,9 @@ const gebruikerId = context.gebruikerId;
 const oorspronkelijkeNaam = sessie.gebruiker?.naam ?? "";
 const api = context.projecten;
 store.nieuwVenster();
+// De toegang en de limieten van een vorig project gelden hier niet: `laad` zet die van dit project.
+store.zetToegang(null);
+store.zetLimiet(null);
 const { nodeTekst } = useNodeTekst();
 const { t } = useI18n();
 const toast = useToast();
@@ -104,33 +113,44 @@ const autosave = useAutosave({
   modus: context.modus,
 });
 
-// --- Alleen-lezen ---------------------------------------------------------------
+// --- Alleen-lezen en de gratis limiet ---------------------------------------------
 
 /** De organisatie van het project; de pagina kan bij een andere dan de actieve organisatie horen. */
 const projectOrganisatieId = ref<string | null>(null);
 
-/** Mag de organisatie van dit project schrijven? Onbekend (nog niet geladen of niet in de sessie) is ja: de server beslist. */
-const organisatieSchrijft = computed(() => {
-  const organisatie = sessie.organisaties.find((o) => o.id === projectOrganisatieId.value);
-  return organisatie ? organisatie.toegang.schrijven : true;
-});
+/**
+ * Neemt de projecttoegang over (spec 4.7): bewerken, de teller en het watermerk. De limieten bewaakt de
+ * store alleen voor een project met limiet, en nooit in het beheerscherm (correcties door de beheerder
+ * gaan niet langs de limiet).
+ */
+function pasToegangToe(project: Pick<Project, "toegang" | "limieten">): void {
+  const toegang = project.toegang ?? null;
+  store.zetToegang(toegang);
+  store.zetLimiet(!admin && toegang?.limiet ? (project.limieten ?? null) : null);
+}
+
+/** Leest alleen de toegang van het project opnieuw (bv. na een vrijgave of een abonnement); het document blijft. */
+async function herlaadToegang(): Promise<void> {
+  pasToegangToe(await api.haal(id));
+}
 
 /**
- * De editor is alleen-lezen als de organisatie niet (meer) mag schrijven volgens de sessie, of als
- * het bewaren een 402 gaf (de sessie kan dan nog achterlopen).
+ * De editor is alleen-lezen als het project niet bewerkt mag worden (`toegang.bewerken`, bv. gestempeld
+ * na het abonnement), of als het bewaren een 402 `PROJECT_ALLEEN_LEZEN` gaf (de toegang kan dan nog
+ * achterlopen). Vóór het laden is er geen toegang: dan niet.
  */
-const alleenLezen = computed(() => admin ? !context.mogelijkheden.schrijven : !organisatieSchrijft.value || autosave.alleenLezen.value);
+const alleenLezen = computed(() => admin ? !context.mogelijkheden.schrijven : store.toegang?.bewerken === false || autosave.alleenLezen.value);
 watch(alleenLezen, (waarde) => store.zetAlleenLezen(waarde), { immediate: true, flush: "sync" });
 // Plaatsen en meten wijzigen straks het document: bij alleen-lezen stoppen ze.
 watch(alleenLezen, (waarde) => {
   if (waarde) stopPlaatsenEnMeten();
 });
 
-// Een 402 bij het bewaren: de sessie opnieuw lezen (de banner en de schrijfrechten volgen) en uitleggen
-// dat het werk lokaal bewaard blijft.
+// Een 402 `PROJECT_ALLEEN_LEZEN` bij het bewaren: de projecttoegang opnieuw lezen (de balk volgt) en
+// uitleggen dat het werk lokaal bewaard blijft.
 watch(autosave.alleenLezen, async (geweigerd) => {
   if (!geweigerd) return;
-  void sessie.laad().catch(() => {});
+  void herlaadToegang().catch(() => {});
   // Alleen beloven dat het werk lokaal bewaard blijft als het concept er echt staat.
   const bewaard = await autosave.wachtOpConcept().catch(() => false);
   toast.add({
@@ -140,16 +160,105 @@ watch(autosave.alleenLezen, async (geweigerd) => {
 });
 
 /**
- * Terug in dit tabblad na een 402: heeft de organisatie intussen weer schrijfrecht (bv. na betalen in
- * een ander tabblad), dan wordt het lokaal bewaarde werk alsnog opgeslagen. Anders blijft het lokaal.
+ * Terug in dit tabblad met een project dat beperkt is (alleen-lezen of met limiet) of na een 402: de
+ * projecttoegang opnieuw lezen (bv. na een vrijgave of een abonnement in een ander tabblad). Mag het
+ * project nu bewerkt worden, dan wordt het lokaal bewaarde werk alsnog opgeslagen. Anders blijft het lokaal.
  */
-async function hervatNaAbonnement(): Promise<void> {
+async function hervatSchrijven(): Promise<void> {
   try {
-    await sessie.laad();
+    await herlaadToegang();
   } catch {
     return;
   }
-  if (organisatieSchrijft.value) await autosave.nuOpslaan().catch(() => {});
+  if (store.toegang?.bewerken && (autosave.alleenLezen.value || autosave.limiet.value)) {
+    await autosave.nuOpslaan().catch(() => {});
+  }
+}
+
+/** Een project dat de editor beperkt: alleen-lezen of met een gratis limiet. */
+const beperkt = computed(() => !admin && (store.toegang?.bewerken === false || store.toegang?.limiet === true));
+
+/** De rol van de gebruiker in de organisatie van het project. */
+const projectRol = computed(() => sessie.organisaties.find((o) => o.id === projectOrganisatieId.value)?.rol ?? null);
+const abonnementApi = useAbonnementApi();
+const { taal } = useTaal();
+const projectprijs = ref<Prijs | null>(null);
+let projectprijsGeladen = false;
+const knoppen = computed(() => limietKnoppen(projectRol.value, projectprijs.value));
+const projectprijsTekst = computed(() => (projectprijs.value ? prijsTekst(projectprijs.value, taal.value) : null));
+
+/** Het limietvenster hangt aan `limietGeweigerd` van de store; sluiten wist die. Niet in het beheerscherm. */
+const limietOpen = computed({
+  get: () => !admin && store.limietGeweigerd !== null,
+  set: (open: boolean) => {
+    if (!open) store.wisLimietGeweigerd();
+  },
+});
+const balkZichtbaar = computed(() => !admin && toonAlleenLezenBalk(store.toegang));
+
+/** De projectprijs van de actieve organisatie (= die van het project), één keer, alleen voor een eigenaar. */
+async function laadProjectprijs(): Promise<void> {
+  if (admin || projectprijsGeladen || projectRol.value !== "eigenaar") return;
+  projectprijsGeladen = true;
+  try {
+    projectprijs.value = (await abonnementApi.haal()).prijzen?.project ?? null;
+  } catch {
+    // Zonder prijs toont het venster alleen de abonnementsknop; een volgende keer opnieuw proberen.
+    projectprijsGeladen = false;
+  }
+}
+watch([limietOpen, balkZichtbaar, projectRol], ([open, balk]) => {
+  if (open || balk) void laadProjectprijs();
+});
+
+const vrijgaveBezig = ref(false);
+
+/**
+ * "Dit project vrijgeven": eerst het werk bewaren zoals het nu is (binnen de limiet), dan naar
+ * Checkout. De geweigerde operatie wordt na de terugkeer niet opnieuw uitgevoerd. Staat het werk in
+ * het concept, dan vraagt de browser niet of de gebruiker de pagina wil verlaten (`vertrekBevestigd`).
+ */
+async function vrijgeven(): Promise<void> {
+  const klant = context.klant;
+  if (!klant || vrijgaveBezig.value) return;
+  vrijgaveBezig.value = true;
+  try {
+    const uitkomst = await geefProjectVrij({
+      nuOpslaan: () => autosave.nuOpslaan().catch(() => {}),
+      vrijgeven: () => klant.vrijgeven(id),
+      conceptBewaard: () => autosave.wachtOpConcept(),
+      bevestigVertrek: () => {
+        vertrekBevestigd = true;
+      },
+      navigeer: (url) => navigateTo(url, { external: true }),
+      herlaad: herlaadToegang,
+    });
+    if (uitkomst === "al-vrij") {
+      store.wisLimietGeweigerd();
+      await hervatSchrijven();
+    }
+  } catch (fout) {
+    // Bv. 409 VRIJGAVE_LOOPT: een betaling voor dit project loopt nog.
+    toast.add({ title: vertaalFout(fout, t), color: "error" });
+  } finally {
+    vrijgaveBezig.value = false;
+  }
+}
+
+/**
+ * Terug uit Checkout met `?vrijgave=<sessie>`: synchroniseren en de query wissen, vóór het laden van
+ * het project, zodat de toegang meteen de nieuwe is.
+ */
+async function verwerkTerugVanVrijgave(): Promise<void> {
+  const klant = context.klant;
+  const sessieId = typeof route.query.vrijgave === "string" ? route.query.vrijgave : undefined;
+  if (admin || !klant || !sessieId) return;
+  const uitkomst = await verwerkVrijgave(sessieId, {
+    synchroniseer: (s) => klant.synchroniseerVrijgave(id, s),
+    verwijderQuery: () => router.replace({ query: { ...route.query, vrijgave: undefined } }),
+  });
+  if (uitkomst === "vrijgegeven") toast.add({ title: t("editor.limiet.vrijgegeven"), color: "success", icon: "i-lucide-lock-open" });
+  else if (uitkomst === "verwerking") toast.add({ title: t("editor.limiet.verwerking"), color: "info" });
 }
 
 // --- Laden en het lokale concept -------------------------------------------
@@ -171,6 +280,7 @@ async function laad(): Promise<void> {
   }
   if (!admin) await werkInOrganisatieVan(project.organisatieId);
   projectOrganisatieId.value = project.organisatieId;
+  pasToegangToe(project);
   // Meteen goed vóór het document er is: de watcher draait ook, maar dit laat geen gat.
   store.zetAlleenLezen(alleenLezen.value);
   store.laad({ id: project.id, naam: project.naam, versie: project.versie, document: project.document });
@@ -242,9 +352,15 @@ async function verwerpConcept(): Promise<void> {
 
 const conflictOpen = ref(false);
 const conflictBezig = ref(false);
+/**
+ * De kopie kreeg 402 `PROJECT_LIMIET` (een gratis project boven de limiet): de dialoog biedt dan de
+ * download van het lokale document aan in plaats van de kopie. Geldt tot het conflict opgelost is.
+ */
+const kopieOverLimiet = ref(false);
 
 watch(autosave.status, (status) => {
   conflictOpen.value = status === "conflict";
+  if (status !== "conflict") kopieOverLimiet.value = false;
 });
 
 // De server weigerde het document met een bekende foutcode (bv. PLANBESTAND_ONBEKEND): de vertaalde reden.
@@ -255,10 +371,14 @@ watch(autosave.fout, (fout) => {
 async function losConflictOp(actie: () => Promise<void>): Promise<void> {
   conflictBezig.value = true;
   try {
-    await actie();
-  } catch (fout) {
-    // Een kopie maken kan 402 geven: dan alleen-lezen, geen generieke fout.
-    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
+    // Een kopie maken kan 402 geven: dan de melding, geen generieke fout. Het concept blijft staan; bij
+    // `PROJECT_LIMIET` kan er geen kopie komen en biedt de dialoog de download aan.
+    const uitkomst = await bewaarElders({
+      actie,
+      behandelWeigering: behandelSchrijfweigering,
+      meldFout: (fout) => toast.add({ title: vertaalFout(fout, t), color: "error" }),
+    });
+    if (uitkomst === "limiet") kopieOverLimiet.value = true;
   } finally {
     conflictBezig.value = false;
   }
@@ -267,6 +387,8 @@ async function losConflictOp(actie: () => Promise<void>): Promise<void> {
 // --- Project elders verwijderd -----------------------------------------------------
 
 const nieuwProjectBezig = ref(false);
+/** Het nieuwe project kreeg 402 `PROJECT_LIMIET`: de melding biedt dan de download van het lokale document aan. */
+const nieuwProjectOverLimiet = ref(false);
 
 /**
  * "Terug naar de projecten" in de melding is een uitdrukkelijke keuze om het werk los te laten: alleen
@@ -281,21 +403,29 @@ function terugNaarProjecten(klik: MouseEvent): void {
 
 /** Bij een mislukte conceptschrijfactie (status onbewaard) staat het werk alleen nog in het geheugen. */
 const verwijderdUitleg = computed(() =>
-  autosave.status.value === "onbewaard" ? t("editor.verwijderd.uitlegNietLokaal") : t("editor.verwijderd.uitleg"),
+  nieuwProjectOverLimiet.value
+    ? t("editor.verwijderd.uitlegLimiet")
+    : autosave.status.value === "onbewaard"
+      ? t("editor.verwijderd.uitlegNietLokaal")
+      : t("editor.verwijderd.uitleg"),
 );
 
 /**
  * Het project werd elders verwijderd: het lokale document wordt een nieuw project (met de plannen van
- * het bedrijf). Een 402 geeft de alleen-lezenmelding, een andere fout een toast; de editor blijft dan
- * staan zoals hij was, met het concept lokaal.
+ * het bedrijf). Een 402 geeft de melding van de weigering, een andere fout een toast; de editor blijft
+ * dan staan zoals hij was, met het concept lokaal. Bij 402 `PROJECT_LIMIET` (het document gaat over de
+ * gratis limiet) kan er geen nieuw project komen: de melding biedt dan de download aan.
  */
 async function bewaarAlsNieuwProject(): Promise<void> {
   if (!context.mogelijkheden.nieuwProject || nieuwProjectBezig.value) return;
   nieuwProjectBezig.value = true;
   try {
-    await autosave.bewaarAlsNieuwProject();
-  } catch (fout) {
-    if (!(await behandelSchrijfweigering(fout))) toast.add({ title: vertaalFout(fout, t), color: "error" });
+    const uitkomst = await bewaarElders({
+      actie: autosave.bewaarAlsNieuwProject,
+      behandelWeigering: behandelSchrijfweigering,
+      meldFout: (fout) => toast.add({ title: vertaalFout(fout, t), color: "error" }),
+    });
+    if (uitkomst === "limiet") nieuwProjectOverLimiet.value = true;
   } finally {
     nieuwProjectBezig.value = false;
   }
@@ -335,6 +465,8 @@ function toonBevindingen(): void { werkruimte.value?.toonBevindingen(); }
 function bijVerlaten(event: BeforeUnloadEvent): void {
   // Een bedoelde herlading met het werk in het concept (een nieuwe versie): niets vragen.
   if (versieStore.zonderWaarschuwing) return;
+  // Een bevestigd vertrek (bv. naar Checkout met het werk in het concept): niet nog eens vragen.
+  if (vertrekBevestigd) return;
   if (waarschuwBijVerlaten(autosave.status.value)) event.preventDefault();
 }
 
@@ -392,8 +524,10 @@ function opnieuwInloggen(): void {
 function bijFocus(): void {
   if (admin) { void sessie.laad().then(() => support?.controleer(sessie.gebruiker?.id ?? null)).catch(() => {}); return; }
   if (autosave.afgemeld.value) void opnieuwProberen();
-  else if (autosave.alleenLezen.value) void hervatNaAbonnement();
-  else void sessie.laad().catch(() => {});
+  else {
+    void sessie.laad().catch(() => {});
+    if (autosave.alleenLezen.value || autosave.limiet.value || beperkt.value) void hervatSchrijven();
+  }
 }
 
 // Een 401 bij het bewaren: de sessie opnieuw lezen, zodat de melding zegt of er nu iemand anders
@@ -446,6 +580,7 @@ const planDialoogOpen = ref(false);
 const tekenDialoogOpen = ref(false);
 const tekenPaginaId = ref<string | undefined>();
 function tekenPlan(paginaId?: string) {
+  if (paginaId === undefined && !store.controleerToevoegen("situatieschemas")) return;
   stopPlaatsenEnMeten();
   tekenPaginaId.value = paginaId;
   tekenDialoogOpen.value = true;
@@ -524,6 +659,8 @@ function schaalGemeten(afstandPx: number): void {
 }
 
 function planToevoegen(): void {
+  // Een nieuw situatieschema boven de limiet: meteen het limietvenster, niet eerst opladen.
+  if (!store.controleerToevoegen("situatieschemas")) return;
   vervangPaginaId.value = undefined;
   planDialoogOpen.value = true;
 }
@@ -574,7 +711,7 @@ onMounted(() => {
   window.addEventListener("focus", bijFocus);
   window.addEventListener("dragover", bestandBuitenDropzone);
   window.addEventListener("drop", bestandBuitenDropzone);
-  void laad();
+  void verwerkTerugVanVrijgave().catch(() => {}).then(() => laad());
 });
 onBeforeUnmount(() => {
   clearInterval(supportTimer);
@@ -614,12 +751,22 @@ onBeforeUnmount(() => {
       >
         <template #actions>
           <UButton
+            v-if="nieuwProjectOverLimiet"
+            size="xs"
+            color="error"
+            icon="i-lucide-download"
+            :label="$t('admin.support.download')"
+            :disabled="!lokaalDocumentBeschikbaar"
+            data-testid="verwijderd-download"
+            @click="downloadLokaal"
+          />
+          <UButton
+            v-else-if="context.mogelijkheden.nieuwProject"
             size="xs"
             color="error"
             icon="i-lucide-copy-plus"
             :label="$t('editor.verwijderd.nieuwProject')"
             :loading="nieuwProjectBezig"
-            v-if="context.mogelijkheden.nieuwProject"
             data-testid="verwijderd-nieuw-project"
             @click="bewaarAlsNieuwProject"
           />
@@ -632,6 +779,39 @@ onBeforeUnmount(() => {
             :label="$t('editor.verwijderd.terug')"
             data-testid="verwijderd-terug"
             @click="terugNaarProjecten"
+          />
+        </template>
+      </UAlert>
+      <UAlert
+        v-if="balkZichtbaar"
+        color="warning"
+        variant="subtle"
+        icon="i-lucide-lock"
+        orientation="horizontal"
+        class="rounded-none border-b border-default py-2"
+        :title="$t('editor.alleenLezenBalk.titel')"
+        :description="$t('editor.alleenLezenBalk.tekst')"
+        data-testid="alleen-lezen-balk"
+      >
+        <template v-if="knoppen.abonnement" #actions>
+          <UButton
+            v-if="knoppen.vrijgeven"
+            size="xs"
+            color="warning"
+            icon="i-lucide-lock-open"
+            :label="$t('editor.limiet.vrijgeven')"
+            :loading="vrijgaveBezig"
+            data-testid="alleen-lezen-vrijgeven"
+            @click="vrijgeven"
+          />
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-sparkles"
+            to="/abonnement"
+            :label="$t('editor.limiet.abonnement')"
+            data-testid="alleen-lezen-abonnement"
           />
         </template>
       </UAlert>
@@ -775,14 +955,23 @@ onBeforeUnmount(() => {
       @navigeer="navigeerDossier"
     />
     <ProjectgegevensDialoog v-model:open="dossierGegevensOpen" />
+    <LimietDialoog
+      v-if="!admin"
+      v-model:open="limietOpen"
+      :knoppen="knoppen"
+      :prijs="projectprijsTekst"
+      :limieten="store.limieten"
+      :bezig="vrijgaveBezig"
+      @vrijgeven="vrijgeven"
+    />
     <ConflictDialoog
       v-model:open="conflictOpen"
       :bezig="conflictBezig"
-      :kopie-toegestaan="context.mogelijkheden.dupliceren"
+      :kopie-toegestaan="context.mogelijkheden.dupliceren && !kopieOverLimiet"
       @download="downloadLokaal"
       :lokale-wijzigingen="autosave.conflict.value?.lokaleWijzigingen ?? true"
       @serverversie="losConflictOp(autosave.laadServerversie)"
-      @kopie="context.mogelijkheden.dupliceren && losConflictOp(autosave.bewaarAlsKopie)"
+      @kopie="context.mogelijkheden.dupliceren && !kopieOverLimiet && losConflictOp(autosave.bewaarAlsKopie)"
     />
   </div>
 </template>

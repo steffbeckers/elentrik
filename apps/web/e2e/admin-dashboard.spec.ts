@@ -69,11 +69,21 @@ test('superuser zonder bedrijf zoekt, corrigeert, beheert toegang en leest audit
     await page.getByRole('textbox', { name: 'Reden voor de correctie' }).fill('Partnerbedrijf krijgt gratis toegang');
     await page.getByRole('button', { name: 'Wijziging bewaren' }).click();
     await expect(page.getByRole('button', { name: 'Gratis toegang stopzetten' })).toBeVisible();
-    await page.getByRole('button', { name: 'Proefperiode verlengen', exact: true }).click();
+    await page.getByRole('button', { name: 'Tijdelijke volledige toegang', exact: true }).click();
     await page.getByLabel('Nieuwe laatste proefdag').fill('2099-12-31');
     await page.getByRole('textbox', { name: 'Reden voor de correctie' }).fill('Extra tijd voor evaluatie');
     await page.getByRole('button', { name: 'Wijziging bewaren' }).click();
     await expect(page.getByRole('link', { name: 'Proefperiode verlengd', exact: true })).toBeVisible();
+    // Onderwijs gaat niet samen met gratis toegang: eerst die stopzetten, dan de onderwijsstatus toekennen.
+    await page.getByRole('button', { name: 'Gratis toegang stopzetten' }).click();
+    await page.getByRole('textbox', { name: 'Reden voor de correctie' }).fill('Partnerschap afgelopen');
+    await page.getByRole('button', { name: 'Wijziging bewaren' }).click();
+    await page.getByRole('button', { name: 'Onderwijsstatus toekennen' }).click();
+    await page.getByRole('textbox', { name: 'Reden voor de correctie' }).fill('School bevestigd per mail');
+    await page.getByRole('button', { name: 'Wijziging bewaren' }).click();
+    await expect(page.getByRole('button', { name: 'Onderwijsstatus stopzetten' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Gratis toegang toekennen' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Onderwijsstatus gewijzigd', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Notitie toevoegen', exact: true }).click();
     await page.getByRole('textbox', { name: /^Notitie/ }).fill('Klant volgende week contacteren');
     await page.getByLabel('Opvolgdatum (optioneel)').fill('2026-01-01');
