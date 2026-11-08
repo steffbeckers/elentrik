@@ -289,6 +289,21 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(svgVan("standaard")).toBe(svgVan());
     });
 
+    test.each(["standaard", "wand", "led", "noodverlichting", "tl"] as const)("%s als laatste punt: de leiding stopt in het midden, geen streepje erboven", (soort) => {
+      const svg = tekenSymbool(licht(soort, 4), { einde: true }).svg;
+      const stam = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
+      expect(stam).toHaveLength(1);
+      expect(Math.max(stam[0]!.y1, stam[0]!.y2)).toBe(10);
+      expect(Math.min(stam[0]!.y1, stam[0]!.y2)).toBe(5);
+    });
+
+    test("spot als laatste punt: geen leiding boven de cirkel", () => {
+      const svg = tekenSymbool(licht("spot"), { einde: true }).svg;
+      const stam = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
+      expect(stam).toHaveLength(1);
+      expect(Math.max(stam[0]!.y1, stam[0]!.y2)).toBe(10);
+    });
+
     test("led: het kruis plus de tekst LED", () => {
       const svg = svgVan("led");
       expect(kruis(svg)).toHaveLength(2);

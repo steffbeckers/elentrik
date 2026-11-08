@@ -87,7 +87,8 @@ export function tekenContactdoos(node: NodeVan<"contactdoos">, horizontaal = fal
  * - "spot": de projector, een kruis in een cirkel (⊗) met een boog aan de kant van `in`;
  * - "noodverlichting": het veiligheidsverlichtingstoestel, een kruis met een gevulde stip;
  * - "led": een kruis met de tekst "LED" (staat niet in de tabel).
- * Het aantal komt als tekst "n×" links van het symbool.
+ * Het aantal komt als tekst "n×" links van het symbool. Bij `einde` (laatste punt) stopt de
+ * leiding in het snijpunt van het kruis (bij de projector aan de cirkel) en loopt ze niet verder.
  */
 export function tekenLichtpunt(node: NodeVan<"lichtpunt">, horizontaal = false, einde = false): Symbool {
   const breedte = horizontaal ? Math.max(14, (String(node.aantal).length + 1) * 1.2 + 2) : 14;
@@ -99,7 +100,7 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">, horizontaal = false, 
   // Eén doorlopende leiding van `in` naar `uit`; de projector vervangt ze door twee stukken.
   let svg = node.soort === "spot" ? "" : horizontaal
     ? lijn(0, cy, einde ? x : breedte, cy)
-    : lijn(x, hoogte, x, 0);
+    : lijn(x, hoogte, x, einde ? cy : 0);
   /** De twee diagonalen van het kruis, met halve armlengte `a` rond (x, cy). */
   const kruis = (a: number) =>
     lijn(x - a, cy + a, x + a, cy - a, { data: { rol: "kruis" } }) +
@@ -131,7 +132,7 @@ export function tekenLichtpunt(node: NodeVan<"lichtpunt">, horizontaal = false, 
       svg +=
         (horizontaal ? lijn(0, cy, x - r, cy) : lijn(x, hoogte, x, cy + r)) +
         cirkel(x, cy, r) +
-        (horizontaal ? (einde ? "" : lijn(x + r, cy, breedte, cy)) : lijn(x, cy - r, x, 0)) +
+        (einde ? "" : horizontaal ? lijn(x + r, cy, breedte, cy) : lijn(x, cy - r, x, 0)) +
         kruis(r * Math.SQRT1_2) +
         pad(
           horizontaal
