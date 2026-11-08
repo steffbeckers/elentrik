@@ -14,9 +14,12 @@ export function focusWeergave(vak: Afmeting & { x: number; y: number }, venster:
   return { x: vak.x + vak.breedte / 2 - b / 2, y: vak.y + vak.hoogte / 2 - h / 2, b, h };
 }
 
-/** Zoom is begrensd tot 25 % – 400 % van de passende weergave; een plan mag verder (`maxPlanZoom`). */
+/** Zoom is begrensd tot 25 % – 1000 % van de passende weergave; een plan mag verder (`maxPlanZoom`). */
 export const MIN_ZOOM = 0.25;
-export const MAX_ZOOM = 4;
+export const MAX_ZOOM = 10;
+
+/** Focussen op een werkgebied zoomt hooguit tot 400 %, zodat kleine symbolen niet overdreven groot worden. */
+export const FOCUS_MAX_ZOOM = 4;
 
 /** Op een plan mag je inzoomen tot één rasterpixel zoveel schermpixels beslaat. */
 const PLAN_SCHERMPIXELS_PER_RASTERPIXEL = 2;

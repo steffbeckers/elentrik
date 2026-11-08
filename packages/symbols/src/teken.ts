@@ -8,7 +8,8 @@ import { tekenAansluiting, tekenTeller, tekenAarding } from "./voeding";
 export type SymboolOpties = {
   /**
    * De node is het laatste punt: er loopt geen leiding verder naar een volgend punt. De
-   * contactdoos laat de lijn dan in de boog stoppen in plaats van door te lopen tot `uit`.
+   * contactdoos en het lichtpunt laten de lijn dan in het symbool stoppen in plaats van door
+   * te lopen tot `uit`.
    */
   einde?: boolean;
 };
@@ -39,7 +40,7 @@ export function tekenSymbool(node: Node, opties: SymboolOpties = {}): Symbool {
     case "contactdoos":
       return tekenContactdoos(node, false, opties.einde ?? false);
     case "lichtpunt":
-      return tekenLichtpunt(node);
+      return tekenLichtpunt(node, false, opties.einde ?? false);
     case "schakelaar":
       return tekenSchakelaar(node);
     case "toestel":
