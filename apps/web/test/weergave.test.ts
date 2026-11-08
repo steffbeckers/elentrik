@@ -180,10 +180,10 @@ describe("maxPlanZoom", () => {
   });
 
   test("hangt af van het venster: een breder venster heeft minder zoom nodig", () => {
-    const smal = { breedte: 1000, hoogte: 750 };
-    const breed = { breedte: 2000, hoogte: 1500 };
-    expect(maxPlanZoom(passendeWeergave(PLAN, smal, 0)!, smal)).toBeCloseTo(16, 9);
-    expect(maxPlanZoom(passendeWeergave(PLAN, breed, 0)!, breed)).toBeCloseTo(8, 9);
+    const smal = { breedte: 500, hoogte: 375 };
+    const breed = { breedte: 1000, hoogte: 750 };
+    expect(maxPlanZoom(passendeWeergave(PLAN, smal, 0)!, smal)).toBeCloseTo(32, 9);
+    expect(maxPlanZoom(passendeWeergave(PLAN, breed, 0)!, breed)).toBeCloseTo(16, 9);
   });
 
   test("is minstens MAX_ZOOM voor een klein raster", () => {
