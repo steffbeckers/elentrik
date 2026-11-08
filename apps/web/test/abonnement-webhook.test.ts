@@ -29,7 +29,8 @@ const CONFIG: AbonnementConfig = {
   ingeschakeld: true,
   sleutel: "sk_test_nep_alleen_voor_tests",
   webhookGeheim: GEHEIM,
-  prijzen: { maand: "price_maand", jaar: "price_jaar" },
+  prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+  limieten: { kringen: 5, situatieschemas: 1 },
   boekhoudingInbox: INBOX,
   apiBasis: null,
 };
@@ -244,7 +245,7 @@ describe("handtekening", () => {
 
   test("abonnementen uit, of zonder webhookgeheim: 404 en er gebeurt niets", async () => {
     const e = event("customer.subscription.updated", abonnementObject("sub_1"));
-    zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+    zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
     expect((await stuur(e.body)).status).toBe(404);
     zetAbonnementen({ config: { ...CONFIG, webhookGeheim: null } as AbonnementConfig, stripe });
     expect((await stuur(e.body)).status).toBe(404);
@@ -307,7 +308,7 @@ describe("synchronisatie", () => {
     expect(r.stripeAbonnementId).toBe("sub_nieuw");
     expect(r.status).toBe("active");
     const toegang = await toegangVoor(db, orgA, CONFIG);
-    expect(toegang.schrijven).toBe(true);
+    expect(toegang.niveau).toBe("abonnement");
     expect(toegang.reden).toBe("actief");
   });
 });
@@ -321,7 +322,7 @@ describe("mislukte eerste betaling", () => {
     expect(aanroepen("beeindigAbonnement")).toEqual([{ methode: "beeindigAbonnement", invoer: "sub_1" }]);
     const r = await rij();
     expect(r.status).toBe("canceled");
-    expect((await toegangVoor(db, orgA, CONFIG)).schrijven).toBe(false);
+    expect((await toegangVoor(db, orgA, CONFIG)).niveau).toBe("gratis");
   });
 
   test("invoice.payment_failed met subscription_create beëindigt het abonnement en synchroniseert", async () => {

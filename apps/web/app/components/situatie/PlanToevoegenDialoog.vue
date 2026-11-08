@@ -234,6 +234,11 @@ async function bevestig() {
       situatie.vervangAchtergrond(paginaId, achtergronden[0]!);
     } else {
       const ids = situatie.voegPlanPaginasToe(concepten.map((u, i) => ({ titel: u.titel.trim(), achtergrond: achtergronden[i]!, referentie: u.referentie })));
+      // Over de gratis limiet: niets toegevoegd. De dialoog sluit, zodat het limietvenster te zien is.
+      if (ids.length === 0) {
+        open.value = false;
+        return;
+      }
       paginaId = ids[0]!;
     }
     open.value = false;

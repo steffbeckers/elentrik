@@ -2,11 +2,14 @@
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import type { AbonnementStatus, ToegangReden } from "../../shared/abonnement";
+import type {
+  AbonnementStatus,
+  Bedrijfsniveau,
+  Projecttoegang,
+  ToegangReden,
+} from "../../shared/abonnement";
 
-/** Proefperiode voor het eerste bedrijf dat iemand zelf aanmaakt. */
-export const PROEF_DAGEN = 30;
-/** Schrijfrecht tot zoveel dagen na de eerste `past_due`. */
+/** Volledige toegang tot zoveel dagen na de eerste `past_due`. */
 export const ACHTERSTALLIG_DAGEN = 14;
 
 const DAG_MS = 24 * 3600 * 1000;
@@ -15,39 +18,60 @@ export interface ToegangInvoer {
   nu: Date;
   /** Onwaar als Stripe niet is ingesteld: dan gelden geen beperkingen. */
   ingeschakeld: boolean;
+  /** Einde van de overgangsproef (spec 4.8); voor nieuwe bedrijven het moment van aanmaken. */
   proefEinde: Date;
   vrijgesteld: boolean;
+  onderwijs: boolean;
   /** Het gevolgde abonnement (zie `kiesGevolgdAbonnement`), of null. */
   abonnement: { status: AbonnementStatus; achterstalligSinds: Date | null } | null;
 }
 
 /**
- * Mag deze organisatie schrijven? De regels in volgorde (spec 4.2):
- * 1. abonnementen uit, 2. vrijgesteld, 3. `active` of `trialing`, 4. `past_due` binnen 14 dagen
- * na de eerste keer, 5. de proefperiode loopt, 6. anders alleen-lezen met de reden daarvan.
+ * Het niveau van een bedrijf (spec 4.3), in volgorde:
+ * 1. abonnementen uit, 2. vrijgesteld, 3. onderwijs, 4. `active` of `trialing`, `past_due` binnen
+ * 14 dagen na de eerste keer, of de overgangsproef loopt: `abonnement`, 5. anders `gratis`, met
+ * als reden een mislukte betaling, een beëindigd abonnement of gewoon `gratis`.
  */
-export function bepaalToegang(i: ToegangInvoer): { schrijven: boolean; reden: ToegangReden } {
-  if (!i.ingeschakeld) return { schrijven: true, reden: "uit" };
-  if (i.vrijgesteld) return { schrijven: true, reden: "vrijgesteld" };
+export function bepaalBedrijfsniveau(i: ToegangInvoer): { niveau: Bedrijfsniveau; reden: ToegangReden } {
+  if (!i.ingeschakeld) return { niveau: "uit", reden: "uit" };
+  if (i.vrijgesteld) return { niveau: "vrijgesteld", reden: "vrijgesteld" };
+  if (i.onderwijs) return { niveau: "onderwijs", reden: "onderwijs" };
   const status = i.abonnement?.status;
-  if (status === "active" || status === "trialing") return { schrijven: true, reden: "actief" };
+  if (status === "active" || status === "trialing") return { niveau: "abonnement", reden: "actief" };
   if (status === "past_due") {
-    // Zonder bekend begin van de achterstal telt nu als begin: nooit onterecht blokkeren.
+    // Zonder bekend begin van de achterstal telt nu als begin: nooit onterecht terugzetten.
     const sinds = i.abonnement?.achterstalligSinds ?? i.nu;
     if (i.nu.getTime() < sinds.getTime() + ACHTERSTALLIG_DAGEN * DAG_MS) {
-      return { schrijven: true, reden: "betaling-mislukt" };
+      return { niveau: "abonnement", reden: "betaling-mislukt" };
     }
   }
-  if (i.nu.getTime() < i.proefEinde.getTime()) return { schrijven: true, reden: "proef" };
-  if (status === "past_due" || status === "unpaid") return { schrijven: false, reden: "betaling-mislukt" };
+  if (i.nu.getTime() < i.proefEinde.getTime()) return { niveau: "abonnement", reden: "proef" };
+  if (status === "past_due" || status === "unpaid") return { niveau: "gratis", reden: "betaling-mislukt" };
   if (status === "canceled" || status === "incomplete_expired" || status === "paused") {
-    return { schrijven: false, reden: "beeindigd" };
+    return { niveau: "gratis", reden: "beeindigd" };
   }
-  return { schrijven: false, reden: "proef-voorbij" };
+  return { niveau: "gratis", reden: "gratis" };
 }
 
 /**
- * Tot wanneer een organisatie met een mislukte betaling (`past_due`) nog mag schrijven: de eerste
+ * Wat een bedrijf op `niveau` met één project mag (de tabel in spec 4.3). Gekocht of gestempeld
+ * gaat vóór onderwijs: een eerder betaald of gestempeld dossier krijgt nooit een watermerk.
+ */
+export function bepaalProjecttoegang(
+  niveau: Bedrijfsniveau,
+  p: { gekocht: boolean; gestempeld: boolean },
+): Projecttoegang {
+  const { gekocht, gestempeld } = p;
+  const vrij: Projecttoegang = { bewerken: true, limiet: false, watermerk: null, gekocht, gestempeld };
+  if (niveau === "uit" || niveau === "vrijgesteld" || niveau === "abonnement") return vrij;
+  if (gekocht) return vrij;
+  if (gestempeld) return { bewerken: false, limiet: false, watermerk: null, gekocht, gestempeld };
+  if (niveau === "onderwijs") return { bewerken: true, limiet: false, watermerk: "onderwijs", gekocht, gestempeld };
+  return { bewerken: true, limiet: true, watermerk: "gratis", gekocht, gestempeld };
+}
+
+/**
+ * Tot wanneer een organisatie met een mislukte betaling (`past_due`) nog volledige toegang heeft: de eerste
  * `past_due` plus `ACHTERSTALLIG_DAGEN`. Null bij een andere status of zonder bekend begin.
  */
 export function achterstalligTot(abonnement: ToegangInvoer["abonnement"]): Date | null {

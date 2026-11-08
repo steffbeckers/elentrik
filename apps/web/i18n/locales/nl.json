@@ -59,9 +59,7 @@
     "archiefTonen": "Gearchiveerde notities tonen",
     "geenNotities": "Nog geen notities in deze selectie.",
     "waaromToegang": "Waarom heeft dit bedrijf toegang?",
-    "waaromAlleenLezen": "Waarom is dit bedrijf alleen-lezen?",
-    "schrijven": "Bewerken toegestaan",
-    "alleenLezen": "Alleen-lezen",
+    "waaromGratis": "Waarom is dit bedrijf op het gratis niveau?",
     "beoordeeldOp": "Beoordeeld op {datum}",
     "rechtenUitleg": "Lidmaatschap, gebruikersrol en opslaglimieten blijven afzonderlijk gelden.",
     "proefEinde": "Lokaal proefeinde (exclusief)",
@@ -70,7 +68,19 @@
     "vrijstelling": "Gratis toegang — geen abonnement nodig",
     "ingeschakeld": "Ingeschakeld",
     "uitgeschakeld": "Uitgeschakeld",
-    "proefVerlengen": "Proefperiode verlengen",
+    "proefVerlengen": "Tijdelijke volledige toegang",
+    "onderwijs": "Onderwijsstatus",
+    "onderwijsStoppen": "Onderwijsstatus stopzetten",
+    "onderwijsGeven": "Onderwijsstatus toekennen",
+    "onderwijsUitleg": "Onderwijs geeft gratis toegang met het watermerk \"Onderwijsversie\". Niet combineerbaar met gratis toegang zonder watermerk.",
+    "onderwijsVerwijderenUitleg": "De bestaande proef- en abonnementsregels worden opnieuw toegepast. Dit start geen nieuwe proef of betaling.",
+    "gekochtOp": "Gekocht op",
+    "abonnementStempelOp": "Abonnementsstempel op",
+    "projectaankopen": "Projectaankopen",
+    "geenProjectaankopen": "Nog geen projectaankopen.",
+    "aankoopAangemaakt": "Aangemaakt {datum}",
+    "aankoopBetaald": "betaald {datum}",
+    "aankoopStatus": { "open": "Open", "betaald": "Betaald", "vervallen": "Vervallen", "mislukt": "Mislukt" },
     "vrijstellingStoppen": "Gratis toegang stopzetten",
     "vrijstellingGeven": "Gratis toegang toekennen",
     "nieuweEinddatum": "Nieuwe laatste proefdag",
@@ -135,7 +145,8 @@
       "abonnement": "Actief abonnement",
       "betalingsgratie": "Betalingsgratie",
       "proef": "Lokale proef",
-      "alleenLezen": "Alleen-lezen"
+      "onderwijs": "Onderwijs",
+      "gratis": "Gratis niveau"
     },
     "redenen": {
       "uit": "Betalingsbeperkingen staan globaal uit.",
@@ -143,13 +154,15 @@
       "actief": "Het geregistreerde Stripe-abonnement geeft toegang.",
       "betaling-mislukt": "Een mislukte betaling bepaalt de toegang; de eventuele betalingsgratie staat hieronder.",
       "proef": "De lokale proefperiode geeft toegang.",
-      "proef-voorbij": "De lokale proefperiode is voorbij.",
+      "onderwijs": "Onderwijsstatus is ingeschakeld.",
+      "gratis": "Geen abonnement en geen lopende proef: het bedrijf werkt op het gratis niveau.",
       "beeindigd": "Het abonnement is beëindigd en er is geen geldige lokale proef."
     },
     "acties": {
       "gebruiker_naam": "Gebruikersnaam gecorrigeerd",
       "organisatie_gegevens": "Bedrijfsgegevens gecorrigeerd",
       "organisatie_vrijstelling": "Gratis toegang gewijzigd",
+      "organisatie_onderwijs": "Onderwijsstatus gewijzigd",
       "organisatie_proefperiode": "Proefperiode verlengd",
       "notitie_aangemaakt": "Supportnotitie toegevoegd",
       "notitie_gewijzigd": "Supportnotitie gewijzigd",
@@ -161,7 +174,7 @@
     "aandacht": {
       "proefEindigt": "Proef loopt binnen 7 dagen af",
       "betaling": "Betaling vraagt aandacht",
-      "alleenLezen": "Bedrijven met alleen-lezen toegang"
+      "gratis": "Bedrijven op het gratis niveau"
     },
     "auditFilters": {
       "doelId": "Record-ID",
@@ -314,14 +327,35 @@
       "melding": "Dit project werd verwijderd.",
       "uitleg": "Je wijzigingen staan nog lokaal. Bewaar ze als nieuw project, of ga terug naar de projecten.",
       "uitlegNietLokaal": "Je wijzigingen konden ook niet lokaal bewaard worden en staan alleen nog in het geheugen. Bewaar ze nu als nieuw project en sluit dit venster niet.",
+      "uitlegLimiet": "Als nieuw project gaat dit werk over de gratis limiet. Je wijzigingen staan nog lokaal: download ze als bestand, of ga terug naar de projecten.",
       "nieuwProject": "Bewaar als nieuw project",
       "terug": "Terug naar de projecten"
     },
+    "limiet": {
+      "titel": "Dit project gaat over de gratis limiet",
+      "uitleg": "Een gratis project mag maximaal {kringen} en {situatieschemas} bevatten. Wat je net wou toevoegen, is niet toegevoegd.",
+      "prijs": "Geef dit project eenmalig vrij voor {prijs} excl. btw ({incl} incl. 21 % btw). Een vrijgegeven project heeft geen limieten.",
+      "lid": "Vraag de eigenaar van je bedrijf om dit project vrij te geven.",
+      "vrijgeven": "Dit project vrijgeven",
+      "abonnement": "Een abonnement nemen",
+      "sluiten": "Sluiten",
+      "vrijgegeven": "Dit project is vrijgegeven",
+      "verwerking": "De betaling wordt nog verwerkt. Het project wordt vrijgegeven zodra ze binnen is.",
+      "teller": {
+        "label": "Gratis limiet",
+        "kringen": "{aantal} van {max} kring | {aantal} van {max} kringen",
+        "situatieschemas": "{aantal} van {max} situatieschema | {aantal} van {max} situatieschema's"
+      }
+    },
+    "alleenLezenBalk": {
+      "titel": "Alleen lezen",
+      "tekst": "Dit project is gemaakt tijdens je abonnement. Je kan het bekijken en exporteren. Om te bewerken geef je het vrij of neem je opnieuw een abonnement."
+    },
     "alleenLezen": {
-      "bewaardLokaal": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
-      "nietBewaard": "Je bedrijf heeft geen actief abonnement. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen.",
+      "bewaardLokaal": "Dit project is alleen-lezen. Je laatste wijzigingen zijn niet opgeslagen, maar blijven lokaal bewaard.",
+      "nietBewaard": "Dit project is alleen-lezen. Je laatste wijzigingen konden niet opgeslagen worden en ook niet lokaal bewaard. Sluit dit venster niet: ze staan alleen nog in het geheugen.",
       "dialoogTitel": "Alleen lezen",
-      "dialoogBeschrijving": "Je bedrijf heeft geen actief abonnement. Wijzigingen in deze dialoog kunnen niet meer bewaard worden."
+      "dialoogBeschrijving": "Dit project is alleen-lezen. Wijzigingen in deze dialoog kunnen niet bewaard worden."
     },
     "onderdelenPaneel": {
       "titel": "Onderdelen",
@@ -748,7 +782,7 @@
         "onbewaard": "Het project kon niet opgeslagen worden. Exporteren kan zodra het opgeslagen is.",
         "conflict": "Het project is intussen elders gewijzigd. Los eerst het conflict op.",
         "fout": "De server weigerde het project op te slaan. Probeer opnieuw op te slaan en exporteer daarna.",
-        "alleen-lezen": "Je bedrijf heeft geen actief abonnement, dus je laatste wijzigingen staan alleen lokaal en komen niet in de PDF. Open het project opnieuw om de laatst opgeslagen versie te exporteren."
+        "alleen-lezen": "Dit project is alleen-lezen, dus je laatste wijzigingen staan alleen lokaal en komen niet in de PDF. Open het project opnieuw om de laatst opgeslagen versie te exporteren."
       },
       "onderdelen": {
         "titel": "Onderdelen",
@@ -977,6 +1011,11 @@
       "export": "Kijk de bevindingen na en exporteer het dossier als PDF."
     },
     "zojuist": "zojuist",
+    "label": {
+      "gratis": "Gratis",
+      "vrijgegeven": "Vrijgegeven",
+      "alleen-lezen": "Alleen-lezen"
+    },
     "status": {
       "nietGeexporteerd": "Niet geëxporteerd",
       "geexporteerd": "Geëxporteerd"
@@ -1351,7 +1390,8 @@
       "betalingMislukt": "Je laatste betaling is mislukt.",
       "betalingMisluktTot": "Je laatste betaling is mislukt. Regel je betaling vóór {datum}.",
       "beeindigd": "Je abonnement is beëindigd.",
-      "proefVoorbij": "Dit bedrijf heeft geen lopende gratis proefperiode. Kies een abonnement om projecten te bewerken."
+      "gratis": "Je gebruikt de gratis versie van Elentrik.",
+      "onderwijs": "Onderwijsaccount: geen limieten, exports met watermerk."
     },
     "datumOnbekend": "een latere datum",
     "formules": {
@@ -1360,7 +1400,8 @@
     },
     "per": {
       "maand": "per maand",
-      "jaar": "per jaar"
+      "jaar": "per jaar",
+      "project": "per project"
     },
     "exclBtw": "excl. btw ({incl} incl. 21 % btw)",
     "korting": "−{percentage} %",
@@ -1369,12 +1410,31 @@
     "betalingRegelen": "Betaling regelen",
     "lid": "Vraag een eigenaar van je bedrijf om het abonnement te regelen.",
     "prijzenOntbreken": "Prijzen konden niet geladen worden",
+    "onderwijs": "Onderwijsaccount: geen limieten, exports met watermerk",
+    "gratis": {
+      "titel": "Gratis",
+      "kringen": "{n} kring | {n} kringen",
+      "situatieschemas": "{n} situatieschema | {n} situatieschema's",
+      "tekst": "Elk gratis project mag maximaal {kringen} en {situatieschemas} bevatten. Exports van een gratis project krijgen het watermerk “Gratis versie”."
+    },
+    "projectBlok": {
+      "titel": "Per project",
+      "tekst": "Heeft een project meer nodig dan de gratis limieten, dan geef je het eenmalig vrij. Dat doe je vanuit de editor, in het project zelf. Een vrijgegeven project heeft geen limieten."
+    },
+    "kaartenBlok": {
+      "titel": "Abonnement",
+      "tekst": "Met een abonnement verdwijnen alle limieten en watermerken."
+    },
+    "weigering": {
+      "limiet": "Dit project gaat over de gratis limiet.",
+      "alleenLezen": "Dit project is alleen-lezen. Geef het vrij of neem een abonnement om het te bewerken."
+    },
     "banner": {
       "proef": "Nog {n} dag gratis. | Nog {n} dagen gratis.",
       "kies": "Kies een abonnement",
       "betaling": "Je laatste betaling is mislukt. Regel je betaling vóór {datum}.",
-      "betalingZonderDatum": "Je laatste betaling is mislukt. Regel je betaling snel, anders kan je bedrijf straks geen projecten meer bewerken.",
-      "alleenLezen": "Je bedrijf heeft geen actief abonnement. Je kan projecten bekijken en exporteren, maar niet bewerken."
+      "betalingZonderDatum": "Je laatste betaling is mislukt. Regel je betaling snel, anders valt je bedrijf terug op de gratis versie en worden projecten uit je abonnement alleen-lezen.",
+      "betalingNaGratie": "Je laatste betaling is mislukt. Je bedrijf gebruikt nu de gratis versie en projecten uit je abonnement zijn alleen-lezen. Regel je betaling om weer alles te bewerken."
     }
   },
   "menu": {
@@ -1416,6 +1476,7 @@
   "fouten": {
     "ADMIN_CORRECTIE_ONGELDIG": "Deze supportcorrectie is verlopen, afgerond of hoort bij een andere aanmelding. Je lokale werk blijft bewaard. Start een nieuwe correctie om verder te bewaren.",
     "ADMIN_STRIPE_BEVESTIGING": "Bevestig dat bestaande Stripe-abonnementen en open betalingen blijven doorlopen. Beheer ze apart in Stripe.",
+    "ADMIN_ONDERWIJS_VRIJSTELLING": "Een bedrijf kan niet tegelijk gratis toegang en onderwijsstatus hebben. Stop eerst de andere.",
     "ADMIN_PROEF_VERLENGEN": "Kies een einddatum die later ligt dan de huidige proefperiode en vandaag.",
     "BEDRIJF_VRIJGESTELD": "Dit bedrijf heeft gratis toegang en kan geen nieuw abonnement afsluiten.",
     "onbekend": "Er ging iets mis. Probeer het opnieuw.",
@@ -1448,6 +1509,11 @@
     "ABONNEMENT_BESTAAT": "Dit bedrijf heeft al een abonnement.",
     "GEEN_KLANT": "Dit bedrijf heeft nog geen betaalgegevens. Kies eerst een abonnement.",
     "ABONNEMENTEN_UIT": "Betalen is nog niet ingesteld.",
+    "PROJECT_ALLEEN_LEZEN": "Dit project is alleen-lezen. Je kan het bekijken en exporteren, maar niet meer bewerken.",
+    "PROJECT_LIMIET": "Deze wijziging gaat boven de limiet van de gratis versie en werd niet bewaard.",
+    "PROJECT_AL_GEKOCHT": "Dit project is al vrijgegeven.",
+    "VRIJGEVEN_NIET_NODIG": "Dit project hoeft niet vrijgegeven te worden.",
+    "VRIJGAVE_LOOPT": "De betaling voor dit project wordt nog verwerkt. Probeer het later opnieuw.",
     "LAATSTE_EIGENAAR": "Er moet minstens één eigenaar blijven.",
     "AL_LID": "Dit adres is al lid.",
     "AL_UITGENODIGD": "Dit adres is al uitgenodigd.",

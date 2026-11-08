@@ -1,19 +1,22 @@
 import {
   DocumentFout,
   nieuwProjectDocument,
+  telVoorLimiet,
   wijzigEigenschappen,
   type InstallatieDocument,
   type Node,
   type NodeId,
 } from "@elentrik/model";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { useAutosave } from "../app/composables/useAutosave";
 import {
   BEGIN_VOORINSTELLINGEN,
   MAX_STAPPEN,
   useEditorStore,
 } from "../app/stores/editor";
 import { useSessieStore } from "../app/stores/sessie";
+import { useSituatieStore } from "../app/stores/situatie";
 
 type Store = ReturnType<typeof useEditorStore>;
 
@@ -1046,4 +1049,173 @@ test('insert-before is disabled with invalid/multiple selection or readonly and 
  const store=laadNieuw();store.onderdeel='leiding';const before=store.document;
  for(const ids of [[],[before!.rootId],[eersteVan(store,'differentieel'),eersteVan(store,'verdeelbord')]]){store.selectie=ids;expect(store.kanVoorSelectieInvoegen).toBe(false);store.voegVoorSelectieIn();expect(store.document).toBe(before);}
  store.selectie=[eersteVan(store,'differentieel')];store.zetAlleenLezen(true);expect(store.kanVoorSelectieInvoegen).toBe(false);store.voegVoorSelectieIn();expect(store.document).toBe(before);expect(store.terug).toHaveLength(0);
+});
+
+describe("gratis limiet", () => {
+  const LIMIETEN = { kringen: 5, situatieschemas: 1 };
+  const ACHTERGROND = { origineelBestandId: "o1", rasterBestandId: "r1", breedte_px: 3000, hoogte_px: 2000 };
+
+  /** Een document met `n` kringen (via de store, zonder limiet), met een schone undo-stapel. */
+  function metKringen(n: number): Store {
+    const store = laadNieuw();
+    for (let i = 0; i < n; i++) nieuweKring(store);
+    expect(telVoorLimiet(doc(store)).kringen).toBe(n);
+    return store;
+  }
+
+  test("pasToe weigert zesde kring bij limiet en zet limietGeweigerd", () => {
+    const store = metKringen(5);
+    store.zetLimiet(LIMIETEN);
+    const voor = store.document;
+    const terug = store.terug;
+    const vooruit = store.vooruit;
+    const selectie = store.selectie;
+    const teller = store.gewijzigdSindsOpslaan;
+
+    nieuweKring(store);
+
+    expect(store.document).toBe(voor);
+    expect(store.terug).toBe(terug);
+    expect(store.vooruit).toBe(vooruit);
+    expect(store.selectie).toEqual(selectie);
+    expect(store.gewijzigdSindsOpslaan).toBe(teller);
+    expect(store.limietGeweigerd).toEqual({ kringen: 6, situatieschemas: 0 });
+
+    store.wisLimietGeweigerd();
+    expect(store.limietGeweigerd).toBeNull();
+  });
+
+  test("dupliceren via Ctrl+D boven de limiet geeft null en wijzigt niets", () => {
+    const store = metKringen(5);
+    store.zetLimiet(LIMIETEN);
+    const voor = store.document;
+    expect(store.dupliceerSelectieKring()).toBeNull();
+    expect(store.document).toBe(voor);
+    expect(store.limietGeweigerd).toEqual({ kringen: 6, situatieschemas: 0 });
+  });
+
+  test("sjabloon dat over de limiet gaat wordt niet toegepast, undo-stapel ongewijzigd", () => {
+    // Vijf kringen en een gevulde redo-stapel: ook die blijft staan.
+    const store = metKringen(6);
+    store.ongedaanMaken();
+    expect(store.vooruit).toHaveLength(1);
+    store.zetLimiet(LIMIETEN);
+    const voor = store.document;
+    const terug = store.terug;
+    const vooruit = store.vooruit;
+
+    store.voegSjabloonToe("badkamer", { soort: "nieuw-op-bord", nodeId: eersteVan(store, "verdeelbord") });
+
+    expect(store.document).toBe(voor);
+    expect(store.terug).toBe(terug);
+    expect(store.vooruit).toBe(vooruit);
+    expect(store.limietGeweigerd!.kringen).toBeGreaterThan(5);
+  });
+
+  test("tweede situatiepagina via situatiestore geweigerd", () => {
+    const store = laadNieuw();
+    store.zetLimiet(LIMIETEN);
+    const situatie = useSituatieStore();
+    const eerste = situatie.voegPlanPaginasToe([{ titel: "Gelijkvloers", achtergrond: ACHTERGROND }]);
+    expect(eerste).toHaveLength(1);
+    expect(store.limietGeweigerd).toBeNull();
+    const voor = store.document;
+    const terug = store.terug;
+
+    expect(situatie.voegPlanPaginasToe([{ titel: "Verdieping", achtergrond: ACHTERGROND }])).toEqual([]);
+    expect(situatie.bewaarTekening("Getekend", ACHTERGROND, { formaat: "openplan3d-v1", project: "{\"floors\":[]}", kader: { x_cm: 0, y_cm: 0, pxPerCm: 2 } })).toBe("");
+
+    expect(store.document).toBe(voor);
+    expect(store.terug).toBe(terug);
+    expect(doc(store).situatie.paginas).toHaveLength(1);
+    expect(store.limietGeweigerd).toEqual({ kringen: 0, situatieschemas: 2 });
+  });
+
+  test("controleerToevoegen meldt vooraf dat een nieuwe pagina over de limiet gaat", () => {
+    const store = laadNieuw();
+    expect(store.controleerToevoegen("situatieschemas")).toBe(true);
+    store.zetLimiet(LIMIETEN);
+    expect(store.controleerToevoegen("situatieschemas")).toBe(true);
+    useSituatieStore().voegPlanPaginasToe([{ titel: "Gelijkvloers", achtergrond: ACHTERGROND }]);
+    expect(store.controleerToevoegen("situatieschemas")).toBe(false);
+    expect(store.limietGeweigerd).toEqual({ kringen: 0, situatieschemas: 2 });
+  });
+
+  test("kring verwijderen boven de limiet mag", () => {
+    const store = metKringen(7);
+    store.zetLimiet(LIMIETEN);
+    const voor = store.document;
+    store.selectie = [eersteVan(store, "automaat")];
+
+    store.verwijderSelectie(true);
+
+    expect(store.document).not.toBe(voor);
+    expect(telVoorLimiet(doc(store)).kringen).toBe(6);
+    expect(store.limietGeweigerd).toBeNull();
+    // Undo en redo zijn geen nieuwe operaties: ze herstellen een eerdere staat.
+    store.ongedaanMaken();
+    expect(telVoorLimiet(doc(store)).kringen).toBe(7);
+    store.opnieuw();
+    expect(telVoorLimiet(doc(store)).kringen).toBe(6);
+    expect(store.limietGeweigerd).toBeNull();
+  });
+
+  test("zonder limieten (null) geen controle", () => {
+    const store = metKringen(5);
+    store.zetLimiet(LIMIETEN);
+    store.zetLimiet(null);
+    nieuweKring(store);
+    expect(telVoorLimiet(doc(store)).kringen).toBe(6);
+    expect(store.limietGeweigerd).toBeNull();
+  });
+
+  test("laad wist limietGeweigerd, de limieten blijven", () => {
+    const store = metKringen(5);
+    store.zetLimiet(LIMIETEN);
+    nieuweKring(store);
+    expect(store.limietGeweigerd).not.toBeNull();
+    store.laad({ id: "p1", naam: "Woning Janssens", versie: 1, document: startDocument() });
+    expect(store.limietGeweigerd).toBeNull();
+    expect(store.limieten).toEqual(LIMIETEN);
+  });
+
+  test("402 PROJECT_LIMIET bij bewaren bewaart concept en opent venster", async () => {
+    const store = laadNieuw();
+    const concepten = { bewaarConcept: vi.fn(async () => {}), wisConcept: vi.fn(async () => {}) };
+    const telling = { kringen: 6, situatieschemas: 0 };
+    const bewaar = vi.fn(async () => {
+      throw Object.assign(new Error("Limiet"), {
+        statusCode: 402,
+        data: { data: { code: "PROJECT_LIMIET", telling, limieten: LIMIETEN } },
+      });
+    });
+    const autosave = useAutosave({
+      store,
+      bewaar,
+      haal: vi.fn(),
+      naarProject: vi.fn(),
+      gebruikerId: "g1",
+      concepten,
+      vertragingMs: 1_000_000,
+    });
+
+    store.wijzigProjectgegevens({ naam: "Te veel" });
+    await autosave.nuOpslaan();
+    expect(await autosave.wachtOpConcept()).toBe(true);
+
+    expect(bewaar).toHaveBeenCalledTimes(1);
+    // Het werk staat als lokaal concept, er volgt geen nieuwe poging vanzelf, en de editor is niet alleen-lezen.
+    expect(concepten.bewaarConcept).toHaveBeenLastCalledWith(
+      expect.objectContaining({ projectId: "p1" }),
+      expect.objectContaining({ naam: "Te veel" }),
+    );
+    expect(concepten.wisConcept).not.toHaveBeenCalled();
+    expect(autosave.status.value).toBe("lokaal");
+    expect(autosave.limiet.value).toBe(true);
+    expect(autosave.alleenLezen.value).toBe(false);
+    expect(autosave.fout.value).toBeNull();
+    // Het limietvenster hangt aan `limietGeweigerd`.
+    expect(store.limietGeweigerd).toEqual(telling);
+    autosave.stop();
+  });
 });

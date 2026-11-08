@@ -60,6 +60,8 @@ function opzet(overschrijf: Partial<AutosaveOpties> = {}) {
     // Het dubbel op de server heeft zijn eigen document-id.
     document: id === "kopie1" ? { ...startDocument(), id: KOPIE_DOC_ID } : startDocument(),
     versie: 7,
+    toegang: { bewerken: true, limiet: false, watermerk: null, gekocht: false, gestempeld: false },
+    limieten: null,
   }));
   const dupliceer = vi.fn<NonNullable<AutosaveOpties["dupliceer"]>>(async (_id, _bestandIds) => ({ id: "kopie1" }));
   const naarProject = vi.fn(async (_id: string) => {});
@@ -396,6 +398,42 @@ describe("useAutosave", () => {
     expect(vertaalFout(opslagVol, (sleutel) => sleutel)).toBe("fouten.OPSLAG_VOL");
     expect(naarProject).not.toHaveBeenCalled();
     expect(autosave.status.value).toBe("conflict");
+  });
+
+  describe("402 PROJECT_LIMIET bij een kopie (gratis bedrijf, bron boven de limiet)", () => {
+    const limietFout = () =>
+      Object.assign(new Error("Limiet"), { statusCode: 402, data: { data: { code: "PROJECT_LIMIET" } } });
+
+    test("het dupliceren geweigerd: de fout komt door, het concept blijft, geen navigatie, het conflict blijft", async () => {
+      const { store, bewaar, dupliceer, naarProject, autosave } = opzet();
+      bewaar.mockRejectedValueOnce(new ConflictFout(5));
+      wijzig(store, "Lokaal");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      const fout = limietFout();
+      dupliceer.mockRejectedValueOnce(fout);
+
+      await expect(autosave.bewaarAlsKopie()).rejects.toBe(fout);
+
+      expect(naarProject).not.toHaveBeenCalled();
+      expect(autosave.status.value).toBe("conflict");
+      expect((await conceptVan("p1"))?.naam).toBe("Lokaal");
+    });
+
+    test("het bewaren in de kopie geweigerd: de fout komt door, het concept van het origineel blijft", async () => {
+      const { store, bewaar, naarProject, autosave } = opzet();
+      bewaar.mockRejectedValueOnce(new ConflictFout(5));
+      wijzig(store, "Lokaal");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      const fout = limietFout();
+      bewaar.mockRejectedValueOnce(fout);
+
+      await expect(autosave.bewaarAlsKopie()).rejects.toBe(fout);
+
+      expect(naarProject).not.toHaveBeenCalled();
+      expect((await conceptVan("p1"))?.naam).toBe("Lokaal");
+    });
   });
 
   test("bewaarAlsKopie zonder lokale wijzigingen, maar met een wijziging tijdens het dupliceren: die gaat mee naar de kopie", async () => {
@@ -1138,16 +1176,16 @@ describe("useAutosave: foutsoorten", () => {
     });
   });
 
-  describe("402 ABONNEMENT_VEREIST", () => {
-    const abonnementVereist = () =>
-      Object.assign(new Error("Abonnement vereist"), {
+  describe("402 PROJECT_ALLEEN_LEZEN", () => {
+    const alleenLezenFout = () =>
+      Object.assign(new Error("Alleen lezen"), {
         statusCode: 402,
-        data: { data: { code: "ABONNEMENT_VEREIST", reden: "beeindigd" } },
+        data: { data: { code: "PROJECT_ALLEEN_LEZEN" } },
       });
 
     test("status alleen-lezen, concept bewaard, geen nieuwe poging", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValue(abonnementVereist());
+      bewaar.mockRejectedValue(alleenLezenFout());
       expect(autosave.alleenLezen.value).toBe(false);
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
@@ -1168,7 +1206,7 @@ describe("useAutosave: foutsoorten", () => {
 
     test("een wijziging die daarna nog binnenkomt houdt het concept bij en stuurt niets", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValue(abonnementVereist());
+      bewaar.mockRejectedValue(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1184,7 +1222,7 @@ describe("useAutosave: foutsoorten", () => {
 
     test("stop bewaart niet meer: het concept blijft staan", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValue(abonnementVereist());
+      bewaar.mockRejectedValue(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1199,7 +1237,7 @@ describe("useAutosave: foutsoorten", () => {
 
     test("nuOpslaan na betaling bewaart alles en haalt de editor uit alleen-lezen", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValueOnce(abonnementVereist());
+      bewaar.mockRejectedValueOnce(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1216,7 +1254,7 @@ describe("useAutosave: foutsoorten", () => {
 
     test("nuOpslaan zonder abonnement blijft alleen-lezen, zonder timer", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValue(abonnementVereist());
+      bewaar.mockRejectedValue(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1254,7 +1292,7 @@ describe("useAutosave: foutsoorten", () => {
 
     test("alleen-lezen en dan een 404 bij opnieuw proberen: verwijderd, en alleen-lezen vervalt", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValueOnce(abonnementVereist());
+      bewaar.mockRejectedValueOnce(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1272,7 +1310,7 @@ describe("useAutosave: foutsoorten", () => {
         wisConcept: vi.fn(async () => {}),
       };
       const { store, bewaar, autosave } = opzet({ concepten });
-      bewaar.mockRejectedValue(abonnementVereist());
+      bewaar.mockRejectedValue(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1295,7 +1333,7 @@ describe("useAutosave: foutsoorten", () => {
         wisConcept: vi.fn(async () => {}),
       };
       const { store, bewaar, autosave } = opzet({ concepten });
-      bewaar.mockRejectedValue(abonnementVereist());
+      bewaar.mockRejectedValue(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1317,7 +1355,7 @@ describe("useAutosave: foutsoorten", () => {
 
     test("een netwerkfout bij opnieuw proberen in alleen-lezen: geen timer, status blijft alleen-lezen", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValueOnce(abonnementVereist());
+      bewaar.mockRejectedValueOnce(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
@@ -1331,13 +1369,78 @@ describe("useAutosave: foutsoorten", () => {
 
     test("laadServerversie haalt de status terug naar opgeslagen", async () => {
       const { store, bewaar, autosave } = opzet();
-      bewaar.mockRejectedValue(abonnementVereist());
+      bewaar.mockRejectedValue(alleenLezenFout());
       wijzig(store, "a");
       await vi.advanceTimersByTimeAsync(2000);
       await leeg();
       await autosave.laadServerversie();
       expect(autosave.status.value).toBe("opgeslagen");
       expect(autosave.alleenLezen.value).toBe(false);
+    });
+  });
+
+  describe("402 PROJECT_LIMIET", () => {
+    const TELLING = { kringen: 6, situatieschemas: 1 };
+    const limietFout = () =>
+      Object.assign(new Error("Limiet"), {
+        statusCode: 402,
+        data: { data: { code: "PROJECT_LIMIET", telling: TELLING, limieten: { kringen: 5, situatieschemas: 1 } } },
+      });
+
+    test("lokaal met limiet, concept bewaard, venster open, geen timer; de editor blijft bewerkbaar", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValue(limietFout());
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.status.value).toBe("lokaal");
+      expect(autosave.limiet.value).toBe(true);
+      expect(autosave.alleenLezen.value).toBe(false);
+      expect(autosave.fout.value).toBeNull();
+      expect(store.limietGeweigerd).toEqual(TELLING);
+      expect((await conceptVan("p1"))?.naam).toBe("a");
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(bewaar).toHaveBeenCalledTimes(1);
+    });
+
+    test("de volgende wijziging probeert opnieuw; het venster gaat niet opnieuw open", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValue(limietFout());
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      store.wisLimietGeweigerd();
+
+      wijzig(store, "b");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(bewaar).toHaveBeenCalledTimes(2);
+      expect(store.limietGeweigerd).toBeNull();
+      expect(autosave.limiet.value).toBe(true);
+      expect((await conceptVan("p1"))?.naam).toBe("b");
+
+      // Een kring minder (hier: gewoon een geslaagde poging): bewaard, limiet vervalt.
+      bewaar.mockImplementation(async (_id, versie) => ({ versie: versie + 1 }));
+      wijzig(store, "c");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.status.value).toBe("opgeslagen");
+      expect(autosave.limiet.value).toBe(false);
+      expect(await conceptVan("p1")).toBeUndefined();
+    });
+
+    test("de oude code ABONNEMENT_VEREIST volgt nu het fout-pad", async () => {
+      const { store, bewaar, autosave } = opzet();
+      bewaar.mockRejectedValue(
+        Object.assign(new Error("Oud"), { statusCode: 402, data: { data: { code: "ABONNEMENT_VEREIST" } } }),
+      );
+      wijzig(store, "a");
+      await vi.advanceTimersByTimeAsync(2000);
+      await leeg();
+      expect(autosave.status.value).toBe("fout");
+      expect(autosave.alleenLezen.value).toBe(false);
+      expect(autosave.limiet.value).toBe(false);
     });
   });
 
@@ -1627,6 +1730,18 @@ describe("useAutosave: project elders verwijderd (404)", () => {
     await expect(autosave.bewaarAlsNieuwProject()).rejects.toBe(opslagVol);
 
     expect(vertaalFout(opslagVol, (sleutel) => sleutel)).toBe("fouten.OPSLAG_VOL");
+    expect(autosave.status.value).toBe("verwijderd");
+    expect(naarProject).not.toHaveBeenCalled();
+    expect((await conceptVan("p1"))?.naam).toBe("a");
+  });
+
+  test("402 PROJECT_LIMIET bij het maken (verwijderd project boven de limiet): de fout komt door, het concept blijft", async () => {
+    const { maakNieuw, naarProject, autosave } = await verwijderdeOpzet();
+    const fout = Object.assign(new Error("Limiet"), { statusCode: 402, data: { data: { code: "PROJECT_LIMIET" } } });
+    maakNieuw.mockRejectedValueOnce(fout);
+
+    await expect(autosave.bewaarAlsNieuwProject()).rejects.toBe(fout);
+
     expect(autosave.status.value).toBe("verwijderd");
     expect(naarProject).not.toHaveBeenCalled();
     expect((await conceptVan("p1"))?.naam).toBe("a");

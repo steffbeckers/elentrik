@@ -4,7 +4,7 @@ import type { AdminAuditDetail, AdminAuditItem } from "../../shared/admin/audit"
 import type { AdminMutatie, AdminPagina } from "../../shared/admin/basis";
 import type { AdminNotitie } from "../../shared/admin/notities";
 import type { AdminRevisie } from "../../shared/admin/projecten";
-import type { AdminGebruiker, AdminGebruikerDetail, AdminOrganisatie, AdminOrganisatieDetail, AdminOverzicht, AdminProject } from "../../shared/admin/records";
+import type { AdminGebruiker, AdminGebruikerDetail, AdminOrganisatie, AdminOrganisatieDetail, AdminOverzicht, AdminProject, AdminProjectDetail } from "../../shared/admin/records";
 import type { AdminZoekresultaten } from "../../shared/admin/zoeken";
 import type { ExportInfo } from "../../shared/exports";
 import { VERWACHTE_GEBRUIKER_HEADER } from "../../shared/gebruiker";
@@ -44,7 +44,7 @@ export function maakAdminApi(haal: ProjectenFetch, gebruikerId: string) {
     organisaties: (q?: Query) => lees<AdminPagina<AdminOrganisatie>>("organisaties", q),
     organisatie: (target: string) => lees<AdminOrganisatieDetail>(`organisaties/${id(target)}`),
     projecten: (q?: Query) => lees<AdminPagina<AdminProject>>("projecten", q),
-    project: (target: string) => lees<AdminProject>(`projecten/${id(target)}`),
+    project: (target: string) => lees<AdminProjectDetail>(`projecten/${id(target)}`),
     audit: (q?: Query) => lees<AdminPagina<AdminAuditItem>>("audit", q),
     auditDetail: (target: string) => lees<AdminAuditDetail>(`audit/${id(target)}`),
     revisie: (target: string) => lees<AdminRevisie>(`revisies/${id(target)}`),
@@ -53,6 +53,7 @@ export function maakAdminApi(haal: ProjectenFetch, gebruikerId: string) {
     corrigeerGebruiker: (target: string, body: Correctie<{ naam: string }>) => wijzig<AdminGebruikerDetail>(`gebruikers/${id(target)}`, body),
     corrigeerOrganisatie: (target: string, body: Correctie<{ naam: string; installateur: Partij }>) => wijzig<AdminOrganisatieDetail>(`organisaties/${id(target)}`, body),
     vrijstelling: (target: string, body: Correctie<{ vrijgesteld: boolean; stripeBevestigd: boolean }>) => wijzig<AdminOrganisatieDetail>(`organisaties/${id(target)}/vrijstelling`, body),
+    onderwijs: (target: string, body: Correctie<{ onderwijs: boolean; stripeBevestigd: boolean }>) => wijzig<AdminOrganisatieDetail>(`organisaties/${id(target)}/onderwijs`, body),
     proef: (target: string, body: Correctie<{ einddatum: string; stripeBevestigd: boolean }>) => wijzig<AdminOrganisatieDetail>(`organisaties/${id(target)}/proefperiode`, body),
     notities: (q: Query) => lees<AdminPagina<AdminNotitie>>("notities", q),
     maakNotitie: (body: { organisatieId: string; projectId: string | null; tekst: string; opvolgdatum: string | null }) => wijzig<AdminNotitie>("notities", body, "POST"),

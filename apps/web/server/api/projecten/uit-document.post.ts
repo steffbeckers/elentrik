@@ -1,8 +1,8 @@
 import { setResponseStatus } from "h3";
-import { vereisSchrijfrecht } from "../../abonnementen/handhaving";
+import { vereisNieuwProject } from "../../abonnementen/handhaving";
 import { gebruikOpslag } from "../../bestanden/opslag";
 import { gebruikDb } from "../../db";
-import { maakProjectUitDocument } from "../../projecten/repo";
+import { maakProjectUitDocument, valideerDocument } from "../../projecten/repo";
 import { leesBody, metProjectFouten, ProjectUitDocumentSchema } from "../../utils/projecten";
 import { defineBeveiligdeHandler, vereisLid, vereisVerwachteGebruiker } from "../../utils/toegang";
 
@@ -13,10 +13,11 @@ export default defineBeveiligdeHandler(async (event) => {
   // Nooit onder de sessie van een andere gebruiker dan wie dit venster opende.
   await vereisVerwachteGebruiker(event);
   const { organisatieId } = await vereisLid(event);
-  await vereisSchrijfrecht(organisatieId);
   const invoer = await leesBody(event, ProjectUitDocumentSchema);
+  const document = await metProjectFouten(async () => valideerDocument(invoer.document));
+  const { stempel } = await vereisNieuwProject(organisatieId, document);
   const project = await metProjectFouten(() =>
-    maakProjectUitDocument(gebruikDb(), gebruikOpslag(), organisatieId, invoer),
+    maakProjectUitDocument(gebruikDb(), gebruikOpslag(), organisatieId, invoer, stempel ? { stempel: new Date() } : undefined),
   );
   setResponseStatus(event, 201);
   return project;

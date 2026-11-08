@@ -26,6 +26,7 @@ export const SERVER_FOUTCODES = [
   "ADMIN_GEWIJZIGD",
   "ADMIN_MUTATIE_CONFLICT",
   "ADMIN_STRIPE_BEVESTIGING",
+  "ADMIN_ONDERWIJS_VRIJSTELLING",
   "ADMIN_PROEF_VERLENGEN",
   "ADMIN_CORRECTIE_ONGELDIG",
   "BEDRIJF_VRIJGESTELD",
@@ -63,6 +64,13 @@ export const SERVER_FOUTCODES = [
   "ABONNEMENT_BESTAAT",
   "GEEN_KLANT",
   "ABONNEMENTEN_UIT",
+  // Handhaving per project (402, server/abonnementen/handhaving.ts)
+  "PROJECT_ALLEEN_LEZEN",
+  "PROJECT_LIMIET",
+  // Betalen per project (409, server/abonnementen/projectaankoop.ts)
+  "PROJECT_AL_GEKOCHT",
+  "VRIJGEVEN_NIET_NODIG",
+  "VRIJGAVE_LOOPT",
   // Organisatie en uitnodigingen
   "LAATSTE_EIGENAAR",
   "AL_LID",

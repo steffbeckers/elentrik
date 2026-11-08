@@ -37,7 +37,11 @@ De prijzen zijn ruwe bedragen, gevonden op 7 november 2026, exclusief btw tenzij
 
 ## Voorstel
 
+**Stand van zaken:** de voorstellen A, B en C zijn gepland en uitgevoerd in het plan `docs/superpowers/plans/2026-11-07-prijsmodel.md`, volgens de spec `docs/superpowers/specs/2026-11-07-elentrik-prijsmodel-design.md`. Voorstel D blijft open (spec §7).
+
 ### A. Watermerk op de export zonder betaling — M
+
+**Status:** gepland en uitgevoerd in `docs/superpowers/plans/2026-11-07-prijsmodel.md`. Gekozen: het watermerk "Gratis versie" op elke export van een gratis project, "Onderwijsversie" voor een onderwijsbedrijf, ook in het afdrukvoorbeeld.
 
 - Zonder lopend abonnement, en tijdens de proefperiode, krijgt elke PDF-pagina een duidelijke markering: "Proefversie, geen officieel dossier".
 - Met een abonnement, of voor een vrijgesteld bedrijf, verdwijnt de markering. Ook oudere projecten kunnen dan zonder markering opnieuw geëxporteerd worden.
@@ -49,6 +53,8 @@ De prijzen zijn ruwe bedragen, gevonden op 7 november 2026, exclusief btw tenzij
 
 ### B. Een gratis versie zonder tijdslimiet — M
 
+**Status:** gepland en uitgevoerd in `docs/superpowers/plans/2026-11-07-prijsmodel.md`. Gekozen: de proefperiode verdwijnt (een lopende proef loopt uit) en een gratis project heeft een limiet van 5 kringen en 1 situatieschema.
+
 - Met het watermerk uit A wordt onbeperkt gratis tekenen veilig. De gebruiker betaalt op het moment dat hij het dossier echt nodig heeft.
 - Mogelijke vormen:
   - **Tekenen blijft altijd gratis.** De proefperiode van 30 dagen verdwijnt. Betalen geldt alleen voor de export zonder markering.
@@ -59,6 +65,8 @@ De prijzen zijn ruwe bedragen, gevonden op 7 november 2026, exclusief btw tenzij
   - Hoe past dit in de regels van `bepaalToegang` en `vereisSchrijfrecht`?
 
 ### C. Betalen per project — M/L
+
+**Status:** gepland en uitgevoerd in `docs/superpowers/plans/2026-11-07-prijsmodel.md`. Gekozen: een eenmalige betaling via Stripe Checkout (modus `payment`) geeft één project voor altijd vrij, zonder limieten en zonder watermerk; een kopie start opnieuw als gratis project.
 
 - Een eenmalige betaling haalt de markering weg voor één project. Daarna blijft het project bewerkbaar en kan het opnieuw geëxporteerd worden.
 - Dit herziet het niet-doel "eenmalige aankoop" uit de abonnementenspec. Dat vraagt een expliciete beslissing.
