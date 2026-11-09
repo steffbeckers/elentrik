@@ -25,7 +25,7 @@ const geldig = () =>
     aantalGebruikers: 2,
   });
 
-async function stuur(lichaam: string | Uint8Array): Promise<Response> {
+async function stuur(lichaam: string | Uint8Array<ArrayBuffer>): Promise<Response> {
   geteld++;
   return fetch(`${basis}/api/instances`, {
     method: "POST",
