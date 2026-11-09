@@ -43,7 +43,6 @@ Een pnpm-monorepo in TypeScript.
 | `packages/symbols` | De elektrische symbolen als SVG. |
 | `packages/render` | Het schema, het situatieschema, de kringenlijst en de printversie van het dossier. |
 | `infra` | De Docker-diensten voor lokale ontwikkeling en de e2e-tests. |
-| `deploy/nas` | De productie- en stagingopstelling op de NAS. |
 | `docs` | Handleidingen, specificaties, plannen en de woordenlijst. |
 
 ## Lokaal aan de slag
@@ -103,7 +102,6 @@ pnpm --filter @elentrik/web exec playwright test
 - [`DESIGN.md`](DESIGN.md): de visuele richtlijnen.
 - [`docs/lokaal-en-online.md`](docs/lokaal-en-online.md): lokaal gebruik, talen, abonnementen en
   Stripe, en de e2e-opstelling.
-- [`docs/online.md`](docs/online.md): Elentrik online zetten en bijwerken op de NAS.
 - [`docs/admin-beheer.md`](docs/admin-beheer.md): het superuserdashboard en systeembeheer.
 - [`docs/vertalingen.md`](docs/vertalingen.md): de woordenlijst in drie talen.
 - [`docs/superpowers`](docs/superpowers): ontwerpspecificaties en implementatieplannen.
