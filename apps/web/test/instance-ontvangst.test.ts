@@ -9,6 +9,7 @@ import {
   BEWAARDAGEN,
   DAGPLAFOND,
   maakLimiet,
+  MAX_SLEUTELS,
   ruimInstanceMeldingenOp,
   slaMeldingOp,
 } from "../server/instance/ontvangst";
@@ -109,6 +110,22 @@ describe("maakLimiet", () => {
     expect(limiet("a", t)).toBe(false);
     expect(limiet("b", t)).toBe(true);
     expect(limiet("a", t + 3_600_001)).toBe(true);
+  });
+
+  test("het plafond op sleutels weigert een nieuwe sleutel, een bestaande onder de limiet blijft toegelaten", () => {
+    const limiet = maakLimiet();
+    const t = 1_000_000;
+    for (let i = 0; i < MAX_SLEUTELS; i++) expect(limiet(`k${i}`, t)).toBe(true);
+    expect(limiet("nieuw", t)).toBe(false);
+    expect(limiet("k0", t)).toBe(true);
+  });
+
+  test("oude sleutels worden na het venster geveegd", () => {
+    const limiet = maakLimiet();
+    const t = 1_000_000;
+    for (let i = 0; i < MAX_SLEUTELS; i++) limiet(`k${i}`, t);
+    expect(limiet("nieuw", t)).toBe(false);
+    expect(limiet("nieuw", t + 3_600_001)).toBe(true);
   });
 });
 

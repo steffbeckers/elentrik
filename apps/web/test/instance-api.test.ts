@@ -84,6 +84,24 @@ describe("POST /api/instances", () => {
     expect(antwoord.status).toBe(413);
   });
 
+  test("een chunked lichaam boven 2048 bytes geeft 413", async () => {
+    geteld++;
+    const stroom = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let i = 0; i < 3; i++) controller.enqueue(new Uint8Array(1000).fill(0x20));
+        controller.close();
+      },
+    });
+    const antwoord = await fetch(`${basis}/api/instances`, {
+      method: "POST",
+      headers: { "content-type": "application/json", connection: "close" },
+      body: stroom,
+      duplex: "half",
+    } as RequestInit);
+    expect(antwoord.status).toBe(413);
+    expect(await db.select().from(instanceMeldingen)).toHaveLength(0);
+  });
+
   test("de 11de melding van hetzelfde IP binnen het uur geeft 429", async () => {
     // De eerdere tests telden al mee voor 127.0.0.1: vul aan tot 10 en controleer de 11de.
     while (geteld < 10) expect((await stuur(geldig())).status).toBe(204);

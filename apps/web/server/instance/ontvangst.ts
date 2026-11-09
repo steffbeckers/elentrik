@@ -17,18 +17,32 @@ const DAG_MS = 24 * 3600 * 1000;
 /** `true` betekent toegelaten. */
 export type Limiet = (sleutel: string, nu: number) => boolean;
 
-/** Een schuivend venster per sleutel: hooguit `max` toegelaten aanroepen per `vensterMs`. */
+/** Het hoogste aantal sleutels dat de limiet tegelijk bijhoudt; daarboven weigert ze een nieuwe sleutel. */
+export const MAX_SLEUTELS = 10_000;
+const OPRUIMING_MS = 60_000;
+
+/**
+ * Een schuivend venster per sleutel: hooguit `max` toegelaten aanroepen per `vensterMs`. Elke
+ * aanroep wist alleen de oude tijdstippen van de eigen sleutel; de hele map wordt hooguit eens per
+ * minuut geveegd. Met `MAX_SLEUTELS` sleutels in de map krijgt een nieuwe sleutel `false`.
+ */
 export function maakLimiet(max = 10, vensterMs = 3_600_000): Limiet {
   const tijdstippen = new Map<string, number[]>();
+  let laatsteVeeg = -Infinity;
   return (sleutel, nu) => {
-    // Oude tijdstippen (van elke sleutel) vallen weg, zodat de map niet blijft groeien.
-    for (const [s, lijst] of tijdstippen) {
-      const over = lijst.filter((t) => t > nu - vensterMs);
-      if (over.length === 0) tijdstippen.delete(s);
-      else tijdstippen.set(s, over);
+    if (nu - laatsteVeeg >= OPRUIMING_MS) {
+      laatsteVeeg = nu;
+      for (const [s, lijst] of tijdstippen) {
+        if (lijst[lijst.length - 1]! <= nu - vensterMs) tijdstippen.delete(s);
+      }
     }
-    const lijst = tijdstippen.get(sleutel) ?? [];
-    if (lijst.length >= max) return false;
+    const bestaand = tijdstippen.get(sleutel);
+    if (!bestaand && tijdstippen.size >= MAX_SLEUTELS) return false;
+    const lijst = (bestaand ?? []).filter((t) => t > nu - vensterMs);
+    if (lijst.length >= max) {
+      tijdstippen.set(sleutel, lijst);
+      return false;
+    }
     lijst.push(nu);
     tijdstippen.set(sleutel, lijst);
     return true;

@@ -3,7 +3,7 @@
 // instance stuurt dit server-naar-server. Het antwoord is 204, ook boven het dagplafond.
 //
 // Volgorde: omgeving (404), limiet per IP (429), grootte (413), inhoud (400), opslaan (204).
-import { getRequestHeader, readRawBody, setResponseStatus } from "h3";
+import { getRequestHeader, setResponseStatus } from "h3";
 import { leesInstanceMelding } from "../../shared/instance";
 import { leesOmgeving } from "../../shared/omgeving";
 import { verzoekIp } from "../auth/ip";
@@ -29,13 +29,19 @@ export default defineBeveiligdeHandler(
     if (Number(getRequestHeader(event, "content-length") ?? 0) > MAX_BYTES) {
       throw maakFout(413, "Melding te groot", "INSTANCE_TE_GROOT");
     }
-    const ruw = await readRawBody(event, false);
-    if (ruw !== undefined && ruw.length > MAX_BYTES) {
-      throw maakFout(413, "Melding te groot", "INSTANCE_TE_GROOT");
+    // Zonder (geldige) Content-Length lezen we zelf, en stoppen zodra er te veel binnenkomt.
+    const stukken: Buffer[] = [];
+    let totaal = 0;
+    for await (const stuk of event.node.req) {
+      const deel = Buffer.isBuffer(stuk) ? stuk : Buffer.from(stuk as Uint8Array);
+      totaal += deel.length;
+      if (totaal > MAX_BYTES) throw maakFout(413, "Melding te groot", "INSTANCE_TE_GROOT");
+      stukken.push(deel);
     }
+    const ruw = Buffer.concat(stukken);
     let invoer: unknown;
     try {
-      invoer = JSON.parse(ruw?.toString("utf8") ?? "");
+      invoer = JSON.parse(ruw.toString("utf8"));
     } catch {
       throw maakFout(400, "Ongeldige melding", "INSTANCE_ONGELDIG");
     }
