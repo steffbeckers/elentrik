@@ -81,8 +81,8 @@ NEDERLANDSE TEKST (BINDEND)
    De melding bevat een willekeurige identificatie van de installatie, de hostnaam, de versie, of
    abonnementen aan staan en het aantal organisaties en gebruikers, maar geen namen, e-mailadressen of
    projectinhoud. De ontvangende server bewaart daarbij het IP-adres van de melding. Het doel is zicht op
-   installaties die zonder licentie draaien. De README beschrijft de ping volledig, ook hoe u hem
-   uitschakelt. Wie de ping uitschakelt, krijgt daardoor geen enkel recht bovenop deze licentie.
+   installaties die zonder licentie draaien. Het bestand docs/instance-ping.md beschrijft de ping
+   volledig, ook hoe u hem uitschakelt. Wie de ping uitschakelt, krijgt daardoor geen enkel recht bovenop deze licentie.
 
 7. Merken
 
@@ -210,8 +210,8 @@ Copyright (c) 2026 Steff Beckers. All rights reserved, except as expressly permi
    contains a random identifier of the installation, the host name, the version, whether subscriptions
    are enabled and the number of organisations and users, but no names, email addresses or project
    content. The receiving server also stores the IP address of the report. Its purpose is visibility of
-   installations running without a license. The README describes the ping in full, including how to
-   disable it. Disabling the ping does not grant you any right beyond this license.
+   installations running without a license. The file docs/instance-ping.md describes the ping in full,
+   including how to disable it. Disabling the ping does not grant you any right beyond this license.
 
 7. Trademarks
 
