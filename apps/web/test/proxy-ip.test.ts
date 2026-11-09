@@ -7,7 +7,7 @@ import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { type Auth, zetAuth } from "../server/auth";
 import { clientIp } from "../server/auth/ip";
-import { inSubnet, isCidr, isIp } from "../server/net";
+import { inSubnet, ipLimietSleutel, isCidr, isIp } from "../server/net";
 
 const NET = "172.30.70.0/24";
 
@@ -152,5 +152,24 @@ describe("de auth-route en het IP voor Better Auth", () => {
     expect(await vraag()).toEqual({ xff: "127.0.0.1", realIp: null });
     vi.stubEnv("ELENTRIK_VERTROUWD_PROXYNET", "");
     expect(await vraag()).toEqual({ xff: "127.0.0.1", realIp: null });
+  });
+});
+
+describe("ipLimietSleutel", () => {
+  test("IPv4 en IPv4-in-IPv6 geven het IPv4-adres", () => {
+    expect(ipLimietSleutel("192.0.2.1")).toBe("192.0.2.1");
+    expect(ipLimietSleutel("::ffff:192.0.2.1")).toBe("192.0.2.1");
+  });
+
+  test("twee adressen in hetzelfde /64 geven dezelfde sleutel", () => {
+    const a = ipLimietSleutel("2001:db8:1:2:aaaa::1");
+    expect(a).toBe(ipLimietSleutel("2001:db8:1:2:bbbb::9"));
+    expect(a.endsWith("/64")).toBe(true);
+    expect(a).not.toBe(ipLimietSleutel("2001:db8:1:3::1"));
+  });
+
+  test("geen of een ongeldig IP geeft onbekend", () => {
+    expect(ipLimietSleutel(undefined)).toBe("onbekend");
+    expect(ipLimietSleutel("x")).toBe("onbekend");
   });
 });
