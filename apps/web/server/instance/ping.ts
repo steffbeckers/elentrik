@@ -30,10 +30,18 @@ function waarschuw(reden: string): void {
   console.warn(`[instance-ping] melding mislukt: ${reden}`);
 }
 
-/** Alleen een productiebuild van een zelf gehoste kopie pingt, tenzij het is uitgezet. */
+/** De hosts van de officiële omgevingen (productie en staging); die sturen zelf nooit een ping. */
+export const OFFICIELE_HOSTS = ["elentrik.app", "staging.elentrik.app"];
+
+/**
+ * Alleen een productiebuild buiten de officiële omgevingen pingt, tenzij het is uitgezet. Een
+ * officiële omgeving heeft `ELENTRIK_OMGEVING` gezet én een officiële host; een kopie van de
+ * NAS-stack met een andere `BETTER_AUTH_URL` pingt dus wel.
+ */
 export function pingActief(env: Env): boolean {
   if (env.NODE_ENV !== "production") return false;
-  if (leesOmgeving(env) !== null) return false;
+  const host = hostUit(env.BETTER_AUTH_URL);
+  if (leesOmgeving(env) !== null && host !== null && OFFICIELE_HOSTS.includes(host)) return false;
   if (env.ELENTRIK_INSTANCE_PING?.trim().toLowerCase() === "uit") return false;
   return geplandeTakenAan(env);
 }

@@ -17,8 +17,10 @@ describe("pingActief", () => {
   it.each([
     [{ NODE_ENV: "production" }, true],
     [{}, false],
-    [{ NODE_ENV: "production", ELENTRIK_OMGEVING: "productie" }, false],
-    [{ NODE_ENV: "production", ELENTRIK_OMGEVING: "staging" }, false],
+    [{ NODE_ENV: "production", ELENTRIK_OMGEVING: "productie", BETTER_AUTH_URL: "https://elentrik.app" }, false],
+    [{ NODE_ENV: "production", ELENTRIK_OMGEVING: "staging", BETTER_AUTH_URL: "https://staging.elentrik.app" }, false],
+    [{ NODE_ENV: "production", ELENTRIK_OMGEVING: "productie", BETTER_AUTH_URL: "https://kopie.example" }, true],
+    [{ NODE_ENV: "production", ELENTRIK_OMGEVING: "productie" }, true],
     [{ NODE_ENV: "production", ELENTRIK_INSTANCE_PING: " UIT " }, false],
     [{ NODE_ENV: "production", ELENTRIK_GEPLANDE_TAKEN: "uit" }, false],
     [{ NODE_ENV: "production", ELENTRIK_OMGEVING: "iets-anders" }, true],

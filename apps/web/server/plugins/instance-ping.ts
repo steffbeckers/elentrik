@@ -6,5 +6,12 @@ import { pingActief, verstuurPing } from "../instance/ping";
 
 export default defineNitroPlugin(() => {
   if (!pingActief(process.env)) return;
-  setTimeout(() => void verstuurPing({ db: gebruikDb(), env: process.env }), 60_000).unref();
+  setTimeout(() => {
+    // Nooit een exception uit de timer: `gebruikDb()` kan synchroon gooien, buiten de try van verstuurPing.
+    try {
+      void verstuurPing({ db: gebruikDb(), env: process.env }).catch(() => {});
+    } catch {
+      // De ping is niet kritiek.
+    }
+  }, 60_000).unref();
 });
