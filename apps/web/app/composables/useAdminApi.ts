@@ -2,6 +2,7 @@ import type { Partij } from "@elentrik/model";
 import { createError } from "h3";
 import type { AdminAuditDetail, AdminAuditItem } from "../../shared/admin/audit";
 import type { AdminMutatie, AdminPagina } from "../../shared/admin/basis";
+import type { AdminInstance } from "../../shared/admin/instances";
 import type { AdminNotitie } from "../../shared/admin/notities";
 import type { AdminRevisie } from "../../shared/admin/projecten";
 import type { AdminGebruiker, AdminGebruikerDetail, AdminOrganisatie, AdminOrganisatieDetail, AdminOverzicht, AdminProject, AdminProjectDetail } from "../../shared/admin/records";
@@ -45,6 +46,7 @@ export function maakAdminApi(haal: ProjectenFetch, gebruikerId: string) {
     organisatie: (target: string) => lees<AdminOrganisatieDetail>(`organisaties/${id(target)}`),
     projecten: (q?: Query) => lees<AdminPagina<AdminProject>>("projecten", q),
     project: (target: string) => lees<AdminProjectDetail>(`projecten/${id(target)}`),
+    instances: (q?: Query) => lees<AdminPagina<AdminInstance>>("instances", q),
     audit: (q?: Query) => lees<AdminPagina<AdminAuditItem>>("audit", q),
     auditDetail: (target: string) => lees<AdminAuditDetail>(`audit/${id(target)}`),
     revisie: (target: string) => lees<AdminRevisie>(`revisies/${id(target)}`),
