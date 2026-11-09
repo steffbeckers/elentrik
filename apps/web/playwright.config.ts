@@ -71,6 +71,8 @@ export default defineConfig({
       BOEKHOUDING_INBOX: "",
       // Geen uurlijkse inhaaltaak in e2e: de tests sturen zelf de events die ze nodig hebben.
       ELENTRIK_GEPLANDE_TAKEN: "uit",
+      // Geen instance-ping naar elentrik.app vanuit de e2e-server.
+      ELENTRIK_INSTANCE_PING: "uit",
     },
     timeout: 120_000,
   },

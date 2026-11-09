@@ -37,12 +37,14 @@ RUN mkdir -p /migratie/node_modules \
  && find /migratie/node_modules \( -name '*.d.ts' -o -name '*.d.cts' -o -name '*.d.mts' -o -name '*.map' \) -delete
 
 FROM node:24.21.0-slim AS runtime
+ARG ELENTRIK_REVISIE=
 LABEL org.opencontainers.image.source="https://github.com/steffbeckers/elentrik" \
       org.opencontainers.image.title="elentrik-web"
 # NODE_ENV=production is nodig: alleen dan weigert de opstartcontrole een onvolledige configuratie.
 ENV NODE_ENV=production \
     NITRO_HOST=0.0.0.0 \
     NITRO_PORT=3000
+ENV ELENTRIK_REVISIE=${ELENTRIK_REVISIE}
 WORKDIR /app
 COPY --from=bouw /app/apps/web/.output ./.output
 COPY --from=bouw /app/apps/web/server/db/migraties ./migraties

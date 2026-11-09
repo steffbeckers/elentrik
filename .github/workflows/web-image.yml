@@ -89,6 +89,7 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
+          build-args: ELENTRIK_REVISIE=${{ github.sha }}
           tags: ${{ steps.tags.outputs.tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/steffbeckers/elentrik

@@ -80,7 +80,7 @@ export default defineNuxtConfig({
     // Taken (server/tasks) en hun planning: de uurlijkse inhaaltaak voor gemiste Stripe-meldingen en
     // het dagelijkse opruimen van de prullenbak en van verweesde bestanden (04:00, tijdzone van de container).
     experimental: { tasks: true },
-    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"], "0 4 * * *": ["bestanden:opruimen"], "15 4 * * *": ["instance:opruimen"] },
+    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"], "0 4 * * *": ["bestanden:opruimen"], "15 4 * * *": ["instance:opruimen"], "30 3 * * *": ["instance:ping"] },
     publicAssets: [
       { dir: "../plan-editor/dist", baseURL: "/plan-editor", maxAge: 0 },
       pdfjsBron("wasm"),

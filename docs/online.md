@@ -959,6 +959,7 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 | Variabele | Verplicht | Waar je de waarde vindt |
 | --- | --- | --- |
 | `ELENTRIK_GEPLANDE_TAKEN` | nee | Weglaten. Met `uit` doet de uurlijkse inhaaltaak niets. |
+| `ELENTRIK_INSTANCE_PING` | nee | Weglaten. Met `uit` meldt deze kopie zich niet dagelijks anoniem bij elentrik.app. |
 
 ### Opslag
 
