@@ -107,10 +107,45 @@ pnpm --filter @elentrik/web exec playwright test
 - [`docs/superpowers`](docs/superpowers): ontwerpspecificaties en implementatieplannen.
 - [`docs/backlog`](docs/backlog): ideeën voor later.
 
+## Bijdragen
+
+Bijdragen zijn welkom. Lees eerst [`CONTRIBUTING.md`](CONTRIBUTING.md): hoe je lokaal opzet, hoe je
+een pull request maakt, de clean-room-regel en de [CLA](CLA.md) die je één keer tekent.
+
+## Instance-ping
+
+Een productieversie van Elentrik die buiten de officiële omgevingen draait, meldt zich bij
+<https://elentrik.app>: kort na het opstarten en daarna één keer per dag. Zo is zichtbaar welke
+installaties zonder licentie draaien. De ping is open en gedocumenteerd, niet verborgen.
+
+| Veld | Inhoud |
+| --- | --- |
+| `instanceId` | Een willekeurige id, één keer aangemaakt en bewaard in de database van de installatie. |
+| `host` | De hostnaam uit `BETTER_AUTH_URL`, zonder schema, poort of pad. |
+| `versie` | De commit van de build, of `"onbekend"`. |
+| `abonnementenAan` | Of `STRIPE_GEHEIME_SLEUTEL` gezet is. |
+| `aantalOrganisaties` | Het aantal organisaties. |
+| `aantalGebruikers` | Het aantal gebruikers. |
+
+Er gaan geen namen, e-mailadressen of projectgegevens mee. elentrik.app bewaart daarnaast het IP-adres
+van de melding. `pnpm dev`, de tests en de e2e-tests melden zich niet. Uitzetten kan met
+`ELENTRIK_INSTANCE_PING=uit`; dat geeft geen rechten bovenop de licentie.
+
+> De ping is nog in voorbereiding en zit nog niet in de code. Deze sectie beschrijft hoe hij zal werken.
+
 ## Licentie
 
-Copyright © 2026 Steff Beckers. Alle rechten voorbehouden. De broncode is publiek zichtbaar, maar
-dat geeft geen recht om ze te gebruiken, te kopiëren, te wijzigen of te verspreiden. Zie
-[`LICENSE`](LICENSE). Voor een licentie: <steff@steffbeckers.com>.
+Elentrik valt onder de **Elentrik Bronlicentie** (zie [`LICENSE`](LICENSE)). De Nederlandse tekst is
+bindend; er staat een Engelse vertaling naast.
 
-Afhankelijkheden van derden vallen onder hun eigen licenties.
+- **Mag:** de code bekijken, lokaal draaien, wijzigen en testen om bij te dragen, en je wijzigingen
+  voorleggen via een pull request.
+- **Mag niet zonder schriftelijke toestemming:** Elentrik in productie gebruiken (ook voor je eigen
+  bedrijf), het als dienst aanbieden of zelf hosten, het doorverkopen, of er een concurrerend product
+  mee maken.
+
+Elentrik in productie gebruiken doe je via <https://elentrik.app>. Voor een andere licentie:
+<steff@steffbeckers.com>.
+
+Software van derden valt onder haar eigen licentie: de afhankelijkheden in de `package.json`-bestanden
+en de code van OpenPlan3D in `apps/plan-editor/vendor/openplan3d` (MIT).

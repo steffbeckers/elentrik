@@ -1,40 +1,260 @@
-Elentrik
-Copyright (c) 2026 Steff Beckers. Alle rechten voorbehouden.
+Elentrik Bronlicentie, versie 1.0
+Copyright (c) 2026 Steff Beckers. Alle rechten voorbehouden, behalve wat deze licentie uitdrukkelijk toestaat.
 
-Deze software, met inbegrip van de broncode, de documentatie, de ontwerpen,
-de symbolen en alle andere bestanden in deze repository (samen "de Software"),
-is eigendom van Steff Beckers en wordt beschermd door het auteursrecht.
+Dit bestand bevat eerst de Nederlandse tekst en daarna een Engelse vertaling. Alleen de Nederlandse
+tekst is juridisch bindend. Bij een verschil of een twijfel over de uitleg gaat de Nederlandse tekst voor.
 
-Dat de broncode publiek zichtbaar is, betekent niet dat u er rechten op krijgt.
-Zonder voorafgaande schriftelijke toestemming van de rechthebbende is het
-verboden de Software of een deel ervan:
+================================================================================
+NEDERLANDSE TEKST (BINDEND)
+================================================================================
 
-  1. te gebruiken, uit te voeren of te installeren, behalve om de broncode te
-     bekijken;
-  2. te kopiëren, te verveelvoudigen of op te slaan, behalve de tijdelijke
-     kopieën die nodig zijn om de broncode te bekijken;
-  3. te wijzigen, te vertalen, aan te passen of er afgeleide werken van te
-     maken;
-  4. te verspreiden, te publiceren, in sublicentie te geven, te verhuren, uit
-     te lenen, te verkopen of op enige andere wijze ter beschikking te stellen,
-     ook niet als dienst via een netwerk;
-  5. te gebruiken om een concurrerend product of een concurrerende dienst te
-     ontwikkelen.
+1. Begrippen
 
-Een fork binnen GitHub ontstaat enkel door de functies van dat platform en
-geeft geen rechten bovenop wat hierboven toegestaan is.
+   "De Software": de broncode, de documentatie, de ontwerpen, de symbolen, de vertalingen en alle andere
+   bestanden in deze repository, en elke gewijzigde versie of elk afgeleid werk ervan, met uitzondering
+   van de software van derden uit artikel 8.
 
-Software van derden die deze repository gebruikt, zoals de afhankelijkheden
-die in de package.json-bestanden vermeld staan, valt onder de eigen licenties
-van die derden. Deze licentie heeft daar geen betrekking op.
+   "De Rechthebbende": Steff Beckers, de houder van de auteursrechten op de Software.
 
-DE SOFTWARE WORDT GELEVERD "ZOALS ZE IS", ZONDER ENIGE GARANTIE, UITDRUKKELIJK
-OF STILZWIJGEND, MET INBEGRIP VAN MAAR NIET BEPERKT TOT GARANTIES VAN
-VERHANDELBAARHEID, GESCHIKTHEID VOOR EEN BEPAALD DOEL OF HET NIET-INBREUK
-MAKEN OP RECHTEN VAN DERDEN. DE RECHTHEBBENDE IS IN GEEN GEVAL AANSPRAKELIJK
-VOOR ENIGE SCHADE DIE VOORTVLOEIT UIT HET GEBRUIK VAN DE SOFTWARE.
+   "U": de natuurlijke persoon of rechtspersoon die de Software gebruikt. Handelt u voor een
+   onderneming of organisatie, dan geldt deze licentie ook voor die onderneming of organisatie.
 
-Op deze licentie is het Belgische recht van toepassing.
+   "Gebruik in productie": elk gebruik van de Software buiten het ontwikkelen en testen van de Software
+   zelf, met of zonder winstoogmerk. Daaronder valt in elk geval: echte elektrische installaties
+   documenteren, dossiers, schema's of lijsten opmaken die buiten het ontwikkelen en testen gebruikt
+   worden, gegevens van echte klanten of projecten verwerken, en de Software via een netwerk
+   beschikbaar maken voor anderen dan uzelf.
 
-Wie de Software wil gebruiken of een licentie wil verkrijgen, kan contact
-opnemen met de rechthebbende via steff@steffbeckers.com.
+   "Bijdrage": elke wijziging, toevoeging of elk ander werk dat u aan de Rechthebbende voorlegt om in de
+   Software op te nemen, onder meer via een pull request in de officiële repository.
+
+2. Wat u mag
+
+   De Rechthebbende geeft u een niet-exclusieve, kosteloze, wereldwijde en niet-overdraagbare licentie
+   om de Software, uitsluitend om bij te dragen aan de Software of om ze te leren kennen:
+
+   a) te bekijken, te lezen en te bestuderen;
+   b) te kopiëren, onder meer door de repository te klonen of te forken;
+   c) lokaal te installeren en uit te voeren, op uw eigen toestellen of in uw eigen ontwikkel- en
+      testomgevingen, met testgegevens;
+   d) te wijzigen en er afgeleide werken van te maken;
+   e) uw wijzigingen voor te leggen als Bijdrage aan de officiële repository;
+   f) uw wijzigingen publiek te delen in een fork op GitHub, om een Bijdrage voor te bereiden of te
+      bespreken, onder deze licentie.
+
+3. Wat verboden is zonder voorafgaande schriftelijke toestemming
+
+   Zonder voorafgaande schriftelijke toestemming van de Rechthebbende is het verboden om de Software
+   of een deel ervan:
+
+   a) in productie te gebruiken, voor eigen of commerciële doeleinden;
+   b) als dienst aan te bieden of te hosten, voor klanten, voor derden of voor uw eigen onderneming of
+      organisatie;
+   c) te verkopen, door te verkopen, te verhuren, uit te lenen, in sublicentie te geven of op enige
+      andere wijze ter beschikking te stellen, tegen betaling of kosteloos, behalve zoals artikel 2 f)
+      toestaat;
+   d) te gebruiken om een concurrerend product of een concurrerende dienst te ontwikkelen, te
+      verbeteren of aan te bieden, of om delen ervan in een ander product op te nemen;
+   e) te gebruiken zonder de kennisgevingen van auteursrecht en licentie, of die kennisgevingen te
+      verwijderen of te wijzigen.
+
+   Een fork binnen GitHub ontstaat door de functies van dat platform en geeft geen rechten bovenop wat
+   artikel 2 toestaat. De officiële dienst op https://elentrik.app is de manier om Elentrik in productie
+   te gebruiken. Voor een andere toestemming of een licentie: zie artikel 13.
+
+4. Voorwaarden
+
+   Elke kopie van de Software, gewijzigd of niet, bevat deze licentie en de kennisgeving van
+   auteursrecht. Gewijzigde versies vallen onder deze licentie; u mag er geen andere licentie op
+   toepassen.
+
+5. Bijdragen
+
+   Voor een Bijdrage aanvaardt u eerst de Contributor License Agreement in het bestand CLA.md. Die bepaalt
+   welke rechten u op uw Bijdragen aan de Rechthebbende geeft. De Rechthebbende beslist vrij of die een
+   Bijdrage opneemt.
+
+6. Instance-ping
+
+   Een uitgerolde productieversie van de Software, buiten de officiële omgevingen van de Rechthebbende,
+   meldt zich automatisch bij https://elentrik.app: kort na het opstarten en daarna één keer per dag.
+   De melding bevat een willekeurige identificatie van de installatie, de hostnaam, de versie, of
+   abonnementen aan staan en het aantal organisaties en gebruikers, maar geen namen, e-mailadressen of
+   projectinhoud. De ontvangende server bewaart daarbij het IP-adres van de melding. Het doel is zicht op
+   installaties die zonder licentie draaien. De README beschrijft de ping volledig, ook hoe u hem
+   uitschakelt. Wie de ping uitschakelt, krijgt daardoor geen enkel recht bovenop deze licentie.
+
+7. Merken
+
+   Deze licentie geeft geen recht om de naam "Elentrik", het logo of andere kenmerken van de
+   Rechthebbende te gebruiken, behalve om de herkomst van de Software naar waarheid te vermelden.
+
+8. Software van derden
+
+   Software van derden die de Software gebruikt of bevat, valt onder de eigen licenties van die derden.
+   Deze licentie heeft daar geen betrekking op. Het gaat onder meer om:
+
+   a) de afhankelijkheden die in de package.json-bestanden vermeld staan;
+   b) de code in apps/plan-editor/vendor/openplan3d, afkomstig van OpenPlan3D, onder de MIT-licentie
+      die in die map is opgenomen (apps/plan-editor/vendor/openplan3d/LICENSE).
+
+9. Einde van de licentie
+
+   Schendt u deze licentie, dan eindigen uw rechten onder deze licentie automatisch en meteen. De
+   Rechthebbende kan ze schriftelijk herstellen. Schendt u ze voor het eerst en zet u de schending stop
+   binnen 30 dagen nadat de Rechthebbende u erop wees, dan herleven uw rechten.
+
+10. Geen garantie en beperkte aansprakelijkheid
+
+   De Software wordt geleverd "zoals ze is", zonder enige garantie, uitdrukkelijk of stilzwijgend,
+   met inbegrip van maar niet beperkt tot garanties van verhandelbaarheid, geschiktheid voor een
+   bepaald doel of het niet-inbreuk maken op rechten van derden. De AREI-bevindingen in de Software zijn
+   geen keuring en geen garantie dat een installatie aan de regelgeving voldoet. Voor zover de wet het
+   toelaat, is de Rechthebbende niet aansprakelijk voor enige schade die voortvloeit uit het gebruik
+   van de Software of uit het onvermogen om ze te gebruiken. Deze beperking geldt niet voor opzet of
+   bedrog, of voor zover de wet een beperking verbiedt.
+
+11. Latere versies
+
+   De Rechthebbende mag latere versies van de Software onder een andere licentie of andere voorwaarden
+   verspreiden. Wat u onder deze licentie verkreeg, blijft voor u onder deze licentie vallen, tenzij u
+   de nieuwe voorwaarden aanvaardt.
+
+12. Toepasselijk recht en bevoegde rechter
+
+   Op deze licentie is het Belgische recht van toepassing. Geschillen behoren tot de uitsluitende
+   bevoegdheid van de rechtbanken van het gerechtelijk arrondissement waar de Rechthebbende
+   de woonplaats heeft, onverminderd dwingende regels die een andere rechter bevoegd maken.
+
+13. Contact
+
+   Wie de Software in productie wil gebruiken, een andere toestemming of een licentie wil, of een vraag
+   heeft over deze licentie, kan contact opnemen met de Rechthebbende via steff@steffbeckers.com.
+
+================================================================================
+ENGLISH TRANSLATION (FOR INFORMATION ONLY)
+================================================================================
+
+This translation is provided for convenience. Only the Dutch text above is legally binding. In case of
+any difference or doubt about the interpretation, the Dutch text prevails.
+
+Elentrik Source License, version 1.0
+Copyright (c) 2026 Steff Beckers. All rights reserved, except as expressly permitted by this license.
+
+1. Definitions
+
+   "The Software": the source code, documentation, designs, symbols, translations and all other files in
+   this repository, and any modified version or derivative work of them, excluding the third-party
+   software referred to in section 8.
+
+   "The Licensor": Steff Beckers, the holder of the copyright in the Software.
+
+   "You": the natural or legal person using the Software. If you act on behalf of a company or
+   organisation, this license also applies to that company or organisation.
+
+   "Production use": any use of the Software other than developing and testing the Software itself,
+   whether for profit or not. This includes in any case: documenting real electrical installations,
+   producing dossiers, diagrams or lists that are used outside development and testing, processing data
+   of real customers or projects, and making the Software available over a network to anyone other than
+   yourself.
+
+   "Contribution": any modification, addition or other work that you submit to the Licensor for inclusion
+   in the Software, including through a pull request in the official repository.
+
+2. What you may do
+
+   The Licensor grants you a non-exclusive, royalty-free, worldwide and non-transferable license, solely
+   to contribute to the Software or to get to know it, to:
+
+   a) view, read and study the Software;
+   b) copy the Software, including by cloning or forking the repository;
+   c) install and run the Software locally, on your own devices or in your own development and test
+      environments, with test data;
+   d) modify the Software and create derivative works of it;
+   e) submit your modifications as a Contribution to the official repository;
+   f) share your modifications publicly in a fork on GitHub, to prepare or discuss a Contribution, under
+      this license.
+
+3. What is prohibited without prior written permission
+
+   Without the prior written permission of the Licensor, you may not, for the Software or any part of it:
+
+   a) use it in production, for your own or for commercial purposes;
+   b) offer or host it as a service, for customers, for third parties or for your own company or
+      organisation;
+   c) sell, resell, rent, lend, sublicense or otherwise make it available, whether for a fee or free of
+      charge, except as permitted by section 2 f);
+   d) use it to develop, improve or offer a competing product or service, or include parts of it in
+      another product;
+   e) use it without the copyright and license notices, or remove or alter those notices.
+
+   A fork within GitHub arises from that platform's features and grants no rights beyond section 2. The
+   official service at https://elentrik.app is the way to use Elentrik in production. For any other
+   permission or a license: see section 13.
+
+4. Conditions
+
+   Every copy of the Software, modified or not, includes this license and the copyright notice. Modified
+   versions are subject to this license; you may not apply any other license to them.
+
+5. Contributions
+
+   Before making a Contribution, you first accept the Contributor License Agreement in the file CLA.md. It
+   sets out which rights in your Contributions you grant to the Licensor. The Licensor decides freely
+   whether to include a Contribution.
+
+6. Instance ping
+
+   A deployed production build of the Software, outside the Licensor's official environments,
+   automatically reports to https://elentrik.app: shortly after start-up and then once a day. The report
+   contains a random identifier of the installation, the host name, the version, whether subscriptions
+   are enabled and the number of organisations and users, but no names, email addresses or project
+   content. The receiving server also stores the IP address of the report. Its purpose is visibility of
+   installations running without a license. The README describes the ping in full, including how to
+   disable it. Disabling the ping does not grant you any right beyond this license.
+
+7. Trademarks
+
+   This license grants no right to use the name "Elentrik", the logo or other marks of the Licensor,
+   except to truthfully state the origin of the Software.
+
+8. Third-party software
+
+   Third-party software used or included by the Software is subject to the licenses of those third
+   parties. This license does not apply to it. This includes:
+
+   a) the dependencies listed in the package.json files;
+   b) the code in apps/plan-editor/vendor/openplan3d, originating from OpenPlan3D, under the MIT license
+      included in that folder (apps/plan-editor/vendor/openplan3d/LICENSE).
+
+9. Termination
+
+   If you breach this license, your rights under this license end automatically and immediately. The
+   Licensor may reinstate them in writing. If it is your first breach and you stop it within 30 days after
+   the Licensor notified you, your rights are reinstated.
+
+10. No warranty and limited liability
+
+   The Software is provided "as is", without any warranty, express or implied, including but not limited
+   to warranties of merchantability, fitness for a particular purpose or non-infringement of third-party
+   rights. The AREI findings in the Software are not an inspection and no guarantee that an installation
+   complies with the regulations. To the extent permitted by law, the Licensor is not liable for any
+   damage arising from the use of or the inability to use the Software. This limitation does not apply to
+   wilful misconduct or fraud, or where the law prohibits a limitation.
+
+11. Later versions
+
+   The Licensor may distribute later versions of the Software under a different license or different
+   terms. What you obtained under this license remains under this license for you, unless you accept the
+   new terms.
+
+12. Governing law and jurisdiction
+
+   This license is governed by Belgian law. Disputes fall under the exclusive jurisdiction of the courts
+   of the judicial district of the Licensor's domicile, without prejudice to mandatory rules that
+   give jurisdiction to another court.
+
+13. Contact
+
+   Anyone who wants to use the Software in production, wants any other permission or a license, or has a
+   question about this license, can contact the Licensor at steff@steffbeckers.com.
