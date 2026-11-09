@@ -51,7 +51,10 @@ Het is mislukt, ook als het technisch werkt, als:
 De ping is actief als alle voorwaarden kloppen:
 
 1. `NODE_ENV === "production"` (een productiebuild; `pnpm dev` en Vitest vallen weg);
-2. `ELENTRIK_OMGEVING` is leeg (de officiële productie en staging zetten `productie` of `staging`);
+2. het is geen officiële omgeving: `ELENTRIK_OMGEVING` is niet gezet, of `BETTER_AUTH_URL` heeft een andere host
+   dan `elentrik.app` of `staging.elentrik.app` (de officiële productie en staging zetten beide;
+   `OFFICIELE_HOSTS` in `server/instance/ping.ts`). Gewijzigd na de eindreview, omdat de openbare
+   `deploy/nas/compose.yaml` `ELENTRIK_OMGEVING: productie` vastzet en een kopie daarvan anders nooit pingde;
 3. `ELENTRIK_INSTANCE_PING` is niet `uit`;
 4. de geplande taken staan aan (`geplandeTakenAan()` in `server/taken/lock.ts`). Dat geldt voor de
    ping na het opstarten en voor de dagelijkse ping, zodat `ELENTRIK_GEPLANDE_TAKEN=uit` beide stopt.
