@@ -654,6 +654,17 @@ const TABEL: Record<string, Rij> = {
     lid: 400,
     eigenaar: 400,
   },
+  "POST /api/instances": {
+    // Publiek: een instance stuurt dit server-naar-server. Buiten productie (hier zonder
+    // ELENTRIK_OMGEVING) geeft elke actor 404; de inhoud staat in test/instance-api.test.ts.
+    publiek: true,
+    verzoek: async () => ({ methode: "POST", pad: "/api/instances", json: { id: "toegang" } }),
+    zonderSessie: 404,
+    zonderOrganisatie: 404,
+    andereOrganisatie: 404,
+    lid: 404,
+    eigenaar: 404,
+  },
 };
 
 // Elk admin-endpoint weigert alle gewone actors, vóór body/target parsing.

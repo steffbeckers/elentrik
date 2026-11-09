@@ -91,6 +91,12 @@ export const SERVER_FOUTCODES = [
   // Een serverfout na het klikken op een geldige inloglink: een redirect naar /inloggen?fout=<CODE>
   // (server/auth/inloglink.ts), geen h3-fout.
   "INLOGLINK_MISLUKT",
+  // De ontvangende kant van de instance-ping (server/api/instances.post.ts): niet op productie (404),
+  // te veel meldingen van een IP (429), een te groot lichaam (413) of een ongeldige melding (400).
+  "INSTANCE_ONBEKEND",
+  "INSTANCE_TE_VEEL",
+  "INSTANCE_TE_GROOT",
+  "INSTANCE_ONGELDIG",
 ] as const;
 
 /**

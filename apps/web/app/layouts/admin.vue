@@ -6,7 +6,7 @@ const sessie = useSessieStore();
 const openingGebruiker = sessie.gebruiker?.id;
 const geldig = computed(() => sessie.gebruiker?.id === openingGebruiker && sessie.gebruiker?.superuser);
 watch(geldig, (waarde) => { if (!waarde) navigateTo('/inloggen'); });
-const links = [{ pad: '/admin', label: 'overzicht' }, ...['gebruikers', 'organisaties', 'projecten', 'audit'].map(label => ({ pad: `/admin/${label}`, label }))];
+const links = [{ pad: '/admin', label: 'overzicht' }, ...['gebruikers', 'organisaties', 'projecten', 'installaties', 'audit'].map(label => ({ pad: `/admin/${label}`, label }))];
 </script>
 <template>
   <div v-if="geldig" class="min-h-dvh bg-default">

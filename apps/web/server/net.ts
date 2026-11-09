@@ -104,3 +104,18 @@ export function inSubnet(ip: string, cidr: string): boolean {
   }
   return true;
 }
+
+/**
+ * De sleutel waarop de limiet van de instance-ping telt: het IPv4-adres (ook uit IPv4-in-IPv6), of
+ * bij IPv6 de eerste 8 bytes (het /64-net) in hex plus `/64`; zonder of met een ongeldig IP `onbekend`.
+ */
+export function ipLimietSleutel(ip: string | undefined): string {
+  const adres = ip === undefined ? null : parseAdres(ip);
+  if (!adres) return "onbekend";
+  if (adres.versie === 4) return adres.bytes.join(".");
+  const groepen: string[] = [];
+  for (let i = 0; i < 8; i += 2) {
+    groepen.push(((adres.bytes[i]! << 8) | adres.bytes[i + 1]!).toString(16).padStart(4, "0"));
+  }
+  return `${groepen.join(":")}/64`;
+}

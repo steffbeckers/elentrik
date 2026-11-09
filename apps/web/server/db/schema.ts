@@ -405,3 +405,35 @@ export const projectaankopen = pgTable(
       .where(sql`${table.status} = 'open'`),
   ],
 );
+
+/** De identiteit van deze instance voor de instance-ping; hoogstens één rij. */
+export const instance = pgTable(
+  "instance",
+  {
+    sleutel: text("sleutel").primaryKey().default("deze"),
+    id: uuid("id").notNull(),
+    aangemaaktOp: timestamp("aangemaakt_op", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("instance_een_rij", sql`${table.sleutel} = 'deze'`)],
+);
+
+/** Ontvangen instance-pings, één rij per instance (alleen op de ontvanger gevuld). */
+export const instanceMeldingen = pgTable(
+  "instance_meldingen",
+  {
+    instanceId: uuid("instance_id").primaryKey(),
+    host: text("host").notNull(),
+    versie: text("versie").notNull(),
+    abonnementenAan: boolean("abonnementen_aan").notNull(),
+    aantalOrganisaties: integer("aantal_organisaties").notNull(),
+    aantalGebruikers: integer("aantal_gebruikers").notNull(),
+    eersteMeldingOp: timestamp("eerste_melding_op", { withTimezone: true }).notNull(),
+    laatsteMeldingOp: timestamp("laatste_melding_op", { withTimezone: true }).notNull(),
+    aantalMeldingen: integer("aantal_meldingen").notNull().default(1),
+    laatsteIp: text("laatste_ip"),
+  },
+  (table) => [
+    index("instance_meldingen_eerste_idx").on(table.eersteMeldingOp),
+    index("instance_meldingen_laatste_idx").on(table.laatsteMeldingOp),
+  ],
+);

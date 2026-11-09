@@ -450,6 +450,7 @@ WEB_ENV=(
   -e "ELENTRIK_BESTANDEN_DIR=/tmp/bestanden"
   -e "ELENTRIK_GOTENBERG_URL=http://gotenberg:3000"
   -e "ELENTRIK_GEPLANDE_TAKEN=uit"
+  -e "ELENTRIK_INSTANCE_PING=uit"
 )
 docker run -d --name "${PROJECT}-kapot" --network "$PROJECT" "${WEB_ENV[@]}" "$IMAGE_KAPOT" >/dev/null
 EXIT_KAPOT="$(wacht_op_stop "${PROJECT}-kapot" 120)"
@@ -479,6 +480,7 @@ docker run -d --name "${PROJECT}-zonder" --network "$PROJECT" \
   -e "BETTER_AUTH_SECRET=${GEHEIM_TESTWAARDE}" \
   -e "BETTER_AUTH_URL=${BASIS}" \
   -e "ELENTRIK_BESTANDEN_DIR=/tmp/bestanden" \
+  -e "ELENTRIK_INSTANCE_PING=uit" \
   "$IMAGE" >/dev/null
 EXIT_ZONDER="$(wacht_op_stop "${PROJECT}-zonder" 120)"
 [ "$EXIT_ZONDER" != timeout ] || faal "de container zonder ELENTRIK_GOTENBERG_URL stopte niet"

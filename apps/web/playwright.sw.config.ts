@@ -50,6 +50,8 @@ export default defineConfig({
       SMTP_BEVEILIGD: "",
       BOEKHOUDING_INBOX: "",
       ELENTRIK_GEPLANDE_TAKEN: "uit",
+      // Geen instance-ping naar elentrik.app vanuit de e2e-server.
+      ELENTRIK_INSTANCE_PING: "uit",
     },
     // Bouwen duurt enkele minuten.
     timeout: 600_000,
