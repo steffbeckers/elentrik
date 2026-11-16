@@ -494,6 +494,18 @@ watchPostEffect(() => {
 .basis :deep([data-node-id] *) {
   pointer-events: all;
 }
+/* Het raakvlak (ruimer dan het symbool) licht op onder de aanwijzer: je ziet wat een klik selecteert. */
+.basis :deep([data-node-id]) {
+  cursor: pointer;
+}
+.basis :deep(.raakvlak) {
+  rx: 1px;
+}
+@media (hover: hover) {
+  .basis :deep([data-node-id]:hover > .raakvlak) {
+    fill: color-mix(in srgb, var(--ui-primary) 12%, transparent);
+  }
+}
 .schema-plus:focus-visible { outline: none; }
 .schema-plus:focus-visible circle { stroke-width: 1; fill: var(--ui-bg-accented); }
 </style>
