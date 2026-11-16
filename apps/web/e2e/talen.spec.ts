@@ -14,6 +14,7 @@ import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
 import { wachtOpHydratatie } from "./hulp/hydratatie";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 import { leesPdf } from "./hulp/pdf";
+import { voegToeAanKringEinde } from "./hulp/schema-selectie";
 import { bevestigSjabloonOpBord } from "./hulp/sjabloon";
 import { sjabloonRegex, vertaling } from "./hulp/teksten";
 import { E2E_URL } from "./omgeving";
@@ -187,12 +188,9 @@ test("een bevinding in de editor staat in de taal van de interface", async ({ pa
   await page.getByRole("button", { name: vertaling("fr", "editor.sjablonen.kring-stopcontacten") }).click();
   // Een sjabloon opent de invoegdialoog: de bestemming bevestigen.
   await bevestigSjabloonOpBord(page);
-  // Een zevende contactdoos die er vijf telt: elf op één kring is een fout.
-  await page.getByTestId("schema-canvas").locator('[data-testid^="plus-kring-einde-"]').click();
-  await page.getByTestId("werkruimte-eigenschappen").click();
-  const aantal = page.getByTestId("veld-aantal");
-  await aantal.fill("5");
-  await aantal.blur();
+  // Drie contactdozen bij de zes van het sjabloon: negen op één kring is een fout. Een meervoudige
+  // contactdoos telt als één, dus het aantal per doos verhogen geeft geen fout meer.
+  await voegToeAanKringEinde(page, 3, vertaling("fr", "editor.canvas.passendMaken"));
 
   const sleutel = "arei.kring.max-contactdozen.overschreden";
   await page.getByTestId("werkruimte-bevindingen").click();

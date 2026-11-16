@@ -20,3 +20,18 @@ export async function selecteerSchemaNode(page: Page, id: string): Promise<void>
   await page.mouse.click(punt!.x, punt!.y);
   await expect(page.getByTestId(`selectie-${id}`)).toHaveCount(1);
 }
+
+/**
+ * Voegt `aantal` keer het gekozen onderdeel toe aan het einde van de enige kring van het schema.
+ * Na elke klik verhuist de plusknop naar het nieuwe einde; de volgende klik wacht daarop.
+ * `passendMaken` is de naam van de knop in de taal van de interface.
+ */
+export async function voegToeAanKringEinde(page: Page, aantal: number, passendMaken = "Passend maken"): Promise<void> {
+  const plus = page.getByTestId("schema-canvas").locator('[data-testid^="plus-kring-einde-"]');
+  for (let i = 0; i < aantal; i++) {
+    await page.getByRole("button", { name: passendMaken }).click();
+    const vorige = await plus.getAttribute("data-testid");
+    await plus.click();
+    await expect(plus).not.toHaveAttribute("data-testid", vorige!);
+  }
+}
