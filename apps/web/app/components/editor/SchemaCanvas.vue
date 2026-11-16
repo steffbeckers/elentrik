@@ -360,6 +360,15 @@ watch(
   () => canvas.passendAlsNodig(),
 );
 
+// Het lege schema staat sterk ingezoomd. Komt de eerste kring erbij (of de hele startwoning), of
+// verdwijnt de laatste door ongedaan maken, dan verandert de omvang zo sterk dat de vorige
+// uitsnede niets nuttigs meer toont: maak opnieuw passend.
+watch(
+  () => store.zonderKringen,
+  () => nextTick(maakPassend),
+  { flush: "post" },
+);
+
 // `v-html` vervangt de SVG bij elke wijziging; de viewBox van de basislaag volgt die van de overlay.
 watchPostEffect(() => {
   void store.svg;

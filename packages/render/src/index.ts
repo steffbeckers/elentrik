@@ -8,6 +8,7 @@ export { situatieLaagSvg, type SituatieItem } from "./situatie-svg";
 export { situatieAfdekkingenSvg } from "./situatie-afdekkingen";
 export { SYMBOOL_DELER, nodeLabel, situatieItems, symboolGrootte, type LabelTerugval } from "./situatie-items";
 export { kringenlijst, type KringenlijstRij } from "./kringenlijst";
+export { MAX_KRINGEN_PER_DIFFERENTIEEL, MODULES_PER_RIJ, bordOverzicht, type BordDifferentieel, type BordOverzicht } from "./bordoverzicht";
 export { NL } from "./teksten/nl";
 export { LOCALES, TEKSTEN, type Taal, type Teksten } from "./teksten/index";
 export { formatteerDatum } from "./print/cartouche";

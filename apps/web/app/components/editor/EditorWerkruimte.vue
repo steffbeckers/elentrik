@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { dossierStatus } from "~/editor/dossierstatus";
 import { useEditorStore, type Tabblad } from "~/stores/editor";
 const props = defineProps<{ tabblad: Tabblad; selectie: readonly string[]; heeftPlan: boolean }>();
 const store = useEditorStore();
+/** Wat nog op een plan moet, geteld zoals de dossierchecklist; bij 0 toont het tabblad niets. */
+const tePlaatsen = computed(() => dossierStatus(store.document, store.analyse).ongeplaatst);
 type Paneel = "onderdelen" | "eigenschappen" | "bevindingen" | "opmaak";
 const paneel = ref<Paneel | null>(props.tabblad === "eendraadschema" ? "onderdelen" : null);
 onMounted(() => { if (window.matchMedia("(max-width: 767px)").matches) paneel.value = null; });
@@ -69,7 +72,22 @@ function navigeerTab(event: KeyboardEvent, index: number): void {
         :label="$t(`editor.bovenbalk.tabbladen.${tabblad}`)"
         @click="store.tabblad = tabblad"
         @keydown="navigeerTab($event, index)"
-      />
+      >
+        <!-- Het cijfer is voor het oog; een schermlezer krijgt de volledige zin als deel van de naam van het tabblad. -->
+        <template v-if="tabblad === 'situatieschema' && tePlaatsen > 0" #trailing>
+          <UBadge
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            class="tabular-nums"
+            :title="$t('editor.werkruimte.tePlaatsen', { aantal: tePlaatsen }, tePlaatsen)"
+            data-testid="tab-situatieschema-teller"
+          >
+            <span aria-hidden="true">{{ tePlaatsen }}</span>
+            <span class="sr-only">{{ $t('editor.werkruimte.tePlaatsen', { aantal: tePlaatsen }, tePlaatsen) }}</span>
+          </UBadge>
+        </template>
+      </UButton>
     </nav>
       <nav ref="bediening" class="flex min-w-0 items-center gap-1 overflow-x-auto" :aria-label="$t('editor.werkruimte.panelen')">
         <button v-for="keuze in keuzes" :key="keuze.id" type="button"

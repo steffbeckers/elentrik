@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
+import { LOCALES } from "@elentrik/arei";
 import { DocumentFout, type Node, type NodeType } from "@elentrik/model";
-import { GEMEENSCHAPPELIJK, VELDEN, veldGroepen, veldWeergaveWaarde, type Veld } from "~/editor/velden";
+import { GEMEENSCHAPPELIJK, VELDEN, veldGroepen, veldWeergaveWaarde, voorstelTekst, type Veld } from "~/editor/velden";
 import { Werkconcepten } from "~/editor/werkconcept";
 import { useEditorStore } from "~/stores/editor";
 
@@ -118,6 +120,28 @@ function verlaat(veld: Veld): void {
   store.sluitGroep();
 }
 
+const { taal } = useTaal();
+const getal = computed(() => new Intl.NumberFormat(LOCALES[taal.value], { maximumFractionDigits: 3 }));
+
+/** Een voorstel volgt de weg van getypte invoer (dezelfde controle en hetzelfde concept) en is meteen één undo-stap. */
+function kiesVoorstel(veld: Veld, voorstel: string): void {
+  // De waarde die er al staat opnieuw kiezen is geen wijziging en dus geen undo-stap.
+  if (tekstWaarde(veld) === voorstel) return;
+  invoer(veld, voorstel);
+  verlaat(veld);
+}
+
+/** Het menu naast een veld met voorstellen: een kop en de gangbare waarden, in de notatie van de taal. */
+function voorstelItems(veld: Veld): DropdownMenuItem[][] {
+  return [
+    [{ type: "label", label: t("velden.suggesties.kop") }],
+    (veld.suggesties ?? []).map((voorstel) => ({
+      label: voorstelTekst(veld, voorstel, (waarde) => getal.value.format(waarde)),
+      onSelect: () => kiesVoorstel(veld, voorstel),
+    })),
+  ];
+}
+
 /** Keuzelijst en schakelaar: één wijziging is één undo-stap. */
 function kies(veld: Veld, waarde: unknown): void {
   wijzig(veld, waarde === GEEN ? undefined : waarde);
@@ -191,28 +215,44 @@ function plaatshouder(veld: Veld): string | undefined {
               :error="ongeldig[veld.sleutel] ? $t('editor.eigenschappen.ongeldig') : undefined"
               size="sm"
             >
-              <UInput
-                :model-value="tekstWaarde(veld)"
-                :type="veld.soort === 'getal' ? 'number' : 'text'"
-                :min="veld.min"
-                :step="veld.soort === 'getal' ? (veld.stap ?? 'any') : undefined"
-                :placeholder="plaatshouder(veld)"
-                :disabled="store.alleenLezen"
-                :data-testid="`veld-${veld.sleutel}`"
-                :list="veld.suggesties ? `suggesties-${veld.sleutel}` : undefined"
-                class="w-full"
-                :ui="veld.eenheid ? { trailing: 'pointer-events-none' } : undefined"
-                @update:model-value="(w: string | number) => invoer(veld, w)"
-                @blur="verlaat(veld)"
-                @keydown.esc.stop.prevent="concepten.herstel(veld.sleutel); store.sluitGroep()"
-              >
-                <template v-if="veld.eenheid" #trailing>
-                  <span class="text-xs text-muted">{{ veld.eenheid }}</span>
-                </template>
-              </UInput>
-              <datalist v-if="veld.suggesties" :id="`suggesties-${veld.sleutel}`">
-                <option v-for="suggestie in veld.suggesties" :key="suggestie" :value="suggestie" />
-              </datalist>
+              <!-- Het veld blijft vrije invoer; de knop ernaast toont alle voorstellen, wat er ook in het veld staat. -->
+              <UFieldGroup size="sm" class="flex w-full">
+                <UInput
+                  :model-value="tekstWaarde(veld)"
+                  :type="veld.soort === 'getal' ? 'number' : 'text'"
+                  :min="veld.min"
+                  :step="veld.soort === 'getal' ? (veld.stap ?? 'any') : undefined"
+                  :placeholder="plaatshouder(veld)"
+                  :disabled="store.alleenLezen"
+                  :data-testid="`veld-${veld.sleutel}`"
+                  class="min-w-0 flex-1"
+                  :ui="veld.eenheid ? { trailing: 'pointer-events-none' } : undefined"
+                  @update:model-value="(w: string | number) => invoer(veld, w)"
+                  @blur="verlaat(veld)"
+                  @keydown.esc.stop.prevent="concepten.herstel(veld.sleutel); store.sluitGroep()"
+                >
+                  <template v-if="veld.eenheid" #trailing>
+                    <span class="text-xs text-muted">{{ veld.eenheid }}</span>
+                  </template>
+                </UInput>
+                <UDropdownMenu
+                  v-if="veld.suggesties"
+                  :items="voorstelItems(veld)"
+                  :content="{ align: 'end' }"
+                  :disabled="store.alleenLezen"
+                  size="sm"
+                >
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    icon="i-lucide-chevron-down"
+                    :disabled="store.alleenLezen"
+                    :aria-label="$t('velden.suggesties.knop', { veld: $t(veld.labelSleutel) })"
+                    :title="$t('velden.suggesties.knop', { veld: $t(veld.labelSleutel) })"
+                    :data-testid="`veld-${veld.sleutel}-voorstellen`"
+                  />
+                </UDropdownMenu>
+              </UFieldGroup>
             </UFormField>
 
             <UFormField v-else-if="veld.soort === 'keuze'" :label="$t(veld.labelSleutel)" size="sm">

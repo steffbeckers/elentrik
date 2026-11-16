@@ -28,6 +28,11 @@ import {
   voegAfwijkingToe,
   voegOnderdeelToe,
   voegSjabloonToe as voegSjabloonToeAanDoc,
+  voegBordSjabloonToe,
+  isKringSjabloon,
+  sjabloonDifferentieel,
+  sjabloonVoor,
+  startWoning,
   wijzigEigenschappen,
   wijzigProject,
   type Aanknoping,
@@ -409,14 +414,35 @@ export const useEditorStore = defineStore("editor", () => {
 
   /** Het doel uit de bevestigingsdialoog; die stelt een standaard voor (`kringBestemming`), de gebruiker bevestigt. */
   /** `ruimte`: de soort ruimte voor de nieuwe punten; weggelaten de suggestie van het sjabloon, `null` voor geen. */
+  /**
+   * Een kring komt op het doel, achter een nieuw of een bestaand differentieel. Zonder `instellingen`
+   * krijgt een nieuw differentieel die van het sjabloon zelf (de laadpaal: klasse B). Een sjabloon dat
+   * geen kring is (de aarding) komt rechtstreeks op het bord van het doel.
+   */
   function voegSjabloonToe(sjabloonId: string, doel?: SjabloonDoel, instellingen?: DifferentieelInstellingen, ruimte?: Ruimte | null): void {
     if (alleenLezen.value) return;
     if (!doel) throw new DocumentFout("NIET_TOEGELATEN_KIND", { reden: "kies een sjabloonbestemming" });
     const doc = vereisDocument();
-    const r = voegSjabloonToeAanDoc(doc, doel, sjabloonId, instellingen, ruimte);
+    const sjabloon = sjabloonVoor(sjabloonId, doc.voeding.stroomtype);
+    const r = isKringSjabloon(sjabloon)
+      ? voegSjabloonToeAanDoc(doc, doel, sjabloonId, instellingen ?? sjabloonDifferentieel(sjabloon), ruimte)
+      : voegBordSjabloonToe(doc, doel.nodeId, sjabloonId);
     if (!pasToeMetBehoud(r)) return;
     selectie.value = [r.id];
     if (doel.soort === "bestaande-differentieel") onthoudDifferentieel(doc, doel.nodeId);
+  }
+
+  /** Een schema zonder kringen: dan biedt het paneel Onderdelen de startwoning aan. */
+  const zonderKringen = computed(() => telling.value?.kringen === 0);
+
+  /**
+   * Zet de startwoning (`startWoning`) op het hoofdbord, in één undo-stap. Geeft true als ze is
+   * ingevoegd; false in alleen-lezen of als ze over de gratis limiet gaat (`limietGeweigerd`). Staan
+   * er al kringen, dan gooit dit een `DocumentFout`.
+   */
+  function voegStartwoningToe(): boolean {
+    if (alleenLezen.value) return false;
+    return pasToeMetBehoud(startWoning(vereisDocument()));
   }
   function voegLichtschakelingToe(doel: LichtschakelingDoel, opties: LichtschakelingOpties, instellingen?: DifferentieelInstellingen): void {
     if (alleenLezen.value) return;
@@ -739,6 +765,8 @@ export const useEditorStore = defineStore("editor", () => {
     kanAftakkingToevoegen,
     voegAftakkingToeBijSelectie,
     voegSjabloonToe,
+    zonderKringen,
+    voegStartwoningToe,
     voegLichtschakelingToe,
     legKringCodesVast,
     hernummerKringen,

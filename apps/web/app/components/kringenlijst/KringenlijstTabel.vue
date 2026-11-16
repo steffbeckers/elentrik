@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TEKSTEN, kringenlijst, type KringenlijstRij, type Teksten } from "@elentrik/render";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import BordOverzicht from "~/components/kringenlijst/BordOverzicht.vue";
 import { volgendeRij } from "~/editor/rijnavigatie";
 import { useEditorStore } from "~/stores/editor";
 
@@ -152,6 +153,8 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
     :aria-label="$t('editor.kringenlijst.titel')"
     data-testid="kringenlijst"
   >
+    <!-- Boven de tabel en mee met de verticale scroll; `sticky left-0` houdt het blok in beeld bij horizontaal scrollen. -->
+    <BordOverzicht />
     <p v-if="rijen.length === 0" class="p-6 text-center text-sm text-muted" data-testid="kringenlijst-leeg">
       {{ teksten.geenKringen }}
     </p>

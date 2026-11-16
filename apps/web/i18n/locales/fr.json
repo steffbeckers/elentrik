@@ -380,7 +380,12 @@
         "eindpunten": "Points d’utilisation"
       },
       "meer": "Plus…",
-      "minder": "Moins"
+      "minder": "Moins",
+      "sjabloongroepen": {
+        "kringen": "Circuits",
+        "toestellen": "Appareils",
+        "installatie": "Installation"
+      }
     },
     "symbolen": {
       "openen": "Tous les symboles",
@@ -434,7 +439,17 @@
       "kring-verlichting": "Circuit d'éclairage",
       "kookplaat": "Plaque de cuisson",
       "wasmachine": "Lave-linge",
-      "badkamer": "Salle de bain"
+      "badkamer": "Salle de bain",
+      "keuken": "Cuisine",
+      "buiten": "Extérieur",
+      "oven": "Four",
+      "vaatwasser": "Lave-vaisselle",
+      "droogkast": "Sèche-linge",
+      "boiler": "Chauffe-eau",
+      "warmtepomp": "Pompe à chaleur",
+      "laadpaal": "Borne de recharge",
+      "zonnepanelen": "Panneaux solaires",
+      "aarding": "Mise à la terre"
     },
     "eigenschappen": {
       "groepen": {
@@ -850,7 +865,18 @@
       "weergaven": "Parties du dossier",
       "planHint": "Sélectionnez un point sur le plan ou ouvrez Éléments pour placer un point.",
       "sluiten": "Fermer le panneau",
-      "toetsenbordhulp": "Aide clavier"
+      "toetsenbordhulp": "Aide clavier",
+      "tePlaatsen": "Encore 1 élément à placer | Encore {aantal} éléments à placer"
+    },
+    "bord": {
+      "titel": "Aperçu du tableau",
+      "indicatief": "Indicatif, pour vous aider à choisir le coffret. La proposition compte environ 20 % de réserve.",
+      "kringen": "1 circuit | {aantal} circuits",
+      "modules": "1 module | {aantal} modules",
+      "kast": "proposition : coffret de 1 rangée de {perRij} modules | proposition : coffret de {aantal} rangées de {perRij} modules",
+      "algemeen": "général",
+      "contactdozen": "1 prise de courant | {aantal} prises de courant",
+      "teVeel": "Plus de {max} circuits derrière cet interrupteur différentiel"
     },
     "materiaallijst": {
       "titel": "Liste du matériel",
@@ -899,7 +925,8 @@
       "doelen": {
         "nieuw-op-bord": "Nouveau circuit avec différentiel",
         "bestaande-differentieel": "Utiliser le différentiel existant",
-        "bestaande-kring": "Dérivation sur le circuit existant"
+        "bestaande-kring": "Dérivation sur le circuit existant",
+        "op-bord": "Directement sur le tableau"
       },
       "schakelingen": {
         "enkel": "Interrupteur unipolaire + point lumineux",
@@ -910,7 +937,21 @@
       "ruimte": {
         "label": "Type de local",
         "hulp": "S’applique aux nouveaux points de ce modèle."
+      },
+      "bezetting": "{aantal} sur {max} circuits",
+      "differentieelVol": "Cet interrupteur différentiel alimente déjà {aantal} circuits. Plus de {max} circuits derrière un interrupteur différentiel de 30 mA au maximum donne un constat. Choisissez un nouvel interrupteur différentiel.",
+      "sjabloonhulp": {
+        "laadpaal": "Valeur prédéfinie : un interrupteur différentiel propre de 30 mA, classe B. La classe A suffit si la borne détecte elle-même un courant continu à partir de 6 mA."
       }
+    },
+    "startwoning": {
+      "titel": "Démarrage rapide",
+      "knop": "Insérer une habitation type",
+      "uitleg": "Une habitation courante en une fois : mise à la terre, deux interrupteurs différentiels de 30 mA, éclairage, prises, cuisine, salle de bain et les gros appareils. Adaptez ensuite ce qui diffère.",
+      "ingevoegd": "Habitation type insérée",
+      "ingevoegdUitleg": "Ces valeurs sont prédéfinies. Vérifiez la protection et la canalisation pour cette installation.",
+      "ongedaanMaken": "Annuler l’insertion",
+      "nietMeerOngedaan": "Vous avez continué à travailler entre-temps. Annulez les étapes une à une."
     },
     "referenties": {
       "titel": "Repères des circuits",
@@ -1078,6 +1119,7 @@
     }
   },
   "velden": {
+    "suggesties": {"knop": "Propositions : {veld}", "kop": "Valeurs courantes"},
     "aantalPanelen": {"label": "Nombre de panneaux"},
     "schijnbaarVermogen_kVA": {"label": "Puissance apparente"},
     "dcDetectie_mA": {"label": "Détection de courant résiduel DC"},
