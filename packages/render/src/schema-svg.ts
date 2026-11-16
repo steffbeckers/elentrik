@@ -9,12 +9,33 @@ const PIJL_TEKST_MM = 2.5;
 /** Afstand van de tekstbasislijn boven de lijn waarop het vervolg staat, zodat de tekst de lijn niet raakt. */
 const PIJL_LABEL_BOVEN_LIJN_MM = 1.2;
 
-function elementSvg(element: SchemaElement): string {
+/** Extra ruimte rond een symbool waarin een klik het symbool nog raakt, in mm. */
+const RAAKVLAK_MARGE_MM = 1.5;
+/** Kleinste breedte en hoogte van een raakvlak, in mm: ook een leiding (een dunne lijn) is zo makkelijk aan te wijzen. */
+const RAAKVLAK_MIN_MM = 8;
+
+/**
+ * Onzichtbaar raakvlak in de lokale coördinaten van het symbool: het vak van het symbool, rondom
+ * iets ruimer en minstens `RAAKVLAK_MIN_MM` breed en hoog, gecentreerd. Het staat in de groep,
+ * zodat `closest("[data-node-id]")` het vindt, en als eerste kind, zodat de getekende lijnen
+ * erboven liggen. De kolommen (24 mm) en de verticale afstand (4 mm) houden de vlakken van
+ * naburige symbolen uit elkaar.
+ */
+function raakvlakSvg(breedte: number, hoogte: number): string {
+  const b = Math.max(RAAKVLAK_MIN_MM, breedte + 2 * RAAKVLAK_MARGE_MM);
+  const h = Math.max(RAAKVLAK_MIN_MM, hoogte + 2 * RAAKVLAK_MARGE_MM);
+  return (
+    `<rect class="raakvlak" x="${getal((breedte - b) / 2)}" y="${getal((hoogte - h) / 2)}" ` +
+    `width="${getal(b)}" height="${getal(h)}" fill="none" pointer-events="all"/>`
+  );
+}
+
+function elementSvg(element: SchemaElement, metRaakvlak = false): string {
   switch (element.soort) {
     case "symbool":
       return (
         `<g data-node-id="${escapeXml(element.nodeId)}" transform="translate(${getal(element.x)} ${getal(element.y)})">` +
-        `${element.symbool.svg}</g>`
+        `${metRaakvlak ? raakvlakSvg(element.symbool.maat.breedte, element.symbool.maat.hoogte) : ""}${element.symbool.svg}</g>`
       );
     case "lijn":
       return (
@@ -93,7 +114,7 @@ export function schemaPaginaSvg(opmaak: SchemaOpmaak, paginaIndex: number): stri
   const clip =
     `<clipPath id="${clipId}"><rect x="${marge}" y="${marge}" ` +
     `width="${getal(ruimte.breedte)}" height="${getal(ruimte.hoogte)}"/></clipPath>`;
-  const inhoud = pagina.elementen.map(elementSvg).join("");
+  const inhoud = pagina.elementen.map((element) => elementSvg(element)).join("");
   return root(
     maat.breedte,
     maat.hoogte,
@@ -102,8 +123,11 @@ export function schemaPaginaSvg(opmaak: SchemaOpmaak, paginaIndex: number): stri
   );
 }
 
-/** De hele strook op schaal 1, zonder clip, voor de editor. */
+/**
+ * De hele strook op schaal 1, zonder clip, voor de editor. Elk symbool krijgt een onzichtbaar
+ * raakvlak, zodat selecteren geen mikken op de lijnen vraagt; de afdruk heeft er geen.
+ */
 export function schemaStripSvg(opmaak: SchemaOpmaak): string {
   const { strook } = opmaak;
-  return root(strook.breedte, strook.hoogte, strook.elementen.map(elementSvg).join(""));
+  return root(strook.breedte, strook.hoogte, strook.elementen.map((element) => elementSvg(element, true)).join(""));
 }
