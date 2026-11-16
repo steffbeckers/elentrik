@@ -8,8 +8,10 @@ export const NL: Readonly<Record<string, string>> = {
     "Het algemeen differentieel heeft een gevoeligheid van {gevoeligheid} mA. Meer dan {max} mA is niet toegestaan.",
   "arei.differentieel.natte-ruimte.ontbreekt":
     "Dit punt ({reden}) hangt niet achter een differentieel van maximaal {max} mA.",
-  "arei.kring.doorsnede-beveiliging.te-hoog":
-    "De beveiliging van {nominaal} A is te hoog voor een leiding van {doorsnede} mm². Maximaal {max} A.",
+  "arei.kring.doorsnede-beveiliging.te-hoog-automaat":
+    "De automaat van {nominaal} A is te hoog voor een leiding van {doorsnede} mm². Maximaal {max} A voor een automaat.",
+  "arei.kring.doorsnede-beveiliging.te-hoog-zekering":
+    "De zekering van {nominaal} A is te hoog voor een leiding van {doorsnede} mm². Maximaal {max} A voor een zekering.",
   "arei.kring.doorsnede-beveiliging.onbekende-doorsnede":
     "Voor een leidingdoorsnede van {doorsnede} mm² is geen maximale beveiliging gekend. Controleer dit handmatig.",
   "arei.kring.max-contactdozen.overschreden":
@@ -29,6 +31,38 @@ export const NL: Readonly<Record<string, string>> = {
   "arei.leiding.onvolledig.doorsnede": "Bij deze leiding is de doorsnede nog niet ingevuld.",
   "arei.punt.zonder-beveiliging.ontbreekt":
     "Dit punt hangt niet achter een automaat of zekering in een verdeelbord.",
+  "arei.differentieel.max-stroombanen.overschreden":
+    "Achter dit differentieel van {gevoeligheid} mA zitten {aantal} kringen. In een nieuwe huishoudelijke installatie zijn er maximaal {max} per differentieel toegelaten.",
+  "arei.differentieel.max-stroombanen.context":
+    "Achter dit differentieel van {gevoeligheid} mA zitten {aantal} kringen. Sinds 1 juni 2023 zijn er maximaal {max} per differentieel toegelaten. Controleer de installatiecontext en eventuele overgangsbepalingen; een bestaande installatie is niet automatisch vrijgesteld.",
+  "arei.differentieel.type-ac.niet-toegelaten":
+    "Dit differentieel is van het type AC. Dat type is niet toegelaten in een nieuwe huishoudelijke installatie; kies minstens type A.",
+  "arei.differentieel.type-ac.context":
+    "Dit differentieel is van het type AC. Dat type is niet meer toegelaten in nieuwe installaties. Controleer de installatiecontext en eventuele overgangsbepalingen; een bestaande installatie is niet automatisch vrijgesteld.",
+  "arei.aarding.spreidingsweerstand.te-weinig-differentielen":
+    "De aardingsweerstand ligt boven 30 Ω. Dan zijn minstens {min} differentiëlen van maximaal 30 mA nodig; het schema heeft er {aantal}.",
+  "arei.aarding.spreidingsweerstand.te-veel-contactdozen":
+    "De aardingsweerstand ligt boven 30 Ω. Achter dit differentieel zitten {aantal} contactdozen en vaste toestellen; dan zijn er maximaal {max} toegelaten.",
+  "arei.aarding.spreidingsweerstand.kring-onbeschermd":
+    "De aardingsweerstand ligt boven 30 Ω. Dan hoort kring {kring} achter een differentieel van maximaal {max} mA, naast het algemeen differentieel.",
+  "arei.laadpaal.differentieel.ontbreekt":
+    "Deze laadpaal hangt niet achter een eigen differentieel van maximaal {max} mA. Het algemeen differentieel telt daarvoor niet.",
+  "arei.laadpaal.differentieel.type":
+    "Het differentieel van deze laadpaal is geen type B en de laadpaal heeft geen DC-foutstroomdetectie van maximaal {max} mA. Kies een differentieel van type B of vul de DC-foutstroomdetectie van de laadpaal in.",
+  "arei.verlichting.min-kringen.een-kring":
+    "Alle lichtpunten zitten op kring {kring}. Verdeel de verlichting over minstens {min} kringen, zodat niet alles tegelijk uitvalt.",
+  "arei.contactdoos.uitvoering.randaarde":
+    "Deze contactdoos heeft geen randaarde. In een nieuwe installatie hoort elke contactdoos een randaarde te hebben.",
+  "arei.contactdoos.uitvoering.kinderbeveiliging":
+    "Deze contactdoos heeft geen kinderbeveiliging. In een nieuwe huishoudelijke installatie hoort elke contactdoos kinderbeveiliging te hebben.",
+  "arei.aarding.niet-getekend.beide":
+    "Het schema toont nog geen aarding. Voeg de aardingsonderbreker en de aardelektrode toe.",
+  "arei.aarding.niet-getekend.aardingsonderbreker":
+    "Het schema toont een aardelektrode maar nog geen aardingsonderbreker.",
+  "arei.aarding.niet-getekend.aardelektrode":
+    "Het schema toont een aardingsonderbreker maar nog geen aardelektrode.",
+  "arei.kring.spanningsval.te-hoog":
+    "De geschatte spanningsval van kring {kring} is {spanningsval} %, boven de richtwaarde van {max} %. Dit is een richtwaarde, geen AREI-eis; overweeg een grotere doorsnede.",
   // Waarden die als parameter in een bericht staan (een ruimte of toestelsoort), zodat elke taal ze vertaalt.
   "waarde.badkamer": "badkamer",
   "waarde.keuken": "keuken",

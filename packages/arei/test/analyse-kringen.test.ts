@@ -300,7 +300,7 @@ describe("analyseer: kringen en nummering", () => {
     expect(analyseer(doc).kringen).toMatchObject([{ id: ids.z, label: "A" }]);
   });
 
-  test("tellingen: contactdozen en lichtpunten tellen aantal op, schakelaars en toestellen nodes", () => {
+  test("tellingen: contactdozen en lichtpunten tellen aantal op; contactdoosPunten, schakelaars en toestellen nodes", () => {
     const { doc, ids } = installatie()
       .verdeelbord((b) =>
         b.kring((k) =>
@@ -319,8 +319,43 @@ describe("analyseer: kringen en nummering", () => {
     const r1 = voegToe(doc, ids.laatste!, { ...CONTACTDOOS, aantal: 2 });
     const r2 = voegToe(r1.doc, r1.id, { type: "lichtpunt", aantal: 3 });
     const analyse = analyseer(r2.doc);
-    expect(analyse.kringen[0]!.tellingen).toEqual({ contactdozen: 5, lichtpunten: 5, schakelaars: 2, toestellen: 1 });
+    // 4 contactdoos-onderdelen (3 enkele en 1 dubbele) met samen 5 contactdozen.
+    expect(analyse.kringen[0]!.tellingen).toEqual({
+      contactdozen: 5,
+      contactdoosPunten: 4,
+      lichtpunten: 5,
+      schakelaars: 2,
+      toestellen: 1,
+    });
     expect(analyse.kringen[0]!.puntIds).toHaveLength(10);
+  });
+
+  test("een kring kent de differentielen boven zijn beveiliging, dichtstbijzijnde eerst", () => {
+    const { doc, ids } = installatie()
+      .differentieel(
+        300,
+        (d) =>
+          d.verdeelbord((b) =>
+            b
+              .differentieel(30, (n) => n.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1)), { als: "d30" })
+              .kring((k) => k.automaat(32).leiding(6).toestel("kookplaat")),
+          ),
+        { als: "d300" },
+      )
+      .bouw();
+    expect(analyseer(doc).kringen.map((k) => k.differentielen)).toEqual([[ids.d30, ids.d300], [ids.d300]]);
+  });
+
+  test("een differentieel onder de kringbeveiliging hoort niet bij de differentielen van de kring", () => {
+    const h = handmatig();
+    const bord = h.voeg(h.teller, { type: "verdeelbord" });
+    const automaat = h.voeg(bord, AUTOMAAT);
+    const diff = h.voeg(automaat, DIFFERENTIEEL);
+    const leiding = h.voeg(diff, LEIDING);
+    const cd = h.voeg(leiding, CONTACTDOOS);
+    const analyse = analyseer(h.doc);
+    expect(analyse.kringen[0]!.differentielen).toEqual([]);
+    expect(analyse.ketens[cd]!.differentielen).toEqual([diff]);
   });
 
   test("een keten van 5.000 contactdozen in één kring geeft geen RangeError", () => {

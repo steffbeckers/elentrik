@@ -27,15 +27,18 @@ describe("referentie-installaties", () => {
     const aantalPunten = 6 + 5 + 1 + 1 + 2;
     expect(aantalPunten).toBe(15);
     expect(analyseer(doc).nietGeplaatst).toHaveLength(aantalPunten);
-    expect(bevindingen).toHaveLength(aantalPunten + 11);
-    expect(waarschuwingen(bevindingen)).toHaveLength(11);
-    expect(waarschuwingen(bevindingen).every(b => b.regelId === "arei.differentieel.aanvullend")).toBe(true);
-    for (const b of bevindingen.filter(b => b.ernst === "info")) {
-      expect(b.ernst).toBe("info");
-      expect(b.regelId).toBe("arei.situatie.niet-geplaatst");
-      expect(b.berichtSleutel).toBe("arei.situatie.niet-geplaatst.punt");
-    }
-    expect(new Set(bevindingen.map((b) => b.nodeIds[0])).size).toBe(aantalPunten);
+    expect(fouten(bevindingen)).toEqual([]);
+    // 11 gewone punten zonder aanvullende 30 mA, en alle verlichting op één kring.
+    expect(waarschuwingen(bevindingen).map((b) => b.regelId).sort()).toEqual([
+      ...Array.from({ length: 11 }, () => "arei.differentieel.aanvullend"),
+      "arei.verlichting.min-kringen",
+    ]);
+    // Eén melding per niet-geplaatst punt, en één voor de aarding die niet getekend is.
+    expect(bevindingen.filter((b) => b.ernst === "info").map((b) => b.berichtSleutel).sort()).toEqual([
+      "arei.aarding.niet-getekend.beide",
+      ...Array.from({ length: aantalPunten }, () => "arei.situatie.niet-geplaatst.punt"),
+    ]);
+    expect(bevindingen).toHaveLength(aantalPunten + 11 + 2);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 
@@ -51,18 +54,23 @@ describe("referentie-installaties", () => {
       nodeIds: [ids["rij"]],
       parameters: { aantal: 9, max: 8 },
     });
-    expect(waarschuwingen(bevindingen)).toHaveLength(20);
-    expect(waarschuwingen(bevindingen).every(b => b.regelId === "arei.differentieel.aanvullend")).toBe(true);
+    expect(waarschuwingen(bevindingen).filter(regelId("arei.differentieel.aanvullend"))).toHaveLength(20);
+    expect(waarschuwingen(bevindingen).filter((b) => b.regelId !== "arei.differentieel.aanvullend").map((b) => b.regelId)).toEqual([
+      "arei.verlichting.min-kringen",
+    ]);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 
-  test("woning met laadpaal en zonnepanelen (3N400V): ontbrekende 30 mA blijft ter beoordeling", () => {
+  test("woning met laadpaal en zonnepanelen (3N400V): geen fouten, de laadpaal zit achter een eigen differentieel type B", () => {
     const doc = referentieWoning();
     expect(valideerStructuur(doc)).toEqual([]);
     const bevindingen = controleer(doc, regelset);
     expect(fouten(bevindingen)).toEqual([]);
-    expect(waarschuwingen(bevindingen)).toHaveLength(11);
-    expect(waarschuwingen(bevindingen).every(b => b.regelId === "arei.differentieel.aanvullend")).toBe(true);
+    expect(bevindingen.filter(regelId("arei.laadpaal.differentieel"))).toEqual([]);
+    expect(waarschuwingen(bevindingen).filter(regelId("arei.differentieel.aanvullend"))).toHaveLength(11);
+    expect(waarschuwingen(bevindingen).filter((b) => b.regelId !== "arei.differentieel.aanvullend").map((b) => b.regelId)).toEqual([
+      "arei.verlichting.min-kringen",
+    ]);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 });

@@ -29,7 +29,21 @@ describe("arei-2020@1", () => {
       "arei.situatie.niet-geplaatst",
       "arei.leiding.onvolledig",
       "arei.punt.zonder-beveiliging",
+      "arei.differentieel.max-stroombanen",
+      "arei.differentieel.type-ac",
+      "arei.aarding.spreidingsweerstand",
+      "arei.laadpaal.differentieel",
+      "arei.verlichting.min-kringen",
+      "arei.contactdoos.uitvoering",
+      "arei.aarding.niet-getekend",
+      "arei.kring.spanningsval",
     ]);
+  });
+
+  test("elke regel is voorlopig en heeft een unieke id", () => {
+    const set = haalRegelset("arei-2020@1");
+    expect(set.regels.every((r) => r.nagekeken === false)).toBe(true);
+    expect(new Set(set.regels.map((r) => r.id)).size).toBe(set.regels.length);
   });
 });
 
