@@ -117,6 +117,23 @@ function verwijder(heleTak: boolean): void {
   }
 }
 
+/**
+ * Verwijdert de selectie, voor de sneltoets en voor de knoppen in de balk boven het schema (op een
+ * aanraakscherm is er geen Delete-toets). Een hele tak vanaf 5 nodes vraagt eerst een bevestiging
+ * (spec §4.4); de weigering voor een aansluiting of teller komt eerst, want dan is ze zinloos.
+ */
+function vraagVerwijderen(heleTak: boolean): void {
+  if (store.alleenLezen || store.selectie.length === 0) return;
+  if (heleTak && !bevatVasteNode(store.selectie)) {
+    const aantal = aantalInTakken(store.selectie);
+    if (aantal >= BEVESTIG_VANAF) {
+      teVerwijderenAantal.value = aantal;
+      return;
+    }
+  }
+  verwijder(heleTak);
+}
+
 function bevestigTakVerwijderen(): void {
   if (store.alleenLezen) return;
   teVerwijderenAantal.value = null;
@@ -162,16 +179,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
       else store.voegToeBijSelectie();
       break;
     case "verwijder":
-      // Eerst de weigering (aansluiting of teller), dan pas de bevestiging: die is dan zinloos.
-      if (actie.heleTak && !bevatVasteNode(store.selectie)) {
-        // Vanaf 5 nodes eerst een bevestiging (spec §4.4).
-        const aantal = aantalInTakken(store.selectie);
-        if (aantal >= BEVESTIG_VANAF) {
-          teVerwijderenAantal.value = aantal;
-          break;
-        }
-      }
-      verwijder(actie.heleTak);
+      vraagVerwijderen(actie.heleTak);
       break;
     case "ongedaan":
       store.ongedaanMaken();
@@ -387,6 +395,15 @@ watchPostEffect(() => {
         data-testid="schema-nodekeuze" class="min-h-9 min-w-0 flex-1 sm:w-80 sm:flex-none"
         @update:model-value="kiesStructuur" />
       <UButton v-if="!store.alleenLezen" icon="i-lucide-plus" :color="toevoegenOpen ? 'primary' : 'neutral'" variant="soft" :label="$t('werkbaarheid.tekenen.toevoegen')" :aria-expanded="toevoegenOpen" aria-controls="schema-invoegen" data-testid="schema-toevoegmodus" class="min-h-9" @click="toevoegenOpen = !toevoegenOpen" />
+      <!-- De selectie verwijderen kan ook zonder toetsenbord: op een aanraakscherm is er geen Delete-toets. -->
+      <div v-if="!store.alleenLezen && store.selectie.length" role="group" :aria-label="$t('editor.sneltoetsen.verwijder')" class="flex items-center gap-1">
+        <UTooltip :text="$t('editor.sneltoetsen.verwijder')" :kbds="['Delete']">
+          <UButton color="neutral" variant="ghost" icon="i-lucide-trash-2" :label="$t('editor.canvas.takVerwijderen.bevestigen')" :aria-label="$t('editor.sneltoetsen.verwijder')" data-testid="schema-verwijder" class="min-h-9" @click="vraagVerwijderen(false)" />
+        </UTooltip>
+        <UTooltip :text="$t('editor.sneltoetsen.verwijderTak')" :kbds="['Shift', 'Delete']">
+          <UButton color="neutral" variant="ghost" icon="i-lucide-list-x" :aria-label="$t('editor.sneltoetsen.verwijderTak')" data-testid="schema-verwijder-tak" class="min-h-9" @click="vraagVerwijderen(true)" />
+        </UTooltip>
+      </div>
     </div>
     <div v-if="toevoegenOpen && !store.alleenLezen" id="schema-invoegen" class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default bg-elevated px-3 py-2">
       <div class="flex min-w-0 flex-1 basis-64 flex-wrap items-center gap-2">

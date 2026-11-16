@@ -47,3 +47,46 @@ test("een klik naast een leiding of naast een automaat selecteert dat onderdeel"
   await page.mouse.click(ander.x + 2, ander.y + 2);
   await expect(page.getByTestId(`selectie-${ander.id}`)).toHaveCount(1);
 });
+
+test("de selectie verwijderen kan met de knoppen boven het schema, zonder toetsenbord", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", {
+    data: { naam: `Test Verwijderknop ${Date.now()}`, klantnaam: "", stroomtype: "2x230V" },
+  });
+  expect(antwoord.status()).toBe(201);
+  const { id } = (await antwoord.json()) as { id: string };
+
+  await page.goto(`/projecten/${id}`);
+  await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
+  await page.getByRole("button", { name: "Passend maken" }).click();
+
+  const canvas = page.getByTestId("schema-canvas");
+  const nodes = canvas.locator("[data-node-id]");
+  const aantal = await nodes.count();
+  // Zonder selectie zijn er geen verwijderknoppen.
+  await page.mouse.click(5, 300);
+  await expect(page.getByTestId("schema-verwijder")).toHaveCount(0);
+
+  // Het bovenste symbool is de laatste contactdoos van de kring: die kan alleen weg.
+  const bovenste = await nodes.evaluateAll((groepen) => {
+    const vlakken = groepen.map((g) => ({ id: g.getAttribute("data-node-id")!, r: g.querySelector(":scope > .raakvlak")!.getBoundingClientRect() }));
+    const top = vlakken.reduce((a, b) => (b.r.y < a.r.y ? b : a));
+    return { id: top.id, x: top.r.x + top.r.width / 2, y: top.r.y + top.r.height / 2 };
+  });
+  await page.mouse.click(bovenste.x, bovenste.y);
+  await expect(page.getByTestId(`selectie-${bovenste.id}`)).toHaveCount(1);
+  await page.getByTestId("schema-verwijder").click();
+  await expect(nodes).toHaveCount(aantal - 1);
+
+  // De hele kring: de automaat kiezen en de tak verwijderen vraagt eerst een bevestiging.
+  await page.getByTestId("schema-nodekeuze").click();
+  await page.getByRole("option", { name: /Automaat/ }).first().click();
+  await page.getByTestId("schema-verwijder-tak").click();
+  await expect(page.getByRole("dialog")).toContainText("Hele tak verwijderen");
+  await page.getByTestId("tak-verwijderen-bevestigen").click();
+  await expect(canvas.locator("[data-node-id]")).toHaveCount(aantal - 8);
+
+  // Alles is ongedaan te maken.
+  await page.getByTestId("ongedaan-maken").click();
+  await expect(canvas.locator("[data-node-id]")).toHaveCount(aantal - 1);
+});
