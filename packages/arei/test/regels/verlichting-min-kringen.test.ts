@@ -9,11 +9,11 @@ const ID = "arei.verlichting.min-kringen";
 describe("verlichting.min-kringen", () => {
   const regel = maakRegelVerlichtingMinKringen(PARAMETERS_AREI_2020_V1);
 
-  test("is een voorlopige waarschuwing zonder artikel", () => {
+  test("is een voorlopige info-melding zonder artikel", () => {
     expect(regel.id).toBe(ID);
     expect(regel.nagekeken).toBe(false);
     expect(regel.artikel).toBe("");
-    expect(regel.ernst).toBe("waarschuwing");
+    expect(regel.ernst).toBe("info");
   });
 
   test("zonder lichtpunten geeft de regel niets", () => {
@@ -23,7 +23,7 @@ describe("verlichting.min-kringen", () => {
     expect(draaiRegel(regel, doc)).toEqual([]);
   });
 
-  test("alle lichtpunten op één kring geven een waarschuwing op die kring", () => {
+  test("alle lichtpunten op één kring geven een info-melding op die kring", () => {
     const { doc, ids } = installatie()
       .verdeelbord((b) =>
         b
@@ -34,7 +34,7 @@ describe("verlichting.min-kringen", () => {
     expect(draaiRegel(regel, doc)).toEqual([
       {
         regelId: ID,
-        ernst: "waarschuwing",
+        ernst: "info",
         nodeIds: [ids["licht"]],
         berichtSleutel: `${ID}.een-kring`,
         parameters: { kring: "B", min: 2 },

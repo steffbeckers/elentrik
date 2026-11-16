@@ -28,15 +28,16 @@ describe("referentie-installaties", () => {
     expect(aantalPunten).toBe(15);
     expect(analyseer(doc).nietGeplaatst).toHaveLength(aantalPunten);
     expect(fouten(bevindingen)).toEqual([]);
-    // 11 gewone punten zonder aanvullende 30 mA, en alle verlichting op één kring.
-    expect(waarschuwingen(bevindingen).map((b) => b.regelId).sort()).toEqual([
-      ...Array.from({ length: 11 }, () => "arei.differentieel.aanvullend"),
-      "arei.verlichting.min-kringen",
-    ]);
-    // Eén melding per niet-geplaatst punt, en één voor de aarding die niet getekend is.
+    // 11 gewone punten zonder aanvullende 30 mA.
+    expect(waarschuwingen(bevindingen).map((b) => b.regelId).sort()).toEqual(
+      Array.from({ length: 11 }, () => "arei.differentieel.aanvullend"),
+    );
+    // Eén melding per niet-geplaatst punt, één voor de aarding die niet getekend is en één voor de
+    // verlichting die op één kring zit.
     expect(bevindingen.filter((b) => b.ernst === "info").map((b) => b.berichtSleutel).sort()).toEqual([
       "arei.aarding.niet-getekend.beide",
       ...Array.from({ length: aantalPunten }, () => "arei.situatie.niet-geplaatst.punt"),
+      "arei.verlichting.min-kringen.een-kring",
     ]);
     expect(bevindingen).toHaveLength(aantalPunten + 11 + 2);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
@@ -55,9 +56,8 @@ describe("referentie-installaties", () => {
       parameters: { aantal: 9, max: 8 },
     });
     expect(waarschuwingen(bevindingen).filter(regelId("arei.differentieel.aanvullend"))).toHaveLength(20);
-    expect(waarschuwingen(bevindingen).filter((b) => b.regelId !== "arei.differentieel.aanvullend").map((b) => b.regelId)).toEqual([
-      "arei.verlichting.min-kringen",
-    ]);
+    expect(waarschuwingen(bevindingen).filter((b) => b.regelId !== "arei.differentieel.aanvullend")).toEqual([]);
+    expect(bevindingen.filter(regelId("arei.verlichting.min-kringen")).map((b) => b.ernst)).toEqual(["info"]);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 
@@ -68,9 +68,8 @@ describe("referentie-installaties", () => {
     expect(fouten(bevindingen)).toEqual([]);
     expect(bevindingen.filter(regelId("arei.laadpaal.differentieel"))).toEqual([]);
     expect(waarschuwingen(bevindingen).filter(regelId("arei.differentieel.aanvullend"))).toHaveLength(11);
-    expect(waarschuwingen(bevindingen).filter((b) => b.regelId !== "arei.differentieel.aanvullend").map((b) => b.regelId)).toEqual([
-      "arei.verlichting.min-kringen",
-    ]);
+    expect(waarschuwingen(bevindingen).filter((b) => b.regelId !== "arei.differentieel.aanvullend")).toEqual([]);
+    expect(bevindingen.filter(regelId("arei.verlichting.min-kringen")).map((b) => b.ernst)).toEqual(["info"]);
     expect(bevindingen.filter(regelId("arei.punt.zonder-beveiliging"))).toEqual([]);
   });
 });

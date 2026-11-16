@@ -50,7 +50,7 @@ export const EN: Readonly<Record<string, string>> = {
   "arei.laadpaal.differentieel.type":
     "The RCD of this EV charger is not type B and the charger has no DC residual current detection of {max} mA or less. Choose a type B RCD or enter the charger's DC residual current detection.",
   "arei.verlichting.min-kringen.een-kring":
-    "All light points are on circuit {kring}. Spread the lighting over at least {min} circuits so that it does not all fail at once.",
+    "All light points are on circuit {kring}. For information: preferably spread the lighting over at least {min} circuits so that it does not all fail at once.",
   "arei.contactdoos.uitvoering.randaarde":
     "This socket has no earth contact. In a new installation every socket should have one.",
   "arei.contactdoos.uitvoering.kinderbeveiliging":

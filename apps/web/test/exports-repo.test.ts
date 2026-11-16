@@ -125,9 +125,8 @@ describe("maakExport", () => {
       versieLabel: "V1",
       papier: "A3",
       aantalFouten: 0,
-      // De oude referentie mist 30 mA op zes contactdozen en vijf lichtpunten, en heeft
-      // alle lichtpunten op één kring.
-      aantalWaarschuwingen: 12,
+      // De oude referentie mist 30 mA op zes contactdozen en vijf lichtpunten.
+      aantalWaarschuwingen: 11,
       aangemaakt: nu.toISOString(),
     });
     expect(nep.oproepen).toHaveLength(1);
@@ -151,7 +150,7 @@ describe("maakExport", () => {
       papier: "A3",
       onderdelen: { eendraadschema: true, situatieschema: false, kringenlijst: true, bijlage: false },
       aantalFouten: 0,
-      aantalWaarschuwingen: 12,
+      aantalWaarschuwingen: 11,
     });
   });
 

@@ -50,7 +50,7 @@ export const NL: Readonly<Record<string, string>> = {
   "arei.laadpaal.differentieel.type":
     "Het differentieel van deze laadpaal is geen type B en de laadpaal heeft geen DC-foutstroomdetectie van maximaal {max} mA. Kies een differentieel van type B of vul de DC-foutstroomdetectie van de laadpaal in.",
   "arei.verlichting.min-kringen.een-kring":
-    "Alle lichtpunten zitten op kring {kring}. Verdeel de verlichting over minstens {min} kringen, zodat niet alles tegelijk uitvalt.",
+    "Alle lichtpunten zitten op kring {kring}. Ter info: verdeel de verlichting bij voorkeur over minstens {min} kringen, zodat niet alles tegelijk uitvalt.",
   "arei.contactdoos.uitvoering.randaarde":
     "Deze contactdoos heeft geen randaarde. In een nieuwe installatie hoort elke contactdoos een randaarde te hebben.",
   "arei.contactdoos.uitvoering.kinderbeveiliging":

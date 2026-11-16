@@ -7,7 +7,7 @@ const ID = "arei.verlichting.min-kringen";
  * De verlichting is over minstens twee kringen verdeeld, zodat niet alle lichtpunten samen
  * uitvallen. Eén melding voor de installatie, op de kring die alle lichtpunten draagt.
  * Herkomst: vakkennis uit de elektricien-review van 16 november 2026, nog te toetsen aan de tekst
- * van het AREI; daarom een waarschuwing zonder artikel.
+ * van het AREI; daarom ter info en zonder artikel (beslissing van de gebruiker, 16 november 2026).
  */
 export function maakRegelVerlichtingMinKringen(p: Arei2020Parameters): Regel {
   const min = p.minKringenVerlichting;
@@ -15,7 +15,7 @@ export function maakRegelVerlichtingMinKringen(p: Arei2020Parameters): Regel {
   return {
     id: ID,
     artikel: "",
-    ernst: "waarschuwing",
+    ernst: "info",
     nagekeken: false,
     berichtSleutels: [`${ID}.een-kring`],
     check(analyse) {
@@ -25,7 +25,7 @@ export function maakRegelVerlichtingMinKringen(p: Arei2020Parameters): Regel {
       return [
         {
           regelId: ID,
-          ernst: "waarschuwing",
+          ernst: "info",
           nodeIds: [eerste.beveiligingId],
           berichtSleutel: `${ID}.een-kring`,
           parameters: { kring: eerste.label, min },

@@ -58,12 +58,14 @@ Dit is mijn keuze, niet door de gebruiker bevestigd; de gebruiker vroeg zelfstan
 | `arei.differentieel.type-ac` | fout bij nieuw, anders waarschuwing | Klasse AC. |
 | `arei.aarding.spreidingsweerstand` | fout bij nieuw, anders waarschuwing | Alleen als de ingevulde aardingsweerstand boven 30 Ω ligt: minder dan twee differentiëlen ≤ 30 mA, meer dan 16 contactdozen (een vast toestel telt als één) achter één ervan, of een kring zonder differentieel ≤ 100 mA naast het algemene. |
 | `arei.laadpaal.differentieel` | fout / waarschuwing | Geen differentieel ≤ 30 mA: fout. Wel, maar geen type B en geen DC-detectie ≤ 6 mA: waarschuwing. |
-| `arei.verlichting.min-kringen` | waarschuwing | Er zijn lichtpunten maar ze zitten allemaal op één kring. Uit vakkennis, nog te toetsen aan de tekst. |
+| `arei.verlichting.min-kringen` | info | Er zijn lichtpunten maar ze zitten allemaal op één kring. Uit vakkennis, nog te toetsen aan de tekst; daarom ter info (beslissing van 16 november 2026, eerst een waarschuwing). |
 | `arei.contactdoos.uitvoering` | waarschuwing, alleen bij nieuw | Contactdoos zonder randaarde of zonder kinderbeveiliging. |
 | `arei.aarding.niet-getekend` | info | Er zijn kringen maar geen aardingsonderbreker of geen aardelektrode in het schema. |
 | `arei.kring.spanningsval` | info | Alleen als elke leiding van de kring een lengte heeft: ΔU = k · L · In · ρ / S met ρ = 0,0225 Ω·mm²/m, k = 2 (tweepolig) of √3 (drie- of vierpolig), tegenover 230 V of 400 V. Boven 3 % (kring met alleen verlichting) of 5 % volgt de melding, met de berekende waarde. Een richtwaarde, geen AREI-eis. |
 
-De regel over de aardingsweerstand beoordeelt de meting niet (geen "goed" of "slecht"); hij past de eisen toe die van die waarde afhangen. Dat schuift wel op tegenover de eerdere keuze "metingen worden alleen geregistreerd" en staat daarom apart in de PR.
+De regel over de aardingsweerstand beoordeelt de meting niet (geen "goed" of "slecht"); hij past de eisen toe die van die waarde afhangen. Dat schuift op tegenover de eerdere keuze "metingen worden alleen geregistreerd"; de gebruiker besliste op 16 november 2026 de regel te behouden.
+
+Beslist op dezelfde dag: de ernst van de nieuwe controles blijft afhangen van de installatiecontext (fout bij nieuw, anders waarschuwing), en de startwoning blijft op het gratis niveau het limietvenster openen.
 
 De aarding komt als info-bevinding en niet in de dossierchecklist, zodat geen bestaand dossier zijn status "volledig" verliest.
 

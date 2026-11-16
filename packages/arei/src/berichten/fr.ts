@@ -50,7 +50,7 @@ export const FR: Readonly<Record<string, string>> = {
   "arei.laadpaal.differentieel.type":
     "L'interrupteur différentiel de cette borne de recharge n'est pas de type B et la borne n'a pas de détection de courant résiduel DC de {max} mA maximum. Choisissez un interrupteur différentiel de type B ou renseignez la détection de courant résiduel DC de la borne.",
   "arei.verlichting.min-kringen.een-kring":
-    "Tous les points lumineux sont sur le circuit {kring}. Répartissez l'éclairage sur au moins {min} circuits, afin que tout ne s'éteigne pas en même temps.",
+    "Tous les points lumineux sont sur le circuit {kring}. Pour information : répartissez de préférence l'éclairage sur au moins {min} circuits, afin que tout ne s'éteigne pas en même temps.",
   "arei.contactdoos.uitvoering.randaarde":
     "Cette prise de courant n'a pas de contact de terre. Dans une nouvelle installation, chaque prise de courant doit en avoir un.",
   "arei.contactdoos.uitvoering.kinderbeveiliging":
