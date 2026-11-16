@@ -15,13 +15,33 @@ import { magAftakkingKind } from "./aftakkingen";
 /** Een node van een sjabloon; `kinderen` zijn de geneste sjabloonnodes (geen id's). */
 export type SjabloonNode = NodeInvoer & { kinderen?: SjabloonNode[] };
 
+/** De groepen waarin het paneel Onderdelen de sjablonen toont. */
+export type SjabloonGroep = "kringen" | "toestellen" | "installatie";
+
 export type Sjabloon = {
   id: string;
   naam: string;
   boom: SjabloonNode;
   /** De soort ruimte die het sjabloon voorstelt voor zijn punten (de badkamer); de gebruiker kan ze wijzigen. */
   ruimte?: Ruimte;
+  /** De groep in het paneel Onderdelen. */
+  groep?: SjabloonGroep;
+  /**
+   * Het sjabloon hoort achter een differentieel dat het met geen andere kring deelt (de laadpaal):
+   * de editor stelt dan een nieuw differentieel voor in plaats van een bestaand.
+   */
+  eigenDifferentieel?: true;
 };
+
+/**
+ * Is het sjabloon een kring (een beveiliging, al dan niet achter een eigen differentieel)? Een kring
+ * komt via `voegSjabloonToe` op een bord of een differentieel; de rest (de aarding) komt rechtstreeks
+ * op een verdeelbord, via `voegBordSjabloonToe`.
+ */
+export function isKringSjabloon(sjabloon: Sjabloon): boolean {
+  const type = sjabloon.boom.type;
+  return type === "differentieel" || type === "automaat" || type === "zekering";
+}
 
 type Werk = {
   invoer: SjabloonNode;

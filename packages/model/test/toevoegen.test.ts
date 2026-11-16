@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   NIEUWE_KRING_AUTOMAAT,
   doorsnedeVoorKring,
+  isKringSjabloon,
   SJABLONEN,
   STANDAARD,
   magToevoegen,
@@ -439,13 +440,23 @@ describe("magToevoegen komt overeen met voegOnderdeelToe", () => {
 });
 
 describe("SJABLONEN", () => {
-  test("precies de 5 sjablonen uit de spec", () => {
+  test("de sjablonen, in de volgorde van het paneel", () => {
     expect(SJABLONEN.map((s) => s.id)).toEqual([
       "kring-stopcontacten",
       "kring-verlichting",
-      "kookplaat",
-      "wasmachine",
+      "keuken",
       "badkamer",
+      "buiten",
+      "kookplaat",
+      "oven",
+      "vaatwasser",
+      "wasmachine",
+      "droogkast",
+      "boiler",
+      "warmtepomp",
+      "laadpaal",
+      "zonnepanelen",
+      "aarding",
     ]);
   });
 
@@ -526,7 +537,8 @@ describe("SJABLONEN", () => {
 describe("voegSjabloonToe", () => {
   test("op een verdeelbord: één undo-stap en geldige structuur", () => {
     const { doc, bordId } = start();
-    for (const sjabloon of SJABLONEN) {
+    // De aarding is geen kring: die gaat via `voegBordSjabloonToe` (startwoning.test.ts).
+    for (const sjabloon of SJABLONEN.filter(isKringSjabloon)) {
       const r = voegSjabloonToe(doc, {soort:"nieuw-op-bord",nodeId:bordId}, sjabloon.id);
       expect(haal(r.doc, bordId).kinderen).toEqual([r.id]);
       expect(valideerStructuur(r.doc)).toEqual([]);
@@ -567,7 +579,7 @@ describe("voegSjabloonToe", () => {
 
   test("het Badkamer-sjabloon suggereert de badkamer; de gekozen ruimte gaat naar de nieuwe punten", () => {
     expect(sjabloonVoor("badkamer", "2x230V").ruimte).toBe("badkamer");
-    expect(SJABLONEN.filter((s) => s.ruimte !== undefined).map((s) => s.id)).toEqual(["badkamer"]);
+    expect(SJABLONEN.filter((s) => s.ruimte !== undefined).map((s) => s.id)).toEqual(["keuken", "badkamer", "buiten"]);
     const { doc, bordId } = start();
     const nieuw = (r: { doc: InstallatieDocument }) => Object.values(r.doc.nodes).filter((n) => !Object.hasOwn(doc.nodes, n.id));
     const punten = (r: { doc: InstallatieDocument }) => nieuw(r).filter((n) => n.type === "contactdoos");
