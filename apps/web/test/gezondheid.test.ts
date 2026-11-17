@@ -1,12 +1,11 @@
 // GET /api/gezondheid: publiek, 200 { ok: true, versie, revisie } met een bereikbare database, anders 503
-// { ok: false, versie, revisie } zonder foutdetails. `versie` is de semver uit package.json, `revisie` de
-// korte sha uit ELENTRIK_REVISIE, of null.
+// { ok: false, versie, revisie } zonder foutdetails. `versie` is de semver uit ELENTRIK_VERSIE, `revisie`
+// de korte sha uit ELENTRIK_REVISIE; elk null als onbekend.
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import pakket from "../package.json";
-import { APP_VERSIE, leesRevisie } from "../shared/versie";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { leesRevisie, leesVersie, versieTekst } from "../shared/versie";
 import { type Db, zetDb } from "../server/db";
 import { maakTestDb } from "./db";
 
@@ -27,6 +26,11 @@ beforeAll(async () => {
   basis = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }, 120_000);
 
+beforeEach(() => {
+  vi.stubEnv("ELENTRIK_VERSIE", "");
+  vi.stubEnv("ELENTRIK_REVISIE", "");
+});
+
 afterEach(() => {
   vi.unstubAllEnvs();
 });
@@ -40,7 +44,7 @@ describe("GET /api/gezondheid", () => {
     zetDb(db);
     const antwoord = await fetch(`${basis}/api/gezondheid`);
     expect(antwoord.status).toBe(200);
-    expect(await antwoord.json()).toEqual({ ok: true, versie: APP_VERSIE, revisie: null });
+    expect(await antwoord.json()).toEqual({ ok: true, versie: null, revisie: null });
   });
 
   test("met een database die gooit: 503 { ok: false }, zonder foutdetails", async () => {
@@ -52,7 +56,7 @@ describe("GET /api/gezondheid", () => {
     const antwoord = await fetch(`${basis}/api/gezondheid`);
     const tekst = await antwoord.text();
     expect(antwoord.status).toBe(503);
-    expect(JSON.parse(tekst)).toEqual({ ok: false, versie: APP_VERSIE, revisie: null });
+    expect(JSON.parse(tekst)).toEqual({ ok: false, versie: null, revisie: null });
     expect(tekst).not.toContain("geheim-xyz");
     expect(tekst).not.toContain("ECONNREFUSED");
   });
@@ -61,21 +65,40 @@ describe("GET /api/gezondheid", () => {
     zetDb({ execute: () => new Promise(() => {}) } as unknown as Db);
     const antwoord = await fetch(`${basis}/api/gezondheid`);
     expect(antwoord.status).toBe(503);
-    expect(await antwoord.json()).toEqual({ ok: false, versie: APP_VERSIE, revisie: null });
+    expect(await antwoord.json()).toEqual({ ok: false, versie: null, revisie: null });
   }, 15_000);
 
-  test("met ELENTRIK_REVISIE: de korte sha als revisie", async () => {
+  test("met ELENTRIK_VERSIE en ELENTRIK_REVISIE: de semver en de korte sha", async () => {
     zetDb(db);
+    vi.stubEnv("ELENTRIK_VERSIE", "1.1.0");
     vi.stubEnv("ELENTRIK_REVISIE", "025fc73b1e2d3c4f5a6b7c8d9e0f112233445566");
     const antwoord = await fetch(`${basis}/api/gezondheid`);
-    expect(await antwoord.json()).toEqual({ ok: true, versie: APP_VERSIE, revisie: "025fc73" });
+    expect(await antwoord.json()).toEqual({ ok: true, versie: "1.1.0", revisie: "025fc73" });
   });
 });
 
-describe("APP_VERSIE", () => {
-  test("is de semver uit package.json", () => {
-    expect(APP_VERSIE).toBe(pakket.version);
-    expect(APP_VERSIE).toMatch(/^\d+\.\d+\.\d+(-[0-9a-z.-]+)?$/i);
+describe("leesVersie", () => {
+  test.each([
+    ["1.1.0", "1.1.0"],
+    [" 1.1.0-staging ", "1.1.0-staging"],
+    ["1.1.0-dev", "1.1.0-dev"],
+    ["", null],
+    [undefined, null],
+    ["v1.1.0", null],
+    ["1.1", null],
+  ] as const)("%j -> %j", (waarde, verwacht) => {
+    expect(leesVersie({ ELENTRIK_VERSIE: waarde })).toBe(verwacht);
+  });
+});
+
+describe("versieTekst", () => {
+  test.each([
+    [{ versie: "1.1.0", revisie: "025fc73" }, "1.1.0 025fc73"],
+    [{ versie: "1.1.0", revisie: null }, "1.1.0"],
+    [{ versie: null, revisie: "025fc73" }, "025fc73"],
+    [{ versie: null, revisie: null }, ""],
+  ] as const)("%j -> %j", (appVersie, verwacht) => {
+    expect(versieTekst(appVersie)).toBe(verwacht);
   });
 });
 

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { setResponseStatus } from "h3";
-import { APP_VERSIE, leesRevisie } from "../../shared/versie";
+import { leesAppVersie } from "../../shared/versie";
 import { gebruikDb } from "../db";
 import { defineBeveiligdeHandler } from "../utils/toegang";
 
@@ -20,11 +20,11 @@ async function controleerDatabase(): Promise<void> {
 }
 
 // Publiek: Docker en de monitoring hebben geen sessie. Het antwoord noemt nooit een fout of een
-// instelling; alleen of de database antwoordt, de versie (semver) en de revisie (korte git-sha, anders `null`). De repo is
-// publiek, de sha verraadt dus niets.
+// instelling; alleen of de database antwoordt, de versie (semver) en de revisie (korte git-sha), elk
+// `null` als onbekend. De repo is publiek, de versie en de sha verraden dus niets.
 export default defineBeveiligdeHandler(
   async (event) => {
-    const versie = { versie: APP_VERSIE, revisie: leesRevisie(process.env) };
+    const versie = leesAppVersie(process.env);
     try {
       await controleerDatabase();
       return { ok: true, ...versie };
