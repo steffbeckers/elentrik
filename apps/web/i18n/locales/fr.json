@@ -1494,6 +1494,7 @@
       "betalingNaGratie": "Votre dernier paiement a échoué. Votre entreprise utilise désormais la version gratuite et les projets de votre abonnement sont en lecture seule. Réglez votre paiement pour tout modifier à nouveau."
     }
   },
+  "appVersie": "Version {versie}",
   "menu": {
     "donkereModus": "Mode sombre",
     "lichteModus": "Mode clair",
@@ -1503,7 +1504,6 @@
     "bedrijfsgegevens": "Données de l'entreprise",
     "abonnement": "Abonnement",
     "uitloggen": "Se déconnecter",
-    "versie": "Version {versie}",
     "wisselenMislukt": "Le changement d'organisation n'a pas abouti.",
     "uitloggenMislukt": "La déconnexion n'a pas abouti.",
     "organisatieKeuzeMet": "Choisir une organisation : {organisatie}"

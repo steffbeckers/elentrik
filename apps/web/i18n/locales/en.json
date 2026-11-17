@@ -1494,6 +1494,7 @@
       "betalingNaGratie": "Your last payment failed. Your company now uses the free version and projects from your subscription are read-only. Sort out your payment to edit everything again."
     }
   },
+  "appVersie": "Version {versie}",
   "menu": {
     "donkereModus": "Dark mode",
     "lichteModus": "Light mode",
@@ -1503,7 +1504,6 @@
     "bedrijfsgegevens": "Company details",
     "abonnement": "Subscription",
     "uitloggen": "Sign out",
-    "versie": "Version {versie}",
     "wisselenMislukt": "Switching organisation did not work.",
     "uitloggenMislukt": "Signing out did not work.",
     "organisatieKeuzeMet": "Choose organisation: {organisatie}"

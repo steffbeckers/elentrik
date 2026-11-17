@@ -1494,6 +1494,7 @@
       "betalingNaGratie": "Je laatste betaling is mislukt. Je bedrijf gebruikt nu de gratis versie en projecten uit je abonnement zijn alleen-lezen. Regel je betaling om weer alles te bewerken."
     }
   },
+  "appVersie": "Versie {versie}",
   "menu": {
     "donkereModus": "Donkere modus",
     "lichteModus": "Lichte modus",
@@ -1503,7 +1504,6 @@
     "bedrijfsgegevens": "Bedrijfsgegevens",
     "abonnement": "Abonnement",
     "uitloggen": "Uitloggen",
-    "versie": "Versie {versie}",
     "wisselenMislukt": "Wisselen van organisatie is niet gelukt.",
     "uitloggenMislukt": "Uitloggen is niet gelukt.",
     "organisatieKeuzeMet": "Organisatie kiezen: {organisatie}"
