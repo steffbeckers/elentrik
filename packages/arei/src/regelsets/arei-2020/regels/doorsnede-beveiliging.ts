@@ -3,14 +3,19 @@ import type { Arei2020Parameters } from "../parameters";
 
 const ID = "arei.kring.doorsnede-beveiliging";
 
-/** Regel 3: de beveiliging van een kring is niet hoger dan de kleinste leidingdoorsnede toelaat. */
+/**
+ * Regel 3: de beveiliging van een kring is niet hoger dan de kleinste leidingdoorsnede toelaat.
+ * Boek 1, 4.4.1.5, tabel 1 geeft per doorsnede een grens voor een smeltveiligheid en een hogere
+ * voor een automaat. Herkomst: de toelichting van het sectorkenniscentrum bij de kabelberekening
+ * (elektricien-review van 16 november 2026); nog niet nagekeken tegen de tekst zelf.
+ */
 export function maakRegelDoorsnedeBeveiliging(p: Arei2020Parameters): Regel {
   return {
     id: ID,
-    artikel: "",
+    artikel: "4.4.1.5",
     ernst: "fout",
     nagekeken: false,
-    berichtSleutels: [`${ID}.te-hoog`, `${ID}.onbekende-doorsnede`],
+    berichtSleutels: [`${ID}.te-hoog-automaat`, `${ID}.te-hoog-zekering`, `${ID}.onbekende-doorsnede`],
     check(analyse, doc) {
       const bevindingen: Omit<Bevinding, "afgeweken">[] = [];
       for (const kring of analyse.kringen) {
@@ -28,15 +33,17 @@ export function maakRegelDoorsnedeBeveiliging(p: Arei2020Parameters): Regel {
             berichtSleutel: `${ID}.onbekende-doorsnede`,
             parameters: { doorsnede },
           });
-        } else if (beveiliging.nominaal_A > rij[1]) {
-          bevindingen.push({
-            regelId: ID,
-            ernst: "fout",
-            nodeIds: [kring.beveiligingId],
-            berichtSleutel: `${ID}.te-hoog`,
-            parameters: { nominaal: beveiliging.nominaal_A, doorsnede, max: rij[1] },
-          });
+          continue;
         }
+        const max = beveiliging.type === "zekering" ? rij[1] : rij[2];
+        if (beveiliging.nominaal_A <= max) continue;
+        bevindingen.push({
+          regelId: ID,
+          ernst: "fout",
+          nodeIds: [kring.beveiligingId],
+          berichtSleutel: `${ID}.te-hoog-${beveiliging.type}`,
+          parameters: { nominaal: beveiliging.nominaal_A, doorsnede, max },
+        });
       }
       return bevindingen;
     },

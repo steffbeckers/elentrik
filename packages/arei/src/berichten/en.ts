@@ -8,8 +8,10 @@ export const EN: Readonly<Record<string, string>> = {
     "The main RCD has a sensitivity of {gevoeligheid} mA. More than {max} mA is not permitted.",
   "arei.differentieel.natte-ruimte.ontbreekt":
     "This point ({reden}) is not behind an RCD of {max} mA or less.",
-  "arei.kring.doorsnede-beveiliging.te-hoog":
-    "The protection of {nominaal} A is too high for a cable of {doorsnede} mm². Maximum {max} A.",
+  "arei.kring.doorsnede-beveiliging.te-hoog-automaat":
+    "The circuit breaker of {nominaal} A is too high for a cable of {doorsnede} mm². Maximum {max} A for a circuit breaker.",
+  "arei.kring.doorsnede-beveiliging.te-hoog-zekering":
+    "The fuse of {nominaal} A is too high for a cable of {doorsnede} mm². Maximum {max} A for a fuse.",
   "arei.kring.doorsnede-beveiliging.onbekende-doorsnede":
     "No maximum protection is known for a cross-section of {doorsnede} mm². Please check this manually.",
   "arei.kring.max-contactdozen.overschreden":
@@ -29,6 +31,38 @@ export const EN: Readonly<Record<string, string>> = {
   "arei.leiding.onvolledig.doorsnede": "The cross-section of this cable has not been entered yet.",
   "arei.punt.zonder-beveiliging.ontbreekt":
     "This point is not supplied by a circuit breaker or a fuse in a distribution board.",
+  "arei.differentieel.max-stroombanen.overschreden":
+    "There are {aantal} circuits behind this {gevoeligheid} mA RCD. In a new domestic installation, a maximum of {max} per RCD is permitted.",
+  "arei.differentieel.max-stroombanen.context":
+    "There are {aantal} circuits behind this {gevoeligheid} mA RCD. Since 1 June 2023, a maximum of {max} per RCD has been permitted. Check the installation context and transitional provisions; an existing installation is not automatically exempt.",
+  "arei.differentieel.type-ac.niet-toegelaten":
+    "This RCD is type AC. That type is not permitted in a new domestic installation; choose at least type A.",
+  "arei.differentieel.type-ac.context":
+    "This RCD is type AC. That type is no longer permitted in new installations. Check the installation context and transitional provisions; an existing installation is not automatically exempt.",
+  "arei.aarding.spreidingsweerstand.te-weinig-differentielen":
+    "The earth resistance is above 30 Ω. At least {min} RCDs of 30 mA or less are then required; the diagram has {aantal}.",
+  "arei.aarding.spreidingsweerstand.te-veel-contactdozen":
+    "The earth resistance is above 30 Ω. There are {aantal} sockets and fixed appliances behind this RCD; the maximum permitted is then {max}.",
+  "arei.aarding.spreidingsweerstand.kring-onbeschermd":
+    "The earth resistance is above 30 Ω. Circuit {kring} must then be behind an RCD of {max} mA or less, in addition to the main RCD.",
+  "arei.laadpaal.differentieel.ontbreekt":
+    "This EV charger is not behind its own RCD of {max} mA or less. The main RCD does not count.",
+  "arei.laadpaal.differentieel.type":
+    "The RCD of this EV charger is not type B and the charger has no DC residual current detection of {max} mA or less. Choose a type B RCD or enter the charger's DC residual current detection.",
+  "arei.verlichting.min-kringen.een-kring":
+    "All light points are on circuit {kring}. For information: preferably spread the lighting over at least {min} circuits so that it does not all fail at once.",
+  "arei.contactdoos.uitvoering.randaarde":
+    "This socket has no earth contact. In a new installation every socket should have one.",
+  "arei.contactdoos.uitvoering.kinderbeveiliging":
+    "This socket has no child protection. In a new domestic installation every socket should have it.",
+  "arei.aarding.niet-getekend.beide":
+    "The diagram does not show the earthing yet. Add the earth disconnector and the earth electrode.",
+  "arei.aarding.niet-getekend.aardingsonderbreker":
+    "The diagram shows an earth electrode but no earth disconnector yet.",
+  "arei.aarding.niet-getekend.aardelektrode":
+    "The diagram shows an earth disconnector but no earth electrode yet.",
+  "arei.kring.spanningsval.te-hoog":
+    "The estimated voltage drop of circuit {kring} is {spanningsval}%, above the guideline of {max}%. This is a guideline, not an AREI requirement; consider a larger cross-section.",
   "waarde.badkamer": "bathroom",
   "waarde.keuken": "kitchen",
   "waarde.wasplaats": "laundry room",

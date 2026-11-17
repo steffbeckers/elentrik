@@ -276,7 +276,8 @@ const PICTO = { data: { rol: "picto" } } as const;
 /**
  * Toestel volgens G en H in AREI tabel 2.23, 12 × 12 mm: een vierkant van 10 × 10 mm (het vaste
  * elektrische huishoudtoestel, algemeen symbool) met aansluitlijntjes onder (`in`) en boven
- * (`uit`) en het pictogram van de soort erin. Elk pictogramelement heeft de rol "picto". Een
+ * (`uit`) en het pictogram van de soort erin. Een laatste punt (`einde`) heeft het lijntje naar
+ * `uit` niet, net als de contactdoos en het lichtpunt. Elk pictogramelement heeft de rol "picto". Een
  * pictogram heeft geen tekst, op de warmtepomp na (staat niet in de tabel):
  * - "andere": leeg, het algemene symbool;
  * - "wasmachine": een cirkel met een gevulde stip;
@@ -299,8 +300,9 @@ export function tekenToestel(node: NodeVan<"toestel">, horizontaal = false, eind
   const y = hoogte / 2;
   const maat = { breedte, hoogte, in: horizontaal ? { x: 0, y } : { x, y: hoogte }, uit: horizontaal ? { x: einde ? 11 : breedte, y } : { x, y: 0 } };
   const invoer = (rand = 1) => horizontaal ? lijn(0, y, rand, y) : lijn(x, hoogte, x, hoogte - rand);
-  const uitvoer = (rand = 1) => horizontaal ? (einde ? "" : lijn(breedte - rand, y, breedte, y)) : lijn(x, rand, x, 0);
-  /** Het vierkant van het algemene symbool, met aansluitlijntjes van 1 mm onder en boven. */
+  // Een laatste punt (`einde`) heeft geen lijntje naar een volgend punt: er loopt geen leiding verder.
+  const uitvoer = (rand = 1) => einde ? "" : horizontaal ? lijn(breedte - rand, y, breedte, y) : lijn(x, rand, x, 0);
+  /** Het vierkant van het algemene symbool, met aansluitlijntjes van 1 mm onder en (tenzij `einde`) boven. */
   const vierkant = invoer() + rechthoek(1, 1, 10, 10) + uitvoer();
   /** Gevulde stip met straal 1,2 mm; `r` kan kleiner. */
   const stip = (cx: number, cy: number, r = 1.2) => cirkel(cx, cy, r, { gevuld: true, ...PICTO });
@@ -326,7 +328,7 @@ export function tekenToestel(node: NodeVan<"toestel">, horizontaal = false, eind
     case "bel":
       return { maat, svg: horizontaal
         ? lijn(0, y, 4, y) + lijn(4, 2, 4, 10, PICTO) + pad("M4 2 A4 4 0 0 1 4 10", PICTO) + (einde ? "" : lijn(8, y, breedte, y))
-        : lijn(x, hoogte, x, 7) + lijn(2, 7, 10, 7, PICTO) + pad("M2 7 A4 4 0 0 1 10 7", PICTO) + lijn(x, 3, x, 0) };
+        : lijn(x, hoogte, x, 7) + lijn(2, 7, 10, 7, PICTO) + pad("M2 7 A4 4 0 0 1 10 7", PICTO) + (einde ? "" : lijn(x, 3, x, 0)) };
     case "motor":
       return { maat, svg: invoer(1.5) + cirkel(x, y, 4.5, PICTO) + tekst(x, 7.2, "M", { anker: "middle", grootte: 3.5, ...PICTO }) + uitvoer(1.5) };
     case "ventilator":
@@ -406,7 +408,7 @@ export function tekenToestel(node: NodeVan<"toestel">, horizontaal = false, eind
           lijn(8.5, 8.2, 10.2, 8.2, PICTO) +
           lijn(10.2, 8.2, 10.2, 3.2, PICTO) +
           pad("M9.7 1.2 L10.7 1.2 L10.7 3.2 L9.7 3.2 Z", { gevuld: true, ...PICTO }) +
-          (horizontaal ? (einde ? "" : lijn(8.5, y, breedte, y)) : lijn(x, 2.5, x, 0)),
+          (einde ? "" : horizontaal ? lijn(8.5, y, breedte, y) : lijn(x, 2.5, x, 0)),
       };
     case "omvormer": {
       // Het wisselstroomteken: een sinus van twee halve cirkels (r = 0,8), rechtsonder.

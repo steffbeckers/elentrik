@@ -9,7 +9,7 @@ export type SymboolOpties = {
   /**
    * De node is het laatste punt: er loopt geen leiding verder naar een volgend punt. De
    * contactdoos en het lichtpunt laten de lijn dan in het symbool stoppen in plaats van door
-   * te lopen tot `uit`.
+   * te lopen tot `uit`; een toestel heeft dan geen lijntje boven het symbool.
    */
   einde?: boolean;
 };
@@ -44,7 +44,7 @@ export function tekenSymbool(node: Node, opties: SymboolOpties = {}): Symbool {
     case "schakelaar":
       return tekenSchakelaar(node);
     case "toestel":
-      return tekenToestel(node);
+      return tekenToestel(node, false, opties.einde ?? false);
     default: {
       const onbekend: never = node;
       throw new Error(`Onbekend nodetype: ${JSON.stringify(onbekend)}`);

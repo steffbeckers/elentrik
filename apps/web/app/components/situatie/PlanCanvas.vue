@@ -8,6 +8,8 @@ import { SLEEP_DREMPEL_PX, useCanvasWeergave } from "~/composables/useCanvasWeer
 import { useDocumentFoutMelding } from "~/composables/useDocumentFoutMelding";
 import { useNodeTekst } from "~/composables/useNodeTekst";
 import MarkeringSymbool from "~/components/editor/MarkeringSymbool.vue";
+import MarkeringTip from "~/components/editor/MarkeringTip.vue";
+import { useMarkeringTip } from "~/composables/useMarkeringTip";
 import { markeringen as leidMarkeringenAf } from "~/editor/markeringen";
 import { schemaKeuzes } from "~/editor/schema-navigatie";
 import { maxPlanZoom, schermNaarInhoud } from "~/editor/weergave";
@@ -237,13 +239,23 @@ function breekVerschuivingAf(): void {
   if (v) canvas.negeerTotLoslaten(v.pointerId);
 }
 
+/**
+ * De node onder de aanwijzer: het symbool zelf, of zijn markering. De markering ligt met haar
+ * raakvlak over een hoek van het symbool; slepen en selecteren werken daar zoals op het symbool.
+ */
+function nodeOnder(event: Event): string | null {
+  const element = (event.target as Element).closest("[data-node-id], [data-markering-node]");
+  return element?.getAttribute("data-node-id") ?? element?.getAttribute("data-markering-node") ?? null;
+}
+
 function pointerDown(event: PointerEvent): void {
   if (event.button !== 0 || !venster.value) return;
   // Een verschuiving waarvan de pointerup gemist werd of die een tweede vinger onderbreekt, stopt
   // hier zonder te plaatsen; de klik bij het loslaten van die eerste pointer telt niet.
   breekVerschuivingAf();
-  const element = (event.target as Element).closest<SVGGElement>("[data-node-id]");
-  const nodeId = element?.getAttribute("data-node-id") ?? null;
+  const nodeId = nodeOnder(event);
+  // Het symbool van die node: tijdens het slepen verschuift die groep, ook als de vinger op de markering begon.
+  const element = nodeId === null ? null : venster.value.querySelector<SVGGElement>(`[data-node-id="${CSS.escape(nodeId)}"]`);
   // Zonder schrijfrecht verschuift een symbool niet: slepen erop pant het plan.
   const opSymbool = !ruimteIngedrukt.value && modus.value === "normaal" && event.isPrimary && !alleenLezen.value;
   // Pannen: op lege ruimte, met de spatie ingedrukt, of tijdens plaatsen en meten. Twee vingers pinchen.
@@ -421,8 +433,7 @@ function klik(event: MouseEvent): void {
     plaatsOp(props.teplaatsen, planPunt(event));
     return;
   }
-  const symboolEl = (event.target as Element).closest("[data-node-id]");
-  const id = symboolEl?.getAttribute("data-node-id") ?? null;
+  const id = nodeOnder(event);
   if (id === null) {
     if (!event.shiftKey) editor.selectie = [];
     return;
@@ -546,6 +557,9 @@ function focusSelectie(): void {
   const y = Math.min(...kaders.map(k => k.y));
   canvas.focus({ x, y, breedte: Math.max(...kaders.map(k => k.x + k.zijde)) - x, hoogte: Math.max(...kaders.map(k => k.y + k.zijde)) - y });
 }
+
+// Een klik of tik op een markering zet de tooltip vast; het canvas kiest het onderdeel (`nodeOnder`).
+const markeringTip = useMarkeringTip();
 
 /** Eén markering per geplaatste node, rechtsboven het symbool; de ernst-aggregatie zit in `editor/markeringen.ts`. */
 const markeringen = computed(() => {
@@ -732,6 +746,13 @@ const markeringen = computed(() => {
             :x="m.x"
             :y="m.y"
             :r="symbool * MARKERING_STRAAL"
+            raakbaar
+            data-markering
+            :data-markering-node="m.id"
+            class="pointer-events-auto cursor-help"
+            @pointerenter="markeringTip.wijsAan($event, m.id)"
+            @pointerleave="markeringTip.verlaat()"
+            @click="markeringTip.toon($event, m.id, true)"
           />
           <line
             v-if="meetpunten.length === 2"
@@ -754,6 +775,7 @@ const markeringen = computed(() => {
           />
         </g>
       </svg>
+      <MarkeringTip :tip="markeringTip.tip.value" />
       <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="selectieKaders.length > 0" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 

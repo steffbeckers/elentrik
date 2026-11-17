@@ -38,8 +38,9 @@ export {
   zetReferentiePagina,
   zetLabelOffset,
 } from "./situatie";
-export { pasSjabloonToe, type Sjabloon, type SjabloonNode } from "./sjablonen";
+export { isKringSjabloon, pasSjabloonToe, type Sjabloon, type SjabloonGroep, type SjabloonNode } from "./sjablonen";
 export {
+  MAX_KRINGEN_PER_DIFFERENTIEEL,
   NIEUWE_KRING_AUTOMAAT,
   SJABLONEN,
   STANDAARD,
@@ -47,7 +48,10 @@ export {
   kringLeiding,
   VISUELE_VELDEN,
   nieuwProjectDocument,
+  sjabloonDifferentieel,
   sjabloonVoor,
+  startWoning,
+  voegBordSjabloonToe,
   type Onderdeel,
   type Voorinstelling,
 } from "./standaarden";

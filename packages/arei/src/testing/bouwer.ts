@@ -16,8 +16,10 @@ import {
  * bouwer de DocumentFout van `voegToe`).
  */
 
-type DifferentieelOpties = { polen?: Polen; als?: string };
+type DifferentieelOpties = { polen?: Polen; als?: string; klasse?: "AC" | "A" | "F" | "B" };
 type RuimteOpties = { ruimte?: Ruimte };
+/** `aantal` is het aantal per onderdeel: 2 maakt van elke contactdoos een dubbele. */
+type ContactdoosOpties = RuimteOpties & { aantal?: number; randaarde?: boolean; kinderbeveiliging?: boolean };
 
 /** Gedeelde toestand van één bouwsessie. */
 class Context {
@@ -47,7 +49,7 @@ class Context {
       gevoeligheid_mA: mA,
       nominaal_A: 40,
       polen: opties?.polen ?? 2,
-      klasse: "A",
+      klasse: opties?.klasse ?? "A",
     });
     if (opties?.als !== undefined) this.noem(opties.als, id);
     return id;
@@ -89,12 +91,13 @@ export class KringBouwer {
     return this.beveilig({ type: "zekering", nominaal_A: A });
   }
 
-  leiding(mm2: number, opties: { kabeltype?: string; aantalGeleiders?: number } = {}): this {
+  leiding(mm2: number, opties: { kabeltype?: string; aantalGeleiders?: number; lengte_m?: number } = {}): this {
     const id = this.ctx.voeg(this.beveiligingId ?? this.ouderId, {
       type: "leiding",
       kabeltype: opties.kabeltype ?? "XVB",
       doorsnede_mm2: mm2,
       aantalGeleiders: opties.aantalGeleiders ?? 3,
+      ...(opties.lengte_m !== undefined ? { lengte_m: opties.lengte_m } : {}),
     });
     this.leidingId = id;
     this.puntId = undefined;
@@ -102,13 +105,13 @@ export class KringBouwer {
     return this;
   }
 
-  contactdozen(n: number, opties: RuimteOpties = {}): this {
+  contactdozen(n: number, opties: ContactdoosOpties = {}): this {
     for (let i = 0; i < n; i++) {
       this.punt({
         type: "contactdoos",
-        aantal: 1,
-        randaarde: true,
-        kinderbeveiliging: true,
+        aantal: opties.aantal ?? 1,
+        randaarde: opties.randaarde ?? true,
+        kinderbeveiliging: opties.kinderbeveiliging ?? true,
         waterdicht: false,
         ...metRuimte(opties.ruimte),
       });
@@ -134,11 +137,12 @@ export class KringBouwer {
     });
   }
 
-  toestel(soort: Toestelsoort, opties: { ruimte?: Ruimte; vermogen_W?: number } = {}): this {
+  toestel(soort: Toestelsoort, opties: { ruimte?: Ruimte; vermogen_W?: number; dcDetectie_mA?: number } = {}): this {
     return this.punt({
       type: "toestel",
       soort,
       ...(opties.vermogen_W !== undefined ? { vermogen_W: opties.vermogen_W } : {}),
+      ...(opties.dcDetectie_mA !== undefined ? { dcDetectie_mA: opties.dcDetectie_mA } : {}),
       ...metRuimte(opties.ruimte),
     });
   }

@@ -5,6 +5,9 @@ import CanvasBediening from "~/components/editor/CanvasBediening.vue";
 import { doelSoort, moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useCanvasWeergave } from "~/composables/useCanvasWeergave";
 import MarkeringSymbool from "~/components/editor/MarkeringSymbool.vue";
+import MarkeringTip from "~/components/editor/MarkeringTip.vue";
+import { useMarkeringTip } from "~/composables/useMarkeringTip";
+import { actiebalkAfmeting, actiebalkPlaats } from "~/editor/actiebalk";
 import { markeringen as leidMarkeringenAf } from "~/editor/markeringen";
 import { kringBestemming } from "~/editor/invoegen";
 import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie } from "~/editor/schema-navigatie";
@@ -16,10 +19,14 @@ const SELECTIE_MARGE_MM = 1;
 const MARKERING_STRAAL_MM = 1.5;
 const PLUS_STRAAL_MM = 2.5;
 
+const emit = defineEmits<{ eigenschappen: [] }>();
+
 const store = useEditorStore();
 const { t, te } = useI18n();
 const toast = useToast();
 const voerUit = useDocumentFoutMelding();
+
+const markeringTip = useMarkeringTip();
 
 const venster = useTemplateRef<HTMLElement>("venster");
 const basis = useTemplateRef<HTMLElement>("basis");
@@ -117,6 +124,23 @@ function verwijder(heleTak: boolean): void {
   }
 }
 
+/**
+ * Verwijdert de selectie, voor de sneltoets en voor de knoppen in de balk boven het schema (op een
+ * aanraakscherm is er geen Delete-toets). Een hele tak vanaf 5 nodes vraagt eerst een bevestiging
+ * (spec §4.4); de weigering voor een aansluiting of teller komt eerst, want dan is ze zinloos.
+ */
+function vraagVerwijderen(heleTak: boolean): void {
+  if (store.alleenLezen || store.selectie.length === 0) return;
+  if (heleTak && !bevatVasteNode(store.selectie)) {
+    const aantal = aantalInTakken(store.selectie);
+    if (aantal >= BEVESTIG_VANAF) {
+      teVerwijderenAantal.value = aantal;
+      return;
+    }
+  }
+  verwijder(heleTak);
+}
+
 function bevestigTakVerwijderen(): void {
   if (store.alleenLezen) return;
   teVerwijderenAantal.value = null;
@@ -162,16 +186,7 @@ function toetsIngedrukt(event: KeyboardEvent): void {
       else store.voegToeBijSelectie();
       break;
     case "verwijder":
-      // Eerst de weigering (aansluiting of teller), dan pas de bevestiging: die is dan zinloos.
-      if (actie.heleTak && !bevatVasteNode(store.selectie)) {
-        // Vanaf 5 nodes eerst een bevestiging (spec §4.4).
-        const aantal = aantalInTakken(store.selectie);
-        if (aantal >= BEVESTIG_VANAF) {
-          teVerwijderenAantal.value = aantal;
-          break;
-        }
-      }
-      verwijder(actie.heleTak);
+      vraagVerwijderen(actie.heleTak);
       break;
     case "ongedaan":
       store.ongedaanMaken();
@@ -232,6 +247,47 @@ const selectieKaders = computed(() =>
     const vak = vakken.value[id];
     return vak ? [{ id, vak }] : [];
   }),
+);
+
+/** Een klik of tik op een markering kiest het onderdeel en zet de tooltip vast. */
+function kiesMarkering(event: Event, id: string): void {
+  store.selectie = [id];
+  markeringTip.toon(event, id, true);
+}
+
+// --- Actiebalk bij de selectie ----------------------------------------------
+
+type Actie = { id: string; icoon: string; label: string; voerUit: () => void };
+
+/**
+ * De acties voor de selectie, zonder invoervelden: die staan in het paneel Eigenschappen. Ze doen
+ * hetzelfde als de sneltoetsen, zodat alles ook zonder toetsenbord kan (op een aanraakscherm is er
+ * geen Delete-toets). In alleen-lezen blijft alleen Eigenschappen over.
+ */
+const acties = computed<Actie[]>(() => {
+  const lijst: Actie[] = [
+    { id: "eigenschappen", icoon: "i-lucide-sliders-horizontal", label: t("editor.werkruimte.eigenschappen"), voerUit: () => emit("eigenschappen") },
+  ];
+  if (store.alleenLezen) return lijst;
+  const kringVanNode = store.analyse?.kringVanNode ?? {};
+  if (store.selectie.some((id) => Object.hasOwn(kringVanNode, id))) {
+    lijst.push({ id: "dupliceer", icoon: "i-lucide-copy", label: t("editor.sneltoetsen.dupliceer"), voerUit: dupliceer });
+  }
+  lijst.push(
+    { id: "verwijder", icoon: "i-lucide-trash-2", label: t("editor.sneltoetsen.verwijder"), voerUit: () => vraagVerwijderen(false) },
+    { id: "verwijder-tak", icoon: "i-lucide-list-x", label: t("editor.sneltoetsen.verwijderTak"), voerUit: () => vraagVerwijderen(true) },
+  );
+  return lijst;
+});
+
+/** Naast de selectie, of vast linksboven als de selectie buiten beeld valt (`editor/actiebalk.ts`). */
+const actiebalk = computed(() =>
+  actiebalkPlaats(
+    selectieKaders.value.map(({ vak }) => vak),
+    canvas.weergave.value,
+    canvas.grootte,
+    actiebalkAfmeting(acties.value.length),
+  ),
 );
 
 /** Eén markering per node, rechtsboven het vak; de ernst-aggregatie zit in `editor/markeringen.ts`. */
@@ -360,6 +416,15 @@ watch(
   () => canvas.passendAlsNodig(),
 );
 
+// Het lege schema staat sterk ingezoomd. Komt de eerste kring erbij (of de hele startwoning), of
+// verdwijnt de laatste door ongedaan maken, dan verandert de omvang zo sterk dat de vorige
+// uitsnede niets nuttigs meer toont: maak opnieuw passend.
+watch(
+  () => store.zonderKringen,
+  () => nextTick(maakPassend),
+  { flush: "post" },
+);
+
 // `v-html` vervangt de SVG bij elke wijziging; de viewBox van de basislaag volgt die van de overlay.
 watchPostEffect(() => {
   void store.svg;
@@ -441,6 +506,13 @@ watchPostEffect(() => {
           :x="m.x"
           :y="m.y"
           :r="MARKERING_STRAAL_MM"
+          raakbaar
+          data-markering
+          class="pointer-events-auto cursor-help"
+          @pointerdown.stop
+          @pointerenter="markeringTip.wijsAan($event, m.id)"
+          @pointerleave="markeringTip.verlaat()"
+          @click.stop="kiesMarkering($event, m.id)"
         />
         <g
           v-for="a in plusknoppen"
@@ -459,6 +531,33 @@ watchPostEffect(() => {
           <path d="M-1.2 0H1.2M0 -1.2V1.2" fill="none" stroke-width="0.5" stroke-linecap="round" style="stroke: var(--ui-primary)" />
         </g>
       </svg>
+      <div
+        v-if="actiebalk"
+        role="toolbar"
+        aria-orientation="vertical"
+        :aria-label="$t('editor.canvas.actiebalk')"
+        data-testid="schema-actiebalk"
+        :data-bij-selectie="actiebalk.bijSelectie"
+        class="absolute left-0 top-0 flex flex-col rounded-md border border-neutral-300 bg-white p-1 text-neutral-900 shadow-sm"
+        :style="{ transform: `translate(${actiebalk.x}px, ${actiebalk.y}px)` }"
+        @pointerdown.stop
+        @click.stop
+        @dblclick.stop
+      >
+        <button
+          v-for="actie in acties"
+          :key="actie.id"
+          type="button"
+          class="actie-knop"
+          :title="actie.label"
+          :aria-label="actie.label"
+          :data-testid="`schema-${actie.id}`"
+          @click="actie.voerUit()"
+        >
+          <UIcon :name="actie.icoon" class="size-4" />
+        </button>
+      </div>
+      <MarkeringTip :tip="markeringTip.tip.value" />
       <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="!!gekozenNode" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 
@@ -494,6 +593,22 @@ watchPostEffect(() => {
 .basis :deep([data-node-id] *) {
   pointer-events: all;
 }
+/* Het raakvlak (ruimer dan het symbool) licht op onder de aanwijzer: je ziet wat een klik selecteert. */
+.basis :deep([data-node-id]) {
+  cursor: pointer;
+}
+.basis :deep(.raakvlak) {
+  rx: 1px;
+}
+@media (hover: hover) {
+  .basis :deep([data-node-id]:hover > .raakvlak) {
+    fill: color-mix(in srgb, var(--ui-primary) 12%, transparent);
+  }
+}
+/* Vaste maat: `editor/actiebalk.ts` rekent de plaats van de balk uit zonder te meten (ACTIEBALK_KNOP_PX). */
+.actie-knop { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 4px; cursor: pointer; }
+.actie-knop:hover { background: var(--ui-color-neutral-100); }
+.actie-knop:focus-visible { outline: 2px solid var(--ui-primary); outline-offset: -2px; }
 .schema-plus:focus-visible { outline: none; }
 .schema-plus:focus-visible circle { stroke-width: 1; fill: var(--ui-bg-accented); }
 </style>

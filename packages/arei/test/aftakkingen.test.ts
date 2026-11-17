@@ -21,7 +21,7 @@ test("aftakkingen delen één puntnummer maar behouden fysieke aantallen en afzo
   }
   const a = analyseer(doc);
   expect(takken.map((ids) => ids.map((id) => a.puntLabels[id]))).toEqual([["A1", "A1"], ["A2", "A2", "A2"], ["A3"]]);
-  expect(a.kringen[0]!.tellingen).toEqual({ contactdozen: 0, lichtpunten: 3, schakelaars: 4, toestellen: 0 });
+  expect(a.kringen[0]!.tellingen).toEqual({ contactdozen: 0, contactdoosPunten: 0, lichtpunten: 3, schakelaars: 4, toestellen: 0 });
   expect(a.kringen[0]!.puntIds).toHaveLength(6);
   for (const id of takken.flat()) expect(a.ketens[id]!.leidingId).toBe(leiding);
 });

@@ -53,16 +53,26 @@ describe("regel 4: max-contactdozen", () => {
     ]);
   });
 
-  test("één contactdoos met aantal 9 geeft ook .overschreden", () => {
-    const { doc, ids } = installatie()
-      .verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1).als("cd")))
+  test("een meervoudige contactdoos telt als één: 5 dubbele dozen geven niets", () => {
+    const { doc } = installatie()
+      .verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(5, { aantal: 2 })))
       .bouw();
-    const gewijzigd = kloon(doc);
-    const node = gewijzigd.nodes[ids["cd"]!]!;
-    if (node.type !== "contactdoos") throw new Error("contactdoos verwacht");
-    node.aantal = 9;
-    expect(draai(regel, gewijzigd)).toMatchObject([
-      { nodeIds: [beveiligingIdVan(gewijzigd)], parameters: { kring: "A", aantal: 9, max: 8 } },
+    expect(draai(regel, doc)).toEqual([]);
+  });
+
+  test("één contactdoos met aantal 9 blijft één contactdoos", () => {
+    const { doc } = installatie()
+      .verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(1, { aantal: 9 })))
+      .bouw();
+    expect(draai(regel, doc)).toEqual([]);
+  });
+
+  test("9 dubbele dozen geven .overschreden met het aantal onderdelen", () => {
+    const { doc } = installatie()
+      .verdeelbord((b) => b.kring((k) => k.automaat(16).leiding(2.5).contactdozen(9, { aantal: 2 })))
+      .bouw();
+    expect(draai(regel, doc)).toMatchObject([
+      { nodeIds: [beveiligingIdVan(doc)], parameters: { kring: "A", aantal: 9, max: 8 } },
     ]);
   });
 

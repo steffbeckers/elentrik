@@ -286,6 +286,25 @@ De rubrieken van tabel 2.23 (de symbolen) volgen in het Nederlands en het Frans 
 
 De namen van de talen staan altijd in hun eigen taal: "Nederlands", "Français", "English". In de Franse interface staat een vaste spatie vóór `:`, `?`, `!` en `;`, en binnen « ».
 
+## Elektricienreview (november 2026)
+
+Termen van de nieuwe controles, het bordoverzicht en de startwoning:
+
+| NL | FR | EN |
+|---|---|---|
+| aardingsonderbreker | sectionneur de terre | earth disconnector |
+| aardelektrode | prise de terre | earth electrode |
+| spanningsval | chute de tension | voltage drop |
+| richtwaarde | valeur indicative | guideline |
+| DC-foutstroomdetectie | détection de courant résiduel DC | DC residual current detection |
+| laadpaal | borne de recharge | EV charger |
+| bordoverzicht | aperçu du tableau | board overview |
+| kast (van een verdeelbord) | coffret | enclosure |
+| module | module | module |
+| snel starten | démarrage rapide | quick start |
+| startwoning | habitation type | typical house |
+| nog N onderdelen te plaatsen | encore N éléments à placer | N components still to place |
+
 ## Opvolgpunt
 
 Laat het Frans vóór de lancering nalezen door iemand met Frans als moedertaal.

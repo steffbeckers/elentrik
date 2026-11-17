@@ -1,11 +1,38 @@
 import { expect } from "vitest";
 import { nieuwDocument, voegToe, type InstallatieDocument, type NodeId } from "@elentrik/model";
-import type { Bevinding, Regel } from "../src/index";
+import { controleer, type Bevinding, type Regel } from "../src/index";
 
 /** Diepe kopie via JSON (structuredClone is niet beschikbaar met lib ES2023 zonder DOM/Node-types). */
 export function kloon<T>(waarde: T): T {
   return JSON.parse(JSON.stringify(waarde)) as T;
 }
+
+/** Voert één regel uit op het document en controleert dat ze alleen aangekondigde sleutels gebruikt. */
+export function draaiRegel(regel: Regel, doc: InstallatieDocument): Bevinding[] {
+  const bevindingen = controleer(doc, { id: "test", versie: 1, gepubliceerd: false, regels: [regel] });
+  verwachtBekendeSleutels(regel, bevindingen);
+  return bevindingen;
+}
+
+/** Kopie van het document met de gegeven installatiecontext; zonder context verdwijnt het veld. */
+export function metContext(
+  doc: InstallatieDocument,
+  context: "nieuw" | "bestaand" | "onbekend" | undefined,
+): InstallatieDocument {
+  const kopie = kloon(doc);
+  delete kopie.meta.installatieContext;
+  if (context !== undefined) kopie.meta.installatieContext = context;
+  return kopie;
+}
+
+/** Kopie van het document met een geregistreerde aardingsweerstand. */
+export function metAardingsweerstand(doc: InstallatieDocument, ohm: number): InstallatieDocument {
+  const kopie = kloon(doc);
+  kopie.meta.metingen = { ...kopie.meta.metingen, aardingsweerstand_ohm: ohm };
+  return kopie;
+}
+
+export const tellerVan = (doc: InstallatieDocument): NodeId => doc.nodes[doc.rootId]!.kinderen[0]!;
 
 /** Elke bevinding komt van de regel zelf en gebruikt een sleutel die de regel aankondigt. */
 export function verwachtBekendeSleutels(regel: Regel, bevindingen: readonly Bevinding[]): void {

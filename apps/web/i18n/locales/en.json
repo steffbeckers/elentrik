@@ -228,6 +228,7 @@
   "editor": {
     "canvas": {
       "passendMaken": "Fit to window",
+      "actiebalk": "Actions for the selection",
       "voegToe": "Add {onderdeel}",
       "verwijderenMislukt": {
         "ROOT_NIET_WIJZIGBAAR": "The supply connection and the meter cannot be deleted.",
@@ -380,7 +381,12 @@
         "eindpunten": "End points"
       },
       "meer": "More…",
-      "minder": "Less"
+      "minder": "Less",
+      "sjabloongroepen": {
+        "kringen": "Circuits",
+        "toestellen": "Appliances",
+        "installatie": "Installation"
+      }
     },
     "symbolen": {
       "openen": "All symbols",
@@ -434,7 +440,17 @@
       "kring-verlichting": "Lighting circuit",
       "kookplaat": "Hob",
       "wasmachine": "Washing machine",
-      "badkamer": "Bathroom"
+      "badkamer": "Bathroom",
+      "keuken": "Kitchen",
+      "buiten": "Outdoor",
+      "oven": "Oven",
+      "vaatwasser": "Dishwasher",
+      "droogkast": "Tumble dryer",
+      "boiler": "Water heater",
+      "warmtepomp": "Heat pump",
+      "laadpaal": "EV charger",
+      "zonnepanelen": "Solar panels",
+      "aarding": "Earthing"
     },
     "eigenschappen": {
       "groepen": {
@@ -457,6 +473,7 @@
     },
     "bevindingen": {
       "titel": "Findings",
+      "nogMeer": "and 1 more finding | and {n} more findings",
       "leeg": "No findings within the checks performed.",
       "ernst": {
         "fout": "Errors",
@@ -850,7 +867,18 @@
       "weergaven": "Dossier sections",
       "planHint": "Select a point on the plan or open Components to place a point.",
       "sluiten": "Close panel",
-      "toetsenbordhulp": "Keyboard help"
+      "toetsenbordhulp": "Keyboard help",
+      "tePlaatsen": "1 component still to place | {aantal} components still to place"
+    },
+    "bord": {
+      "titel": "Board overview",
+      "indicatief": "Indicative, to help you choose the enclosure. The suggestion allows about 20% spare capacity.",
+      "kringen": "1 circuit | {aantal} circuits",
+      "modules": "1 module | {aantal} modules",
+      "kast": "suggestion: enclosure with 1 row of {perRij} modules | suggestion: enclosure with {aantal} rows of {perRij} modules",
+      "algemeen": "main",
+      "contactdozen": "1 socket | {aantal} sockets",
+      "teVeel": "More than {max} circuits behind this RCD"
     },
     "materiaallijst": {
       "titel": "Materials list",
@@ -899,7 +927,8 @@
       "doelen": {
         "nieuw-op-bord": "New circuit with RCD",
         "bestaande-differentieel": "Use existing RCD",
-        "bestaande-kring": "Branch on existing circuit"
+        "bestaande-kring": "Branch on existing circuit",
+        "op-bord": "Directly on the board"
       },
       "schakelingen": {
         "enkel": "Single-pole switch + light point",
@@ -910,7 +939,21 @@
       "ruimte": {
         "label": "Room type",
         "hulp": "Applies to the new points of this template."
+      },
+      "bezetting": "{aantal} of {max} circuits",
+      "differentieelVol": "This RCD already feeds {aantal} circuits. More than {max} circuits behind an RCD of at most 30 mA gives a finding. Choose a new RCD.",
+      "sjabloonhulp": {
+        "laadpaal": "Preset: a dedicated 30 mA RCD, class B. Class A is enough when the charger itself detects direct current from 6 mA."
       }
+    },
+    "startwoning": {
+      "titel": "Quick start",
+      "knop": "Insert typical house",
+      "uitleg": "A typical house in one go: earthing, two 30 mA RCDs, lighting, sockets, kitchen, bathroom and the large appliances. Then adjust whatever differs.",
+      "ingevoegd": "Typical house inserted",
+      "ingevoegdUitleg": "These are preset values. Check the protection and cable for this installation.",
+      "ongedaanMaken": "Undo",
+      "nietMeerOngedaan": "You have carried on working in the meantime. Undo the steps one by one."
     },
     "referenties": {
       "titel": "Circuit references",
@@ -1078,6 +1121,7 @@
     }
   },
   "velden": {
+    "suggesties": {"knop": "Suggestions: {veld}", "kop": "Common values"},
     "aantalPanelen": {"label": "Panel count"},
     "schijnbaarVermogen_kVA": {"label": "Apparent power"},
     "dcDetectie_mA": {"label": "DC residual current detection"},

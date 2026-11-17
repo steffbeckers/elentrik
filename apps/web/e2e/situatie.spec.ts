@@ -4,6 +4,7 @@ import type { Mij } from "../shared/mij";
 import type { InstallatieDocument } from "@elentrik/model";
 import { stempelProject, zetProefEinde } from "./hulp/database";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { toonPaneel } from "./hulp/paneel";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "situatie" });
@@ -35,7 +36,7 @@ test("opmaak aanpassen in het echte afdrukvoorbeeld bewaart labeloffset zonder b
   await expect.poll(async () => (await haalProject(request, id)).document.situatie.paginas.length).toBe(2);
   const tweedePagina = (await haalProject(request, id)).document.situatie.paginas[1]!.id;
   await page.getByTestId("pagina-tab-0").click();
-  await page.getByTestId("werkruimte-opmaak").click();
+  await toonPaneel(page, "opmaak");
   await page.getByTestId("plan-afdruk-opmaken").click();
   const dialoog = page.getByRole("dialog", { name: "Afdrukvoorbeeld", exact: true });
   await expect(dialoog).toBeVisible();
@@ -90,12 +91,12 @@ type Project = { versie: number; document: { situatie: { paginas: Pagina[] } } }
 
 /** Ongeplaatste onderdelen staan in de dossierchecklist; het verdeelbord telt ook mee. */
 async function verwachtOngeplaatst(page: Page, aantal: number) {
-  await page.getByTestId("werkruimte-bevindingen").click();
+  await toonPaneel(page, "bevindingen");
   const checklist = page.getByTestId("dossier-checklist");
   const details = checklist.locator("..");
   if (await details.getAttribute("open") === null) await details.locator("summary").click();
   await expect(checklist.getByRole("button", { name: `Nog ${aantal} onderdelen op het plan plaatsen`, exact: true })).toBeVisible();
-  await page.getByTestId("werkruimte-onderdelen").click();
+  await toonPaneel(page, "onderdelen");
 }
 
 /** De tekstlabels in de SVG van het schema (puntlabels als "A1"). */
@@ -302,7 +303,7 @@ test("de dossierchecklist noemt de ongeplaatste onderdelen en een klik selecteer
   test.setTimeout(120_000);
   await maakProjectMetContactdozen(page, `${naam} checklist`);
   await page.getByTestId("tab-situatieschema").click();
-  await page.getByTestId("werkruimte-bevindingen").click();
+  await toonPaneel(page, "bevindingen");
   const checklist = page.getByTestId("dossier-checklist");
   const details = checklist.locator("..");
   if (await details.getAttribute("open") === null) await details.locator("summary").click();
@@ -372,6 +373,8 @@ test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend pla
   await expect(page.locator('[data-testid^="plan-selectie-"]')).toHaveCount(1);
   await page.keyboard.press("Delete");
   await expect(planLabel(page, "A1")).toHaveCount(0);
+  // A1 blijft geselecteerd, dus het paneel staat nog op Eigenschappen; Te plaatsen staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await expect(page.getByTestId("te-plaatsen-A1")).toBeVisible();
   await page.getByTestId("tab-eendraadschema").click();
   await expect(schemaTekst(page, "A1")).toHaveCount(1);
@@ -698,4 +701,28 @@ test("referentieblad importeert zonder export of definitieve plaatsing", async (
   await page.keyboard.press("Delete");
   expect((await haalProject(request, id)).document).toEqual(project.document);
 
+});
+
+test("een markering op het plan toont bij aanwijzen de bevinding van het punt", async ({ page }) => {
+  test.setTimeout(120_000);
+  await maakProjectMetContactdozen(page, `${naam} markeringtip`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await expect.poll(() => planAfbeeldingGeladen(page)).toBe(1200);
+  await page.getByTestId("te-plaatsen-A1").dragTo(page.getByTestId("plan-canvas"));
+  await expect(planLabel(page, "A1")).toHaveCount(1);
+
+  // A1 hangt alleen achter het algemene differentieel: een waarschuwing, met een markering op het plan.
+  const markering = page.locator('[data-testid^="plan-markering-"]').first();
+  await expect(markering).toHaveAttribute("data-ernst", "waarschuwing");
+  await expect(page.getByTestId("markering-tip")).toHaveCount(0);
+  await markering.hover();
+  await expect(page.getByTestId("markering-tip")).toContainText("aanvullende bescherming van maximaal 30 mA");
+  await page.mouse.move(5, 400);
+  await expect(page.getByTestId("markering-tip")).toHaveCount(0);
+
+  // Een klik op de markering kiest het punt, net als een klik op het symbool, en zet de tooltip vast.
+  await markering.click();
+  await expect(page.getByTestId("markering-tip")).toBeVisible();
+  await expect(page.getByTestId("werkruimte-eigenschappen")).toHaveAttribute("aria-expanded", "true");
 });

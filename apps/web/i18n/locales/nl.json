@@ -228,6 +228,7 @@
   "editor": {
     "canvas": {
       "passendMaken": "Passend maken",
+      "actiebalk": "Acties voor de selectie",
       "voegToe": "{onderdeel} toevoegen",
       "verwijderenMislukt": {
         "ROOT_NIET_WIJZIGBAAR": "De aansluiting en de teller kunnen niet verwijderd worden.",
@@ -380,7 +381,12 @@
         "eindpunten": "Eindpunten"
       },
       "meer": "Meer…",
-      "minder": "Minder"
+      "minder": "Minder",
+      "sjabloongroepen": {
+        "kringen": "Kringen",
+        "toestellen": "Toestellen",
+        "installatie": "Installatie"
+      }
     },
     "symbolen": {
       "openen": "Alle symbolen",
@@ -434,7 +440,17 @@
       "kring-verlichting": "Kring verlichting",
       "kookplaat": "Kookplaat",
       "wasmachine": "Wasmachine",
-      "badkamer": "Badkamer"
+      "badkamer": "Badkamer",
+      "keuken": "Keuken",
+      "buiten": "Buiten",
+      "oven": "Oven",
+      "vaatwasser": "Vaatwasser",
+      "droogkast": "Droogkast",
+      "boiler": "Boiler",
+      "warmtepomp": "Warmtepomp",
+      "laadpaal": "Laadpaal",
+      "zonnepanelen": "Zonnepanelen",
+      "aarding": "Aarding"
     },
     "eigenschappen": {
       "groepen": {
@@ -457,6 +473,7 @@
     },
     "bevindingen": {
       "titel": "Bevindingen",
+      "nogMeer": "en nog 1 bevinding | en nog {n} bevindingen",
       "leeg": "Geen bevindingen binnen de uitgevoerde controles.",
       "ernst": {
         "fout": "Fouten",
@@ -850,7 +867,18 @@
       "weergaven": "Dossieronderdelen",
       "planHint": "Kies een punt op het plan of open Onderdelen om een punt te plaatsen.",
       "sluiten": "Paneel sluiten",
-      "toetsenbordhulp": "Toetsenbordhulp"
+      "toetsenbordhulp": "Toetsenbordhulp",
+      "tePlaatsen": "Nog 1 onderdeel te plaatsen | Nog {aantal} onderdelen te plaatsen"
+    },
+    "bord": {
+      "titel": "Bordoverzicht",
+      "indicatief": "Indicatief, als hulp bij het kiezen van de kast. Het voorstel rekent met ongeveer 20 % reserve.",
+      "kringen": "1 kring | {aantal} kringen",
+      "modules": "1 module | {aantal} modules",
+      "kast": "voorstel: kast met 1 rij van {perRij} modules | voorstel: kast met {aantal} rijen van {perRij} modules",
+      "algemeen": "algemeen",
+      "contactdozen": "1 contactdoos | {aantal} contactdozen",
+      "teVeel": "Meer dan {max} kringen achter dit differentieel"
     },
     "materiaallijst": {
       "titel": "Materiaallijst",
@@ -899,7 +927,8 @@
       "doelen": {
         "nieuw-op-bord": "Nieuwe kring met differentieel",
         "bestaande-differentieel": "Bestaande differentieel gebruiken",
-        "bestaande-kring": "Aftakking op bestaande kring"
+        "bestaande-kring": "Aftakking op bestaande kring",
+        "op-bord": "Rechtstreeks op het bord"
       },
       "schakelingen": {
         "enkel": "Enkelpolige schakelaar + lichtpunt",
@@ -910,7 +939,21 @@
       "ruimte": {
         "label": "Soort ruimte",
         "hulp": "Geldt voor de nieuwe punten van dit sjabloon."
+      },
+      "bezetting": "{aantal} van {max} kringen",
+      "differentieelVol": "Achter dit differentieel zitten al {aantal} kringen. Meer dan {max} kringen achter een differentieel van maximaal 30 mA geeft een bevinding. Kies een nieuw differentieel.",
+      "sjabloonhulp": {
+        "laadpaal": "Voorinstelling: een eigen differentieel van 30 mA, klasse B. Klasse A volstaat als de laadpaal zelf gelijkstroom vanaf 6 mA detecteert."
       }
+    },
+    "startwoning": {
+      "titel": "Snel starten",
+      "knop": "Startwoning invoegen",
+      "uitleg": "Een gewone woning in één keer: aarding, twee differentiëlen van 30 mA, verlichting, contactdozen, keuken, badkamer en de grote toestellen. Pas daarna aan wat anders is.",
+      "ingevoegd": "Startwoning ingevoegd",
+      "ingevoegdUitleg": "Dit zijn voorinstellingen. Controleer de beveiliging en leiding voor deze installatie.",
+      "ongedaanMaken": "Ongedaan maken",
+      "nietMeerOngedaan": "Er is intussen verder gewerkt. Maak de stappen één voor één ongedaan."
     },
     "referenties": {
       "titel": "Kringreferenties",
@@ -1078,6 +1121,7 @@
     }
   },
   "velden": {
+    "suggesties": {"knop": "Voorstellen: {veld}", "kop": "Gangbare waarden"},
     "aantalPanelen": {"label": "Aantal panelen"},
     "schijnbaarVermogen_kVA": {"label": "Schijnbaar vermogen"},
     "dcDetectie_mA": {"label": "DC-foutstroomdetectie"},

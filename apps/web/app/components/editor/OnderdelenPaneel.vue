@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { SJABLONEN, type Onderdeel, type Toestelsoort } from "@elentrik/model";
+import { SJABLONEN, type Onderdeel, type SjabloonGroep, type Toestelsoort } from "@elentrik/model";
 import OnderdeelKnop from "~/components/editor/OnderdeelKnop.vue";
 import { SYMBOLEN_TOETS } from "~/composables/sneltoetsen";
+import { sjablonenPerGroep } from "~/editor/invoegen";
 import { schemaKeuzes } from "~/editor/schema-navigatie";
 import { VELDEN } from "~/editor/velden";
 import { useEditorStore } from "~/stores/editor";
@@ -46,6 +47,35 @@ function voegSjabloonToe(id: string): void {
   emit('sjabloon', id);
 }
 
+/** De sjablonen onder Kringen, Toestellen en Installatie; het icoon helpt de groepen uit elkaar te houden. */
+const GROEP_ICOON: Record<SjabloonGroep, string> = {
+  kringen: "i-lucide-layout-template",
+  toestellen: "i-lucide-plug",
+  installatie: "i-lucide-arrow-down-to-line",
+};
+const sjabloonGroepen = sjablonenPerGroep(SJABLONEN);
+
+const toast = useToast();
+/**
+ * Zet de startwoning in het lege schema. Een toast bevestigt het en biedt Ongedaan maken aan: dat
+ * werkt zolang de startwoning de laatste stap is. Gaat ze over de gratis limiet, dan opent de store
+ * het limietvenster en verandert er niets.
+ */
+function voegStartwoningToe(): void {
+  let ingevoegd = false;
+  if (!voerUit(() => (ingevoegd = store.voegStartwoningToe())) || !ingevoegd) return;
+  const stap = store.laatsteStap();
+  toast.add({
+    title: t("editor.startwoning.ingevoegd"),
+    description: t("editor.startwoning.ingevoegdUitleg"),
+    color: "success",
+    icon: "i-lucide-circle-check",
+    actions: [{ label: t("editor.startwoning.ongedaanMaken"), color: "neutral", variant: "outline", onClick: () => {
+      if (!store.ongedaanMakenAlsLaatste(stap)) toast.add({ title: t("editor.startwoning.nietMeerOngedaan"), color: "neutral", icon: "i-lucide-info" });
+    } }],
+  });
+}
+
 /** "Meer…" gaat open zodra een onderdeel erachter het gekozen onderdeel is, zodat het nooit verborgen actief staat. */
 const meerOpen = ref(false);
 watch(() => store.onderdeel, (onderdeel) => {
@@ -71,6 +101,31 @@ watch(() => store.onderdeel, (onderdeel) => {
         <UKbd :value="SYMBOLEN_TOETS.toUpperCase()" />
       </UButton>
     </div>
+
+    <!-- Alleen in een schema zonder kringen: de eerste opzet van een woning is bijna altijd dezelfde. -->
+    <section
+      v-if="store.zonderKringen"
+      aria-labelledby="onderdelen-snel-starten"
+      class="rounded-md bg-elevated p-3"
+      data-testid="snel-starten"
+    >
+      <h3 id="onderdelen-snel-starten" class="mb-1 text-xs font-semibold text-highlighted">
+        {{ $t("editor.startwoning.titel") }}
+      </h3>
+      <p id="startwoning-uitleg" class="mb-3 text-xs text-muted">
+        {{ $t("editor.startwoning.uitleg") }}
+      </p>
+      <UButton
+        block
+        icon="i-lucide-house-plug"
+        class="justify-start"
+        :label="$t('editor.startwoning.knop')"
+        :disabled="store.alleenLezen"
+        aria-describedby="startwoning-uitleg"
+        data-testid="startwoning-invoegen"
+        @click="voegStartwoningToe"
+      />
+    </section>
 
     <section aria-labelledby="onderdelen-groep-kring">
       <h3 id="onderdelen-groep-kring" class="mb-2 px-2 text-xs font-semibold text-highlighted">
@@ -156,20 +211,35 @@ watch(() => store.onderdeel, (onderdeel) => {
       <h3 id="onderdelen-groep-sjablonen" class="mb-2 px-2 text-xs font-semibold text-highlighted">
         {{ $t("editor.onderdelenPaneel.sjablonen") }}
       </h3>
-      <div class="flex flex-col gap-1">
-        <UButton
-          v-for="sjabloon in SJABLONEN"
-          :key="sjabloon.id"
-          block
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-layout-template"
-          class="justify-start"
-          :label="sjabloonNaam(sjabloon.id, sjabloon.naam)"
-          :disabled="store.alleenLezen"
-          @click="voegSjabloonToe(sjabloon.id)"
-        />
-        <UButton block color="neutral" variant="outline" icon="i-lucide-list-ordered" class="justify-start" :label="$t('editor.referenties.titel')" :disabled="store.alleenLezen" data-testid="referenties-openen" @click="emit('referenties')" />
+      <div class="flex flex-col gap-3">
+        <div
+          v-for="{ groep, sjablonen } in sjabloonGroepen"
+          :key="groep"
+          role="group"
+          :aria-labelledby="`sjablonen-groep-${groep}`"
+          :data-testid="`sjablonen-${groep}`"
+        >
+          <h4 :id="`sjablonen-groep-${groep}`" class="mb-1 px-2 text-xs text-muted">
+            {{ $t(`editor.onderdelenPaneel.sjabloongroepen.${groep}`) }}
+          </h4>
+          <div class="flex flex-col gap-1">
+            <UButton
+              v-for="sjabloon in sjablonen"
+              :key="sjabloon.id"
+              block
+              color="neutral"
+              variant="outline"
+              :icon="GROEP_ICOON[groep]"
+              class="justify-start"
+              :label="sjabloonNaam(sjabloon.id, sjabloon.naam)"
+              :disabled="store.alleenLezen"
+              :data-testid="`sjabloon-${sjabloon.id}`"
+              @click="voegSjabloonToe(sjabloon.id)"
+            />
+            <!-- De kringreferenties gelden voor de hele installatie. -->
+            <UButton v-if="groep === 'installatie'" block color="neutral" variant="outline" icon="i-lucide-list-ordered" class="justify-start" :label="$t('editor.referenties.titel')" :disabled="store.alleenLezen" data-testid="referenties-openen" @click="emit('referenties')" />
+          </div>
+        </div>
       </div>
     </section>
   </aside>

@@ -1,11 +1,15 @@
 import { leidingLabel } from "@elentrik/layout";
 import { analyseer } from "@elentrik/arei";
-import type {
-  InstallatieDocument,
-  Node,
-  NodeId,
-  SjabloonDoel,
-  LichtschakelingDoel,
+import {
+  MAX_KRINGEN_PER_DIFFERENTIEEL,
+  isKringSjabloon,
+  type InstallatieDocument,
+  type Node,
+  type NodeId,
+  type Sjabloon,
+  type SjabloonDoel,
+  type SjabloonGroep,
+  type LichtschakelingDoel,
 } from "@elentrik/model";
 
 /** Alleen zichtbare, structureel geldige doelen. Een differentieel voor het bord ontbreekt. */
@@ -80,10 +84,56 @@ export function lichtDoelBijSelectie(
   return kringId ? { soort: "bestaande-kring", nodeId: kringId } : undefined;
 }
 
+/** De groepen van de sjablonen in het paneel Onderdelen, in de volgorde waarin het paneel ze toont. */
+export const SJABLOONGROEPEN: readonly SjabloonGroep[] = ["kringen", "toestellen", "installatie"];
+
+/**
+ * De sjablonen per groep, in de volgorde van `SJABLOONGROEPEN` en binnen een groep in de gegeven
+ * volgorde. Een sjabloon zonder groep is een kring. Een groep zonder sjablonen valt weg.
+ */
+export function sjablonenPerGroep(sjablonen: readonly Sjabloon[]): { groep: SjabloonGroep; sjablonen: Sjabloon[] }[] {
+  return SJABLOONGROEPEN
+    .map((groep) => ({ groep, sjablonen: sjablonen.filter((s) => (s.groep ?? "kringen") === groep) }))
+    .filter((g) => g.sjablonen.length > 0);
+}
+
+/** Boven deze gevoeligheid geldt de grens van `MAX_KRINGEN_PER_DIFFERENTIEEL` niet. */
+const LAAGGEVOELIG_MAX_mA = 30;
+
+/** Hoeveel kringen een differentieel van maximaal 30 mA draagt, tegenover het hoogste aantal. */
+export type Bezetting = { aantal: number; max: number; vol: boolean };
+
+/**
+ * De bezetting van een differentieel van maximaal 30 mA: de kringen waarvan het het dichtstbijzijnde
+ * differentieel boven de beveiliging is (ook die van een onderbord zonder eigen differentieel), zoals
+ * de AREI-regel ze telt. Undefined voor een differentieel boven 30 mA of een andere node: daar geldt
+ * geen grens. Bedoeld voor een differentieel onder een verdeelbord (een bestemming); het algemene
+ * differentieel is er geen.
+ */
+export function differentieelBezetting(doc: InstallatieDocument, differentieelId: NodeId): Bezetting | undefined {
+  const differentieel = Object.hasOwn(doc.nodes, differentieelId) ? doc.nodes[differentieelId] : undefined;
+  if (differentieel?.type !== "differentieel" || differentieel.gevoeligheid_mA > LAAGGEVOELIG_MAX_mA) return undefined;
+  let aantal = 0;
+  const gezien = new Set<NodeId>([differentieelId]);
+  const stapel = [...differentieel.kinderen];
+  while (stapel.length) {
+    const id = stapel.pop()!;
+    const node = Object.hasOwn(doc.nodes, id) ? doc.nodes[id] : undefined;
+    // Onder een dieper differentieel tellen de kringen bij dat differentieel.
+    if (!node || gezien.has(id) || node.type === "differentieel") continue;
+    gezien.add(id);
+    if (node.type === "automaat" || node.type === "zekering") aantal++;
+    stapel.push(...node.kinderen);
+  }
+  return { aantal, max: MAX_KRINGEN_PER_DIFFERENTIEEL, vol: aantal >= MAX_KRINGEN_PER_DIFFERENTIEEL };
+}
+
 /**
  * De standaardbestemming voor een nieuwe kring: het differentieel van de huidige selectie, anders
  * het laatst gebruikte differentieel in dit bord (`laatste`: bord-id → differentieel-id), anders
  * het bord. Een geselecteerd bord blijft het bord. Zonder bord in de selectie geldt het eerste bord.
+ * Een differentieel van maximaal 30 mA dat al vol zit (`differentieelBezetting`) wordt nooit
+ * voorgesteld: de volgende keuze in de rij geldt, tot het bord (een nieuw differentieel).
  */
 export function kringBestemming<T extends { nodeId: NodeId }>(
   doc: InstallatieDocument,
@@ -93,6 +143,7 @@ export function kringBestemming<T extends { nodeId: NodeId }>(
 ): T | undefined {
   const doelVan = (id: NodeId) => doelen.find((d) => d.nodeId === id);
   const isBord = (d: T) => doc.nodes[d.nodeId]?.type === "verdeelbord";
+  const heeftPlaats = (d: T) => !differentieelBezetting(doc, d.nodeId)?.vol;
   let bord: T | undefined;
   if (selectie.length === 1) {
     const gezien = new Set<NodeId>();
@@ -100,8 +151,8 @@ export function kringBestemming<T extends { nodeId: NodeId }>(
     while (node && !gezien.has(node.id)) {
       gezien.add(node.id);
       const doel = doelVan(node.id);
-      if (doel && !isBord(doel)) return doel;
-      if (doel) {
+      if (doel && !isBord(doel) && heeftPlaats(doel)) return doel;
+      if (doel && isBord(doel)) {
         if (node.id === selectie[0]) return doel;
         bord = doel;
         break;
@@ -113,5 +164,33 @@ export function kringBestemming<T extends { nodeId: NodeId }>(
   if (!bord) return undefined;
   const vorig = laatste[bord.nodeId];
   const differentieel = vorig === undefined ? undefined : doelVan(vorig);
-  return differentieel && !isBord(differentieel) ? differentieel : bord;
+  return differentieel && !isBord(differentieel) && heeftPlaats(differentieel) ? differentieel : bord;
+}
+
+/**
+ * De bestemmingen die bij een sjabloon passen. Een kring kan op elk bord (achter een nieuw
+ * differentieel) en achter elk bestaand differentieel; een sjabloon dat geen kring is (de aarding)
+ * komt alleen rechtstreeks op een bord.
+ */
+export function sjabloonBestemmingen(doc: InstallatieDocument, sjabloon: Sjabloon): SjabloonDoel[] {
+  const doelen = invoegBestemmingen(doc);
+  return isKringSjabloon(sjabloon) ? doelen : doelen.filter((d) => d.soort === "nieuw-op-bord");
+}
+
+/**
+ * De standaardbestemming voor een sjabloon. Een gewone kring volgt `kringBestemming`. Een sjabloon
+ * dat een eigen differentieel vraagt (de laadpaal) of geen kring is (de aarding) komt op het bord
+ * van de selectie, anders op het eerste bord.
+ */
+export function sjabloonBestemming(
+  doc: InstallatieDocument,
+  sjabloon: Sjabloon,
+  selectie: readonly NodeId[],
+  laatste: Readonly<Record<NodeId, NodeId>>,
+): SjabloonDoel | undefined {
+  const doelen = sjabloonBestemmingen(doc, sjabloon);
+  if (isKringSjabloon(sjabloon) && !sjabloon.eigenDifferentieel) return kringBestemming(doc, doelen, selectie, laatste);
+  const borden = doelen.filter((d) => d.soort === "nieuw-op-bord");
+  // Zonder differentiëlen in de lijst en zonder laatst gebruikte blijft alleen het bord van de selectie over.
+  return kringBestemming(doc, borden, selectie, {});
 }
