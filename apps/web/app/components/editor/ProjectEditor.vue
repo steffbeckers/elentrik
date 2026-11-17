@@ -821,7 +821,7 @@ onBeforeUnmount(() => {
           <OnderdelenPaneel v-if="store.tabblad === 'eendraadschema'" @sjabloon="openSjabloon" @lichtschakeling="lichtschakelingOpen = true" @referenties="referentiesOpen = true" @eigenschappen="werkruimte?.toonEigenschappen()" />
           <TePlaatsenPaneel v-else :inert="situatie.actievePagina?.referentie || undefined" v-model:gekozen="teplaatsen" v-model:zoek="plaatsZoek" v-model:kring="plaatsKring" v-model:doorgaan="doorplaatsen" @volgorde="plaatsVolgorde = $event" />
         </template>
-        <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" />
+        <SchemaCanvas v-if="store.tabblad === 'eendraadschema'" class="min-h-0 flex-1" @eigenschappen="werkruimte?.toonEigenschappen()" />
         <KringenlijstTabel v-else-if="store.tabblad === 'kringenlijst'" class="min-h-0 flex-1" />
         <MateriaallijstTabel v-else-if="store.tabblad === 'materiaallijst'" class="min-h-0 flex-1" />
         <template v-else>

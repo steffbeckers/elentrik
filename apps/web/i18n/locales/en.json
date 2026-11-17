@@ -228,6 +228,7 @@
   "editor": {
     "canvas": {
       "passendMaken": "Fit to window",
+      "actiebalk": "Actions for the selection",
       "voegToe": "Add {onderdeel}",
       "verwijderenMislukt": {
         "ROOT_NIET_WIJZIGBAAR": "The supply connection and the meter cannot be deleted.",

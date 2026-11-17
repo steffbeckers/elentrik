@@ -228,6 +228,7 @@
   "editor": {
     "canvas": {
       "passendMaken": "Passend maken",
+      "actiebalk": "Acties voor de selectie",
       "voegToe": "{onderdeel} toevoegen",
       "verwijderenMislukt": {
         "ROOT_NIET_WIJZIGBAAR": "De aansluiting en de teller kunnen niet verwijderd worden.",

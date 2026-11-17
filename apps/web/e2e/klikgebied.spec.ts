@@ -48,7 +48,7 @@ test("een klik naast een leiding of naast een automaat selecteert dat onderdeel"
   await expect(page.getByTestId(`selectie-${ander.id}`)).toHaveCount(1);
 });
 
-test("de selectie verwijderen kan met de knoppen boven het schema, zonder toetsenbord", async ({ page, request }) => {
+test("de actiebalk bij de selectie: eigenschappen openen, verwijderen en een hele tak verwijderen zonder toetsenbord", async ({ page, request }) => {
   const antwoord = await request.post("/api/projecten", {
     data: { naam: `Test Verwijderknop ${Date.now()}`, klantnaam: "", stroomtype: "2x230V" },
   });
@@ -63,18 +63,29 @@ test("de selectie verwijderen kan met de knoppen boven het schema, zonder toetse
   const canvas = page.getByTestId("schema-canvas");
   const nodes = canvas.locator("[data-node-id]");
   const aantal = await nodes.count();
-  // Zonder selectie zijn er geen verwijderknoppen.
+  // Zonder selectie is er geen actiebalk.
   await page.mouse.click(5, 300);
-  await expect(page.getByTestId("schema-verwijder")).toHaveCount(0);
+  await expect(page.getByTestId("schema-actiebalk")).toHaveCount(0);
 
   // Het bovenste symbool is de laatste contactdoos van de kring: die kan alleen weg.
   const bovenste = await nodes.evaluateAll((groepen) => {
     const vlakken = groepen.map((g) => ({ id: g.getAttribute("data-node-id")!, r: g.querySelector(":scope > .raakvlak")!.getBoundingClientRect() }));
     const top = vlakken.reduce((a, b) => (b.r.y < a.r.y ? b : a));
-    return { id: top.id, x: top.r.x + top.r.width / 2, y: top.r.y + top.r.height / 2 };
+    return { id: top.id, x: top.r.x + top.r.width / 2, y: top.r.y + top.r.height / 2, rechts: top.r.right };
   });
   await page.mouse.click(bovenste.x, bovenste.y);
   await expect(page.getByTestId(`selectie-${bovenste.id}`)).toHaveCount(1);
+
+  // De balk staat naast het onderdeel, niet erboven of eronder: ze overlapt het raakvlak niet.
+  const balk = (await page.getByTestId("schema-actiebalk").boundingBox())!;
+  expect(balk.x).toBeGreaterThanOrEqual(bovenste.rechts);
+  await expect(page.getByTestId("schema-actiebalk")).toHaveAttribute("data-bij-selectie", "true");
+
+  // Eigenschappen opent het paneel; de selectie blijft.
+  await page.getByTestId("schema-eigenschappen").click();
+  await expect(page.getByTestId("werkruimte-eigenschappen")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByTestId(`selectie-${bovenste.id}`)).toHaveCount(1);
+
   await page.getByTestId("schema-verwijder").click();
   await expect(nodes).toHaveCount(aantal - 1);
 

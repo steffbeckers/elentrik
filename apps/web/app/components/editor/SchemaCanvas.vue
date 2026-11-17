@@ -5,6 +5,7 @@ import CanvasBediening from "~/components/editor/CanvasBediening.vue";
 import { doelSoort, moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useCanvasWeergave } from "~/composables/useCanvasWeergave";
 import MarkeringSymbool from "~/components/editor/MarkeringSymbool.vue";
+import { actiebalkAfmeting, actiebalkPlaats } from "~/editor/actiebalk";
 import { markeringen as leidMarkeringenAf } from "~/editor/markeringen";
 import { kringBestemming } from "~/editor/invoegen";
 import { schemaKeuzes, schemaInvoegKeuzes, invoegpuntBijSelectie } from "~/editor/schema-navigatie";
@@ -15,6 +16,8 @@ const MARGE_MM = 5;
 const SELECTIE_MARGE_MM = 1;
 const MARKERING_STRAAL_MM = 1.5;
 const PLUS_STRAAL_MM = 2.5;
+
+const emit = defineEmits<{ eigenschappen: [] }>();
 
 const store = useEditorStore();
 const { t, te } = useI18n();
@@ -242,6 +245,41 @@ const selectieKaders = computed(() =>
   }),
 );
 
+// --- Actiebalk bij de selectie ----------------------------------------------
+
+type Actie = { id: string; icoon: string; label: string; voerUit: () => void };
+
+/**
+ * De acties voor de selectie, zonder invoervelden: die staan in het paneel Eigenschappen. Ze doen
+ * hetzelfde als de sneltoetsen, zodat alles ook zonder toetsenbord kan (op een aanraakscherm is er
+ * geen Delete-toets). In alleen-lezen blijft alleen Eigenschappen over.
+ */
+const acties = computed<Actie[]>(() => {
+  const lijst: Actie[] = [
+    { id: "eigenschappen", icoon: "i-lucide-sliders-horizontal", label: t("editor.werkruimte.eigenschappen"), voerUit: () => emit("eigenschappen") },
+  ];
+  if (store.alleenLezen) return lijst;
+  const kringVanNode = store.analyse?.kringVanNode ?? {};
+  if (store.selectie.some((id) => Object.hasOwn(kringVanNode, id))) {
+    lijst.push({ id: "dupliceer", icoon: "i-lucide-copy", label: t("editor.sneltoetsen.dupliceer"), voerUit: dupliceer });
+  }
+  lijst.push(
+    { id: "verwijder", icoon: "i-lucide-trash-2", label: t("editor.sneltoetsen.verwijder"), voerUit: () => vraagVerwijderen(false) },
+    { id: "verwijder-tak", icoon: "i-lucide-list-x", label: t("editor.sneltoetsen.verwijderTak"), voerUit: () => vraagVerwijderen(true) },
+  );
+  return lijst;
+});
+
+/** Naast de selectie, of vast linksboven als de selectie buiten beeld valt (`editor/actiebalk.ts`). */
+const actiebalk = computed(() =>
+  actiebalkPlaats(
+    selectieKaders.value.map(({ vak }) => vak),
+    canvas.weergave.value,
+    canvas.grootte,
+    actiebalkAfmeting(acties.value.length),
+  ),
+);
+
 /** Eén markering per node, rechtsboven het vak; de ernst-aggregatie zit in `editor/markeringen.ts`. */
 const markeringen = computed(() => {
   return [...leidMarkeringenAf(store.bevindingen)].flatMap(([id, soort]) => {
@@ -395,15 +433,6 @@ watchPostEffect(() => {
         data-testid="schema-nodekeuze" class="min-h-9 min-w-0 flex-1 sm:w-80 sm:flex-none"
         @update:model-value="kiesStructuur" />
       <UButton v-if="!store.alleenLezen" icon="i-lucide-plus" :color="toevoegenOpen ? 'primary' : 'neutral'" variant="soft" :label="$t('werkbaarheid.tekenen.toevoegen')" :aria-expanded="toevoegenOpen" aria-controls="schema-invoegen" data-testid="schema-toevoegmodus" class="min-h-9" @click="toevoegenOpen = !toevoegenOpen" />
-      <!-- De selectie verwijderen kan ook zonder toetsenbord: op een aanraakscherm is er geen Delete-toets. -->
-      <div v-if="!store.alleenLezen && store.selectie.length" role="group" :aria-label="$t('editor.sneltoetsen.verwijder')" class="flex items-center gap-1">
-        <UTooltip :text="$t('editor.sneltoetsen.verwijder')" :kbds="['Delete']">
-          <UButton color="neutral" variant="ghost" icon="i-lucide-trash-2" :label="$t('editor.canvas.takVerwijderen.bevestigen')" :aria-label="$t('editor.sneltoetsen.verwijder')" data-testid="schema-verwijder" class="min-h-9" @click="vraagVerwijderen(false)" />
-        </UTooltip>
-        <UTooltip :text="$t('editor.sneltoetsen.verwijderTak')" :kbds="['Shift', 'Delete']">
-          <UButton color="neutral" variant="ghost" icon="i-lucide-list-x" :aria-label="$t('editor.sneltoetsen.verwijderTak')" data-testid="schema-verwijder-tak" class="min-h-9" @click="vraagVerwijderen(true)" />
-        </UTooltip>
-      </div>
     </div>
     <div v-if="toevoegenOpen && !store.alleenLezen" id="schema-invoegen" class="flex shrink-0 flex-wrap items-center gap-2 border-b border-default bg-elevated px-3 py-2">
       <div class="flex min-w-0 flex-1 basis-64 flex-wrap items-center gap-2">
@@ -485,6 +514,32 @@ watchPostEffect(() => {
           <path d="M-1.2 0H1.2M0 -1.2V1.2" fill="none" stroke-width="0.5" stroke-linecap="round" style="stroke: var(--ui-primary)" />
         </g>
       </svg>
+      <div
+        v-if="actiebalk"
+        role="toolbar"
+        aria-orientation="vertical"
+        :aria-label="$t('editor.canvas.actiebalk')"
+        data-testid="schema-actiebalk"
+        :data-bij-selectie="actiebalk.bijSelectie"
+        class="absolute left-0 top-0 flex flex-col rounded-md border border-neutral-300 bg-white p-1 text-neutral-900 shadow-sm"
+        :style="{ transform: `translate(${actiebalk.x}px, ${actiebalk.y}px)` }"
+        @pointerdown.stop
+        @click.stop
+        @dblclick.stop
+      >
+        <button
+          v-for="actie in acties"
+          :key="actie.id"
+          type="button"
+          class="actie-knop"
+          :title="actie.label"
+          :aria-label="actie.label"
+          :data-testid="`schema-${actie.id}`"
+          @click="actie.voerUit()"
+        >
+          <UIcon :name="actie.icoon" class="size-4" />
+        </button>
+      </div>
       <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="!!gekozenNode" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 
@@ -532,6 +587,10 @@ watchPostEffect(() => {
     fill: color-mix(in srgb, var(--ui-primary) 12%, transparent);
   }
 }
+/* Vaste maat: `editor/actiebalk.ts` rekent de plaats van de balk uit zonder te meten (ACTIEBALK_KNOP_PX). */
+.actie-knop { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 4px; cursor: pointer; }
+.actie-knop:hover { background: var(--ui-color-neutral-100); }
+.actie-knop:focus-visible { outline: 2px solid var(--ui-primary); outline-offset: -2px; }
 .schema-plus:focus-visible { outline: none; }
 .schema-plus:focus-visible circle { stroke-width: 1; fill: var(--ui-bg-accented); }
 </style>
