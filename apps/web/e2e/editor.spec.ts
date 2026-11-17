@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 import { selecteerSchemaNode } from "./hulp/schema-selectie";
+import { toonPaneel } from "./hulp/paneel";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "editor" });
@@ -112,7 +113,7 @@ test("bouw een kring, herstel, verwijder, wijzig een label en herlaad", async ({
   // 6. Tekst van de leiding wordt platte tekst, nooit HTML. Het algemene label bereikt de SVG niet;
   // het kabeltype wel (via `v-html`), dus daar is de escaping van `render` de enige bescherming.
   const leidingId = await selecteerBij(page, "XVB 3G2,5");
-  await page.getByTestId("werkruimte-eigenschappen").click();
+  await toonPaneel(page, "eigenschappen");
   const labelVeld = page.getByTestId("veld-label");
   await labelVeld.fill(xssLabel);
   await labelVeld.blur();
@@ -175,7 +176,7 @@ test("ongeldige nominale stroom blijft zichtbaar na blur en selectie verlaten", 
   await pasTeMaken(page);
   await page.getByTestId("schema-canvas").locator('[data-testid^="plus-rail-einde-"]').click();
   const automaatId = await selecteerBij(page, "B16 2P");
-  await page.getByTestId("werkruimte-eigenschappen").click();
+  await toonPaneel(page, "eigenschappen");
   const stroom = page.getByTestId("veld-nominaal_A");
   await expect(stroom).toHaveValue("16");
   await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
@@ -247,7 +248,7 @@ test("? toont de sneltoetsen en Ctrl+D dupliceert een kring met de volgende vrij
 
   // Tijdens het typen in een tekstveld gaan ? en Ctrl+D niet af.
   await selecteerBij(page, "A1");
-  await page.getByTestId("werkruimte-eigenschappen").click();
+  await toonPaneel(page, "eigenschappen");
   const label = page.getByTestId("veld-label");
   await label.fill("Keuken");
   await label.press("?");

@@ -18,6 +18,7 @@ import { voegToeAanKringEinde } from "./hulp/schema-selectie";
 import { bevestigSjabloonOpBord } from "./hulp/sjabloon";
 import { sjabloonRegex, vertaling } from "./hulp/teksten";
 import { E2E_URL } from "./omgeving";
+import { toonPaneel } from "./hulp/paneel";
 
 // De interface en de dossiertaal in drie talen (plan 8). Eén gebruiker en één organisatie voor
 // het hele bestand (de rate limiter laat geen login per test toe). De tests zijn onafhankelijk:
@@ -193,7 +194,7 @@ test("een bevinding in de editor staat in de taal van de interface", async ({ pa
   await voegToeAanKringEinde(page, 3, vertaling("fr", "editor.canvas.passendMaken"));
 
   const sleutel = "arei.kring.max-contactdozen.overschreden";
-  await page.getByTestId("werkruimte-bevindingen").click();
+  await toonPaneel(page, "bevindingen");
   const fouten = page.getByTestId("bevindingen-fout");
   await expect(fouten).toContainText(sjabloonRegex(BERICHTEN.fr[sleutel]!));
   // Niet het Nederlands van dezelfde bevinding.

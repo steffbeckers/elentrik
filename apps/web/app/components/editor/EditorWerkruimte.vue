@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { dossierStatus } from "~/editor/dossierstatus";
+import { paneelNaSelectie, type Paneel } from "~/editor/werkruimte-paneel";
 import { useEditorStore, type Tabblad } from "~/stores/editor";
 const props = defineProps<{ tabblad: Tabblad; selectie: readonly string[]; heeftPlan: boolean }>();
 const store = useEditorStore();
 /** Wat nog op een plan moet, geteld zoals de dossierchecklist; bij 0 toont het tabblad niets. */
 const tePlaatsen = computed(() => dossierStatus(store.document, store.analyse).ongeplaatst);
-type Paneel = "onderdelen" | "eigenschappen" | "bevindingen" | "opmaak";
 const paneel = ref<Paneel | null>(props.tabblad === "eendraadschema" ? "onderdelen" : null);
 onMounted(() => { if (window.matchMedia("(max-width: 767px)").matches) paneel.value = null; });
 const inspecteurElement = ref<HTMLElement | null>(null);
@@ -27,7 +27,17 @@ watch(() => props.tabblad, () => {
   if (paneel.value === "opmaak" || (paneel.value === "onderdelen" && (props.tabblad === "kringenlijst" || props.tabblad === "materiaallijst"))) paneel.value = null;
 });
 watch(() => props.heeftPlan, heeftPlan => { if (!heeftPlan && paneel.value === "opmaak") paneel.value = null; });
-// Selectie opent geen paneel onverwacht en houdt opmaak beschikbaar voor het volgende label.
+// De panelen Onderdelen en Eigenschappen volgen de selectie; de regels staan in `editor/werkruimte-paneel.ts`.
+const heeftOnderdelen = computed(() => props.tabblad === "eendraadschema" || props.tabblad === "situatieschema");
+watch([() => props.selectie, () => store.document], ([selectie, document], [vorigeSelectie, vorigDocument]) => {
+  if (selectie === vorigeSelectie) return;
+  paneel.value = paneelNaSelectie(paneel.value, {
+    aantal: selectie.length,
+    vorigAantal: vorigeSelectie.length,
+    documentGewijzigd: document !== vorigDocument,
+    heeftOnderdelen: heeftOnderdelen.value,
+  });
+});
 defineExpose({
   toonOnderdelen: () => { paneel.value = "onderdelen"; },
   toonBevindingen: () => { paneel.value = "bevindingen"; },

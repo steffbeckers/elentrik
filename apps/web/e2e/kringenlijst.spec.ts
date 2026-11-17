@@ -1,6 +1,7 @@
 import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { toonPaneel } from "./hulp/paneel";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "kringenlijst" });
@@ -45,7 +46,7 @@ test("de tabel toont de kolommen van de pdf; een klik of toets selecteert het pu
   await rijen.first().click();
   await expect(rijen.first()).toHaveAttribute("aria-selected", "true");
   await expect(rijen.nth(1)).toHaveAttribute("aria-selected", "false");
-  await page.getByTestId("werkruimte-eigenschappen").click();
+  await toonPaneel(page, "eigenschappen");
   await expect(page.getByTestId("eigenschappen-titel")).toBeVisible();
 
   // Toetsenbord: Enter of spatie op een gefocuste rij selecteert die rij.

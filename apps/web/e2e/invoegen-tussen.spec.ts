@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import type { InstallatieDocument } from "@elentrik/model";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { toonPaneel } from "./hulp/paneel";
 gebruikTestgebruiker(test, { voorvoegsel: "invoegen-tussen" });
 async function haal(
   request: APIRequestContext,
@@ -56,7 +57,7 @@ async function selecteer(page: Page, id: string): Promise<void> {
 }
 async function tool(page: Page, naam: string) {
   if (!(await page.getByTestId(`onderdeel-${naam}`).isVisible()))
-    await page.getByTestId("werkruimte-onderdelen").click();
+    await toonPaneel(page, "onderdelen");
   await page.getByTestId(`onderdeel-${naam}`).click();
 }
 
@@ -77,6 +78,8 @@ test("explicit cable insertion before main RCD preserves the existing chain, sup
   await expect(page.getByTestId("invoegen-voor-selectie")).toContainText(
     /Leiding vóór.*Differentieel/,
   );
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByTestId("invoegen-voor-selectie").click();
   await expect(page.getByTestId("veld-kabeltype")).toBeVisible();
   await expect(page.getByTestId("veld-kabeltype")).toHaveValue("XVB");
@@ -160,6 +163,8 @@ test("EV differential inserts explicitly between circuit B breaker and its exist
   await expect(page.getByTestId("invoegen-voor-selectie")).toContainText(
     /Differentieel vóór B/,
   );
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByTestId("invoegen-voor-selectie").click();
   await expect(page.getByTestId("veld-gevoeligheid_mA")).toBeVisible();
   await expect(page.getByTestId("veld-gevoeligheid_mA")).toHaveValue("30");
