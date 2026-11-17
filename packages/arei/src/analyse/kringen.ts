@@ -82,8 +82,6 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
   const ketens: Record<NodeId, Keten> = {};
   const zonderKring: NodeId[] = [];
   const puntenInVolgorde: NodeId[] = [];
-  /** Per kring (in volgorde van `kringen`): de differentielen boven de beveiliging, dichtstbijzijnde eerst. */
-  const differentielenBovenKring: (readonly NodeId[])[] = [];
   let tellerId: NodeId | null = null;
 
   const hoofdReeks: Reeks = { prefix: "", volgende: 0 };
@@ -131,12 +129,12 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
         verdeelbordId: bordBoven.id,
         puntIds: [],
         leidingIds: [],
-        tellingen: { contactdozen: 0, lichtpunten: 0, schakelaars: 0, toestellen: 0 },
+        tellingen: { contactdozen: 0, contactdoosPunten: 0, lichtpunten: 0, schakelaars: 0, toestellen: 0 },
         ruimtes: [],
         minDoorsnede_mm2: null,
+        differentielen: alsArray(differentielen),
       };
       kringen.push(nieuw);
-      differentielenBovenKring.push(alsArray(differentielen));
       kring = { kring: nieuw, volgendPunt: 1, ruimtes: new Set() };
     }
 
@@ -158,8 +156,10 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
           kring.kring.ruimtes.push(node.ruimte);
         }
         const tellingen = kring.kring.tellingen;
-        if (node.type === "contactdoos") tellingen.contactdozen += node.aantal;
-        else if (node.type === "lichtpunt") tellingen.lichtpunten += node.aantal;
+        if (node.type === "contactdoos") {
+          tellingen.contactdozen += node.aantal;
+          tellingen.contactdoosPunten++;
+        } else if (node.type === "lichtpunt") tellingen.lichtpunten += node.aantal;
         else if (node.type === "schakelaar") tellingen.schakelaars++;
         else if (node.type === "toestel") tellingen.toestellen++;
       } else {
@@ -196,7 +196,7 @@ export function leidAnalyseAf(doc: InstallatieDocument): Analyse {
     ketens,
     zonderKring,
     tellerId,
-    algemeenDifferentieelId: vindAlgemeenDifferentieel(differentielenBovenKring),
+    algemeenDifferentieelId: vindAlgemeenDifferentieel(kringen.map((kring) => kring.differentielen)),
     nietGeplaatst: puntenInVolgorde.filter((id) => !geplaatst.has(id)),
   };
 }

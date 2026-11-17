@@ -140,13 +140,14 @@ function verwijderAfwijking(b: Bevinding): void {
           class="py-3 text-sm"
           data-testid="bevindingengroep"
         >
-          <details :open="bundel.voorbeeld.ernst === 'fout'">
+          <details :open="bundel.voorbeeld.ernst === 'fout'" class="group">
           <summary class="cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-primary">
           <span class="mb-1 font-semibold">
             {{ bundel.kringLabel ? $t('editor.bevindingen.kring', { kring: bundel.kringLabel }) : $t('editor.bevindingen.installatie') }}
           </span>
           <span class="ml-2 text-xs text-muted">{{ $t('werkbaarheid.bevindingen.punten', { aantal: bundel.nodeIds.length }) }}</span>
-          <span class="mt-1 block line-clamp-2 text-xs text-muted">{{ formatteerBericht(bundel.voorbeeld, taal) }}</span>
+          <!-- Preview only while closed: opened, the full message below takes over. -->
+          <span class="mt-1 block line-clamp-2 text-xs text-muted group-open:hidden" data-testid="bevinding-preview">{{ formatteerBericht(bundel.voorbeeld, taal) }}</span>
           </summary>
           <div class="pt-3">
           <p class="break-words">{{ formatteerBericht(bundel.voorbeeld, taal) }}</p>

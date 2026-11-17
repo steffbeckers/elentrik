@@ -3,16 +3,21 @@ import {
   DocumentFout,
   RuimteSchema,
   SJABLONEN,
+  isKringSjabloon,
+  sjabloonDifferentieel,
+  sjabloonVoor,
+  voegBordSjabloonToe,
   voegSjabloonToe,
   type Ruimte,
+  type Sjabloon,
   type SjabloonDoel,
   type DifferentieelInstellingen,
 } from "@elentrik/model";
 import { KEUZELIJST_IN_DIALOOG } from "~/editor/keuzelijst";
 import { useEditorStore } from "~/stores/editor";
 import {
-  invoegBestemmingen,
-  kringBestemming,
+  sjabloonBestemming,
+  sjabloonBestemmingen,
   invoegSpecificatie,
 } from "~/editor/invoegen";
 import AlleenLezenMelding from "./AlleenLezenMelding.vue";
@@ -21,12 +26,25 @@ import InvoegBestemmingVelden from "./InvoegBestemmingVelden.vue";
 const open = defineModel<boolean>("open", { default: false });
 const props = defineProps<{ sjabloonId: string }>();
 const store = useEditorStore();
-const { t } = useI18n();
+const { t, te } = useI18n();
 const voerUit = useDocumentFoutMelding();
 /** De keuze "Geen" in de keuzelijst Soort ruimte; een keuzelijst kent geen lege waarde. */
 const GEEN = "__geen__";
+/** Het sjabloon in de variant van het stroomtype; undefined zolang er geen (bekend) sjabloon gekozen is. */
+const sjabloon = computed<Sjabloon | undefined>(() =>
+  store.document && SJABLONEN.some((s) => s.id === props.sjabloonId)
+    ? sjabloonVoor(props.sjabloonId, store.document.voeding.stroomtype)
+    : undefined,
+);
+/** Een kring kiest een differentieel; de aarding komt rechtstreeks op een bord. */
+const isKring = computed(() => !sjabloon.value || isKringSjabloon(sjabloon.value));
+/** Een toelichting bij de voorinstelling van dit sjabloon (de laadpaal), als die er is. */
+const hulpSleutel = computed(() => {
+  const sleutel = `editor.invoegen.sjabloonhulp.${props.sjabloonId}`;
+  return te(sleutel) ? sleutel : undefined;
+});
 /** De ruimte die het sjabloon voorstelt (de badkamer), of undefined: dan toont de dialoog geen veld. */
-const suggestie = computed(() => SJABLONEN.find((s) => s.id === props.sjabloonId)?.ruimte);
+const suggestie = computed(() => sjabloon.value?.ruimte);
 const ruimteKeuze = ref<Ruimte | typeof GEEN>(GEEN);
 const ruimteItems = computed(() => [
   { value: GEEN, label: t("editor.eigenschappen.geen") },
@@ -44,35 +62,36 @@ const instellingen = ref<DifferentieelInstellingen>({
   klasse: "A",
 });
 const doelen = computed(() =>
-  store.document ? invoegBestemmingen(store.document) : [],
+  store.document && sjabloon.value ? sjabloonBestemmingen(store.document, sjabloon.value) : [],
 );
 watch(open, (value) => {
   if (!value) return;
   ruimteKeuze.value = suggestie.value ?? GEEN;
-  // Het differentieel van de selectie, anders het laatst gebruikte in dit bord, anders het bord.
-  doel.value = store.document ? kringBestemming(store.document, doelen.value, store.selectie, store.laatsteDifferentieel) : undefined;
+  // Het differentieel van de selectie, anders het laatst gebruikte in dit bord, anders het bord. Een vol
+  // differentieel wordt niet voorgesteld; de laadpaal en de aarding gaan naar het bord.
+  doel.value = store.document && sjabloon.value
+    ? sjabloonBestemming(store.document, sjabloon.value, store.selectie, store.laatsteDifferentieel)
+    : undefined;
+  // Een nieuw differentieel begint bij dat van het sjabloon (de laadpaal: klasse B), met de polen van het stroomtype.
   instellingen.value = {
     gevoeligheid_mA: 30,
     nominaal_A: 40,
+    klasse: "A",
+    ...(sjabloon.value ? sjabloonDifferentieel(sjabloon.value) : undefined),
     polen:
       store.document?.voeding.stroomtype === "3N400V"
         ? 4
         : store.document?.voeding.stroomtype === "3x230V"
           ? 3
           : 2,
-    klasse: "A",
   };
 });
 const voorbeeld = computed(() => {
   if (!store.document || !doel.value || !props.sjabloonId) return undefined;
   try {
-    const r = voegSjabloonToe(
-      store.document,
-      doel.value,
-      props.sjabloonId,
-      instellingen.value,
-      ruimte.value,
-    );
+    const r = isKring.value
+      ? voegSjabloonToe(store.document, doel.value, props.sjabloonId, instellingen.value, ruimte.value)
+      : voegBordSjabloonToe(store.document, doel.value.nodeId, props.sjabloonId);
     return Object.values(r.doc.nodes).filter(
       (n) => !store.document!.nodes[n.id],
     );
@@ -102,7 +121,11 @@ function voegIn() {
           v-model:doel="doel"
           v-model:instellingen="instellingen"
           :doelen="doelen"
+          :op-bord="!isKring"
         />
+        <p v-if="hulpSleutel" class="text-sm text-muted" data-testid="sjabloon-hulp">
+          {{ $t(hulpSleutel) }}
+        </p>
         <UFormField
           v-if="suggestie"
           :label="$t('editor.invoegen.ruimte.label')"
@@ -117,7 +140,7 @@ function voegIn() {
             data-testid="sjabloon-ruimte"
           />
         </UFormField>
-        <p class="text-sm text-muted">
+        <p v-if="isKring" class="text-sm text-muted">
           {{ $t(suggestie ? "editor.invoegen.voorinstellingenMetRuimte" : "editor.invoegen.voorinstellingen") }}
         </p>
         <section v-if="voorbeeld" aria-live="polite" class="space-y-2">

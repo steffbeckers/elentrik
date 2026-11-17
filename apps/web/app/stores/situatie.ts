@@ -77,7 +77,8 @@ export const useSituatieStore = defineStore("situatie", () => {
       }
       ids.push(toegevoegd.id);
     }
-    if (resultaten.length) editor.pasToe(samengevoegd(doc, resultaten));
+    // Over de limiet (of alleen-lezen): niets toegevoegd, dus ook geen pagina's om te kiezen.
+    if (resultaten.length && !editor.pasToe(samengevoegd(doc, resultaten))) return [];
     gekozenPaginaId.value = ids[0] ?? gekozenPaginaId.value;
     return ids;
   }
@@ -109,7 +110,8 @@ export const useSituatieStore = defineStore("situatie", () => {
     } else {
       const toegevoegd = voegPaginaToe(doc, titel);
       paginaId = toegevoegd.id;
-      editor.pasToe(samengevoegd(doc, [toegevoegd, zetGetekendPlan(toegevoegd.doc, paginaId, achtergrond, tekening)]));
+      // Over de limiet: geen nieuwe pagina.
+      if (!editor.pasToe(samengevoegd(doc, [toegevoegd, zetGetekendPlan(toegevoegd.doc, paginaId, achtergrond, tekening)]))) return "";
     }
     gekozenPaginaId.value = paginaId;
     return paginaId;

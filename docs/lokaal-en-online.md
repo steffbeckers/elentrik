@@ -117,6 +117,9 @@ chatbericht. Ze staan zonder waarde in `apps/web/.env.example`.
 | `STRIPE_WEBHOOK_GEHEIM` | Het geheim van het webhook-eindpunt (`whsec_...`). |
 | `STRIPE_PRIJS_MAAND` | Het id van de maandprijs (`price_...`). |
 | `STRIPE_PRIJS_JAAR` | Het id van de jaarprijs (`price_...`). |
+| `STRIPE_PRIJS_PROJECT` | Optioneel: het id van de eenmalige prijs om één project vrij te geven (`price_...`). Leeg: geen knop om vrij te geven. |
+| `GRATIS_MAX_KRINGEN` | Optioneel: het maximum aantal kringen per gratis project. Leeg: 5. |
+| `GRATIS_MAX_SITUATIESCHEMAS` | Optioneel: het maximum aantal situatieschema's per gratis project. Leeg: 1. |
 | `BOEKHOUDING_INBOX` | Het e-mailadres van de boekhouding. Optioneel: leeg betekent geen kopie. |
 | `STRIPE_API_BASIS` | Alleen voor de e2e-tests, voor een nep-Stripe. Zet dit nooit in je eigen `.env`. |
 
@@ -136,7 +139,8 @@ De code legt deze instellingen niet vast. Doe ze in testmodus en later nog eens 
 
 - **Stripe Tax:** aan, met het Belgische vestigingsadres en de btw-registratie.
 - **Prijzen:** twee terugkerende prijzen, een per maand en een per jaar, in EUR en **exclusief**
-  btw (tax behavior "exclusive"). Hun id's gaan in `STRIPE_PRIJS_MAAND` en `STRIPE_PRIJS_JAAR`.
+  btw (tax behavior "exclusive"). Hun id's gaan in `STRIPE_PRIJS_MAAND` en `STRIPE_PRIJS_JAAR`. Optioneel
+  een eenmalige prijs om één project vrij te geven, ook exclusief btw: haar id gaat in `STRIPE_PRIJS_PROJECT`.
 - **Factuurnummering:** een eigen voorvoegsel, bijvoorbeeld `ELK-`, doorlopend over het hele account.
 - **Klantmails:** Stripe stuurt de klant **geen** facturen, want de officiële factuur komt uit de
   boekhouding. Betalingsbewijzen naar eigen keuze.

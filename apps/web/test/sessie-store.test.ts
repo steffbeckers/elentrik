@@ -6,8 +6,8 @@ import { useSessieStore, type SessieApi } from "../app/stores/sessie";
 const MIJ: Mij = {
   gebruiker: { id: "u1", naam: "An Peeters", email: "an@example.test", superuser: false, proefGebruikt: true, taal: "nl" as const },
   organisaties: [
-    { id: "o1", naam: "Peeters Elektro", rol: "eigenaar", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
-    { id: "o2", naam: "Janssens BV", rol: "lid", toegang: { schrijven: true, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
+    { id: "o1", naam: "Peeters Elektro", rol: "eigenaar", toegang: { niveau: "uit" as const, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
+    { id: "o2", naam: "Janssens BV", rol: "lid", toegang: { niveau: "uit" as const, reden: "uit" as const, proefEinde: null, achterstalligTot: null } },
   ],
   actieveOrganisatieId: "o1",
   abonnementenIngeschakeld: false,

@@ -13,6 +13,8 @@ export type AdminProject = {
   id: string; naam: string; klantnaam: string; organisatieId: string | null; organisatieNaam: string | null;
   versie: number; aangemaakt: string; gewijzigd: string; verwijderd: string | null;
 };
+export type AdminProjectAankoop = { id: string; status: "open" | "betaald" | "vervallen" | "mislukt"; aangemaakt: string; betaaldOp: string | null };
+export type AdminProjectDetail = AdminProject & { gekochtOp: string | null; abonnementStempelOp: string | null; projectaankopen: AdminProjectAankoop[] };
 export type AdminGebruikerDetail = AdminGebruiker & {
   emailBevestigd: boolean; verwacht: string; organisaties: AdminPagina<AdminOrganisatie>;
 };
@@ -24,7 +26,7 @@ export type AdminOverzicht = {
   beoordeeldOp: string; billing: boolean;
   aantallen: { gebruikers: number; organisaties: number; projecten: number; nieuweGebruikers: number; nieuweOrganisaties: number; gewijzigdeProjecten: number };
   toegang: Record<AdminToegangGroep, number>;
-  aandacht: { proefEindigt: AdminPagina<AdminOrganisatie>; betaling: AdminPagina<AdminOrganisatie>; alleenLezen: AdminPagina<AdminOrganisatie> };
+  aandacht: { proefEindigt: AdminPagina<AdminOrganisatie>; betaling: AdminPagina<AdminOrganisatie>; gratis: AdminPagina<AdminOrganisatie> };
   recenteProjecten: AdminProject[]; recenteCorrecties: AdminAuditItem[];
   opvolging: AdminPagina<AdminNotitie>;
 };

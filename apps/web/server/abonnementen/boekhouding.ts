@@ -70,7 +70,9 @@ export async function stuurFactuurDoor(
 
     const nummer = factuur.nummer ?? factuur.id;
     const pdf = await stripe.factuurPdf(factuur);
-    const regel = `Bijgevoegd: Stripe-factuur ${nummer} van ${euro(factuur.bedragBetaald)}, betaald voor een Elentrik-abonnement.`;
+    // Een factuur zonder abonnement is een eenmalige betaling: de vrijgave van een project.
+    const waarvoor = factuur.abonnementId ? "een Elentrik-abonnement" : "de vrijgave van een project in Elentrik";
+    const regel = `Bijgevoegd: Stripe-factuur ${nummer} van ${euro(factuur.bedragBetaald)}, betaald voor ${waarvoor}.`;
     const mail: Mail = {
       aan: inbox,
       onderwerp: `Stripe-factuur ${nummer}`,

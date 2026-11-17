@@ -26,6 +26,8 @@ export const E2E_STRIPE_SLEUTEL = "sk_test_e2e";
 export const E2E_STRIPE_WEBHOOK_GEHEIM = "whsec_e2e";
 export const E2E_STRIPE_PRIJS_MAAND = "price_e2e_maand";
 export const E2E_STRIPE_PRIJS_JAAR = "price_e2e_jaar";
+/** De eenmalige prijs om één project vrij te geven (prijsmodel). */
+export const E2E_STRIPE_PRIJS_PROJECT = "price_e2e_project";
 
 /**
  * Veiligheidsnet: stopt tenzij de URL wijst naar de lokale Postgres (127.0.0.1 of localhost,

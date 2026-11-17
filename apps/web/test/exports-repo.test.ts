@@ -11,9 +11,10 @@ import type { ExportInvoer } from "../shared/exports";
 import { bewaarBedrijf, bewaarLogo } from "../server/bedrijf/repo";
 import { maakLokaleOpslag, type BestandOpslag } from "../server/bestanden/opslag";
 import { bewaarBestand } from "../server/bestanden/repo";
+import type { AbonnementConfig } from "../server/abonnementen/config";
 import type { Db } from "../server/db";
-import { bedrijfsinstellingen, bestanden, exports, projecten, snapshots } from "../server/db/schema";
-import { exportBestandsnaam, lijstExports, maakExport } from "../server/exports/repo";
+import { bedrijfsinstellingen, bestanden, exports, organization, projecten, snapshots } from "../server/db/schema";
+import { exportBestandsnaam, lijstExports, maakExport, watermerkVoorProject } from "../server/exports/repo";
 import { PdfFout, type PdfInvoer } from "../server/pdf/gotenberg";
 import { bewaarProject, maakProject, ProjectFout } from "../server/projecten/repo";
 import { maakTestDb, maakTestOrganisatie } from "./db";
@@ -567,5 +568,91 @@ describe("maakExport: watermerk van staging", () => {
       vi.unstubAllEnvs();
     }
     expect(nep.oproepen[0]!.html).toContain("watermerk-titel");
+  });
+});
+
+describe("maakExport: watermerk van de versie", () => {
+  async function exporteer(watermerk: "gratis" | "onderwijs" | null, dossierTaal?: "nl" | "fr" | "en", omgeving?: string) {
+    const doc = structuredClone(referentieWoning());
+    if (dossierTaal !== undefined) doc.meta.dossierTaal = dossierTaal;
+    const { db, org, opslag, projectId } = await opzet(doc);
+    const nep = nepPdf();
+    const env = omgeving === undefined ? {} : { ELENTRIK_OMGEVING: omgeving };
+    await maakExport(db, opslag, org, projectId, VERSIE, invoer(), { maakPdf: nep.maakPdf, env, watermerk });
+    return nep.oproepen[0]!.html;
+  }
+
+  test("gratis project: pdf-html bevat 'Gratis versie'", async () => {
+    const html = await exporteer("gratis");
+    expect(html).toContain('<div class="watermerk-titel">Gratis versie</div>');
+    expect(html).toContain('<div class="watermerk-ondertitel">Geen officieel dossier</div>');
+    expect(html.match(/class="watermerk"/g)!.length).toBe(html.match(/<section class="pagina">/g)!.length);
+  });
+
+  test("gratis project met dossiertaal fr: watermerk in het Frans", async () => {
+    const html = await exporteer("gratis", "fr");
+    expect(html).toContain("Version gratuite");
+    expect(html).toContain("Pas un dossier officiel");
+    expect(html).not.toContain("Gratis versie");
+  });
+
+  test("onderwijs: 'Onderwijsversie'", async () => {
+    const html = await exporteer("onderwijs");
+    expect(html).toContain('<div class="watermerk-titel">Onderwijsversie</div>');
+    expect(html).toContain("Geen officieel dossier");
+  });
+
+  test("zonder versiewatermerk (bijvoorbeeld gestempeld project na einde abonnement): geen watermerk", async () => {
+    expect(await exporteer(null)).not.toContain("watermerk");
+  });
+
+  test("staging en gratis: alleen het gratis watermerk", async () => {
+    const html = await exporteer("gratis", undefined, "staging");
+    expect(html).toContain("Gratis versie");
+    expect(html).not.toContain("STAGING");
+    expect(html.match(/class="watermerk"/g)!.length).toBe(html.match(/<section class="pagina">/g)!.length);
+  });
+
+  test("staging zonder versiewatermerk: het watermerk van staging", async () => {
+    expect(await exporteer(null, undefined, "staging")).toContain("STAGING");
+  });
+});
+
+describe("watermerkVoorProject", () => {
+  const LIMIETEN = { kringen: 5, situatieschemas: 1 };
+  const AAN: AbonnementConfig = {
+    ingeschakeld: true,
+    sleutel: "sk_test_nep",
+    webhookGeheim: null,
+    prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+    limieten: LIMIETEN,
+    boekhoudingInbox: null,
+    apiBasis: null,
+  };
+  const UIT: AbonnementConfig = { ingeschakeld: false, limieten: LIMIETEN };
+  const verleden = new Date("2026-10-01T00:00:00Z");
+
+  async function gratisProject(deel: { abonnementStempelOp?: Date } = {}) {
+    const { db, org, projectId } = await opzet();
+    await db.update(organization).set({ proefEinde: verleden }).where(eq(organization.id, org));
+    if (deel.abonnementStempelOp) await db.update(projecten).set(deel).where(eq(projecten.id, projectId));
+    return { db, org, projectId };
+  }
+
+  test("gratis organisatie: gratis; onderwijs: onderwijs", async () => {
+    const { db, org, projectId } = await gratisProject();
+    expect(await watermerkVoorProject(db, projectId, AAN)).toBe("gratis");
+    await db.update(organization).set({ onderwijs: true }).where(eq(organization.id, org));
+    expect(await watermerkVoorProject(db, projectId, AAN)).toBe("onderwijs");
+  });
+
+  test("gestempeld project: geen watermerk", async () => {
+    const { db, projectId } = await gratisProject({ abonnementStempelOp: verleden });
+    expect(await watermerkVoorProject(db, projectId, AAN)).toBeNull();
+  });
+
+  test("zonder Stripe: geen watermerk van een versie", async () => {
+    const { db, projectId } = await gratisProject();
+    expect(await watermerkVoorProject(db, projectId, UIT)).toBeNull();
   });
 });

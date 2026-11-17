@@ -47,6 +47,21 @@ describe("maakStrook: een keten", () => {
     }
   });
 
+  test("alleen de laatste contactdoos laat de lijn in de boog stoppen", () => {
+    const dozen = syms.filter((s) => s.symbool.svg.includes(" A3 3 "));
+    expect(dozen).toHaveLength(3);
+    /** De kleinste y van de verticale stam door het midden van het symbool. */
+    const stamTop = (s: SymboolElement): number => {
+      const m = s.symbool.svg.match(/<line x1="7" y1="10" x2="7" y2="([\d.]+)"/);
+      if (!m) throw new Error("geen stam");
+      return Number(m[1]);
+    };
+    // Een volgend punt: de lijn loopt door tot `uit`. Het laatste punt: ze stopt op de boog.
+    expect(stamTop(dozen[0]!)).toBe(0);
+    expect(stamTop(dozen[1]!)).toBe(0);
+    expect(stamTop(dozen[2]!)).toBe(7);
+  });
+
   test("elke node staat in kolom 0 en de breedte is een kolom plus marges", () => {
     expect(Object.keys(strook.kolomVan)).toHaveLength(9);
     for (const kolom of Object.values(strook.kolomVan)) expect(kolom).toBe(0);

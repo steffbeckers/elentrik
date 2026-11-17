@@ -50,7 +50,7 @@ const groepen = computed(() => {
           nodeId,
           testId: `te-plaatsen-${puntLabel || nodeId}`,
           tekst: labels.value.get(nodeId) ?? nodeId,
-          symbool: tekenSymbool(node),
+          symbool: tekenSymbool(node, { einde: true }),
         },
       ];
     }),
@@ -113,7 +113,7 @@ function sleepStart(event: DragEvent, nodeId: NodeId): void {
             class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm disabled:cursor-not-allowed disabled:opacity-60"
             :class="[
               editor.alleenLezen ? '' : 'cursor-grab active:cursor-grabbing',
-              gekozen === item.nodeId ? 'bg-primary/10 text-primary ring-1 ring-primary' : 'hover:bg-elevated',
+              gekozen === item.nodeId ? 'bg-primary/10 text-primary ring-1 ring-inset ring-primary' : 'hover:bg-elevated',
             ]"
             @click="kies(item.nodeId)"
             @dragstart="sleepStart($event, item.nodeId)"

@@ -255,13 +255,18 @@ describe("regel 3: doorsnede-beveiliging", () => {
       .verdeelbord((b) => b.kring((k) => k.automaat(A).leiding(mm2).contactdozen(1).als("laatste")))
       .bouw();
 
+  const kringMetZekering = (A: number, mm2: number) =>
+    installatie()
+      .verdeelbord((b) => b.kring((k) => k.zekering(A).als("zekering").leiding(mm2).contactdozen(1)))
+      .bouw();
+
   const beveiligingIdVan = (doc: InstallatieDocument) =>
     Object.values(doc.nodes).find((n) => n.type === "automaat")!.id;
 
-  test("is voorlopig en heeft de verwachte metadata", () => {
+  test("is voorlopig en verwijst naar de tabel van 4.4.1.5", () => {
     expect(regel.id).toBe("arei.kring.doorsnede-beveiliging");
     expect(regel.nagekeken).toBe(false);
-    expect(regel.artikel).toBe("");
+    expect(regel.artikel).toBe("4.4.1.5");
     expect(regel.ernst).toBe("fout");
   });
 
@@ -269,15 +274,54 @@ describe("regel 3: doorsnede-beveiliging", () => {
     expect(draai(regel, kringMet(16, 1.5).doc)).toEqual([]);
   });
 
-  test("20 A op 1,5 mm2 geeft .te-hoog op de beveiliging", () => {
+  test("20 A op 1,5 mm2 geeft .te-hoog-automaat op de beveiliging", () => {
     const { doc } = kringMet(20, 1.5);
     expect(draai(regel, doc)).toEqual([
       {
         regelId: "arei.kring.doorsnede-beveiliging",
         ernst: "fout",
         nodeIds: [beveiligingIdVan(doc)],
-        berichtSleutel: "arei.kring.doorsnede-beveiliging.te-hoog",
+        berichtSleutel: "arei.kring.doorsnede-beveiliging.te-hoog-automaat",
         parameters: { nominaal: 20, doorsnede: 1.5, max: 16 },
+        afgeweken: false,
+      },
+    ]);
+  });
+
+  // Tabel 1: [mm², smeltveiligheid, automaat].
+  test.each([
+    [1.5, 10, 16],
+    [2.5, 16, 20],
+    [4, 20, 25],
+    [6, 32, 40],
+    [10, 50, 63],
+    [16, 63, 80],
+    [25, 80, 100],
+    [35, 100, 125],
+  ])("%s mm2: zekering tot %i A en automaat tot %i A", (mm2, zekering, automaat) => {
+    expect(draai(regel, kringMet(automaat, mm2).doc)).toEqual([]);
+    expect(draai(regel, kringMet(automaat + 1, mm2).doc)).toMatchObject([
+      { berichtSleutel: "arei.kring.doorsnede-beveiliging.te-hoog-automaat", parameters: { max: automaat } },
+    ]);
+    expect(draai(regel, kringMetZekering(zekering, mm2).doc)).toEqual([]);
+    expect(draai(regel, kringMetZekering(zekering + 1, mm2).doc)).toMatchObject([
+      { berichtSleutel: "arei.kring.doorsnede-beveiliging.te-hoog-zekering", parameters: { max: zekering } },
+    ]);
+  });
+
+  test("een automaat van 40 A op 6 mm2 is toegelaten", () => {
+    expect(draai(regel, kringMet(40, 6).doc)).toEqual([]);
+  });
+
+  test("een zekering van 16 A op 1,5 mm2 geeft .te-hoog-zekering op de zekering", () => {
+    const { doc, ids } = kringMetZekering(16, 1.5);
+    expect(draai(regel, doc)).toEqual([
+      {
+        regelId: "arei.kring.doorsnede-beveiliging",
+        ernst: "fout",
+        nodeIds: [ids["zekering"]],
+        berichtSleutel: "arei.kring.doorsnede-beveiliging.te-hoog-zekering",
+        parameters: { nominaal: 16, doorsnede: 1.5, max: 10 },
         afgeweken: false,
       },
     ]);

@@ -122,7 +122,7 @@ function kiesCombinatie(combinatie: Voorinstelling): void {
                   <button
                     type="button"
                     class="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-elevated focus-visible:outline-2 focus-visible:outline-primary"
-                    :class="geopend.type === kaart.type ? 'bg-primary/10 ring-1 ring-primary' : ''"
+                    :class="geopend.type === kaart.type ? 'bg-primary/10 ring-1 ring-inset ring-primary' : ''"
                     :aria-pressed="geopend.type === kaart.type"
                     :data-testid="`symbolenkaart-${kaart.type}`"
                     @click="open(kaart)"
@@ -210,7 +210,7 @@ function kiesCombinatie(combinatie: Voorinstelling): void {
                 <button
                   type="button"
                   class="flex h-full w-full flex-col items-center gap-1 rounded-md p-2 text-center text-xs hover:bg-elevated focus-visible:outline-2 focus-visible:outline-primary"
-                  :class="zelfdeCombinatie(geopend, combinatie, stand) ? 'bg-primary/10 text-primary ring-1 ring-primary' : 'ring-1 ring-default'"
+                  :class="zelfdeCombinatie(geopend, combinatie, stand) ? 'bg-primary/10 text-primary ring-1 ring-inset ring-primary' : 'ring-1 ring-inset ring-default'"
                   :aria-pressed="zelfdeCombinatie(geopend, combinatie, stand)"
                   :data-testid="`combinatie-${index}`"
                   @click="zetCombinatie(combinatie)"

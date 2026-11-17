@@ -3,6 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, type Ref } from "vue";
 import {
   begrens,
+  FOCUS_MAX_ZOOM,
   focusWeergave,
   MAX_ZOOM,
   MIN_ZOOM,
@@ -78,7 +79,7 @@ export function useCanvasWeergave(opties: CanvasWeergaveOpties) {
   }
   function focus(vak: Afmeting & { x: number; y: number }): void {
     const p = passend();
-    if (p) weergave.value = binnenInhoud(focusWeergave(vak, grootte, p, zoomGrenzen(p).max));
+    if (p) weergave.value = binnenInhoud(focusWeergave(vak, grootte, p, Math.min(FOCUS_MAX_ZOOM, zoomGrenzen(p).max)));
   }
 
   /** Maakt passend als dat nog nooit lukte (de inhoud kan pas na het mounten bestaan). */

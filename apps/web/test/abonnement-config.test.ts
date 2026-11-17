@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import Stripe from "stripe";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { gebruikAbonnementen, leesAbonnementConfig, zetAbonnementen } from "../server/abonnementen/config";
+import { gebruikAbonnementen, leesAbonnementConfig, leesLimieten, zetAbonnementen } from "../server/abonnementen/config";
 import { leesWebhook, maakStripePoort } from "../server/abonnementen/stripe";
 import { maakNepStripe } from "./nep-stripe";
 
@@ -32,8 +32,9 @@ function vang(f: () => unknown): unknown {
 
 describe("leesAbonnementConfig", () => {
   test("zonder sleutel zijn abonnementen uit", () => {
-    expect(leesAbonnementConfig({})).toEqual({ ingeschakeld: false });
-    expect(leesAbonnementConfig({ STRIPE_GEHEIME_SLEUTEL: "  " })).toEqual({ ingeschakeld: false });
+    const limieten = { kringen: 5, situatieschemas: 1 };
+    expect(leesAbonnementConfig({})).toEqual({ ingeschakeld: false, limieten });
+    expect(leesAbonnementConfig({ STRIPE_GEHEIME_SLEUTEL: "  " })).toEqual({ ingeschakeld: false, limieten });
   });
 
   test("volledig: sleutel, prijzen, geheim en inbox", () => {
@@ -41,9 +42,47 @@ describe("leesAbonnementConfig", () => {
       ingeschakeld: true,
       sleutel: "sk_test_geheim",
       webhookGeheim: "whsec_test",
-      prijzen: { maand: "price_maand", jaar: "price_jaar" },
+      prijzen: { maand: "price_maand", jaar: "price_jaar", project: null },
+      limieten: { kringen: 5, situatieschemas: 1 },
       boekhoudingInbox: "boekhouding@voorbeeld.be",
       apiBasis: null,
+    });
+  });
+
+  test("limieten standaard 5 en 1", () => {
+    expect(leesLimieten({})).toEqual({ kringen: 5, situatieschemas: 1 });
+    expect(leesLimieten({ GRATIS_MAX_KRINGEN: " ", GRATIS_MAX_SITUATIESCHEMAS: "" })).toEqual({
+      kringen: 5,
+      situatieschemas: 1,
+    });
+    expect(leesLimieten({ GRATIS_MAX_KRINGEN: "12", GRATIS_MAX_SITUATIESCHEMAS: "3" })).toEqual({
+      kringen: 12,
+      situatieschemas: 3,
+    });
+    // Ook met abonnementen uit staan de limieten in de config (ze worden dan niet toegepast).
+    expect(leesAbonnementConfig({ GRATIS_MAX_KRINGEN: "7" })).toEqual({
+      ingeschakeld: false,
+      limieten: { kringen: 7, situatieschemas: 1 },
+    });
+    expect(leesAbonnementConfig({ ...VOLLEDIG, GRATIS_MAX_SITUATIESCHEMAS: "2" })).toMatchObject({
+      limieten: { kringen: 5, situatieschemas: 2 },
+    });
+  });
+
+  test("GRATIS_MAX_KRINGEN=abc faalt met de naam", () => {
+    expect(() => leesLimieten({ GRATIS_MAX_KRINGEN: "abc" })).toThrow("GRATIS_MAX_KRINGEN");
+    expect(() => leesAbonnementConfig({ GRATIS_MAX_KRINGEN: "abc" })).toThrow("GRATIS_MAX_KRINGEN");
+    expect(() => leesAbonnementConfig({ ...VOLLEDIG, GRATIS_MAX_KRINGEN: "abc" })).toThrow("GRATIS_MAX_KRINGEN");
+    for (const ongeldig of ["0", "-1", "1.5", "5x", "1e3"]) {
+      expect(() => leesLimieten({ GRATIS_MAX_SITUATIESCHEMAS: ongeldig })).toThrow("GRATIS_MAX_SITUATIESCHEMAS");
+    }
+  });
+
+  test("STRIPE_PRIJS_PROJECT optioneel", () => {
+    expect(leesAbonnementConfig(VOLLEDIG)).toMatchObject({ prijzen: { project: null } });
+    expect(leesAbonnementConfig({ ...VOLLEDIG, STRIPE_PRIJS_PROJECT: "  " })).toMatchObject({ prijzen: { project: null } });
+    expect(leesAbonnementConfig({ ...VOLLEDIG, STRIPE_PRIJS_PROJECT: "price_project" })).toMatchObject({
+      prijzen: { maand: "price_maand", jaar: "price_jaar", project: "price_project" },
     });
   });
 
@@ -122,6 +161,8 @@ describe("leesWebhook", () => {
       objectId: "in_1",
       abonnementId: "sub_1",
       reden: "subscription_cycle",
+      metadata: {},
+      betaalstatus: null,
     });
   });
 
@@ -168,6 +209,44 @@ describe("leesWebhook", () => {
     });
   });
 
+  test("een checkout.session geeft metadata en betaalstatus", () => {
+    const payload = JSON.stringify({
+      id: "evt_project",
+      object: "event",
+      type: "checkout.session.async_payment_succeeded",
+      data: {
+        object: {
+          id: "cs_p",
+          object: "checkout.session",
+          customer: "cus_2",
+          subscription: null,
+          payment_status: "paid",
+          metadata: { organisatieId: "org_1", projectId: "p_1", soort: "project", getal: 3 },
+        },
+      },
+    });
+    expect(leesWebhook(payload, ondertekend(payload), "whsec_test")).toEqual({
+      id: "evt_project",
+      type: "checkout.session.async_payment_succeeded",
+      klantId: "cus_2",
+      objectId: "cs_p",
+      abonnementId: null,
+      reden: null,
+      metadata: { organisatieId: "org_1", projectId: "p_1", soort: "project" },
+      betaalstatus: "paid",
+    });
+  });
+
+  test("een onbekende betaalstatus wordt null", () => {
+    const payload = JSON.stringify({
+      id: "evt_x",
+      object: "event",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_x", object: "checkout.session", customer: "cus_2", payment_status: "raar" } },
+    });
+    expect(leesWebhook(payload, ondertekend(payload), "whsec_test")).toMatchObject({ metadata: {}, betaalstatus: null });
+  });
+
   test("een onbekend objecttype geeft null-velden", () => {
     const payload = JSON.stringify({ id: "evt_4", object: "event", type: "ping", data: { object: { object: "x" } } });
     expect(leesWebhook(payload, ondertekend(payload), "whsec_test")).toEqual({
@@ -177,6 +256,8 @@ describe("leesWebhook", () => {
       objectId: null,
       abonnementId: null,
       reden: null,
+      metadata: {},
+      betaalstatus: null,
     });
   });
 
@@ -307,6 +388,63 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
       "subscription_data[trial_end]": String(Math.floor(trialEinde.getTime() / 1000)),
       success_url: "https://app.test/abonnement?terug={CHECKOUT_SESSION_ID}",
       cancel_url: "https://app.test/abonnement",
+    });
+  });
+
+  test("maakProjectCheckout: modus payment, factuur, belasting en metadata", async () => {
+    antwoorden["/v1/checkout/sessions"] = { id: "cs_p", object: "checkout.session", url: "https://checkout.stripe.test/cs_p" };
+    const r = await poort().maakProjectCheckout({
+      klantId: "cus_1",
+      prijsId: "price_project",
+      organisatieId: "org_1",
+      projectId: "p_1",
+      succesUrl: "https://app.test/projecten/p_1?vrijgave={CHECKOUT_SESSION_ID}",
+      annuleerUrl: "https://app.test/projecten/p_1",
+      locale: "fr",
+    });
+    expect(r).toEqual({ id: "cs_p", url: "https://checkout.stripe.test/cs_p" });
+    const v = verzoeken[0]!;
+    expect(v.pad).toBe("/v1/checkout/sessions");
+    expect(v.versie).toBe(Stripe.API_VERSION);
+    const l = Object.fromEntries(v.lichaam);
+    expect(l).toMatchObject({
+      mode: "payment",
+      customer: "cus_1",
+      "line_items[0][price]": "price_project",
+      "line_items[0][quantity]": "1",
+      "automatic_tax[enabled]": "true",
+      "tax_id_collection[enabled]": "true",
+      billing_address_collection: "required",
+      "customer_update[address]": "auto",
+      "customer_update[name]": "auto",
+      "invoice_creation[enabled]": "true",
+      "metadata[organisatieId]": "org_1",
+      "metadata[projectId]": "p_1",
+      "metadata[soort]": "project",
+      success_url: "https://app.test/projecten/p_1?vrijgave={CHECKOUT_SESSION_ID}",
+      cancel_url: "https://app.test/projecten/p_1",
+      locale: "fr",
+    });
+    expect(Object.keys(l).some((k) => k.startsWith("subscription_data"))).toBe(false);
+  });
+
+  test("haalCheckout geeft metadata en betaalstatus", async () => {
+    antwoorden["/v1/checkout/sessions/cs_p"] = {
+      id: "cs_p",
+      object: "checkout.session",
+      customer: "cus_1",
+      subscription: null,
+      payment_status: "paid",
+      status: "complete",
+      metadata: { organisatieId: "org_1", projectId: "p_1", soort: "project" },
+    };
+    expect(await poort().haalCheckout("cs_p")).toEqual({
+      id: "cs_p",
+      klantId: "cus_1",
+      abonnementId: null,
+      metadata: { organisatieId: "org_1", projectId: "p_1", soort: "project" },
+      betaalstatus: "paid",
+      status: "complete",
     });
   });
 
@@ -591,6 +729,36 @@ describe("maakStripePoort tegen een lokale nep-API", () => {
     };
     expect(await poort().haalPrijs("price_jaar")).toEqual({ id: "price_jaar", bedrag: 9900, munt: "eur", interval: "year" });
   });
+
+  test("haalPrijs: een prijs zonder recurring is eenmalig", async () => {
+    antwoorden["/v1/prices/price_project"] = {
+      id: "price_project",
+      object: "price",
+      unit_amount: 4900,
+      currency: "eur",
+      recurring: null,
+      type: "one_time",
+    };
+    expect(await poort().haalPrijs("price_project")).toEqual({
+      id: "price_project",
+      bedrag: 4900,
+      munt: "eur",
+      interval: "eenmalig",
+    });
+  });
+
+  test("haalPrijs weigert een prijs per week of zonder vast bedrag", async () => {
+    antwoorden["/v1/prices/price_week"] = {
+      id: "price_week",
+      object: "price",
+      unit_amount: 100,
+      currency: "eur",
+      recurring: { interval: "week", interval_count: 1 },
+    };
+    await expect(poort().haalPrijs("price_week")).rejects.toThrow();
+    antwoorden["/v1/prices/price_vrij"] = { id: "price_vrij", object: "price", unit_amount: null, currency: "eur", recurring: null };
+    await expect(poort().haalPrijs("price_vrij")).rejects.toThrow();
+  });
 });
 
 describe("maakNepStripe", () => {
@@ -608,7 +776,14 @@ describe("maakNepStripe", () => {
       locale: "nl",
     });
     expect(checkout).toEqual({ id: "cs_nep_1", url: "https://checkout.nep/cs_nep_1" });
-    expect(await nep.haalCheckout("cs_nep_1")).toEqual({ id: "cs_nep_1", klantId: "cus_nep_1", abonnementId: null });
+    expect(await nep.haalCheckout("cs_nep_1")).toEqual({
+      id: "cs_nep_1",
+      klantId: "cus_nep_1",
+      abonnementId: null,
+      metadata: { organisatieId: "org_1" },
+      betaalstatus: "unpaid",
+      status: "open",
+    });
     expect(await nep.haalCheckout("onbekend")).toBeNull();
     expect(nep.aanroepen.map((a) => a.methode)).toEqual(["maakKlant", "maakCheckout", "haalCheckout", "haalCheckout"]);
     expect(await nep.zoekKlant("org_1")).toBeNull();

@@ -13,12 +13,16 @@
 // ze verleent een verouderde client geen schrijftoegang. Versie 3 beschermt de metingen
 // (`meta.metingen`, `testResultaat` en `uitschakeltijd_ms` per differentieel): ze zijn optioneel
 // binnen schema 2, dus oude dossiers blijven leesbaar zonder migratie, maar de documentkopie van
-// een editor van client 2 kent ze niet en zou ze bij bewaren wegschrijven.
+// een editor van client 2 kent ze niet en zou ze bij bewaren wegschrijven. Versie 4 beschermt het
+// prijsmodel: `Toegang.schrijven` werd `niveau` (bv. gratis, abonnement of onderwijs) en de
+// 402-codes werden `PROJECT_LIMIET` en `PROJECT_ALLEEN_LEZEN` in plaats van `ABONNEMENT_VEREIST`.
+// Een editor van client 3 leest de toegang en de weigering verkeerd: hij behandelt een gratis
+// project als alleen-lezen of een weigering als een gewone fout en verliest zo werk.
 // `test/clientversie.test.ts` pint het paar.
 //
 // Expliciete import in de server en client (ruling E1): dit bestand importeert niets.
 
-export const CLIENT_COMPATIBILITEIT = 3;
+export const CLIENT_COMPATIBILITEIT = 4;
 
 /** Het verzoek van de client: zijn eigen getal. */
 export const CLIENT_HEADER = "x-elentrik-client";

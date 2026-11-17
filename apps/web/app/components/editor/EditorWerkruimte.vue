@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { dossierStatus } from "~/editor/dossierstatus";
+import { paneelNaSelectie, type Paneel } from "~/editor/werkruimte-paneel";
 import { useEditorStore, type Tabblad } from "~/stores/editor";
 const props = defineProps<{ tabblad: Tabblad; selectie: readonly string[]; heeftPlan: boolean }>();
 const store = useEditorStore();
-type Paneel = "onderdelen" | "eigenschappen" | "bevindingen" | "opmaak";
+/** Wat nog op een plan moet, geteld zoals de dossierchecklist; bij 0 toont het tabblad niets. */
+const tePlaatsen = computed(() => dossierStatus(store.document, store.analyse).ongeplaatst);
 const paneel = ref<Paneel | null>(props.tabblad === "eendraadschema" ? "onderdelen" : null);
 onMounted(() => { if (window.matchMedia("(max-width: 767px)").matches) paneel.value = null; });
 const inspecteurElement = ref<HTMLElement | null>(null);
@@ -24,7 +27,17 @@ watch(() => props.tabblad, () => {
   if (paneel.value === "opmaak" || (paneel.value === "onderdelen" && (props.tabblad === "kringenlijst" || props.tabblad === "materiaallijst"))) paneel.value = null;
 });
 watch(() => props.heeftPlan, heeftPlan => { if (!heeftPlan && paneel.value === "opmaak") paneel.value = null; });
-// Selectie opent geen paneel onverwacht en houdt opmaak beschikbaar voor het volgende label.
+// De panelen Onderdelen en Eigenschappen volgen de selectie; de regels staan in `editor/werkruimte-paneel.ts`.
+const heeftOnderdelen = computed(() => props.tabblad === "eendraadschema" || props.tabblad === "situatieschema");
+watch([() => props.selectie, () => store.document], ([selectie, document], [vorigeSelectie, vorigDocument]) => {
+  if (selectie === vorigeSelectie) return;
+  paneel.value = paneelNaSelectie(paneel.value, {
+    aantal: selectie.length,
+    vorigAantal: vorigeSelectie.length,
+    documentGewijzigd: document !== vorigDocument,
+    heeftOnderdelen: heeftOnderdelen.value,
+  });
+});
 defineExpose({
   toonOnderdelen: () => { paneel.value = "onderdelen"; },
   toonBevindingen: () => { paneel.value = "bevindingen"; },
@@ -69,7 +82,22 @@ function navigeerTab(event: KeyboardEvent, index: number): void {
         :label="$t(`editor.bovenbalk.tabbladen.${tabblad}`)"
         @click="store.tabblad = tabblad"
         @keydown="navigeerTab($event, index)"
-      />
+      >
+        <!-- Het cijfer is voor het oog; een schermlezer krijgt de volledige zin als deel van de naam van het tabblad. -->
+        <template v-if="tabblad === 'situatieschema' && tePlaatsen > 0" #trailing>
+          <UBadge
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            class="tabular-nums"
+            :title="$t('editor.werkruimte.tePlaatsen', { aantal: tePlaatsen }, tePlaatsen)"
+            data-testid="tab-situatieschema-teller"
+          >
+            <span aria-hidden="true">{{ tePlaatsen }}</span>
+            <span class="sr-only">{{ $t('editor.werkruimte.tePlaatsen', { aantal: tePlaatsen }, tePlaatsen) }}</span>
+          </UBadge>
+        </template>
+      </UButton>
     </nav>
       <nav ref="bediening" class="flex min-w-0 items-center gap-1 overflow-x-auto" :aria-label="$t('editor.werkruimte.panelen')">
         <button v-for="keuze in keuzes" :key="keuze.id" type="button"

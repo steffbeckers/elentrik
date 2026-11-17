@@ -6,7 +6,7 @@ import { LIJNDIKTE_MM, tekenSymbool } from "@elentrik/symbols";
 // (`aria-hidden`): de knop of kaart eromheen draagt de tekst.
 const props = withDefaults(defineProps<{ node: Node; schaal?: number }>(), { schaal: 4 });
 
-const symbool = computed(() => tekenSymbool(props.node));
+const symbool = computed(() => tekenSymbool(props.node, { einde: true }));
 </script>
 
 <template>

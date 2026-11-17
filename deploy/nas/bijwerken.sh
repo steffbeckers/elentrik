@@ -6,7 +6,7 @@
 #                                 (:latest, of ELENTRIK_IMAGE) en herstart alleen web
 #
 # Draai het in de map met compose.yaml en .env (op de NAS met sudo, zoals docker compose zelf). Daarna
-# wacht het tot de dienst healthy is en toont het de revisie (commit) van het draaiende image.
+# wacht het tot de dienst healthy is en toont het de versie en de revisie (commit) van het draaiende image.
 set -Eeuo pipefail
 
 GEBRUIK="Gebruik: bijwerken.sh <staging|productie>"
@@ -51,6 +51,7 @@ if [ "$STATUS" != healthy ]; then
 fi
 
 REVISIE="$(docker inspect "$CONTAINER" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true)"
+VERSIE="$(docker inspect "$CONTAINER" --format '{{index .Config.Labels "org.opencontainers.image.version"}}' 2>/dev/null || true)"
 IMAGE_ID="$(docker inspect "$CONTAINER" --format '{{.Image}}' | cut -c8-19)"
 echo "== ${1}: ${DIENST} is healthy"
-echo "   image: ${IMAGE_ID}, revisie: ${REVISIE:-onbekend}"
+echo "   image: ${IMAGE_ID}, versie: ${VERSIE:-onbekend}, revisie: ${REVISIE:-onbekend}"

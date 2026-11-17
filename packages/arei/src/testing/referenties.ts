@@ -66,7 +66,10 @@ export function referentieMetOnderbord(): InstallatieDocument {
     .bouw().doc;
 }
 
-/** Woning (3N400V) met laadpaal en omvormer, zonder fouten of waarschuwingen. */
+/**
+ * Woning (3N400V) met laadpaal en omvormer. De laadpaal hangt achter een eigen differentieel van
+ * 30 mA type B (`arei.laadpaal.differentieel`); de woning heeft geen bevinding met ernst fout.
+ */
 export function referentieWoning(): InstallatieDocument {
   return installatie({ stroomtype: "3N400V" })
     .differentieel(
@@ -74,7 +77,11 @@ export function referentieWoning(): InstallatieDocument {
       (d) =>
         d.verdeelbord((b) => {
           appartementKringen(b);
-          b.kring((k) => k.automaat(32, { polen: 4 }).leiding(10).toestel("laadpaal"));
+          b.differentieel(
+            30,
+            (n) => n.kring((k) => k.automaat(32, { polen: 4 }).leiding(10).toestel("laadpaal")),
+            { polen: 4, klasse: "B" },
+          );
           b.kring((k) => k.automaat(20).leiding(4).toestel("omvormer"));
         }),
       { polen: 4 },

@@ -3,9 +3,9 @@ import { filterProjecten } from "../app/utils/projectenZoeken";
 import type { ProjectInLijst } from "../shared/projecten";
 
 const projecten: ProjectInLijst[] = [
-  { id: "1", naam: "Woning Gent", klantnaam: "Janssens", gewijzigd: "2026-11-03", werfGemeente: "Gent", laatsteExport: null },
-  { id: "2", naam: "Atelier", klantnaam: "De Smet", gewijzigd: "2026-11-02", werfGemeente: "Sint-Niklaas", laatsteExport: null },
-  { id: "3", naam: "Appartement Gent", klantnaam: "", gewijzigd: "2026-11-01", werfGemeente: null, laatsteExport: null },
+  { id: "1", naam: "Woning Gent", klantnaam: "Janssens", gewijzigd: "2026-11-03", werfGemeente: "Gent", laatsteExport: null, label: null },
+  { id: "2", naam: "Atelier", klantnaam: "De Smet", gewijzigd: "2026-11-02", werfGemeente: "Sint-Niklaas", laatsteExport: null, label: null },
+  { id: "3", naam: "Appartement Gent", klantnaam: "", gewijzigd: "2026-11-01", werfGemeente: null, laatsteExport: null, label: null },
 ];
 
 describe("projecten zoeken", () => {

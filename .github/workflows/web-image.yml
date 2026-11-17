@@ -48,10 +48,37 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: read
+      # `write`: na een geslaagde build op `main` zet de job de versietag vX.Y.Z.
+      contents: write
       packages: write
     steps:
+      # De volledige geschiedenis met de tags: de versie volgt uit de commits sinds de hoogste tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # De semver uit de Conventional Commits sinds de hoogste tag vX.Y.Z (apps/web/shared/semver.ts):
+      # breaking → major, feat → minor, anders patch. Staging krijgt de komende versie met `-staging`.
+      - name: Versie bepalen
+        id: versie
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          versie="$(node apps/web/scripts/versie.ts)"
+          case "$REF_NAME" in
+            main) ;;
+            staging) versie="${versie}-staging" ;;
+            *)
+              echo "Geen versie voor deze branch" >&2
+              exit 1
+              ;;
+          esac
+          echo "Versie: ${versie}"
+          echo "versie=${versie}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -67,6 +94,7 @@ jobs:
         id: tags
         env:
           REF_NAME: ${{ github.ref_name }}
+          VERSIE: ${{ steps.versie.outputs.versie }}
         run: |
           kort="${GITHUB_SHA::7}"
           case "$REF_NAME" in
@@ -81,6 +109,8 @@ jobs:
             echo "tags<<EOF_TAGS"
             echo "ghcr.io/steffbeckers/elentrik-web:${hoofdtag}"
             echo "ghcr.io/steffbeckers/elentrik-web:sha-${kort}"
+            # Productie ook onder zijn versie, bv. :1.1.0.
+            if [ "$REF_NAME" = main ]; then echo "ghcr.io/steffbeckers/elentrik-web:${VERSIE}"; fi
             echo "EOF_TAGS"
           } >> "$GITHUB_OUTPUT"
 
@@ -89,9 +119,29 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
+          build-args: |
+            ELENTRIK_VERSIE=${{ steps.versie.outputs.versie }}
+            ELENTRIK_REVISIE=${{ github.sha }}
           tags: ${{ steps.tags.outputs.tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/steffbeckers/elentrik
             org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.versie.outputs.versie }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Pas na een geslaagde push van het image: de tag vX.Y.Z op deze commit, zodat de volgende versie
+      # vanaf hier telt. Bestaat de tag al (geen nieuwe commits sinds de vorige release), dan niets. Een
+      # lichtgewicht tag, geen GitHub Release. Een push met GITHUB_TOKEN start geen nieuwe workflow.
+      - name: Versietag zetten
+        if: github.ref == 'refs/heads/main'
+        env:
+          VERSIE: ${{ steps.versie.outputs.versie }}
+        run: |
+          tag="v${VERSIE}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "Tag ${tag} bestaat al"
+          else
+            git tag "${tag}" "${GITHUB_SHA}"
+            git push origin "refs/tags/${tag}"
+          fi

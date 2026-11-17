@@ -19,9 +19,9 @@ const gewoon = (tekst: string) => tekst.replace(/\s/g, " ");
 function overzicht(wijziging: Partial<AbonnementOverzicht> = {}): AbonnementOverzicht {
   return {
     ingeschakeld: true,
-    schrijven: false,
-    reden: "proef-voorbij",
-    proefEinde: NU.toISOString(),
+    niveau: "gratis",
+    reden: "gratis",
+    proefEinde: null,
     achterstalligTot: null,
     status: null,
     formule: null,
@@ -31,7 +31,9 @@ function overzicht(wijziging: Partial<AbonnementOverzicht> = {}): AbonnementOver
     prijzen: {
       maand: { bedrag: 3000, munt: "eur", interval: "month" },
       jaar: { bedrag: 30000, munt: "eur", interval: "year" },
+      project: null,
     },
+    limieten: { kringen: 5, situatieschemas: 1 },
     ...wijziging,
   };
 }
@@ -43,45 +45,45 @@ function fout(status: number, code: string) {
 describe("de pagina", () => {
   test("een eigenaar zonder abonnement ziet twee kaarten met -17 % op jaarlijks", () => {
     const w = paginaWeergave(overzicht(), "eigenaar", "nl");
-    expect(w.kaarten.map((k) => k.formule)).toEqual(["maand", "jaar"]);
-    expect(w.kaarten[0]!.korting).toBeNull();
-    expect(w.kaarten[1]!.korting).toBe(17);
-    expect(gewoon(w.kaarten[0]!.prijs.excl)).toBe("€ 30,00");
+    expect(w.blokken.kaarten.map((k) => k.formule)).toEqual(["maand", "jaar"]);
+    expect(w.blokken.kaarten[0]!.korting).toBeNull();
+    expect(w.blokken.kaarten[1]!.korting).toBe(17);
+    expect(gewoon(w.blokken.kaarten[0]!.prijs.excl)).toBe("€ 30,00");
     expect(w.beheer).toBeNull();
     expect(w.melding).toBeNull();
   });
 
   test("een lid ziet geen knoppen, wel de uitleg", () => {
     const w = paginaWeergave(overzicht(), "lid", "nl");
-    expect(w.kaarten).toEqual([]);
+    expect(w.blokken.kaarten).toEqual([]);
     expect(w.beheer).toBeNull();
     expect(w.melding).toBe("lid");
   });
 
   test("een eigenaar met een abonnement ziet beheren; bij past_due of unpaid betaling regelen", () => {
-    const actief = overzicht({ schrijven: true, reden: "actief", status: "active", formule: "maand", heeftKlant: true });
-    expect(paginaWeergave(actief, "eigenaar", "nl").kaarten).toEqual([]);
+    const actief = overzicht({ niveau: "abonnement", reden: "actief", status: "active", formule: "maand", heeftKlant: true });
+    expect(paginaWeergave(actief, "eigenaar", "nl").blokken.kaarten).toEqual([]);
     expect(paginaWeergave(actief, "eigenaar", "nl").beheer).toBe("abonnement.beheren");
     for (const status of ["past_due", "unpaid"] as const) {
       expect(paginaWeergave({ ...actief, status }, "eigenaar", "nl").beheer).toBe("abonnement.betalingRegelen");
     }
     // Een beëindigd abonnement kan opnieuw genomen worden.
-    const beeindigd = paginaWeergave({ ...actief, status: "canceled", schrijven: false, reden: "beeindigd" }, "eigenaar", "nl");
-    expect(beeindigd.kaarten).toHaveLength(2);
+    const beeindigd = paginaWeergave({ ...actief, status: "canceled", niveau: "gratis", reden: "beeindigd" }, "eigenaar", "nl");
+    expect(beeindigd.blokken.kaarten).toHaveLength(2);
     expect(beeindigd.beheer).toBeNull();
   });
 
   test("zonder prijzen: de status blijft en de melding komt, zonder knoppen", () => {
     const w = paginaWeergave(overzicht({ prijzen: null }), "eigenaar", "nl");
-    expect(w.statusSleutel).toBe("abonnement.status.proefVoorbij");
+    expect(w.statusSleutel).toBe("abonnement.status.gratis");
     expect(w.melding).toBe("prijzen");
-    expect(w.kaarten).toEqual([]);
+    expect(w.blokken.kaarten).toEqual([]);
     expect(w.beheer).toBeNull();
   });
 
   test("zonder prijzen maar met een abonnement kan een eigenaar nog beheren", () => {
     const w = paginaWeergave(
-      overzicht({ prijzen: null, status: "active", reden: "actief", schrijven: true, heeftKlant: true }),
+      overzicht({ prijzen: null, status: "active", reden: "actief", niveau: "abonnement", heeftKlant: true }),
       "eigenaar",
       "nl",
     );
@@ -90,11 +92,11 @@ describe("de pagina", () => {
   });
 
   test("abonnementen uit: alleen de melding dat betalen nog niet is ingesteld", () => {
-    const w = paginaWeergave(overzicht({ ingeschakeld: false, reden: "uit", schrijven: true, prijzen: null }), "eigenaar", "nl");
+    const w = paginaWeergave(overzicht({ ingeschakeld: false, niveau: "uit", reden: "uit", prijzen: null, limieten: null }), "eigenaar", "nl");
     // De zin "Betalen is nog niet ingesteld." staat één keer: in de melding, niet ook in de statusregel.
     expect(w.statusSleutel).toBeNull();
     expect(w.melding).toBe("uit");
-    expect(w.kaarten).toEqual([]);
+    expect(w.blokken.kaarten).toEqual([]);
     expect(w.beheer).toBeNull();
   });
 });
@@ -102,7 +104,7 @@ describe("de pagina", () => {
 describe("terug uit Checkout", () => {
   test("?terug=cs_1 synchroniseert, haalt terug daarna uit de URL en ververst de sessie", async () => {
     const volgorde: string[] = [];
-    const nieuw = overzicht({ status: "active", reden: "actief", schrijven: true });
+    const nieuw = overzicht({ status: "active", reden: "actief", niveau: "abonnement" });
     const api = {
       synchroniseer: vi.fn(async (sessie: string) => {
         volgorde.push(`sync:${sessie}`);
@@ -190,7 +192,7 @@ describe("de API", () => {
   });
 });
 
-describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
+describe("een 402 PROJECT_ALLEEN_LEZEN of PROJECT_LIMIET op Nieuw project of Dupliceren", () => {
   const MIJ: Mij = {
     gebruiker: { id: "u1", naam: "An", email: "an@example.test", superuser: false, proefGebruikt: true, taal: "nl" as const },
     organisaties: [
@@ -198,7 +200,7 @@ describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
         id: "o1",
         naam: "Peeters",
         rol: "eigenaar",
-        toegang: { schrijven: false, reden: "proef-voorbij", proefEinde: NU.toISOString(), achterstalligTot: null },
+        toegang: { niveau: "gratis", reden: "gratis", proefEinde: null, achterstalligTot: null },
       },
     ],
     actieveOrganisatieId: "o1",
@@ -209,21 +211,27 @@ describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
     setActivePinia(createPinia());
   });
 
-  test("ververst de sessie (nieuwe toegang) en meldt dat de fout behandeld is", async () => {
+  test("PROJECT_ALLEEN_LEZEN ververst de sessie (nieuwe toegang) en meldt 'alleen-lezen'", async () => {
     const sessie = useSessieStore();
     const api: SessieApi = { mij: vi.fn(async () => MIJ), wisselActief: vi.fn(), uitloggen: vi.fn() };
     sessie.gebruikApi(api);
     const laad = vi.spyOn(sessie, "laad");
 
-    const weigering = { status: 402, data: { statusCode: 402, data: { code: "ABONNEMENT_VEREIST", reden: "proef-voorbij" } } };
+    const weigering = { status: 402, data: { statusCode: 402, data: { code: "PROJECT_ALLEEN_LEZEN" } } };
     const projecten = maakProjectenApi((async () => Promise.reject(weigering)) as ProjectenFetch);
     await expect(projecten.maak({ naam: "X", klantnaam: "", stroomtype: "2x230V" })).rejects.toBe(weigering);
     await expect(projecten.dupliceer("p1")).rejects.toBe(weigering);
 
-    expect(await behandelSchrijfweigering(weigering, () => sessie.laad())).toBe(true);
+    expect(await behandelSchrijfweigering(weigering, () => sessie.laad())).toBe("alleen-lezen");
     expect(laad).toHaveBeenCalledTimes(1);
-    expect(sessie.toegang.schrijven).toBe(false);
+    expect(sessie.toegang.niveau).toBe("gratis");
     expect(sessie.proefGebruikt).toBe(true);
+  });
+
+  test("PROJECT_LIMIET meldt 'limiet' zonder de sessie te lezen", async () => {
+    const laad = vi.fn(async () => {});
+    expect(await behandelSchrijfweigering(fout(402, "PROJECT_LIMIET"), laad)).toBe("limiet");
+    expect(laad).not.toHaveBeenCalled();
   });
 
   test("een andere fout (ook een 402 met een andere code) is niet behandeld en laadt niets", async () => {
@@ -235,7 +243,7 @@ describe("een 402 ABONNEMENT_VEREIST op Nieuw project of Dupliceren", () => {
 
   test("mislukt het verversen van de sessie, dan blijft de fout toch behandeld", async () => {
     const laad = vi.fn(async () => Promise.reject(new Error("netwerk")));
-    expect(await behandelSchrijfweigering(fout(402, "ABONNEMENT_VEREIST"), laad)).toBe(true);
+    expect(await behandelSchrijfweigering(fout(402, "PROJECT_ALLEEN_LEZEN"), laad)).toBe("alleen-lezen");
   });
 });
 
@@ -244,9 +252,9 @@ describe("de sessie-store", () => {
     setActivePinia(createPinia());
   });
 
-  test("zonder organisatie: schrijven, reden uit en geen proef", () => {
+  test("zonder organisatie: niveau uit, reden uit en geen proef", () => {
     const sessie = useSessieStore();
-    expect(sessie.toegang).toEqual({ schrijven: true, reden: "uit", proefEinde: null, achterstalligTot: null });
+    expect(sessie.toegang).toEqual({ niveau: "uit", reden: "uit", proefEinde: null, achterstalligTot: null });
     expect(sessie.proefGebruikt).toBe(false);
   });
 });
