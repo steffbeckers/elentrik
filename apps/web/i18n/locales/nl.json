@@ -1494,6 +1494,7 @@
       "betalingNaGratie": "Je laatste betaling is mislukt. Je bedrijf gebruikt nu de gratis versie en projecten uit je abonnement zijn alleen-lezen. Regel je betaling om weer alles te bewerken."
     }
   },
+  "appVersie": "Versie {versie}",
   "menu": {
     "donkereModus": "Donkere modus",
     "lichteModus": "Lichte modus",

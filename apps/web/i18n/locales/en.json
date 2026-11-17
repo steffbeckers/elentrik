@@ -1494,6 +1494,7 @@
       "betalingNaGratie": "Your last payment failed. Your company now uses the free version and projects from your subscription are read-only. Sort out your payment to edit everything again."
     }
   },
+  "appVersie": "Version {versie}",
   "menu": {
     "donkereModus": "Dark mode",
     "lichteModus": "Light mode",
