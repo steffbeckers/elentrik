@@ -2,11 +2,21 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { fileURLToPath } from "node:url";
 import type { Mij } from "../shared/mij";
 import type { InstallatieDocument } from "@elentrik/model";
-import { zetProefEinde } from "./hulp/database";
+import { stempelProject, zetProefEinde } from "./hulp/database";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { toonPaneel } from "./hulp/paneel";
 
 // Eén ingelogde testgebruiker met een eigen organisatie voor dit hele bestand.
 gebruikTestgebruiker(test, { voorvoegsel: "situatie" });
+
+const DAG_MS = 24 * 3600 * 1000;
+
+// Volledige toegang (een lopende overgangsproef): deze tests gebruiken meer dan één situatieschema,
+// wat de gratis versie niet toelaat. De globale e2e-limieten blijven ongemoeid (prijsmodel.spec).
+test.beforeEach(async ({ request }) => {
+  const mij = (await (await request.get("/api/mij")).json()) as Mij;
+  await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * DAG_MS));
+});
 
 // Elke run gebruikt een unieke naam, zodat de projecten van deze run herkenbaar zijn; `ruimOp` wist ze na afloop.
 const naam = `Test Situatie ${Date.now()}`;
@@ -26,7 +36,7 @@ test("opmaak aanpassen in het echte afdrukvoorbeeld bewaart labeloffset zonder b
   await expect.poll(async () => (await haalProject(request, id)).document.situatie.paginas.length).toBe(2);
   const tweedePagina = (await haalProject(request, id)).document.situatie.paginas[1]!.id;
   await page.getByTestId("pagina-tab-0").click();
-  await page.getByTestId("werkruimte-opmaak").click();
+  await toonPaneel(page, "opmaak");
   await page.getByTestId("plan-afdruk-opmaken").click();
   const dialoog = page.getByRole("dialog", { name: "Afdrukvoorbeeld", exact: true });
   await expect(dialoog).toBeVisible();
@@ -81,12 +91,12 @@ type Project = { versie: number; document: { situatie: { paginas: Pagina[] } } }
 
 /** Ongeplaatste onderdelen staan in de dossierchecklist; het verdeelbord telt ook mee. */
 async function verwachtOngeplaatst(page: Page, aantal: number) {
-  await page.getByTestId("werkruimte-bevindingen").click();
+  await toonPaneel(page, "bevindingen");
   const checklist = page.getByTestId("dossier-checklist");
   const details = checklist.locator("..");
   if (await details.getAttribute("open") === null) await details.locator("summary").click();
   await expect(checklist.getByRole("button", { name: `Nog ${aantal} onderdelen op het plan plaatsen`, exact: true })).toBeVisible();
-  await page.getByTestId("werkruimte-onderdelen").click();
+  await toonPaneel(page, "onderdelen");
 }
 
 /** De tekstlabels in de SVG van het schema (puntlabels als "A1"). */
@@ -293,7 +303,7 @@ test("de dossierchecklist noemt de ongeplaatste onderdelen en een klik selecteer
   test.setTimeout(120_000);
   await maakProjectMetContactdozen(page, `${naam} checklist`);
   await page.getByTestId("tab-situatieschema").click();
-  await page.getByTestId("werkruimte-bevindingen").click();
+  await toonPaneel(page, "bevindingen");
   const checklist = page.getByTestId("dossier-checklist");
   const details = checklist.locator("..");
   if (await details.getAttribute("open") === null) await details.locator("summary").click();
@@ -363,6 +373,8 @@ test("plan toevoegen, plaatsen, herstellen, van plan halen en een ontbrekend pla
   await expect(page.locator('[data-testid^="plan-selectie-"]')).toHaveCount(1);
   await page.keyboard.press("Delete");
   await expect(planLabel(page, "A1")).toHaveCount(0);
+  // A1 blijft geselecteerd, dus het paneel staat nog op Eigenschappen; Te plaatsen staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await expect(page.getByTestId("te-plaatsen-A1")).toBeVisible();
   await page.getByTestId("tab-eendraadschema").click();
   await expect(schemaTekst(page, "A1")).toHaveCount(1);
@@ -590,26 +602,31 @@ test("pagina wisselen stopt de keuze; smalle schermen behouden de paneelroute", 
 
 test("alleen-lezen worden stopt een gekozen punt en blokkeert doorplaatsen", async ({ page, request }) => {
   test.setTimeout(120_000);
-  await maakProjectMetContactdozen(page, `${naam} alleen lezen`);
+  const mij = (await (await request.get("/api/mij")).json()) as Mij;
+  // Gratis (de proef is voorbij): het project heeft een limiet, dus de editor leest de projecttoegang
+  // opnieuw bij het terugkeren in het tabblad. Eén plan en twee kringen vallen binnen de limiet.
+  await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() - DAG_MS));
+  const projectId = await maakProjectMetContactdozen(page, `${naam} alleen lezen`);
   await page.getByTestId("tab-situatieschema").click();
   await voegPlanToe(page, PLAN_PNG, { leeg: true });
   await expect(page.getByTestId("opslagstatus")).toHaveText("Opgeslagen", { timeout: 15_000 });
   await page.getByTestId("te-plaatsen-doorgaan").click();
   await page.getByTestId("te-plaatsen-A1").click();
-  const mij = (await (await request.get("/api/mij")).json()) as Mij;
-  const dag = 24 * 3600 * 1000;
   try {
-    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() - dag));
-    const sessie = page.waitForResponse(r => r.url().endsWith("/api/mij") && r.request().method() === "GET");
+    // Het project blijkt gestempeld (bewaard tijdens een abonnement dat voorbij is): alleen-lezen.
+    await stempelProject(projectId);
+    const toegang = page.waitForResponse(
+      (r) => r.url().endsWith(`/api/projecten/${projectId}`) && r.request().method() === "GET",
+    );
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-    expect((await sessie).ok()).toBe(true);
-    await expect(page.getByTestId("abonnement-banner-alleen-lezen")).toBeVisible();
+    expect((await toegang).ok()).toBe(true);
+    await expect(page.getByTestId("alleen-lezen-balk")).toBeVisible();
     await expect(page.getByTestId("te-plaatsen-A1")).toBeDisabled();
     await expect(page.getByTestId("te-plaatsen-doorgaan")).toBeDisabled();
     await page.getByTestId("plan-canvas").click({ position: { x: 170, y: 170 } });
     await expect(planSymbolen(page)).toHaveCount(0);
   } finally {
-    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * dag));
+    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * DAG_MS));
   }
 });
 
@@ -684,4 +701,28 @@ test("referentieblad importeert zonder export of definitieve plaatsing", async (
   await page.keyboard.press("Delete");
   expect((await haalProject(request, id)).document).toEqual(project.document);
 
+});
+
+test("een markering op het plan toont bij aanwijzen de bevinding van het punt", async ({ page }) => {
+  test.setTimeout(120_000);
+  await maakProjectMetContactdozen(page, `${naam} markeringtip`);
+  await page.getByTestId("tab-situatieschema").click();
+  await voegPlanToe(page, PLAN_PNG, { leeg: true });
+  await expect.poll(() => planAfbeeldingGeladen(page)).toBe(1200);
+  await page.getByTestId("te-plaatsen-A1").dragTo(page.getByTestId("plan-canvas"));
+  await expect(planLabel(page, "A1")).toHaveCount(1);
+
+  // A1 hangt alleen achter het algemene differentieel: een waarschuwing, met een markering op het plan.
+  const markering = page.locator('[data-testid^="plan-markering-"]').first();
+  await expect(markering).toHaveAttribute("data-ernst", "waarschuwing");
+  await expect(page.getByTestId("markering-tip")).toHaveCount(0);
+  await markering.hover();
+  await expect(page.getByTestId("markering-tip")).toContainText("aanvullende bescherming van maximaal 30 mA");
+  await page.mouse.move(5, 400);
+  await expect(page.getByTestId("markering-tip")).toHaveCount(0);
+
+  // Een klik op de markering kiest het punt, net als een klik op het symbool, en zet de tooltip vast.
+  await markering.click();
+  await expect(page.getByTestId("markering-tip")).toBeVisible();
+  await expect(page.getByTestId("werkruimte-eigenschappen")).toHaveAttribute("aria-expanded", "true");
 });

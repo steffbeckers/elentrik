@@ -204,6 +204,9 @@ Geregistreerde meetwaarden in de projectgegevens, het paneel Eigenschappen (groe
 | abonnement | abonnement | subscription |
 | proefperiode | période d'essai | free trial |
 | formule | formule | plan |
+| gratis versie | version gratuite | free version |
+| (een project) vrijgeven | débloquer (un projet) | unlock (a project) |
+| alleen-lezen | lecture seule | read-only |
 | project | projet | project |
 | dossier | dossier | dossier |
 | dossiertaal | langue du dossier | dossier language |
@@ -282,6 +285,25 @@ De rubrieken van tabel 2.23 (de symbolen) volgen in het Nederlands en het Frans 
 "Staging" blijft in elke taal "Staging" (de naam van de omgeving). De balk bovenaan op staging luidt: nl "Staging: testomgeving, geen echte gegevens", fr "Staging : environnement de test, aucune donnée réelle", en "Staging: test environment, no real data".
 
 De namen van de talen staan altijd in hun eigen taal: "Nederlands", "Français", "English". In de Franse interface staat een vaste spatie vóór `:`, `?`, `!` en `;`, en binnen « ».
+
+## Elektricienreview (november 2026)
+
+Termen van de nieuwe controles, het bordoverzicht en de startwoning:
+
+| NL | FR | EN |
+|---|---|---|
+| aardingsonderbreker | sectionneur de terre | earth disconnector |
+| aardelektrode | prise de terre | earth electrode |
+| spanningsval | chute de tension | voltage drop |
+| richtwaarde | valeur indicative | guideline |
+| DC-foutstroomdetectie | détection de courant résiduel DC | DC residual current detection |
+| laadpaal | borne de recharge | EV charger |
+| bordoverzicht | aperçu du tableau | board overview |
+| kast (van een verdeelbord) | coffret | enclosure |
+| module | module | module |
+| snel starten | démarrage rapide | quick start |
+| startwoning | habitation type | typical house |
+| nog N onderdelen te plaatsen | encore N éléments à placer | N components still to place |
 
 ## Opvolgpunt
 

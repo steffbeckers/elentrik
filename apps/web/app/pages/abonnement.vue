@@ -143,8 +143,52 @@ const beheer = () => voerUit("beheer", () => beheerAbonnement({ api, ...doorstur
           data-testid="abonnement-prijzen-ontbreken"
         />
 
-        <div v-if="weergave.kaarten.length" class="grid gap-4 sm:grid-cols-2">
-          <UCard v-for="kaart in weergave.kaarten" :key="kaart.formule" :data-testid="`abonnement-kaart-${kaart.formule}`">
+        <UAlert
+          v-if="weergave.melding === 'onderwijs'"
+          color="info"
+          variant="subtle"
+          icon="i-lucide-graduation-cap"
+          :title="$t('abonnement.onderwijs')"
+          data-testid="abonnement-onderwijs"
+        />
+
+        <UCard v-if="weergave.blokken.gratis" data-testid="abonnement-blok-gratis">
+          <template #header>
+            <h2 class="font-semibold">{{ $t("abonnement.gratis.titel") }}</h2>
+          </template>
+          <p>
+            {{
+              $t("abonnement.gratis.tekst", {
+                kringen: $t("abonnement.gratis.kringen", { n: weergave.blokken.gratis.kringen }, weergave.blokken.gratis.kringen),
+                situatieschemas: $t(
+                  "abonnement.gratis.situatieschemas",
+                  { n: weergave.blokken.gratis.situatieschemas },
+                  weergave.blokken.gratis.situatieschemas,
+                ),
+              })
+            }}
+          </p>
+        </UCard>
+
+        <UCard v-if="weergave.blokken.project" data-testid="abonnement-blok-project">
+          <template #header>
+            <h2 class="font-semibold">{{ $t("abonnement.projectBlok.titel") }}</h2>
+          </template>
+          <p class="text-2xl font-semibold">
+            {{ weergave.blokken.project.prijs.excl }}
+            <span class="text-base font-normal text-muted">{{ $t("abonnement.per.project") }}</span>
+          </p>
+          <p class="text-sm text-muted">{{ $t("abonnement.exclBtw", { incl: weergave.blokken.project.prijs.incl }) }}</p>
+          <p class="mt-3">{{ $t("abonnement.projectBlok.tekst") }}</p>
+        </UCard>
+
+        <p v-if="weergave.blokken.kaarten.length" class="text-muted" data-testid="abonnement-blok-abonnement">
+          <span class="font-semibold text-default">{{ $t("abonnement.kaartenBlok.titel") }}.</span>
+          {{ $t("abonnement.kaartenBlok.tekst") }}
+        </p>
+
+        <div v-if="weergave.blokken.kaarten.length" class="grid gap-4 sm:grid-cols-2">
+          <UCard v-for="kaart in weergave.blokken.kaarten" :key="kaart.formule" :data-testid="`abonnement-kaart-${kaart.formule}`">
             <template #header>
               <div class="flex items-center justify-between gap-2">
                 <h2 class="font-semibold">{{ formuleLabel(kaart.formule) }}</h2>

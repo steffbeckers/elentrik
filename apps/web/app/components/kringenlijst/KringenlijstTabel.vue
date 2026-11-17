@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TEKSTEN, kringenlijst, type KringenlijstRij, type Teksten } from "@elentrik/render";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import BordOverzicht from "~/components/kringenlijst/BordOverzicht.vue";
 import { volgendeRij } from "~/editor/rijnavigatie";
 import { useEditorStore } from "~/stores/editor";
 
@@ -152,6 +153,8 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
     :aria-label="$t('editor.kringenlijst.titel')"
     data-testid="kringenlijst"
   >
+    <!-- Boven de tabel en mee met de verticale scroll; `sticky left-0` houdt het blok in beeld bij horizontaal scrollen. -->
+    <BordOverzicht />
     <p v-if="rijen.length === 0" class="p-6 text-center text-sm text-muted" data-testid="kringenlijst-leeg">
       {{ teksten.geenKringen }}
     </p>
@@ -190,7 +193,7 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
           <td v-for="kolom in KOLOMMEN" :key="kolom" role="gridcell" class="border-b border-default px-3 py-2 align-top"
             :class="[
               TECHNISCH.has(kolom) ? 'whitespace-nowrap tabular-nums' : '[overflow-wrap:anywhere]',
-              eersteInKring(index) && index > 0 ? 'border-t-2 pt-4' : '',
+              eersteInKring(index) && index > 0 ? 'border-t-2' : '',
               kolom === 'kring' || kolom === 'punt' ? 'font-medium' : '',
             ]"
           >
@@ -210,7 +213,7 @@ watch(() => store.selectie.at(-1), scrollNaarSelectie);
               v-else-if="bewerkbaar(rij, index, kolom)"
               type="button"
               tabindex="-1"
-              class="block min-h-6 w-full cursor-text rounded text-left hover:bg-accented"
+              class="block min-h-5 w-full cursor-text rounded text-left hover:bg-accented"
               :title="$t('editor.kringenlijst.omschrijvingBewerken', { kring: rij.kring })"
               :data-testid="`kringenlijst-omschrijving-${rij.kring}`"
               @click.stop="startBewerken(rij, index)"

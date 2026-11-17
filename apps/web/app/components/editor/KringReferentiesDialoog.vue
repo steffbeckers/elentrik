@@ -25,7 +25,11 @@ function hernummer() {
 function dupliceer() {
   if (store.alleenLezen || !duplicaat.value) return;
   const resultaat = duplicaat.value;
-  if (voerUit(() => store.pasToeMetBehoud(resultaat))) { store.selectie = [resultaat.id]; open.value = false; }
+  let toegepast = false;
+  if (!voerUit(() => (toegepast = store.pasToeMetBehoud(resultaat)))) return;
+  // Over de gratis limiet: niets toegevoegd; de dialoog sluit, zodat het limietvenster te zien is.
+  if (toegepast) store.selectie = [resultaat.id];
+  open.value = false;
 }
 </script>
 

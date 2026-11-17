@@ -102,6 +102,32 @@ describe("schemaStripSvg", () => {
     expect(XMLValidator.validate(svg)).toBe(true);
   });
 
+  test("elk symbool heeft een onzichtbaar raakvlak, ruimer dan het symbool en minstens 8 mm", () => {
+    const doc = kringen(2);
+    const o = opmaak(doc);
+    const svg = schemaStripSvg(o);
+    expect(aantal(svg, 'class="raakvlak"')).toBe(Object.keys(doc.nodes).length);
+    expect(XMLValidator.validate(svg)).toBe(true);
+    // Het raakvlak is het eerste kind van de groep, zodat de getekende lijnen erboven liggen.
+    expect(svg).toMatch(/<g data-node-id="[^"]+" transform="[^"]+"><rect class="raakvlak"/);
+    for (const [id, vak] of Object.entries(o.strook.vakken)) {
+      const rect = new RegExp(
+        `<g data-node-id="${id}" transform="[^"]+"><rect class="raakvlak" x="(-?[\\d.]+)" y="(-?[\\d.]+)" width="([\\d.]+)" height="([\\d.]+)" fill="none" pointer-events="all"/>`,
+      ).exec(svg);
+      expect(rect, id).not.toBeNull();
+      const [x, y, breedte, hoogte] = rect!.slice(1).map(Number) as [number, number, number, number];
+      expect(breedte).toBeGreaterThanOrEqual(Math.max(8, vak.breedte + 3) - 0.011);
+      expect(hoogte).toBeGreaterThanOrEqual(Math.max(8, vak.hoogte + 3) - 0.011);
+      // Gecentreerd op het symbool (lokale coordinaten: (0,0) is linksboven het symbool).
+      expect(x + breedte / 2).toBeCloseTo(vak.breedte / 2, 1);
+      expect(y + hoogte / 2).toBeCloseTo(vak.hoogte / 2, 1);
+    }
+  });
+
+  test("de afdruk heeft geen raakvlakken", () => {
+    expect(schemaPaginaSvg(opmaak(kringen(2)), 0)).not.toContain("raakvlak");
+  });
+
   test("viewBox is de strook op schaal 1, zonder clip", () => {
     const o = opmaak(kringen(3));
     const svg = schemaStripSvg(o);

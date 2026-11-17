@@ -6,12 +6,13 @@ import { verwachtOrganisatie } from "./hulp/navigatie";
 import { expect, test } from "@playwright/test";
 import { nieuwProjectDocument } from "@elentrik/model";
 import { meldAan, meldAf } from "./hulp/aanmelden";
-import { metE2eDatabase } from "./hulp/database";
+import { metE2eDatabase, zetProefEinde } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { TESTWACHTWOORD, uniekAdres } from "./hulp/inloggen";
 import { nieuwSpoor, ruimOp } from "./hulp/opruimen";
 import { aantalMailsAan, laatsteMailAan, linkUit } from "./hulp/mailpit";
 import { E2E_URL } from "./omgeving";
+import type { Mij } from "../shared/mij";
 
 test.describe.configure({ mode: "serial" });
 
@@ -78,6 +79,12 @@ test("registreren: bevestigen en inloggen, en de bestaande projecten en bedrijfs
 
   // Beide projecten staan in de lijst van de nieuwe organisatie.
   for (const naam of projectNamen) await expect(page.getByRole("row").filter({ hasText: naam })).toHaveCount(1);
+  // Ze bestonden vóór het prijsmodel: de overname stempelt ze (spec 4.8).
+  const stempels = await metE2eDatabase(
+    (sql) => sql<{ gestempeld: boolean }[]>`
+      select abonnement_stempel_op is not null as gestempeld from projecten where naam in ${sql(projectNamen)}`,
+  );
+  expect(stempels.map((r) => r.gestempeld)).toEqual([true, true]);
 
   // De bedrijfsgegevens van vóór het inloggen zijn nu van deze organisatie.
   const bedrijf = (await (await page.request.get("/api/bedrijfsgegevens")).json()) as { naam: string };
@@ -162,7 +169,11 @@ test("een collega uitnodigen: registreren via de link zonder bedrijfsnaam, de pr
     // De projecten van de eigenaar staan in de lijst, ook de overgenomen.
     for (const naam of projectNamen) await expect(pagina.getByRole("row").filter({ hasText: naam })).toHaveCount(1);
 
-    // Bewerken kan: een wijziging in de editor wordt op de server bewaard.
+    // Bewerken kan: een wijziging in de editor wordt op de server bewaard. De overgenomen projecten
+    // krijgen bij de overname de stempel (spec 4.8) en een nieuw bedrijf zit in de gratis versie, dus
+    // ze zijn alleen-lezen; met volledige toegang (een lopende overgangsproef) kan de collega bewerken.
+    const mij = (await (await context.request.get("/api/mij")).json()) as Mij;
+    await zetProefEinde(mij.actieveOrganisatieId!, new Date(Date.now() + 20 * 24 * 3600 * 1000));
     const projecten = (await (await context.request.get("/api/projecten")).json()) as { id: string; naam: string }[];
     const project = projecten.find((p) => p.naam === projectNamen[0])!;
     await ga(pagina, `/projecten/${project.id}`);

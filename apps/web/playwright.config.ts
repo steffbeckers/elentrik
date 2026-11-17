@@ -8,6 +8,7 @@ import {
   E2E_SMTP_POORT,
   E2E_STRIPE_PRIJS_JAAR,
   E2E_STRIPE_PRIJS_MAAND,
+  E2E_STRIPE_PRIJS_PROJECT,
   E2E_STRIPE_SLEUTEL,
   E2E_STRIPE_URL,
   E2E_STRIPE_WEBHOOK_GEHEIM,
@@ -61,11 +62,17 @@ export default defineConfig({
       STRIPE_WEBHOOK_GEHEIM: E2E_STRIPE_WEBHOOK_GEHEIM,
       STRIPE_PRIJS_MAAND: E2E_STRIPE_PRIJS_MAAND,
       STRIPE_PRIJS_JAAR: E2E_STRIPE_PRIJS_JAAR,
+      STRIPE_PRIJS_PROJECT: E2E_STRIPE_PRIJS_PROJECT,
+      // De standaardlimieten van de gratis versie, vast, ook als .env andere waarden heeft.
+      GRATIS_MAX_KRINGEN: "5",
+      GRATIS_MAX_SITUATIESCHEMAS: "1",
       STRIPE_API_BASIS: E2E_STRIPE_URL,
       // Geen boekhoudmail in e2e, ook niet als .env een adres heeft.
       BOEKHOUDING_INBOX: "",
       // Geen uurlijkse inhaaltaak in e2e: de tests sturen zelf de events die ze nodig hebben.
       ELENTRIK_GEPLANDE_TAKEN: "uit",
+      // Geen instance-ping naar elentrik.app vanuit de e2e-server.
+      ELENTRIK_INSTANCE_PING: "uit",
     },
     timeout: 120_000,
   },

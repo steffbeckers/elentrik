@@ -159,6 +159,31 @@ describe("controleerConfiguratie", () => {
     expect(controleerConfiguratie({ ...STRIPE, STRIPE_API_BASIS: "https://example.com" })).toEqual(["STRIPE_API_BASIS"]);
   });
 
+  test("GRATIS_MAX_KRINGEN=abc zonder Stripe: die naam, zonder de waarde", () => {
+    const problemen = controleerConfiguratie({ ...VOLLEDIG, GRATIS_MAX_KRINGEN: "abc" });
+    expect(problemen).toEqual(["GRATIS_MAX_KRINGEN"]);
+    expect(problemen.join(" ")).not.toContain("abc");
+  });
+
+  test("GRATIS_MAX_SITUATIESCHEMAS=0 zonder Stripe: die naam", () => {
+    expect(controleerConfiguratie({ ...VOLLEDIG, GRATIS_MAX_SITUATIESCHEMAS: "0" })).toEqual(["GRATIS_MAX_SITUATIESCHEMAS"]);
+  });
+
+  test("ongeldige limieten met Stripe: elke naam, en een Stripe-fout blijft zichtbaar", () => {
+    expect(controleerConfiguratie({ ...STRIPE, GRATIS_MAX_KRINGEN: "abc", GRATIS_MAX_SITUATIESCHEMAS: "-1" })).toEqual([
+      "GRATIS_MAX_KRINGEN",
+      "GRATIS_MAX_SITUATIESCHEMAS",
+    ]);
+    expect(
+      controleerConfiguratie({ ...STRIPE, GRATIS_MAX_KRINGEN: "abc", STRIPE_API_BASIS: "https://example.com" }),
+    ).toEqual(["GRATIS_MAX_KRINGEN", "STRIPE_API_BASIS"]);
+  });
+
+  test("geldige of lege limieten: geen probleem", () => {
+    expect(controleerConfiguratie({ ...VOLLEDIG, GRATIS_MAX_KRINGEN: "10", GRATIS_MAX_SITUATIESCHEMAS: "" })).toEqual([]);
+    expect(controleerConfiguratie({ ...STRIPE, GRATIS_MAX_KRINGEN: "10", GRATIS_MAX_SITUATIESCHEMAS: "2" })).toEqual([]);
+  });
+
   test("ELENTRIK_OPSLAG_PER_BEDRIJF_MB: leeg of een positief geheel getal is goed, anders die naam", () => {
     for (const goed of ["100", "5120", "", "  "]) {
       expect(controleerConfiguratie({ ...VOLLEDIG, ELENTRIK_OPSLAG_PER_BEDRIJF_MB: goed }), goed).toEqual([]);

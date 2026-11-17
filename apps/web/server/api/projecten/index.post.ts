@@ -1,19 +1,24 @@
 import { setResponseStatus } from "h3";
-import { vereisSchrijfrecht } from "../../abonnementen/handhaving";
+import { vereisNieuwProject } from "../../abonnementen/handhaving";
 import { gebruikDb } from "../../db";
 import { leesGebruikerstaal } from "../../gebruikers/taal";
-import { maakProject } from "../../projecten/repo";
+import { documentVoorNieuwProject, maakProject } from "../../projecten/repo";
 import { leesBody, NieuwProjectSchema } from "../../utils/projecten";
 import { defineBeveiligdeHandler, vereisLid } from "../../utils/toegang";
 
 // Een nieuw project komt altijd in de actieve organisatie.
 export default defineBeveiligdeHandler(async (event) => {
   const { gebruiker, organisatieId } = await vereisLid(event);
-  await vereisSchrijfrecht(organisatieId);
   const invoer = await leesBody(event, NieuwProjectSchema);
   // Het dossier krijgt de taal van wie het aanmaakt; het blijft die taal, wie het ook exporteert.
   const dossierTaal = await leesGebruikerstaal(gebruikDb(), gebruiker.id);
-  const project = await maakProject(gebruikDb(), organisatieId, { ...invoer, dossierTaal });
+  const { stempel } = await vereisNieuwProject(organisatieId, documentVoorNieuwProject({ ...invoer, dossierTaal }));
+  const project = await maakProject(
+    gebruikDb(),
+    organisatieId,
+    { ...invoer, dossierTaal },
+    stempel ? { stempel: new Date() } : undefined,
+  );
   setResponseStatus(event, 201);
   return project;
 });

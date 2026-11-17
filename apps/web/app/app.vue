@@ -35,5 +35,6 @@ useHead({
     <StagingBalk />
     <NieuweVersie />
     <NuxtLayout><NuxtPage /></NuxtLayout>
+    <AppVersie />
   </UApp>
 </template>

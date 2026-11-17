@@ -4,6 +4,7 @@ import type { AdminProjectRevisie } from "../../shared/admin/projecten";
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -28,6 +29,10 @@ export const projecten = pgTable(
     aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
     gewijzigd: timestamp("gewijzigd", { withTimezone: true }).notNull().defaultNow(),
     verwijderd: timestamp("verwijderd", { withTimezone: true }),
+    /** Wanneer het project per stuk gekocht werd (prijsmodel); null als het niet gekocht is. */
+    gekochtOp: timestamp("gekocht_op", { withTimezone: true }),
+    /** Wanneer het project onder het abonnement viel; bestaande projecten krijgen dit bij de migratie. */
+    abonnementStempelOp: timestamp("abonnement_stempel_op", { withTimezone: true }),
   },
   (table) => [index("projecten_organisatie_id_idx").on(table.organisatieId)],
 );
@@ -208,17 +213,20 @@ export const organization = pgTable(
     createdAt: timestamp("created_at").notNull(),
     metadata: text("metadata"),
     /**
-     * Tot wanneer de organisatie gratis mag schrijven. De code zet het bij het aanmaken
-     * (`kenProefperiodeToe`); de default is het vangnet voor een rechtstreekse insert, en geeft
-     * bestaande organisaties bij de migratie 30 dagen vanaf dat moment.
+     * Einde van de overgangsproef: tot dan telt het bedrijf als niveau `abonnement` (spec 4.8).
+     * Sinds het prijsmodel is er geen proefperiode meer: beide aanmaakpaden zetten het op het
+     * moment van aanmaken, en de default `now()` is het vangnet voor een rechtstreekse insert.
      */
-    proefEinde: timestamp("proef_einde", { withTimezone: true })
-      .notNull()
-      .default(sql`now() + interval '30 days'`),
+    proefEinde: timestamp("proef_einde", { withTimezone: true }).notNull().default(sql`now()`),
     /** Altijd schrijfrecht zonder abonnement; alleen via SQL te zetten. */
     vrijgesteld: boolean("vrijgesteld").notNull().default(false),
+    /** Onderwijsorganisatie: gratis, met watermerk; sluit `vrijgesteld` uit. Alleen via SQL te zetten. */
+    onderwijs: boolean("onderwijs").notNull().default(false),
   },
-  (table) => [uniqueIndex("organization_slug_uidx").on(table.slug)],
+  (table) => [
+    uniqueIndex("organization_slug_uidx").on(table.slug),
+    check("organization_vrijgesteld_of_onderwijs", sql`NOT (${table.vrijgesteld} AND ${table.onderwijs})`),
+  ],
 );
 
 export const member = pgTable(
@@ -374,3 +382,58 @@ export const adminAudit = pgTable("admin_audit", {
   index("admin_audit_project_idx").on(t.projectId, t.tijd, t.id),
   index("admin_audit_correctie_idx").on(t.correctieId, t.tijd, t.id),
 ]);
+
+/** Een aankoop van één project via Stripe Checkout (prijsmodel). */
+export const projectaankopen = pgTable(
+  "projectaankopen",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisatieId: text("organisatie_id")
+      .notNull()
+      .references(() => organization.id),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projecten.id),
+    checkoutSessie: text("checkout_sessie").notNull().unique(),
+    status: text("status", { enum: ["open", "betaald", "vervallen", "mislukt"] }).notNull(),
+    aangemaakt: timestamp("aangemaakt", { withTimezone: true }).notNull().defaultNow(),
+    betaaldOp: timestamp("betaald_op", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("projectaankopen_open_uniek")
+      .on(table.projectId)
+      .where(sql`${table.status} = 'open'`),
+  ],
+);
+
+/** De identiteit van deze instance voor de instance-ping; hoogstens één rij. */
+export const instance = pgTable(
+  "instance",
+  {
+    sleutel: text("sleutel").primaryKey().default("deze"),
+    id: uuid("id").notNull(),
+    aangemaaktOp: timestamp("aangemaakt_op", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("instance_een_rij", sql`${table.sleutel} = 'deze'`)],
+);
+
+/** Ontvangen instance-pings, één rij per instance (alleen op de ontvanger gevuld). */
+export const instanceMeldingen = pgTable(
+  "instance_meldingen",
+  {
+    instanceId: uuid("instance_id").primaryKey(),
+    host: text("host").notNull(),
+    versie: text("versie").notNull(),
+    abonnementenAan: boolean("abonnementen_aan").notNull(),
+    aantalOrganisaties: integer("aantal_organisaties").notNull(),
+    aantalGebruikers: integer("aantal_gebruikers").notNull(),
+    eersteMeldingOp: timestamp("eerste_melding_op", { withTimezone: true }).notNull(),
+    laatsteMeldingOp: timestamp("laatste_melding_op", { withTimezone: true }).notNull(),
+    aantalMeldingen: integer("aantal_meldingen").notNull().default(1),
+    laatsteIp: text("laatste_ip"),
+  },
+  (table) => [
+    index("instance_meldingen_eerste_idx").on(table.eersteMeldingOp),
+    index("instance_meldingen_laatste_idx").on(table.laatsteMeldingOp),
+  ],
+);

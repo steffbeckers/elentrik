@@ -1,6 +1,6 @@
 // Expliciete imports, geen Nuxt-auto-imports (ruling E1). Alles wat van buiten komt
 // (store, API, navigatie) wordt als optie meegegeven, zodat dit zonder Nuxt te testen is.
-import type { InstallatieDocument } from "@elentrik/model";
+import type { InstallatieDocument, Telling } from "@elentrik/model";
 import { getCurrentScope, nextTick, onScopeDispose, ref, watch, type Ref } from "vue";
 import {
   bewaarConcept as bewaarConceptEcht,
@@ -9,7 +9,7 @@ import {
   type Concept,
   type ConceptPlek,
 } from "./concepten";
-import { ABONNEMENT_VEREIST } from "../../shared/abonnement";
+import { PROJECT_ALLEEN_LEZEN, PROJECT_LIMIET } from "../../shared/abonnement";
 import type { Foutcode } from "../../shared/foutcodes";
 import { bekendeFoutcode } from "../fouten";
 import { foutCode } from "../sessie/fouten";
@@ -36,9 +36,11 @@ import {
  *   tot `laadServerversie` of `bewaarAlsKopie` het oplost.
  * - `fout`: de server weigert het document (4xx, bv. 422 of 404). Geen automatische nieuwe poging en geen
  *   autosave meer; `nuOpslaan()` probeert het handmatig opnieuw.
- * - `alleen-lezen`: de server antwoordde 402 `ABONNEMENT_VEREIST`: de organisatie mag niet meer schrijven.
+ * - `alleen-lezen`: de server antwoordde 402 `PROJECT_ALLEEN_LEZEN`: het project mag niet (meer) bewerkt worden.
  *   Het werk staat in het concept; zoals bij `afgemeld` volgt geen nieuwe poging tot `nuOpslaan()`.
  *   Lukt het concept niet (of niet meer), dan is de status `onbewaard`; `alleenLezen` blijft dan true.
+ *   Een 402 `PROJECT_LIMIET` (het bewaren gaat over de gratis limiet) geeft `lokaal` (of `onbewaard`) met
+ *   `limiet`: het werk staat in het concept, er volgt geen nieuwe poging met een timer, wel bij de volgende wijziging.
  * - `verwijderd`: de server antwoordde 404: het project is intussen elders verwijderd. Het werk staat in het
  *   concept; er volgt geen nieuwe poging. De editor biedt `bewaarAlsNieuwProject()` of terug naar de projecten
  *   aan. Verlaten vraagt nog altijd om bevestiging (het concept van een verwijderd project is nooit meer te
@@ -64,6 +66,8 @@ export type AutosaveStore = {
   gewijzigdSindsOpslaan: number;
   /** Stijgt bij elke `laad`; de store houdt hem bij (ruling E11). */
   readonly laadGeneratie: number;
+  /** Het limietvenster van de editor: een 402 `PROJECT_LIMIET` zet hier de telling van de server. */
+  limietGeweigerd?: Telling | null;
   laad(project: { id: string; naam: string; versie: number; document: InstallatieDocument }): void;
 };
 
@@ -124,10 +128,17 @@ export type Autosave = {
    */
   versieVerouderd: Ref<boolean>;
   /**
-   * De server antwoordde 402 `ABONNEMENT_VEREIST`. Het werk staat in het concept; er gaat niets
-   * meer naar de server tot `nuOpslaan()` (na een abonnement). Een geslaagd bewaar zet dit terug op false.
+   * De server antwoordde 402 `PROJECT_ALLEEN_LEZEN`. Het werk staat in het concept; er gaat niets
+   * meer naar de server tot `nuOpslaan()` (na een vrijgave of een abonnement). Een geslaagd bewaar zet
+   * dit terug op false.
    */
   alleenLezen: Ref<boolean>;
+  /**
+   * De server antwoordde 402 `PROJECT_LIMIET`: het bewaren ging over de gratis limiet. Het werk staat in het
+   * concept en `store.limietGeweigerd` opent het limietvenster. De editor blijft bewerkbaar: de volgende
+   * wijziging (bv. een kring minder) probeert opnieuw. Een geslaagd bewaar zet dit terug op false.
+   */
+  limiet: Ref<boolean>;
   /**
    * De server antwoordde 404: het project is verwijderd (elders). Het werk staat in het concept; er gaat
    * niets meer naar de server. `bewaarAlsNieuwProject` maakt er een nieuw project van.
@@ -173,8 +184,15 @@ const AFGEMELD = 401;
 /** Het project bestaat niet (meer): verwijderd, of niet van jou. */
 const NIET_GEVONDEN = 404;
 
-/** De organisatie mag niet (meer) schrijven; samen met de code `ABONNEMENT_VEREIST`. */
+/** Het project mag niet (meer) bewerkt worden of gaat over de limiet; samen met een code van de projecttoegang. */
 const BETALING_VEREIST = 402;
+
+/** De telling uit een 402 `PROJECT_LIMIET` (`data.telling`); zonder bruikbare telling nullen. */
+function limietTelling(fout: unknown): Telling {
+  const data = (fout as { data?: { data?: { telling?: unknown } } } | null)?.data?.data?.telling as Partial<Telling> | undefined;
+  const getal = (waarde: unknown) => (typeof waarde === "number" ? waarde : 0);
+  return { kringen: getal(data?.kringen), situatieschemas: getal(data?.situatieschemas) };
+}
 
 /**
  * Voor `beforeunload` en het navigeren in de app: zolang niet alles op de server staat, vragen we
@@ -212,6 +230,9 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
   const afgemeld = ref(false);
   const versieVerouderd = ref(false);
   const alleenLezen = ref(false);
+  const limiet = ref(false);
+  /** De teller van de inhoud die 402 `PROJECT_LIMIET` kreeg: die opnieuw sturen geeft hetzelfde antwoord. */
+  let limietTeller: number | null = null;
   const verwijderd = ref(false);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -329,9 +350,13 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     );
   }
 
-  /** Wijzigingen die tijdens een bewaar binnenkwamen krijgen hier hun eigen, gedebouncete bewaar. */
+  /**
+   * Wijzigingen die tijdens een bewaar binnenkwamen krijgen hier hun eigen, gedebouncete bewaar. Niet
+   * voor de inhoud die net over de limiet ging: pas een nieuwe wijziging probeert opnieuw.
+   */
   function herplan(): void {
-    if (!gestopt && automatisch() && onbewaard() && timer === undefined) plan(vertragingMs);
+    const zelfdeAlsLimiet = limiet.value && store.gewijzigdSindsOpslaan === limietTeller;
+    if (!gestopt && automatisch() && onbewaard() && !zelfdeAlsLimiet && timer === undefined) plan(vertragingMs);
   }
 
   /** Voert `werk` uit als het ene lopende bewaar; daarna volgt zo nodig een nieuw bewaar. */
@@ -358,6 +383,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     afgemeld.value = false;
     versieVerouderd.value = false;
     alleenLezen.value = false;
+    limiet.value = false;
     status.value = verwijderdStatus();
     const huidig = store.document;
     if (huidig !== null) {
@@ -396,6 +422,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
         afgemeld.value = false;
         versieVerouderd.value = false;
         alleenLezen.value = false;
+        limiet.value = false;
         if (store.gewijzigdSindsOpslaan === teller) {
           conceptGelukt = true;
           status.value = "opgeslagen";
@@ -425,6 +452,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           afgemeld.value = true;
           versieVerouderd.value = false;
           alleenLezen.value = false;
+          limiet.value = false;
           status.value = offlineStatus();
           wisTimer();
         } else if (isNieuweVersieFout(e)) {
@@ -434,15 +462,28 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           versieVerouderd.value = true;
           afgemeld.value = false;
           alleenLezen.value = false;
+          limiet.value = false;
           status.value = offlineStatus();
           wisTimer();
-        } else if (httpCode === BETALING_VEREIST && foutCode(e) === ABONNEMENT_VEREIST) {
-          // De organisatie mag niet meer schrijven: het werk staat in het concept. Opnieuw proberen
-          // heeft pas zin na een abonnement, dus geen nieuwe poging tot `nuOpslaan()`.
+        } else if (httpCode === BETALING_VEREIST && foutCode(e) === PROJECT_ALLEEN_LEZEN) {
+          // Het project mag niet meer bewerkt worden: het werk staat in het concept. Opnieuw proberen
+          // heeft pas zin na een vrijgave of een abonnement, dus geen nieuwe poging tot `nuOpslaan()`.
           alleenLezen.value = true;
+          limiet.value = false;
           afgemeld.value = false;
           versieVerouderd.value = false;
           status.value = alleenLezenStatus();
+          wisTimer();
+        } else if (httpCode === BETALING_VEREIST && foutCode(e) === PROJECT_LIMIET) {
+          // Over de gratis limiet (bv. een ander venster was sneller): het werk staat in het concept en
+          // het limietvenster gaat open, één keer tot een bewaar weer lukt. Geen timer: dezelfde inhoud
+          // geeft hetzelfde antwoord; de volgende wijziging probeert opnieuw.
+          if (!limiet.value && "limietGeweigerd" in store) store.limietGeweigerd = limietTelling(e);
+          limiet.value = true;
+          limietTeller = teller;
+          afgemeld.value = false;
+          versieVerouderd.value = false;
+          status.value = offlineStatus();
           wisTimer();
         } else if (httpCode === NIET_GEVONDEN) {
           // Het project is intussen verwijderd: opnieuw proberen verandert daar niets aan. Het werk
@@ -457,6 +498,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
           afgemeld.value = false;
           versieVerouderd.value = false;
           alleenLezen.value = false;
+          limiet.value = false;
           status.value = "fout";
           wisTimer();
         } else {
@@ -481,6 +523,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       afgemeld.value = false;
       versieVerouderd.value = false;
       alleenLezen.value = false;
+      limiet.value = false;
       verwijderd.value = false;
       status.value = "opgeslagen";
       return;
@@ -534,6 +577,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     afgemeld.value = false;
     versieVerouderd.value = false;
     alleenLezen.value = false;
+    limiet.value = false;
     verwijderd.value = false;
     status.value = "opgeslagen";
     await wisConceptVeilig(id);
@@ -581,6 +625,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
       afgemeld.value = false;
       versieVerouderd.value = false;
       alleenLezen.value = false;
+      limiet.value = false;
       await wisConceptVeilig(id);
       await naarProject(kopie.id);
     });
@@ -682,6 +727,7 @@ export function useAutosave(opties: AutosaveOpties): Autosave {
     afgemeld,
     versieVerouderd,
     alleenLezen,
+    limiet,
     verwijderd,
     nuOpslaan,
     laadServerversie,

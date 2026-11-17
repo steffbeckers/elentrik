@@ -23,6 +23,7 @@ describe("VERTAALDE_PARAMETERS", () => {
     min: "getal",
     nominaal: "getal",
     polen: "getal",
+    spanningsval: "getal",
     verwacht: "getal",
     kring: "vrij",
     label: "vrij",

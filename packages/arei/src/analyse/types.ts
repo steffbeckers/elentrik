@@ -10,10 +10,24 @@ export type Kring = {
   /** Punten van de kring, in pre-order. */
   puntIds: NodeId[];
   leidingIds: NodeId[];
-  /** `contactdozen` en `lichtpunten` zijn sommen van `aantal`; schakelaars en toestellen tellen nodes. */
-  tellingen: { contactdozen: number; lichtpunten: number; schakelaars: number; toestellen: number };
+  /**
+   * `contactdozen` en `lichtpunten` zijn sommen van `aantal`; `contactdoosPunten`, schakelaars en
+   * toestellen tellen nodes. Een meervoudige contactdoos is dus één `contactdoosPunt`.
+   */
+  tellingen: {
+    contactdozen: number;
+    contactdoosPunten: number;
+    lichtpunten: number;
+    schakelaars: number;
+    toestellen: number;
+  };
   ruimtes: Ruimte[];
   minDoorsnede_mm2: number | null;
+  /**
+   * Differentielen boven de kringbeveiliging, dichtstbijzijnde eerst (bevroren en gedeeld tussen
+   * kringen). Het eerste element is het differentieel waar de kring "achter" zit.
+   */
+  differentielen: readonly NodeId[];
 };
 
 export type Keten = {

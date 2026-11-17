@@ -3,7 +3,7 @@
 //
 // Expliciete imports, geen Nuxt-auto-imports: Vitest importeert deze module rechtstreeks
 // (ruling E1).
-import { leesAbonnementConfig } from "../abonnementen/config";
+import { leesAbonnementConfig, leesLimieten } from "../abonnementen/config";
 import { opslagLimietBytes } from "../bestanden/opslagruimte";
 import { isCidr } from "../net";
 import { isPlaatshouder } from "./plaatshouders";
@@ -29,6 +29,8 @@ const GRAPH = ["GRAPH_TENANT_ID", "GRAPH_CLIENT_ID", "GRAPH_CLIENT_GEHEIM", "MAI
 const SMTP = ["SMTP_HOST", "SMTP_VAN"] as const;
 
 const STRIPE = ["STRIPE_WEBHOOK_GEHEIM", "STRIPE_PRIJS_MAAND", "STRIPE_PRIJS_JAAR"] as const;
+
+const LIMIETEN = ["GRATIS_MAX_KRINGEN", "GRATIS_MAX_SITUATIESCHEMAS"] as const;
 
 function gezet(env: Env, naam: string): boolean {
   return !!env[naam]?.trim();
@@ -78,12 +80,23 @@ export function controleerConfiguratie(env: Env): string[] {
     for (const naam of SMTP) if (!gezet(env, naam)) meld(naam);
   }
 
+  // De limieten van de gratis versie gelden ook zonder Stripe in de config: een ongeldige waarde
+  // laat de start altijd mislukken. Per variabele, zodat elke foute naam gemeld wordt.
+  for (const naam of LIMIETEN) {
+    try {
+      leesLimieten({ [naam]: env[naam] });
+    } catch {
+      meld(naam);
+    }
+  }
+
   if (gezet(env, "STRIPE_GEHEIME_SLEUTEL")) {
     for (const naam of STRIPE) if (!gezet(env, naam)) meld(naam);
     // De rest van de Stripe-regels (zoals STRIPE_API_BASIS) staan in leesAbonnementConfig. Haar
     // meldingen beginnen met de naam van de variabele; de rest van de tekst gebruiken we niet.
+    // Zonder de limieten, die hierboven al gecontroleerd zijn en anders een Stripe-fout verbergen.
     try {
-      leesAbonnementConfig(env);
+      leesAbonnementConfig({ ...env, GRATIS_MAX_KRINGEN: undefined, GRATIS_MAX_SITUATIESCHEMAS: undefined });
     } catch (fout) {
       const naam = /^[A-Z][A-Z0-9_]*/.exec(fout instanceof Error ? fout.message : "")?.[0];
       meld(naam ?? "STRIPE_GEHEIME_SLEUTEL");

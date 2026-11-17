@@ -19,10 +19,14 @@ export type Veld = {
   labelSleutel: string;
   soort: "getal" | "tekst" | "keuze" | "schakelaar";
   eenheid?: string;
-  /** Zonder `labelSleutel` toont een optie haar waarde zelf: een getal (polen) of een symbool (curve B). */
+  /**
+   * Gangbare waarden als voorstel; het veld blijft vrije invoer. Bij een getalveld in de notatie
+   * van het invoerveld (`"1.5"`); `voorstelTekst` schrijft ze voor de gebruiker.
+   */
   suggesties?: string[];
   /** Alleen een weergavestandaard; schrijft geen attribuut naar het document. */
   standaard?: boolean | string;
+  /** Zonder `labelSleutel` toont een optie haar waarde zelf: een getal (polen) of een symbool (curve B). */
   opties?: { waarde: string | number; labelSleutel?: string }[];
   min?: number;
   stap?: number;
@@ -89,6 +93,24 @@ const GROEPEN: Readonly<Record<string, VeldGroep>> = {
 /** Keuzes waarvan de waarde een technisch symbool is dat in elke taal hetzelfde blijft (type AC, curve B). */
 const LETTERLIJKE_OPTIES: ReadonlySet<string> = new Set(["klasse", "curve"]);
 
+/** De nominale stromen van een kringbeveiliging (automaat of zekering), in A. */
+const KRINGSTROMEN = ["6", "10", "16", "20", "25", "32", "40", "50", "63"];
+
+/**
+ * De voorstellen per veld: gangbare handelswaarden, geen grenzen en geen controle. Een sleutel
+ * `<type>.<sleutel>` geldt voor één nodetype en gaat voor op de sleutel alleen: de nominale stroom
+ * van een differentieel kent andere waarden dan die van een automaat, en een teller krijgt er geen.
+ */
+const SUGGESTIES: Readonly<Record<string, readonly string[]>> = {
+  kabeltype: ["XVB", "XGB", "EXVB", "VOB", "VVB", "EXAVB", "XFVB"],
+  doorsnede_mm2: ["1.5", "2.5", "4", "6", "10", "16", "25", "35"],
+  brandreactieklasse: ["Eca", "Cca"],
+  "automaat.nominaal_A": KRINGSTROMEN,
+  "zekering.nominaal_A": KRINGSTROMEN,
+  "differentieel.nominaal_A": ["25", "40", "63"],
+  gevoeligheid_mA: ["30", "100", "300"],
+};
+
 /** De tekst onder een sleutel (`a.b.c`) in een vertaalboom, of undefined. */
 function tekst(boom: Boom, sleutel: string): string | undefined {
   let huidig: string | Boom | undefined = boom;
@@ -129,7 +151,7 @@ function keuzeWaarden(schema: ZodVorm): (string | number)[] {
   });
 }
 
-function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
+function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm, type?: NodeType): Veld {
   let schema = zod;
   let optioneel = false;
   while (schema.def.type === "optional" && schema.def.innerType) {
@@ -172,7 +194,8 @@ function veldVan(boom: Boom | undefined, sleutel: string, zod: ZodVorm): Veld {
   }
   if (sleutel === "metBeschermingsgeleider") veld.standaard = true;
   if (sleutel === "puntReferentie") veld.standaard = "automatisch";
-  if (sleutel === "brandreactieklasse") veld.suggesties = ["Eca", "Cca"];
+  const suggesties = (type && SUGGESTIES[`${type}.${sleutel}`]) ?? SUGGESTIES[sleutel];
+  if (suggesties && (veld.soort === "tekst" || veld.soort === "getal")) veld.suggesties = [...suggesties];
   if (optioneel) veld.optioneel = true;
   return veld;
 }
@@ -194,9 +217,9 @@ export function bouwVelden(boom?: Boom): { GEMEENSCHAPPELIJK: Veld[]; VELDEN: Re
       const eigen = Object.entries(shape)
         .filter(([sleutel]) => !STRUCTUUR.has(sleutel) && !(GEMEENSCHAPPELIJKE_SLEUTELS as readonly string[]).includes(sleutel))
         .flatMap(([sleutel, schema]) => {
-          if(sleutel !== "aanleg") return [veldVan(boom,sleutel,schema)];
+          if(sleutel !== "aanleg") return [veldVan(boom,sleutel,schema,type)];
           const object=schema.def.innerType!;
-          return Object.entries(object.shape!).map(([deel,zod])=>({...veldVan(boom,`aanleg.${deel}`,zod),optioneel:true}));
+          return Object.entries(object.shape!).map(([deel,zod])=>({...veldVan(boom,`aanleg.${deel}`,zod,type),optioneel:true}));
         });
       return [type, eigen];
     }),
@@ -210,6 +233,15 @@ export const { GEMEENSCHAPPELIJK, VELDEN } = bouwVelden();
 export function veldWeergaveWaarde(node: unknown, veld: Pick<Veld, "sleutel" | "standaard">): unknown {
   const waarde = veldWaarde(node, veld.sleutel);
   return waarde === undefined ? veld.standaard : waarde;
+}
+
+/**
+ * Hoe een voorstel in de keuzelijst staat: een getal in de notatie van de taal (`getal`, bv. "1,5")
+ * met de eenheid erachter, een tekst zoals hij is.
+ */
+export function voorstelTekst(veld: Pick<Veld, "soort" | "eenheid">, voorstel: string, getal: (waarde: number) => string): string {
+  const waarde = veld.soort === "getal" ? getal(Number(voorstel)) : voorstel;
+  return veld.eenheid ? `${waarde} ${veld.eenheid}` : waarde;
 }
 
 /** De velden per groep, in de volgorde van `VELDGROEPEN`; binnen een groep in de volgorde van `velden`. Lege groepen vallen weg. */

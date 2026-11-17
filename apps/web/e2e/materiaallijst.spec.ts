@@ -1,6 +1,7 @@
 import { bevestigSjabloonOpBord } from './hulp/sjabloon';
 import { expect, test } from "@playwright/test";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { toonPaneel } from "./hulp/paneel";
 
 gebruikTestgebruiker(test, { voorvoegsel: "materialen" });
 
@@ -20,7 +21,7 @@ test("materiaallijst telt kabel en draad en bewaart aanpasbare lengtes", async (
   await expect(page.getByTestId("materiaallijst-ontbrekend")).toBeVisible();
   await kabel.locator("summary").click();
   await kabel.getByRole("button").first().click();
-  await page.getByTestId("werkruimte-eigenschappen").click();
+  await toonPaneel(page, "eigenschappen");
   await page.getByTestId("veld-lengte_m").fill("12.5");
   await page.getByTestId("veld-lengte_m").blur();
   await expect(kabel.getByTestId("materiaal-hoeveelheid")).toHaveText("12,5 m");

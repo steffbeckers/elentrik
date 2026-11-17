@@ -59,9 +59,7 @@
     "archiefTonen": "Show archived notes",
     "geenNotities": "No notes in this selection yet.",
     "waaromToegang": "Why does this company have access?",
-    "waaromAlleenLezen": "Why is this company read-only?",
-    "schrijven": "Editing allowed",
-    "alleenLezen": "Read-only",
+    "waaromGratis": "Why is this company on the free tier?",
     "beoordeeldOp": "Evaluated at {datum}",
     "rechtenUitleg": "Membership, user role and storage limits still apply separately.",
     "proefEinde": "Local trial end (exclusive)",
@@ -70,7 +68,19 @@
     "vrijstelling": "Free access — no subscription required",
     "ingeschakeld": "Enabled",
     "uitgeschakeld": "Disabled",
-    "proefVerlengen": "Extend trial",
+    "proefVerlengen": "Temporary full access",
+    "onderwijs": "Education status",
+    "onderwijsStoppen": "Stop education status",
+    "onderwijsGeven": "Grant education status",
+    "onderwijsUitleg": "Education status gives free access with an \"Education version\" watermark. Cannot be combined with free access without a watermark.",
+    "onderwijsVerwijderenUitleg": "The existing trial and subscription rules apply again. This does not start a new trial or payment.",
+    "gekochtOp": "Purchased on",
+    "abonnementStempelOp": "Subscription stamp on",
+    "projectaankopen": "Project purchases",
+    "geenProjectaankopen": "No project purchases yet.",
+    "aankoopAangemaakt": "Created {datum}",
+    "aankoopBetaald": "paid {datum}",
+    "aankoopStatus": { "open": "Open", "betaald": "Paid", "vervallen": "Expired", "mislukt": "Failed" },
     "vrijstellingStoppen": "Remove free access",
     "vrijstellingGeven": "Grant free access",
     "nieuweEinddatum": "New last trial day",
@@ -101,6 +111,19 @@
     "bedrijfstoegang": "Company access",
     "geenAandacht": "No companies in this group.",
     "opvolging": "Follow-ups due today or earlier",
+    "installaties": "Installations",
+    "geenInstances": "No self-hosted installation has reported in yet.",
+    "stil": "Quiet",
+    "instanceHost": "Host",
+    "instanceVersie": "Version",
+    "instanceStripe": "Stripe",
+    "instanceOrganisaties": "Organizations",
+    "instanceGebruikers": "Users",
+    "instanceEerste": "First report",
+    "instanceLaatste": "Last report",
+    "instanceIp": "IP",
+    "instanceAan": "On",
+    "instanceUit": "Off",
     "geenOpvolging": "No pending follow-ups.",
     "recenteProjecten": "Recently updated projects",
     "recenteCorrecties": "Recent administrative actions",
@@ -135,7 +158,8 @@
       "abonnement": "Active subscription",
       "betalingsgratie": "Payment grace",
       "proef": "Local trial",
-      "alleenLezen": "Read-only"
+      "onderwijs": "Education",
+      "gratis": "Free tier"
     },
     "redenen": {
       "uit": "Payment restrictions are disabled globally.",
@@ -143,13 +167,15 @@
       "actief": "The recorded Stripe subscription grants access.",
       "betaling-mislukt": "A failed payment determines access; any payment grace deadline is shown below.",
       "proef": "The local trial grants access.",
-      "proef-voorbij": "The local trial has ended.",
+      "onderwijs": "Education status is enabled.",
+      "gratis": "No subscription and no running trial: the company is on the free tier.",
       "beeindigd": "The subscription has ended and no local trial is valid."
     },
     "acties": {
       "gebruiker_naam": "User name corrected",
       "organisatie_gegevens": "Company details corrected",
       "organisatie_vrijstelling": "Free access changed",
+      "organisatie_onderwijs": "Education status changed",
       "organisatie_proefperiode": "Trial extended",
       "notitie_aangemaakt": "Support note added",
       "notitie_gewijzigd": "Support note updated",
@@ -161,7 +187,7 @@
     "aandacht": {
       "proefEindigt": "Trial ends within 7 days",
       "betaling": "Payment needs attention",
-      "alleenLezen": "Read-only companies"
+      "gratis": "Companies on the free tier"
     },
     "auditFilters": {
       "doelId": "Record ID",
@@ -202,6 +228,7 @@
   "editor": {
     "canvas": {
       "passendMaken": "Fit to window",
+      "actiebalk": "Actions for the selection",
       "voegToe": "Add {onderdeel}",
       "verwijderenMislukt": {
         "ROOT_NIET_WIJZIGBAAR": "The supply connection and the meter cannot be deleted.",
@@ -314,14 +341,35 @@
       "melding": "This project was deleted.",
       "uitleg": "Your changes are still kept locally. Save them as a new project, or go back to the projects.",
       "uitlegNietLokaal": "Your changes could not be kept locally either and only exist in memory. Save them as a new project now and do not close this window.",
+      "uitlegLimiet": "As a new project, this work exceeds the free limit. Your changes are still kept locally: download them as a file, or go back to the projects.",
       "nieuwProject": "Save as new project",
       "terug": "Back to the projects"
     },
+    "limiet": {
+      "titel": "This project exceeds the free limit",
+      "uitleg": "A free project can contain at most {kringen} and {situatieschemas}. What you just tried to add has not been added.",
+      "prijs": "Unlock this project once for {prijs} excl. VAT ({incl} incl. 21% VAT). An unlocked project has no limits.",
+      "lid": "Ask the owner of your company to unlock this project.",
+      "vrijgeven": "Unlock this project",
+      "abonnement": "Take a subscription",
+      "sluiten": "Close",
+      "vrijgegeven": "This project has been unlocked",
+      "verwerking": "The payment is still being processed. The project will be unlocked as soon as it arrives.",
+      "teller": {
+        "label": "Free limit",
+        "kringen": "{aantal} of {max} circuit | {aantal} of {max} circuits",
+        "situatieschemas": "{aantal} of {max} layout plan | {aantal} of {max} layout plans"
+      }
+    },
+    "alleenLezenBalk": {
+      "titel": "Read-only",
+      "tekst": "This project was created during your subscription. You can view and export it. To edit it, unlock it or take a subscription again."
+    },
     "alleenLezen": {
-      "bewaardLokaal": "Your company has no active subscription. Your latest changes have not been saved, but they are kept locally.",
-      "nietBewaard": "Your company has no active subscription. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory.",
+      "bewaardLokaal": "This project is read-only. Your latest changes have not been saved, but they are kept locally.",
+      "nietBewaard": "This project is read-only. Your latest changes could not be saved, nor kept locally. Do not close this window: they now exist only in memory.",
       "dialoogTitel": "Read-only",
-      "dialoogBeschrijving": "Your company has no active subscription. Changes in this dialog can no longer be saved."
+      "dialoogBeschrijving": "This project is read-only. Changes in this dialog cannot be saved."
     },
     "onderdelenPaneel": {
       "titel": "Components",
@@ -333,7 +381,12 @@
         "eindpunten": "End points"
       },
       "meer": "More…",
-      "minder": "Less"
+      "minder": "Less",
+      "sjabloongroepen": {
+        "kringen": "Circuits",
+        "toestellen": "Appliances",
+        "installatie": "Installation"
+      }
     },
     "symbolen": {
       "openen": "All symbols",
@@ -387,7 +440,17 @@
       "kring-verlichting": "Lighting circuit",
       "kookplaat": "Hob",
       "wasmachine": "Washing machine",
-      "badkamer": "Bathroom"
+      "badkamer": "Bathroom",
+      "keuken": "Kitchen",
+      "buiten": "Outdoor",
+      "oven": "Oven",
+      "vaatwasser": "Dishwasher",
+      "droogkast": "Tumble dryer",
+      "boiler": "Water heater",
+      "warmtepomp": "Heat pump",
+      "laadpaal": "EV charger",
+      "zonnepanelen": "Solar panels",
+      "aarding": "Earthing"
     },
     "eigenschappen": {
       "groepen": {
@@ -410,6 +473,7 @@
     },
     "bevindingen": {
       "titel": "Findings",
+      "nogMeer": "and 1 more finding | and {n} more findings",
       "leeg": "No findings within the checks performed.",
       "ernst": {
         "fout": "Errors",
@@ -748,7 +812,7 @@
         "onbewaard": "The project could not be saved. You can export as soon as it is saved.",
         "conflict": "The project has been changed elsewhere in the meantime. Resolve the conflict first.",
         "fout": "The server refused to save the project. Try saving again, then export.",
-        "alleen-lezen": "Your company has no active subscription, so your latest changes are only kept locally and will not be in the PDF. Reopen the project to export the last saved version."
+        "alleen-lezen": "This project is read-only, so your latest changes are only kept locally and will not be in the PDF. Reopen the project to export the last saved version."
       },
       "onderdelen": {
         "titel": "Contents",
@@ -803,7 +867,18 @@
       "weergaven": "Dossier sections",
       "planHint": "Select a point on the plan or open Components to place a point.",
       "sluiten": "Close panel",
-      "toetsenbordhulp": "Keyboard help"
+      "toetsenbordhulp": "Keyboard help",
+      "tePlaatsen": "1 component still to place | {aantal} components still to place"
+    },
+    "bord": {
+      "titel": "Board overview",
+      "indicatief": "Indicative, to help you choose the enclosure. The suggestion allows about 20% spare capacity.",
+      "kringen": "1 circuit | {aantal} circuits",
+      "modules": "1 module | {aantal} modules",
+      "kast": "suggestion: enclosure with 1 row of {perRij} modules | suggestion: enclosure with {aantal} rows of {perRij} modules",
+      "algemeen": "main",
+      "contactdozen": "1 socket | {aantal} sockets",
+      "teVeel": "More than {max} circuits behind this RCD"
     },
     "materiaallijst": {
       "titel": "Materials list",
@@ -852,7 +927,8 @@
       "doelen": {
         "nieuw-op-bord": "New circuit with RCD",
         "bestaande-differentieel": "Use existing RCD",
-        "bestaande-kring": "Branch on existing circuit"
+        "bestaande-kring": "Branch on existing circuit",
+        "op-bord": "Directly on the board"
       },
       "schakelingen": {
         "enkel": "Single-pole switch + light point",
@@ -863,7 +939,21 @@
       "ruimte": {
         "label": "Room type",
         "hulp": "Applies to the new points of this template."
+      },
+      "bezetting": "{aantal} of {max} circuits",
+      "differentieelVol": "This RCD already feeds {aantal} circuits. More than {max} circuits behind an RCD of at most 30 mA gives a finding. Choose a new RCD.",
+      "sjabloonhulp": {
+        "laadpaal": "Preset: a dedicated 30 mA RCD, class B. Class A is enough when the charger itself detects direct current from 6 mA."
       }
+    },
+    "startwoning": {
+      "titel": "Quick start",
+      "knop": "Insert typical house",
+      "uitleg": "A typical house in one go: earthing, two 30 mA RCDs, lighting, sockets, kitchen, bathroom and the large appliances. Then adjust whatever differs.",
+      "ingevoegd": "Typical house inserted",
+      "ingevoegdUitleg": "These are preset values. Check the protection and cable for this installation.",
+      "ongedaanMaken": "Undo",
+      "nietMeerOngedaan": "You have carried on working in the meantime. Undo the steps one by one."
     },
     "referenties": {
       "titel": "Circuit references",
@@ -977,6 +1067,11 @@
       "export": "Review the findings and export the dossier as a PDF."
     },
     "zojuist": "just now",
+    "label": {
+      "gratis": "Free",
+      "vrijgegeven": "Unlocked",
+      "alleen-lezen": "Read-only"
+    },
     "status": {
       "nietGeexporteerd": "Not exported",
       "geexporteerd": "Exported"
@@ -1026,6 +1121,7 @@
     }
   },
   "velden": {
+    "suggesties": {"knop": "Suggestions: {veld}", "kop": "Common values"},
     "aantalPanelen": {"label": "Panel count"},
     "schijnbaarVermogen_kVA": {"label": "Apparent power"},
     "dcDetectie_mA": {"label": "DC residual current detection"},
@@ -1351,7 +1447,8 @@
       "betalingMislukt": "Your last payment failed.",
       "betalingMisluktTot": "Your last payment failed. Sort out your payment before {datum}.",
       "beeindigd": "Your subscription has ended.",
-      "proefVoorbij": "This company has no ongoing free trial. Choose a subscription to edit projects."
+      "gratis": "You are using the free version of Elentrik.",
+      "onderwijs": "Education account: no limits, exports with a watermark."
     },
     "datumOnbekend": "a later date",
     "formules": {
@@ -1360,7 +1457,8 @@
     },
     "per": {
       "maand": "per month",
-      "jaar": "per year"
+      "jaar": "per year",
+      "project": "per project"
     },
     "exclBtw": "excl. VAT ({incl} incl. 21% VAT)",
     "korting": "−{percentage}%",
@@ -1369,14 +1467,34 @@
     "betalingRegelen": "Sort out payment",
     "lid": "Ask an owner of your company to arrange the subscription.",
     "prijzenOntbreken": "Prices could not be loaded",
+    "onderwijs": "Education account: no limits, exports with a watermark",
+    "gratis": {
+      "titel": "Free",
+      "kringen": "{n} circuit | {n} circuits",
+      "situatieschemas": "{n} layout plan | {n} layout plans",
+      "tekst": "Each free project can contain at most {kringen} and {situatieschemas}. Exports of a free project carry the watermark “Free version”."
+    },
+    "projectBlok": {
+      "titel": "Per project",
+      "tekst": "If a project needs more than the free limits, you unlock it once. You do that from the editor, inside the project itself. An unlocked project has no limits."
+    },
+    "kaartenBlok": {
+      "titel": "Subscription",
+      "tekst": "With a subscription, all limits and watermarks disappear."
+    },
+    "weigering": {
+      "limiet": "This project exceeds the free limit.",
+      "alleenLezen": "This project is read-only. Unlock it or take a subscription to edit it."
+    },
     "banner": {
       "proef": "{n} free day left. | {n} free days left.",
       "kies": "Choose a subscription",
       "betaling": "Your last payment failed. Sort out your payment before {datum}.",
-      "betalingZonderDatum": "Your last payment failed. Sort out your payment soon, or your company will no longer be able to edit projects.",
-      "alleenLezen": "Your company has no active subscription. You can view and export projects, but not edit them."
+      "betalingZonderDatum": "Your last payment failed. Sort out your payment soon, or your company will fall back to the free version and projects from your subscription will become read-only.",
+      "betalingNaGratie": "Your last payment failed. Your company now uses the free version and projects from your subscription are read-only. Sort out your payment to edit everything again."
     }
   },
+  "appVersie": "Version {versie}",
   "menu": {
     "donkereModus": "Dark mode",
     "lichteModus": "Light mode",
@@ -1416,6 +1534,7 @@
   "fouten": {
     "ADMIN_CORRECTIE_ONGELDIG": "This support correction has expired, ended or belongs to another sign-in. Your local work is retained. Start a new correction to continue saving.",
     "ADMIN_STRIPE_BEVESTIGING": "Confirm that existing Stripe subscriptions and pending payments continue unchanged. Manage them separately in Stripe.",
+    "ADMIN_ONDERWIJS_VRIJSTELLING": "A company cannot have both free access and education status. Stop the other one first.",
     "ADMIN_PROEF_VERLENGEN": "Choose an end date later than the current trial and today.",
     "BEDRIJF_VRIJGESTELD": "This company has free access and cannot start a new subscription.",
     "onbekend": "Something went wrong. Please try again.",
@@ -1427,6 +1546,10 @@
     "ADMIN_GEWIJZIGD": "These details have changed. Reload them and check your changes.",
     "ADMIN_MUTATIE_CONFLICT": "This save belongs to different details. Reload the details before saving again.",
     "VERZOEK_VAN_ANDERE_SITE": "This request did not come from Elentrik and was refused. Reload the page.",
+    "INSTANCE_ONBEKEND": "Not available.",
+    "INSTANCE_TE_VEEL": "Too many reports. Try again later.",
+    "INSTANCE_TE_GROOT": "The report is too large.",
+    "INSTANCE_ONGELDIG": "The report is not valid.",
     "NIET_GEVONDEN": "This does not exist (any more), or you do not have access to it.",
     "ONGELDIGE_INVOER": "Some details are not valid. Check them and try again.",
     "ONGELDIGE_NAAM": "The name must be 1 to 80 characters.",
@@ -1448,6 +1571,11 @@
     "ABONNEMENT_BESTAAT": "This company already has a subscription.",
     "GEEN_KLANT": "This company has no payment details yet. Choose a subscription first.",
     "ABONNEMENTEN_UIT": "Payment has not been set up yet.",
+    "PROJECT_ALLEEN_LEZEN": "This project is read-only. You can view and export it, but no longer edit it.",
+    "PROJECT_LIMIET": "This change exceeds the limit of the free version and was not saved.",
+    "PROJECT_AL_GEKOCHT": "This project has already been unlocked.",
+    "VRIJGEVEN_NIET_NODIG": "This project does not need to be unlocked.",
+    "VRIJGAVE_LOOPT": "The payment for this project is still being processed. Please try again later.",
     "LAATSTE_EIGENAAR": "At least one owner must remain.",
     "AL_LID": "Someone with this address is already a member.",
     "AL_UITGENODIGD": "Someone with this address has already been invited.",

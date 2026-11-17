@@ -1,7 +1,10 @@
 import { nieuwProjectDocument, type InstallatieDocument, type NodeId } from "@elentrik/model";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { TEKSTEN } from "@elentrik/render";
 import { sneltoets, type Toets } from "../app/composables/sneltoetsen";
+import { bewaarElders, geefProjectVrij, limietKnoppen, toonAlleenLezenBalk, verwerkVrijgave, watermerkVoor } from "../app/editor/limiet";
+import type { Projecttoegang } from "../shared/abonnement";
 import { uploadFoutMelding } from "../app/situatie/plan-opladen";
 import { situatieSneltoets, type SituatieToets } from "../app/situatie/sneltoetsen";
 import { useEditorStore } from "../app/stores/editor";
@@ -259,9 +262,9 @@ describe("een plan uploaden zonder abonnement", () => {
   /** Een `$fetch`-fout zoals de editor hem krijgt: status bovenaan, de foutcode in `data.data.code`. */
   const fetchFout = (status: number, code: string) => Object.assign(new Error(`HTTP ${status}`), { status, data: { data: { code } } });
 
-  test("een 402 ABONNEMENT_VEREIST gaat langs de alleen-lezenafhandeling: niets meer te melden", async () => {
+  test.each(["PROJECT_ALLEEN_LEZEN", "PROJECT_LIMIET"])("een 402 %s gaat langs de alleen-lezenafhandeling: niets meer te melden", async (code) => {
     const alleenLezen = vi.fn(async () => true);
-    const fout = fetchFout(402, "ABONNEMENT_VEREIST");
+    const fout = fetchFout(402, code);
     expect(await uploadFoutMelding(fout, alleenLezen)).toBeNull();
     expect(alleenLezen).toHaveBeenCalledWith(fout);
   });
@@ -269,8 +272,10 @@ describe("een plan uploaden zonder abonnement", () => {
   test("een 402 met een andere code, of een afhandeling die niets doet, blijft de algemene fout", async () => {
     const alleenLezen = vi.fn(async () => false);
     expect(await uploadFoutMelding(fetchFout(402, "ANDERE"), alleenLezen)).toBe("mislukt");
-    expect(alleenLezen).not.toHaveBeenCalled();
+    // De oude code van de organisatie bestaat niet meer.
     expect(await uploadFoutMelding(fetchFout(402, "ABONNEMENT_VEREIST"), alleenLezen)).toBe("mislukt");
+    expect(alleenLezen).not.toHaveBeenCalled();
+    expect(await uploadFoutMelding(fetchFout(402, "PROJECT_ALLEEN_LEZEN"), alleenLezen)).toBe("mislukt");
   });
 
   test("andere fouten behouden hun eigen melding en raken de afhandeling niet", async () => {
@@ -304,9 +309,203 @@ describe("een plan uploaden in een verwijderd project", () => {
   test("andere fouten roepen verwijderd niet aan", async () => {
     const verwijderd = vi.fn();
     expect(await uploadFoutMelding(fetchFout(422, "X"), async () => false, verwijderd)).toBe("tePixels");
-    expect(await uploadFoutMelding(fetchFout(402, "ABONNEMENT_VEREIST"), async () => false, verwijderd)).toBe("mislukt");
+    expect(await uploadFoutMelding(fetchFout(402, "PROJECT_ALLEEN_LEZEN"), async () => false, verwijderd)).toBe("mislukt");
     expect(await uploadFoutMelding(new Error("netwerk"), async () => false, verwijderd)).toBe("mislukt");
     expect(verwijderd).not.toHaveBeenCalled();
   });
 });
 
+
+describe("het limietvenster en de alleen-lezenbalk", () => {
+  const PRIJS = { bedrag: 1900, munt: "eur", interval: "eenmalig" as const };
+  const toegang = (deel: Partial<Projecttoegang>): Projecttoegang => ({
+    bewerken: true,
+    limiet: false,
+    watermerk: null,
+    gekocht: false,
+    gestempeld: false,
+    ...deel,
+  });
+
+  test("een eigenaar met een projectprijs: vrijgeven en een abonnement nemen", () => {
+    expect(limietKnoppen("eigenaar", PRIJS)).toEqual({ lid: false, vrijgeven: true, abonnement: true });
+  });
+
+  test("zonder projectprijs: alleen de abonnementsknop", () => {
+    expect(limietKnoppen("eigenaar", null)).toEqual({ lid: false, vrijgeven: false, abonnement: true });
+  });
+
+  test("een lid: de uitleg voor een lid, zonder knoppen", () => {
+    expect(limietKnoppen("lid", PRIJS)).toEqual({ lid: true, vrijgeven: false, abonnement: false });
+    expect(limietKnoppen(null, PRIJS)).toEqual({ lid: true, vrijgeven: false, abonnement: false });
+  });
+
+  test("de balk alleen voor een gestempeld project dat niet bewerkbaar is", () => {
+    expect(toonAlleenLezenBalk(toegang({ bewerken: false, gestempeld: true }))).toBe(true);
+    expect(toonAlleenLezenBalk(toegang({ bewerken: true, gestempeld: true }))).toBe(false);
+    expect(toonAlleenLezenBalk(toegang({ bewerken: false, gestempeld: false }))).toBe(false);
+    expect(toonAlleenLezenBalk(null)).toBe(false);
+  });
+
+  test("het watermerk van het afdrukvoorbeeld volgt de projecttoegang, in de dossiertaal", () => {
+    expect(watermerkVoor(toegang({ watermerk: "gratis" }), "nl")).toEqual({ titel: "Gratis versie", ondertitel: "Geen officieel dossier" });
+    expect(watermerkVoor(toegang({ watermerk: "onderwijs" }), "nl")).toEqual({ titel: "Onderwijsversie", ondertitel: "Geen officieel dossier" });
+    expect(watermerkVoor(toegang({ watermerk: "gratis" }), "fr")).toEqual(TEKSTEN.fr.watermerkGratis);
+    expect(watermerkVoor(toegang({ watermerk: null }), "nl")).toBeUndefined();
+    expect(watermerkVoor(null, "nl")).toBeUndefined();
+  });
+});
+
+describe("een project vrijgeven", () => {
+  const fout409 = (code: string) => Object.assign(new Error("409"), { status: 409, data: { data: { code } } });
+
+  test("bewaart eerst het werk, vraagt dan Checkout en stuurt door", async () => {
+    const volgorde: string[] = [];
+    const uitkomst = await geefProjectVrij({
+      nuOpslaan: async () => void volgorde.push("bewaren"),
+      vrijgeven: async () => (volgorde.push("vrijgeven"), { url: "https://checkout.example/s1" }),
+      conceptBewaard: async () => (volgorde.push("concept?"), true),
+      bevestigVertrek: () => void volgorde.push("vertrek bevestigd"),
+      navigeer: async (url) => void volgorde.push(`naar ${url}`),
+      herlaad: async () => void volgorde.push("herladen"),
+    });
+    expect(uitkomst).toBe("doorgestuurd");
+    expect(volgorde).toEqual([
+      "bewaren",
+      "vrijgeven",
+      "concept?",
+      "vertrek bevestigd",
+      "naar https://checkout.example/s1",
+    ]);
+  });
+
+  test("staat het werk niet in het concept, dan blijft de vraag bij het verlaten (geen bevestiging)", async () => {
+    const bevestigVertrek = vi.fn();
+    const navigeer = vi.fn();
+    await geefProjectVrij({
+      nuOpslaan: async () => {},
+      vrijgeven: async () => ({ url: "https://checkout.example/s1" }),
+      conceptBewaard: async () => false,
+      bevestigVertrek,
+      navigeer,
+      herlaad: vi.fn(),
+    });
+    expect(bevestigVertrek).not.toHaveBeenCalled();
+    expect(navigeer).toHaveBeenCalledWith("https://checkout.example/s1");
+  });
+
+  test("lukt de vrijgave niet, dan wordt het vertrek niet bevestigd", async () => {
+    const bevestigVertrek = vi.fn();
+    await expect(
+      geefProjectVrij({
+        nuOpslaan: async () => {},
+        vrijgeven: async () => Promise.reject(fout409("VRIJGAVE_LOOPT")),
+        conceptBewaard: async () => true,
+        bevestigVertrek,
+        navigeer: vi.fn(),
+        herlaad: vi.fn(),
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(bevestigVertrek).not.toHaveBeenCalled();
+  });
+
+  test.each(["PROJECT_AL_GEKOCHT", "VRIJGEVEN_NIET_NODIG"])("409 %s: de toegang opnieuw laden, niet doorsturen", async (code) => {
+    const navigeer = vi.fn();
+    const herlaad = vi.fn(async () => {});
+    const uitkomst = await geefProjectVrij({
+      nuOpslaan: async () => {},
+      vrijgeven: async () => Promise.reject(fout409(code)),
+      conceptBewaard: async () => true,
+      bevestigVertrek: vi.fn(),
+      navigeer,
+      herlaad,
+    });
+    expect(uitkomst).toBe("al-vrij");
+    expect(herlaad).toHaveBeenCalledTimes(1);
+    expect(navigeer).not.toHaveBeenCalled();
+  });
+
+  test("409 VRIJGAVE_LOOPT gaat naar de aanroeper (vertaalde fout), zonder doorsturen", async () => {
+    const navigeer = vi.fn();
+    const fout = fout409("VRIJGAVE_LOOPT");
+    await expect(
+      geefProjectVrij({
+        nuOpslaan: async () => {},
+        vrijgeven: async () => Promise.reject(fout),
+        conceptBewaard: async () => true,
+        bevestigVertrek: vi.fn(),
+        navigeer,
+        herlaad: vi.fn(),
+      }),
+    ).rejects.toBe(fout);
+    expect(navigeer).not.toHaveBeenCalled();
+  });
+});
+
+describe("het lokale document elders bewaren (kopie bij een conflict, nieuw project na verwijderen)", () => {
+  const fout402 = (code: string) => Object.assign(new Error("402"), { status: 402, data: { data: { code } } });
+
+  test("gelukt", async () => {
+    const meldFout = vi.fn();
+    expect(await bewaarElders({ actie: async () => {}, behandelWeigering: vi.fn(), meldFout })).toBe("gelukt");
+    expect(meldFout).not.toHaveBeenCalled();
+  });
+
+  test("402 PROJECT_LIMIET: 'limiet', zodat de aanroeper de download van het lokale document aanbiedt", async () => {
+    const fout = fout402("PROJECT_LIMIET");
+    const behandelWeigering = vi.fn(async () => "limiet" as const);
+    const meldFout = vi.fn();
+    expect(await bewaarElders({ actie: () => Promise.reject(fout), behandelWeigering, meldFout })).toBe("limiet");
+    expect(behandelWeigering).toHaveBeenCalledWith(fout);
+    expect(meldFout).not.toHaveBeenCalled();
+  });
+
+  test("402 PROJECT_ALLEEN_LEZEN: behandeld, geen generieke fout", async () => {
+    const meldFout = vi.fn();
+    const uitkomst = await bewaarElders({
+      actie: () => Promise.reject(fout402("PROJECT_ALLEEN_LEZEN")),
+      behandelWeigering: async () => "alleen-lezen",
+      meldFout,
+    });
+    expect(uitkomst).toBe("geweigerd");
+    expect(meldFout).not.toHaveBeenCalled();
+  });
+
+  test("een andere fout wordt gemeld", async () => {
+    const fout = new Error("stuk");
+    const meldFout = vi.fn();
+    const uitkomst = await bewaarElders({ actie: () => Promise.reject(fout), behandelWeigering: async () => false, meldFout });
+    expect(uitkomst).toBe("fout");
+    expect(meldFout).toHaveBeenCalledWith(fout);
+  });
+});
+
+describe("terug uit Checkout met ?vrijgave=", () => {
+  test("synchroniseert, wist de query en meldt de vrijgave", async () => {
+    const volgorde: string[] = [];
+    const uitkomst = await verwerkVrijgave("cs_1", {
+      synchroniseer: async (sessie) => (volgorde.push(`sync ${sessie}`), { gekocht: true }),
+      verwijderQuery: async () => void volgorde.push("query weg"),
+    });
+    expect(uitkomst).toBe("vrijgegeven");
+    expect(volgorde).toEqual(["sync cs_1", "query weg"]);
+  });
+
+  test("nog niet betaald (bv. SEPA): de betaling wordt verwerkt", async () => {
+    const verwijderQuery = vi.fn();
+    expect(await verwerkVrijgave("cs_1", { synchroniseer: async () => ({ gekocht: false }), verwijderQuery })).toBe("verwerking");
+    expect(verwijderQuery).toHaveBeenCalledTimes(1);
+  });
+
+  test("synchroniseren mislukt: de query gaat toch weg, de webhook loopt het bij", async () => {
+    const verwijderQuery = vi.fn();
+    expect(await verwerkVrijgave("cs_1", { synchroniseer: async () => Promise.reject(new Error("weg")), verwijderQuery })).toBe("verwerking");
+    expect(verwijderQuery).toHaveBeenCalledTimes(1);
+  });
+
+  test("zonder ?vrijgave= gebeurt er niets", async () => {
+    const synchroniseer = vi.fn();
+    expect(await verwerkVrijgave(undefined, { synchroniseer, verwijderQuery: vi.fn() })).toBeNull();
+    expect(synchroniseer).not.toHaveBeenCalled();
+  });
+});

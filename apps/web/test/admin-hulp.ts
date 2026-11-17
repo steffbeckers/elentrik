@@ -16,7 +16,7 @@ export async function adminTestServer() {
   vi.stubEnv("BETTER_AUTH_SECRET", "admin-test-geheim-0123456789abcdefghijklmnopqrstuvwxyz");
   vi.stubEnv("BETTER_AUTH_URL", "http://127.0.0.1:3000");
   zetVerzender({ async verstuur() {} });
-  zetAbonnementen({ config: { ingeschakeld: false }, stripe: null });
+  zetAbonnementen({ config: { ingeschakeld: false, limieten: { kringen: 5, situatieschemas: 1 } }, stripe: null });
   const db = await maakTestDb();
   zetDb(db);
   const auth = maakAuth(db);

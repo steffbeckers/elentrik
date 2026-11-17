@@ -71,6 +71,16 @@ describe("useProjectenApi", () => {
     ]);
   });
 
+  test("vrijgeven en de synchronisatie van de vrijgave gaan naar de routes van het project", async () => {
+    const { api, oproepen } = maakApi({ url: "https://checkout.example/s1" });
+    expect(await api.vrijgeven("abc")).toEqual({ url: "https://checkout.example/s1" });
+    await api.synchroniseerVrijgave("abc", "cs_1");
+    expect(oproepen).toEqual([
+      ["/api/projecten/abc/vrijgeven", { method: "POST" }],
+      ["/api/projecten/abc/vrijgave/synchroniseer", { method: "POST", body: { sessie: "cs_1" } }],
+    ]);
+  });
+
   test("dupliceer stuurt altijd een body mee: de id's van de planbestanden, of een lege lijst", async () => {
     const oproepen: Parameters<ProjectenFetch>[] = [];
     const api = maakProjectenApi(async (...argumenten) => {

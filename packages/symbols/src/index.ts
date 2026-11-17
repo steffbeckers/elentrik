@@ -6,6 +6,6 @@ export type { DataAttributen } from "./svg";
 export { tekenAutomaat, tekenDifferentieel, tekenZekering } from "./beveiliging";
 export { tekenLeiding, tekenVerdeelbord } from "./leiding";
 export { tekenContactdoos, tekenLichtpunt, tekenSchakelaar, tekenToestel } from "./punten";
-export { tekenSymbool } from "./teken";
+export { tekenSymbool, type SymboolOpties } from "./teken";
 export { tekenAftakkingSymbool } from "./punten";
 export { tekenAansluiting, tekenTeller } from "./voeding";

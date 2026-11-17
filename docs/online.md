@@ -37,7 +37,13 @@ bezoeker -> Cloudflare -> tunnel (cloudflared) -> elentrik-proxy:8080 (Caddy, op
 - De gegevens staan in mappen op de NAS onder `ELENTRIK_DATA` (standaard `/volume1/docker/elentrik`):
   `postgres/`, `bestanden/`, `backups/` en `staging/bestanden/`.
 - Het image komt van GitHub: `ghcr.io/steffbeckers/elentrik-web`, met de tags `latest` (push naar `main`), `staging` (push naar
-  `staging`) en `sha-<korte commit>`. GitHub Actions bouwt het bij zo'n push; de tests en de typecheck draaien al op `develop`.
+  `staging`), `sha-<korte commit>` en voor productie ook de versie (`1.1.0`). GitHub Actions bouwt het bij zo'n push; de
+  tests en de typecheck draaien al op `develop`.
+- De versie (semver) volgt automatisch uit de commits (Conventional Commits) sinds de laatste release-tag `vX.Y.Z`:
+  `type!:` of `BREAKING CHANGE:` verhoogt de major, `feat:` de minor, al het andere de patch. Na een geslaagde
+  build op `main` zet de workflow de tag `vX.Y.Z`; er is geen versiecommit en geen GitHub Release. Staging toont
+  de komende versie met `-staging`, lokaal staat er `-dev` achter. De app toont de versie en de korte commit
+  onderaan elke pagina en in `/api/gezondheid`.
 
 ### Voor je begint
 
@@ -435,7 +441,7 @@ Test de proxy van binnenuit, met de hostnaam die Cloudflare meestuurt:
 sudo docker exec elentrik-proxy wget -qO- --header "Host: elentrik.app" http://127.0.0.1:8080/api/gezondheid
 ```
 
-Verwacht: `{"ok":true}`. Een andere hostnaam geeft een 404 van de proxy.
+Verwacht: `{"ok":true,"versie":"<versie>","revisie":"<korte sha>"}`. Een andere hostnaam geeft een 404 van de proxy.
 
 Test de gezondheidsroute van binnenuit (er is nog geen tunnel nodig):
 
@@ -443,7 +449,7 @@ Test de gezondheidsroute van binnenuit (er is nog geen tunnel nodig):
 sudo docker exec elentrik-web node -e "fetch('http://127.0.0.1:3000/api/gezondheid').then(r=>r.text().then(t=>console.log(r.status,t)))"
 ```
 
-Verwacht: `200 {"ok":true}`.
+Verwacht: `200 {"ok":true,"versie":"<versie>","revisie":"<korte sha>"}`.
 
 Voer nu **sectie 1, stap 4** uit (`docker network connect elentrik <cloudflared>`), als je dat nog niet deed, en
 controleer van buiten:
@@ -452,7 +458,7 @@ controleer van buiten:
 curl -s https://elentrik.app/api/gezondheid
 ```
 
-Verwacht: `{"ok":true}`. Een 502 van Cloudflare betekent meestal dat `cloudflared` niet aan het netwerk
+Verwacht: `{"ok":true,"versie":"<versie>","revisie":"<korte sha>"}`. Een 502 van Cloudflare betekent meestal dat `cloudflared` niet aan het netwerk
 `elentrik` hangt, of dat de public hostname een verkeerde URL heeft (die hoort `elentrik-proxy:8080` te zijn).
 
 Het is geen goed teken als `web` blijft herstarten: de app weigert in productie te starten bij een
@@ -493,7 +499,8 @@ Stripe-dashboard (eenmalig, met de hand)". Doe die in testmodus, en later nog ee
 ### In testmodus
 
 1. In het Stripe-dashboard, testmodus: twee terugkerende prijzen (maand en jaar, in EUR en **exclusief** btw).
-   Hun id's (`price_...`) komen in `STRIPE_PRIJS_MAAND` en `STRIPE_PRIJS_JAAR`.
+   Hun id's (`price_...`) komen in `STRIPE_PRIJS_MAAND` en `STRIPE_PRIJS_JAAR`. Optioneel een eenmalige prijs
+   (EUR, **exclusief** btw) om één project vrij te geven: haar id komt in `STRIPE_PRIJS_PROJECT`.
 2. **Webhook-eindpunt** aanmaken (Ontwikkelaars, Webhooks, **Eindpunt toevoegen**; de naam kan per versie licht
    verschillen) op:
 
@@ -682,7 +689,8 @@ curl -s https://elentrik.app/api/gezondheid
 Zo blijft het netwerk `elentrik` bestaan en hangt `cloudflared` er nog aan. Gebruik **geen** `docker compose
 down`: dat probeert het netwerk te verwijderen en faalt zolang `cloudflared` eraan hangt ("active endpoints").
 
-Een vaste versie kiezen? Zet in `.env` `ELENTRIK_IMAGE=ghcr.io/steffbeckers/elentrik-web:sha-<korte-commit>` en
+Een vaste versie kiezen? Zet in `.env` `ELENTRIK_IMAGE=ghcr.io/steffbeckers/elentrik-web:<versie>` (bv. `1.1.0`)
+of `...:sha-<korte-commit>` en
 draai `sudo docker compose pull` en `up -d`. Zonder die regel is het `latest`.
 
 ### Via Container Manager
@@ -948,6 +956,9 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 | `STRIPE_WEBHOOK_GEHEIM` | bij Stripe | Het ondertekeningsgeheim van het eindpunt `https://elentrik.app/api/stripe/webhook` (`whsec_...`). |
 | `STRIPE_PRIJS_MAAND` | bij Stripe | Het id van de maandprijs (`price_...`). |
 | `STRIPE_PRIJS_JAAR` | bij Stripe | Het id van de jaarprijs (`price_...`). |
+| `STRIPE_PRIJS_PROJECT` | nee | Het id van de eenmalige prijs om één project vrij te geven (`price_...`, zonder herhaling, exclusief btw). Leeg: geen knop om een project vrij te geven, alleen het abonnement. |
+| `GRATIS_MAX_KRINGEN` | nee | Het maximum aantal kringen per gratis project, een positief geheel getal. Leeg: 5. Een ongeldige waarde laat de start mislukken. |
+| `GRATIS_MAX_SITUATIESCHEMAS` | nee | Het maximum aantal situatieschema's per gratis project, een positief geheel getal. Leeg: 1. Een ongeldige waarde laat de start mislukken. |
 | `BOEKHOUDING_INBOX` | nee | Het adres van de boekhouding, voor een kopie van elke betaalde factuur. Leeg: geen kopie. |
 
 ### Noodstop
@@ -955,6 +966,7 @@ De regels `STRIPE_*`, `SMTP_*` en `BOEKHOUDING_INBOX` mag je leeg of weg laten a
 | Variabele | Verplicht | Waar je de waarde vindt |
 | --- | --- | --- |
 | `ELENTRIK_GEPLANDE_TAKEN` | nee | Weglaten. Met `uit` doet de uurlijkse inhaaltaak niets. |
+| `ELENTRIK_INSTANCE_PING` | nee | Weglaten. Met `uit` meldt deze kopie zich niet dagelijks anoniem bij elentrik.app. |
 
 ### Opslag
 
@@ -978,6 +990,7 @@ deze variabelen zet je in `.env`; de rest staat vast in `compose.yaml`.
 | `STAGING_STRIPE_WEBHOOK_GEHEIM` | bij Stripe | Het ondertekeningsgeheim van het testeindpunt voor staging (`whsec_...`). |
 | `STAGING_STRIPE_PRIJS_MAAND` | bij Stripe | Het id van de maandprijs in de testmodus (`price_...`). |
 | `STAGING_STRIPE_PRIJS_JAAR` | bij Stripe | Het id van de jaarprijs in de testmodus (`price_...`). |
+| `STAGING_STRIPE_PRIJS_PROJECT` | nee | Het id van de eenmalige projectprijs in de testmodus (`price_...`). Leeg: geen knop om een project vrij te geven. |
 
 ### Door `compose.yaml` zelf gezet (niet in `.env`)
 
@@ -1071,6 +1084,7 @@ STAGING_STRIPE_GEHEIME_SLEUTEL=
 STAGING_STRIPE_WEBHOOK_GEHEIM=
 STAGING_STRIPE_PRIJS_MAAND=
 STAGING_STRIPE_PRIJS_JAAR=
+STAGING_STRIPE_PRIJS_PROJECT=
 ```
 
 ### Stap 4. Stripe (alleen testmodus)
@@ -1096,7 +1110,7 @@ sudo docker compose logs --tail 50 web-staging
 curl -s https://staging.elentrik.app/api/gezondheid
 ```
 
-Verwacht `{"ok":true}`; de pagina toont de balk "Staging: testomgeving, geen echte gegevens". Registreer een
+Verwacht `{"ok":true,"versie":"<versie>","revisie":"<korte sha>"}`; de pagina toont de balk "Staging: testomgeving, geen echte gegevens". Registreer een
 testaccount: de bevestigingsmail staat in `https://mailpit-staging.elentrik.app`. Mailpit bewaart hoogstens 500
 mails, in het geheugen: ze verdwijnen bij een herstart. Start `web-staging` niet op, dan noemt de log de **naam** van
 de variabele die niet klopt.

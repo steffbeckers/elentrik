@@ -26,6 +26,7 @@ export const SERVER_FOUTCODES = [
   "ADMIN_GEWIJZIGD",
   "ADMIN_MUTATIE_CONFLICT",
   "ADMIN_STRIPE_BEVESTIGING",
+  "ADMIN_ONDERWIJS_VRIJSTELLING",
   "ADMIN_PROEF_VERLENGEN",
   "ADMIN_CORRECTIE_ONGELDIG",
   "BEDRIJF_VRIJGESTELD",
@@ -63,6 +64,13 @@ export const SERVER_FOUTCODES = [
   "ABONNEMENT_BESTAAT",
   "GEEN_KLANT",
   "ABONNEMENTEN_UIT",
+  // Handhaving per project (402, server/abonnementen/handhaving.ts)
+  "PROJECT_ALLEEN_LEZEN",
+  "PROJECT_LIMIET",
+  // Betalen per project (409, server/abonnementen/projectaankoop.ts)
+  "PROJECT_AL_GEKOCHT",
+  "VRIJGEVEN_NIET_NODIG",
+  "VRIJGAVE_LOOPT",
   // Organisatie en uitnodigingen
   "LAATSTE_EIGENAAR",
   "AL_LID",
@@ -83,6 +91,12 @@ export const SERVER_FOUTCODES = [
   // Een serverfout na het klikken op een geldige inloglink: een redirect naar /inloggen?fout=<CODE>
   // (server/auth/inloglink.ts), geen h3-fout.
   "INLOGLINK_MISLUKT",
+  // De ontvangende kant van de instance-ping (server/api/instances.post.ts): niet op productie (404),
+  // te veel meldingen van een IP (429), een te groot lichaam (413) of een ongeldige melding (400).
+  "INSTANCE_ONBEKEND",
+  "INSTANCE_TE_VEEL",
+  "INSTANCE_TE_GROOT",
+  "INSTANCE_ONGELDIG",
 ] as const;
 
 /**

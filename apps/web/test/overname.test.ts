@@ -389,6 +389,27 @@ describe("neemBestaandeGegevensOver", () => {
     expect(logo!.organisatieId).toBe("org-a");
   });
 
+  test("stempelt de overgenomen projecten (ze bestonden vóór het prijsmodel); een bestaande stempel blijft", async () => {
+    await zaaiBestaandeGegevens();
+    const eerder = new Date("2026-01-01T00:00:00Z");
+    const [gestempeld] = await db
+      .insert(projecten)
+      .values({ naam: "Al gestempeld", document: {}, abonnementStempelOp: eerder })
+      .returning({ id: projecten.id });
+    await db.insert(organization).values({ id: "org-a", name: "A", slug: "a", createdAt: new Date() });
+    const voor = Date.now();
+
+    await neemBestaandeGegevensOver(db, "org-a");
+
+    const rijen = await db.select().from(projecten).where(eq(projecten.organisatieId, "org-a"));
+    expect(rijen).toHaveLength(4);
+    for (const rij of rijen) {
+      expect(rij.abonnementStempelOp, rij.naam).not.toBeNull();
+      if (rij.id === gestempeld!.id) expect(rij.abonnementStempelOp!.getTime()).toBe(eerder.getTime());
+      else expect(rij.abonnementStempelOp!.getTime()).toBeGreaterThanOrEqual(voor - 5_000);
+    }
+  });
+
   test("een tweede organisatie neemt niets meer over", async () => {
     await zaaiBestaandeGegevens();
     await db.insert(organization).values([

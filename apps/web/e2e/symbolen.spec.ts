@@ -1,8 +1,8 @@
 // Het symbolenvenster end-to-end: een combinatie kiezen en tekenen, de sneltoets, zoeken en
-// alleen-lezen (een organisatie zonder lopend abonnement, zoals in abonnement.spec.ts).
+// alleen-lezen (een gestempeld project na het abonnement, zoals in abonnement.spec.ts).
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import type { Mij } from "../shared/mij";
-import { zetProefEinde } from "./hulp/database";
+import { stempelProject, zetProefEinde } from "./hulp/database";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 
@@ -124,11 +124,13 @@ test("alleen-lezen: het venster opent, maar kiezen kan niet", async ({ page, req
   const organisatie = mij.actieveOrganisatieId!;
   const id = await maakProject(request, "Symbolen alleen-lezen");
 
-  // De proef van gisteren: de editor is alleen-lezen.
+  // De proef van gisteren en een gestempeld project (bewaard tijdens het abonnement): de editor is
+  // alleen-lezen, met de balk van het project.
   await zetProefEinde(organisatie, new Date(Date.now() - DAG_MS));
+  await stempelProject(id);
   try {
     await openProject(page, id);
-    await expect(page.getByTestId("abonnement-banner-alleen-lezen")).toBeVisible();
+    await expect(page.getByTestId("alleen-lezen-balk")).toBeVisible();
 
     await page.getByTestId("symbolen-openen").click();
     const venster = page.getByRole("dialog");

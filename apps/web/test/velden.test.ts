@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { LOCALES } from "@elentrik/arei";
 import { NodeSchema, RuimteSchema, type NodeType } from "@elentrik/model";
 import { describe, expect, test } from "vitest";
-import { GEMEENSCHAPPELIJK, VELDEN, bouwVelden, veldGroepen, veldWeergaveWaarde, type Veld } from "../app/editor/velden";
+import { GEMEENSCHAPPELIJK, VELDEN, bouwVelden, veldGroepen, veldWeergaveWaarde, voorstelTekst, type Veld } from "../app/editor/velden";
 import nl from "../i18n/locales/nl.json";
 
 type Boom = { [sleutel: string]: string | Boom };
@@ -185,6 +186,58 @@ describe("VELDEN", () => {
     expect(VELDEN.contactdoos.find((v) => v.sleutel === "aantal")).toMatchObject({ min: 1, stap: 1 });
     expect(VELDEN.leiding.find((v) => v.sleutel === "doorsnede_mm2")).toMatchObject({ min: 0 });
     expect(VELDEN.leiding.find((v) => v.sleutel === "doorsnede_mm2")?.stap).toBeUndefined();
+  });
+});
+
+describe("voorstellen", () => {
+  const veld = (type: NodeType, sleutel: string) => VELDEN[type].find((v) => v.sleutel === sleutel)!;
+  const KRINGSTROMEN = ["6", "10", "16", "20", "25", "32", "40", "50", "63"];
+
+  test("een leiding stelt de gangbare kabeltypes en doorsneden voor", () => {
+    expect(veld("leiding", "kabeltype").suggesties).toEqual(["XVB", "XGB", "EXVB", "VOB", "VVB", "EXAVB", "XFVB"]);
+    expect(veld("leiding", "doorsnede_mm2").suggesties).toEqual(["1.5", "2.5", "4", "6", "10", "16", "25", "35"]);
+    expect(veld("leiding", "brandreactieklasse").suggesties).toEqual(["Eca", "Cca"]);
+  });
+
+  test("de nominale stroom hangt af van het onderdeel; een teller krijgt geen voorstel", () => {
+    expect(veld("automaat", "nominaal_A").suggesties).toEqual(KRINGSTROMEN);
+    expect(veld("zekering", "nominaal_A").suggesties).toEqual(KRINGSTROMEN);
+    expect(veld("differentieel", "nominaal_A").suggesties).toEqual(["25", "40", "63"]);
+    expect(veld("teller", "nominaal_A").suggesties).toBeUndefined();
+  });
+
+  test("een differentieel stelt 30, 100 en 300 mA voor", () => {
+    expect(veld("differentieel", "gevoeligheid_mA").suggesties).toEqual(["30", "100", "300"]);
+  });
+
+  test("een voorstel is alleen een hulp: het veld blijft vrije invoer, en elk voorstel is zelf geldige invoer", () => {
+    const metVoorstel = Object.values(VELDEN).flat().filter((v) => v.suggesties);
+    expect(metVoorstel.length).toBeGreaterThanOrEqual(7);
+    for (const v of metVoorstel) {
+      expect(["tekst", "getal"], v.sleutel).toContain(v.soort);
+      expect(new Set(v.suggesties).size, v.sleutel).toBe(v.suggesties!.length);
+      if (v.soort !== "getal") continue;
+      for (const voorstel of v.suggesties!) {
+        // De notatie van een getalveld: een punt als decimaalteken, zoals het invoerveld ze doorgeeft.
+        expect(voorstel, v.sleutel).toMatch(/^\d+(\.\d+)?$/);
+        expect(Number(voorstel), v.sleutel).toBeGreaterThan(v.min ?? 0);
+      }
+    }
+    // Geen ander veld kreeg er ongevraagd een.
+    expect(GEMEENSCHAPPELIJK.filter((v) => v.suggesties)).toEqual([]);
+    expect(metVoorstel.map((v) => v.sleutel).toSorted()).toEqual(
+      ["brandreactieklasse", "doorsnede_mm2", "gevoeligheid_mA", "kabeltype", "nominaal_A", "nominaal_A", "nominaal_A"],
+    );
+  });
+
+  test("de tekst van een voorstel: een getal in de notatie van de taal met zijn eenheid, een tekst zoals hij is", () => {
+    const nl = (waarde: number) => new Intl.NumberFormat(LOCALES.nl).format(waarde);
+    const en = (waarde: number) => new Intl.NumberFormat(LOCALES.en).format(waarde);
+    expect(voorstelTekst(veld("leiding", "doorsnede_mm2"), "1.5", nl)).toBe("1,5 mm²");
+    expect(voorstelTekst(veld("leiding", "doorsnede_mm2"), "1.5", en)).toBe("1.5 mm²");
+    expect(voorstelTekst(veld("automaat", "nominaal_A"), "16", nl)).toBe("16 A");
+    expect(voorstelTekst(veld("differentieel", "gevoeligheid_mA"), "300", nl)).toBe("300 mA");
+    expect(voorstelTekst(veld("leiding", "kabeltype"), "XVB", nl)).toBe("XVB");
   });
 });
 

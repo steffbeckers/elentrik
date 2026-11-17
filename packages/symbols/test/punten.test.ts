@@ -166,6 +166,16 @@ describe("symbolen voor punten, leiding en onderbord", () => {
       expect(Math.min(lang!.y1, lang!.y2)).toBe(0);
     });
 
+    test.each(contactdozen)("als laatste punt stopt de lijn in de boog: %s", (_naam, node) => {
+      const svg = tekenSymbool(node, { einde: true }).svg;
+      const b = boog(svg);
+      const stam = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
+      expect(stam).toHaveLength(1);
+      expect(Math.max(stam[0]!.y1, stam[0]!.y2)).toBe(10);
+      // De lijn stopt waar ze de bolle kant raakt: niets binnen of voorbij de boog.
+      expect(Math.min(stam[0]!.y1, stam[0]!.y2)).toBe(b.topY);
+    });
+
     test.each(contactdozen)("randaarde raakt de bolle kant: %s", (_naam, node) => {
       const svg = tekenSymbool(node).svg;
       const { randaarde } = node as NodeVan<"contactdoos">;
@@ -277,6 +287,21 @@ describe("symbolen voor punten, leiding en onderbord", () => {
 
     test("standaard en zonder soort zijn gelijk", () => {
       expect(svgVan("standaard")).toBe(svgVan());
+    });
+
+    test.each(["standaard", "wand", "led", "noodverlichting", "tl"] as const)("%s als laatste punt: de leiding stopt in het midden, geen streepje erboven", (soort) => {
+      const svg = tekenSymbool(licht(soort, 4), { einde: true }).svg;
+      const stam = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
+      expect(stam).toHaveLength(1);
+      expect(Math.max(stam[0]!.y1, stam[0]!.y2)).toBe(10);
+      expect(Math.min(stam[0]!.y1, stam[0]!.y2)).toBe(5);
+    });
+
+    test("spot als laatste punt: geen leiding boven de cirkel", () => {
+      const svg = tekenSymbool(licht("spot"), { einde: true }).svg;
+      const stam = lijnen(svg).filter((l) => l.rol === undefined && l.x1 === 7 && l.x2 === 7);
+      expect(stam).toHaveLength(1);
+      expect(Math.max(stam[0]!.y1, stam[0]!.y2)).toBe(10);
     });
 
     test("led: het kruis plus de tekst LED", () => {
@@ -578,6 +603,19 @@ describe("symbolen voor punten, leiding en onderbord", () => {
   });
 
   describe("toestel", () => {
+    test.each(ToestelsoortSchema.options)("%s: als laatste punt geen lijntje boven het symbool, wel de aansluiting onderaan", (soort) => {
+      const doorlopend = tekenSymbool(toestel(soort));
+      const laatste = tekenSymbool(toestel(soort), { einde: true });
+      // Zonder `einde` loopt het symbool door tot `uit`, voor het volgende punt van de kring.
+      expect(raakt(doorlopend, doorlopend.maat.uit)).toBe(true);
+      // Als laatste punt is er geen leiding verder: niets raakt `uit`, de aansluiting `in` blijft.
+      expect(raakt(laatste, laatste.maat.uit)).toBe(false);
+      expect(raakt(laatste, laatste.maat.in)).toBe(true);
+      // De maat blijft dezelfde, zodat de opmaak van het schema niet verschuift.
+      expect(laatste.maat).toEqual(doorlopend.maat);
+      expect(isGoedgevormd(laatste)).toBe(true);
+    });
+
     type Element = { naam: string; a: Map<string, string> };
     const elementen = (svg: string): Element[] =>
       [...svg.matchAll(/<(line|circle|rect|path|text)\b([^>]*)>/g)].map(([, naam = "", tekst = ""]) => ({

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { zetBedrijfBasislijn } from "./hulp/bedrijfsgegevens";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 import { leesPdf } from "./hulp/pdf";
+import { voegToeAanKringEinde } from "./hulp/schema-selectie";
 
 // Eén ingelogde eigenaar met een eigen organisatie, en dus eigen bedrijfsgegevens, voor dit hele
 // bestand.
@@ -53,12 +54,9 @@ test("exporteren bewaart eerst, downloadt de PDF en werkt de lijst bij", async (
 test("onopgeloste fouten: bijlage verplicht en eerst een bevestiging", async ({ page, request }) => {
   const id = await nieuwProject(request, "fouten");
   await openMetKring(page, id);
-  // Een zevende contactdoos die er vijf telt: elf op één kring is een fout.
-  await page.getByTestId("schema-canvas").locator('[data-testid^="plus-kring-einde-"]').click();
-  await page.getByTestId("werkruimte-eigenschappen").click();
-  const aantal = page.getByTestId("veld-aantal");
-  await aantal.fill("5");
-  await aantal.blur();
+  // Drie contactdozen bij de zes van het sjabloon: negen op één kring is een fout. Een meervoudige
+  // contactdoos telt als één, dus het aantal per doos verhogen geeft geen fout meer.
+  await voegToeAanKringEinde(page, 3);
   await expect(page.getByTestId("bevindingenteller")).toHaveAttribute("title", /^1 fout/);
 
   await page.getByTestId("exporteren").click();

@@ -73,6 +73,9 @@ export type Teksten = {
   geenKringen: string;
   /** Het watermerk op de pdf van staging: de titel groot, de ondertitel in de taal van het dossier. */
   watermerk: { titel: string; ondertitel: string };
+  /** Het watermerk van een project zonder officieel dossier: de gratis versie en de onderwijsversie. */
+  watermerkGratis: { titel: string; ondertitel: string };
+  watermerkOnderwijs: { titel: string; ondertitel: string };
 };
 
 export const NL: Teksten = {
@@ -190,4 +193,6 @@ export const NL: Teksten = {
   },
   geenKringen: "Geen kringen",
   watermerk: { titel: "STAGING", ondertitel: "Geen geldig document" },
+  watermerkGratis: { titel: "Gratis versie", ondertitel: "Geen officieel dossier" },
+  watermerkOnderwijs: { titel: "Onderwijsversie", ondertitel: "Geen officieel dossier" },
 };

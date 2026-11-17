@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { ga } from "./hulp/hydratatie";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
+import { toonPaneel } from "./hulp/paneel";
 
 gebruikTestgebruiker(test, { voorvoegsel: "aftakkingen" });
 
@@ -29,17 +30,19 @@ test("bouw vrije aftakkingen, bedien de plus met het toetsenbord en heropen", as
   await expect(page.getByTestId("schema-invoegsoort")).toContainText("Aftakking uitbreiden");
   await expect(page.getByTestId("schema-invoegpunt")).toContainText("A1");
   await page.getByTestId("schema-toevoegen").click();
-  await page.getByTestId("werkruimte-eigenschappen").click();
+  await toonPaneel(page, "eigenschappen");
   await page.getByTestId("veld-aantal").fill("2");
   await page.getByTestId("veld-aantal").blur();
   await expect(labels("A1")).toHaveCount(1);
   await expect(labels("2×")).toHaveCount(1);
 
-  await page.getByTestId("werkruimte-onderdelen").click();
+  await toonPaneel(page, "onderdelen");
 
   // Een tweede aftakking begint aan dezelfde leiding; de wisselvariant geldt voor beide schakelaars.
   await passend();
   await canvas.locator(`[data-node-id="${leiding}"]`).click({ force: true });
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByTestId("onderdeel-schakelaar").click();
   await page.getByTestId("symbolen-openen").click();
   const dialoog = page.getByRole("dialog");
@@ -61,6 +64,8 @@ test("bouw vrije aftakkingen, bedien de plus met het toetsenbord en heropen", as
 
   await passend();
   await canvas.locator(`[data-node-id="${leiding}"]`).click({ force: true });
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByTestId("onderdeel-schakelaar").click();
   await toevoegen.click();
   await expect(labels("A3")).toHaveCount(1);

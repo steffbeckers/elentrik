@@ -4,11 +4,15 @@ import type {
   LichtschakelingDoel,
 } from "@elentrik/model";
 import { useEditorStore } from "~/stores/editor";
-import { invoegSpecificatie } from "~/editor/invoegen";
+import { differentieelBezetting, invoegSpecificatie } from "~/editor/invoegen";
 import { KEUZELIJST_IN_DIALOOG } from "~/editor/keuzelijst";
 import { invoegDoelKeuzes } from "~/editor/schema-navigatie";
 
-const props = defineProps<{ doelen: LichtschakelingDoel[] }>();
+/**
+ * `opBord`: de bestemming is het bord zelf (de aarding), zonder differentieel. De keuzelijst noemt
+ * een bord dan "Rechtstreeks op het bord" en de velden van een nieuw differentieel blijven weg.
+ */
+const props = defineProps<{ doelen: LichtschakelingDoel[]; opBord?: boolean }>();
 const doel = defineModel<LichtschakelingDoel | undefined>("doel");
 const instellingen = defineModel<DifferentieelInstellingen>("instellingen", {
   required: true,
@@ -22,15 +26,36 @@ const waarde = computed({
     doel.value = props.doelen.find((d) => `${d.soort}:${d.nodeId}` === value);
   },
 });
-const items = computed(() => store.document && store.analyse
-  ? invoegDoelKeuzes(store.document, store.analyse, props.doelen,
-    type => t(`editor.types.${type}`), soort => t(`editor.invoegen.doelen.${soort}`))
-  : []);
+/** De bezetting van een bestaand differentieel van maximaal 30 mA; een andere bestemming heeft er geen. */
+function bezettingVan(bestemming: LichtschakelingDoel | undefined) {
+  return store.document && bestemming?.soort === "bestaande-differentieel"
+    ? differentieelBezetting(store.document, bestemming.nodeId)
+    : undefined;
+}
+const items = computed(() => {
+  if (!store.document || !store.analyse) return [];
+  const bezettingen = new Map(props.doelen.map((d) => [`${d.soort}:${d.nodeId}`, bezettingVan(d)]));
+  return invoegDoelKeuzes(store.document, store.analyse, props.doelen,
+    type => t(`editor.types.${type}`),
+    soort => t(`editor.invoegen.doelen.${props.opBord && soort === "nieuw-op-bord" ? "op-bord" : soort}`),
+  ).map((keuze) => {
+    // "6 van 8 kringen": zo is te zien welk differentieel nog plaats heeft.
+    const bezetting = bezettingen.get(keuze.value);
+    return bezetting
+      ? { ...keuze, label: `${keuze.label} — ${t("editor.invoegen.bezetting", { aantal: bezetting.aantal, max: bezetting.max })}` }
+      : keuze;
+  });
+});
 const bestaandeDifferentieel = computed(() =>
   doel.value?.soort === "bestaande-differentieel"
     ? store.document?.nodes[doel.value.nodeId]
     : undefined,
 );
+/** Het gekozen differentieel zit vol: nog een kring erachter geeft een bevinding. */
+const volleBezetting = computed(() => {
+  const bezetting = bezettingVan(doel.value);
+  return bezetting?.vol ? bezetting : undefined;
+});
 </script>
 
 <template>
@@ -53,8 +78,17 @@ const bestaandeDifferentieel = computed(() =>
     {{ $t("editor.invoegen.hergebruik") }}
     {{ invoegSpecificatie(bestaandeDifferentieel) }}
   </p>
+  <p
+    v-if="volleBezetting"
+    role="status"
+    class="flex items-start gap-2 text-sm text-warning"
+    data-testid="differentieel-vol"
+  >
+    <UIcon name="i-lucide-triangle-alert" class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+    <span>{{ $t("editor.invoegen.differentieelVol", { aantal: volleBezetting.aantal, max: volleBezetting.max }) }}</span>
+  </p>
   <fieldset
-    v-if="doel?.soort === 'nieuw-op-bord'"
+    v-if="doel?.soort === 'nieuw-op-bord' && !opBord"
     class="space-y-3"
     :disabled="store.alleenLezen"
   >

@@ -13,6 +13,7 @@ import {
 } from "@elentrik/model";
 import { gebruikTestgebruiker } from "./hulp/inloggen";
 import { selecteerSchemaNode } from "./hulp/schema-selectie";
+import { toonPaneel } from "./hulp/paneel";
 
 gebruikTestgebruiker(test, { voorvoegsel: "elektricien-workflow" });
 type Project = { versie: number; document: InstallatieDocument };
@@ -133,6 +134,8 @@ test("template defaults to the board for the main RCD, reuses F and adds a new R
   // Het hoofddifferentieel is zelf geen bestemming: de standaard valt dan terug op het bord
   // (nieuwe kring met een nieuwe differentieel), en annuleren wijzigt niets.
   await selecteer(page, x.hoofd);
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByRole("button", { name: "Wasmachine", exact: true }).click();
   await expect(
     page.getByRole("group", { name: "Nieuwe differentieel (voorinstelling)" }),
@@ -143,6 +146,8 @@ test("template defaults to the board for the main RCD, reuses F and adds a new R
     .click();
   expect((await haal(request, x.id)).document).toEqual(x.document);
   await selecteer(page, x.f);
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByRole("button", { name: "Wasmachine", exact: true }).click();
   await expect(page.getByTestId("hergebruik-differentieel")).toContainText(
     "30 mA",
@@ -163,6 +168,8 @@ test("template defaults to the board for the main RCD, reuses F and adds a new R
     )
     .toBe(Object.keys(x.document.nodes).length);
   await selecteer(page, x.bord);
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByRole("button", { name: "Wasmachine", exact: true }).click();
   await expect(
     page.getByRole("group", { name: "Nieuwe differentieel (voorinstelling)" }),
@@ -182,7 +189,7 @@ test("manual circuit J persists in schema, circuit list and after reload", async
   const x = await seed(request);
   await page.goto(`/projecten/${x.id}`);
   await selecteer(page, x.kring);
-  await page.getByTestId("werkruimte-eigenschappen").click();
+  await toonPaneel(page, "eigenschappen");
   await page.getByTestId("veld-kringCode").fill("J");
   await page.getByTestId("veld-kringCode").blur();
   await expect
@@ -206,6 +213,8 @@ test("light assembly adds separate lamps to selected circuit and undo removes th
   const x = await seed(request);
   await page.goto(`/projecten/${x.id}`);
   await selecteer(page, x.kring);
+  // Het paneel volgde de selectie naar Eigenschappen; deze actie staat in Onderdelen.
+  await toonPaneel(page, "onderdelen");
   await page.getByTestId("lichtschakeling-openen").click();
   await page.getByTestId("licht-schakeling").click();
   await page

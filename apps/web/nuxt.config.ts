@@ -1,5 +1,28 @@
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname } from "node:path";
+import { bepaalVersie } from "./shared/semver";
+
+// Buiten het image (nuxt dev, e2e) zijn ELENTRIK_VERSIE en ELENTRIK_REVISIE leeg. Vul ze dan uit de
+// checkout: de komende versie met `-dev` (shared/semver.ts) en de commit. Hier en niet in een
+// Nitro-plugin: de server erft de omgeving van dit proces, en een wijziging van dit bestand herstart de
+// ontwikkelserver. ELENTRIK_VERSIE_UIT_GIT onthoudt dat de waarden van hier komen: bij een herstart na
+// een nieuwe commit worden ze dan ververst, een zelf gezette waarde blijft staan. De productiebuild
+// (NODE_ENV=production) raakt ze niet aan; het image zet ze zelf.
+if (process.env.NODE_ENV !== "production") {
+  const uitGit = process.env.ELENTRIK_VERSIE_UIT_GIT === "1";
+  const git = (args: string[]) =>
+    execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  try {
+    if (uitGit || (!process.env.ELENTRIK_REVISIE?.trim() && !process.env.ELENTRIK_VERSIE?.trim())) {
+      process.env.ELENTRIK_REVISIE = git(["rev-parse", "HEAD"]).trim();
+      process.env.ELENTRIK_VERSIE = `${bepaalVersie(git).versie}-dev`;
+      process.env.ELENTRIK_VERSIE_UIT_GIT = "1";
+    }
+  } catch {
+    // Geen git: geen versie.
+  }
+}
 
 // pdf.js haalt zijn binaire bronnen op via URL's; Nitro serveert ze rechtstreeks uit het pakket,
 // zodat er niets in de repo wordt gekopieerd en niets van een CDN komt.
@@ -80,7 +103,7 @@ export default defineNuxtConfig({
     // Taken (server/tasks) en hun planning: de uurlijkse inhaaltaak voor gemiste Stripe-meldingen en
     // het dagelijkse opruimen van de prullenbak en van verweesde bestanden (04:00, tijdzone van de container).
     experimental: { tasks: true },
-    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"], "0 4 * * *": ["bestanden:opruimen"] },
+    scheduledTasks: { "0 * * * *": ["abonnementen:inhalen"], "0 4 * * *": ["bestanden:opruimen"], "15 4 * * *": ["instance:opruimen"], "30 3 * * *": ["instance:ping"] },
     publicAssets: [
       { dir: "../plan-editor/dist", baseURL: "/plan-editor", maxAge: 0 },
       pdfjsBron("wasm"),
