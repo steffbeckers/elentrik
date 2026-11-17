@@ -473,6 +473,7 @@
     },
     "bevindingen": {
       "titel": "Bevindingen",
+      "nogMeer": "en nog 1 bevinding | en nog {n} bevindingen",
       "leeg": "Geen bevindingen binnen de uitgevoerde controles.",
       "ernst": {
         "fout": "Fouten",

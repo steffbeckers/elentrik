@@ -473,6 +473,7 @@
     },
     "bevindingen": {
       "titel": "Findings",
+      "nogMeer": "and 1 more finding | and {n} more findings",
       "leeg": "No findings within the checks performed.",
       "ernst": {
         "fout": "Errors",

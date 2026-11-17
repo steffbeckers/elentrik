@@ -473,6 +473,7 @@
     },
     "bevindingen": {
       "titel": "Constats",
+      "nogMeer": "et encore 1 constat | et encore {n} constats",
       "leeg": "Aucune constatation dans les contrôles effectués.",
       "ernst": {
         "fout": "Erreurs",

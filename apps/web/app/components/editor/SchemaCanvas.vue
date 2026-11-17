@@ -5,6 +5,8 @@ import CanvasBediening from "~/components/editor/CanvasBediening.vue";
 import { doelSoort, moetNegeren, sneltoets, WIDGET_SELECTOR } from "~/composables/sneltoetsen";
 import { useCanvasWeergave } from "~/composables/useCanvasWeergave";
 import MarkeringSymbool from "~/components/editor/MarkeringSymbool.vue";
+import MarkeringTip from "~/components/editor/MarkeringTip.vue";
+import { useMarkeringTip } from "~/composables/useMarkeringTip";
 import { actiebalkAfmeting, actiebalkPlaats } from "~/editor/actiebalk";
 import { markeringen as leidMarkeringenAf } from "~/editor/markeringen";
 import { kringBestemming } from "~/editor/invoegen";
@@ -23,6 +25,8 @@ const store = useEditorStore();
 const { t, te } = useI18n();
 const toast = useToast();
 const voerUit = useDocumentFoutMelding();
+
+const markeringTip = useMarkeringTip();
 
 const venster = useTemplateRef<HTMLElement>("venster");
 const basis = useTemplateRef<HTMLElement>("basis");
@@ -244,6 +248,12 @@ const selectieKaders = computed(() =>
     return vak ? [{ id, vak }] : [];
   }),
 );
+
+/** Een klik of tik op een markering kiest het onderdeel en zet de tooltip vast. */
+function kiesMarkering(event: Event, id: string): void {
+  store.selectie = [id];
+  markeringTip.toon(event, id, true);
+}
 
 // --- Actiebalk bij de selectie ----------------------------------------------
 
@@ -496,6 +506,13 @@ watchPostEffect(() => {
           :x="m.x"
           :y="m.y"
           :r="MARKERING_STRAAL_MM"
+          raakbaar
+          data-markering
+          class="pointer-events-auto cursor-help"
+          @pointerdown.stop
+          @pointerenter="markeringTip.wijsAan($event, m.id)"
+          @pointerleave="markeringTip.verlaat()"
+          @click.stop="kiesMarkering($event, m.id)"
         />
         <g
           v-for="a in plusknoppen"
@@ -540,6 +557,7 @@ watchPostEffect(() => {
           <UIcon :name="actie.icoon" class="size-4" />
         </button>
       </div>
+      <MarkeringTip :tip="markeringTip.tip.value" />
       <CanvasBediening :percentage="canvas.zoomPercentage.value" :kan-focus="!!gekozenNode" @zoom="canvas.zoom" @passend="maakPassend" @focus="focusSelectie" />
     </div>
 

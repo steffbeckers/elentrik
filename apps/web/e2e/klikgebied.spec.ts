@@ -37,10 +37,13 @@ test("een klik naast een leiding of naast een automaat selecteert dat onderdeel"
   await page.mouse.click(leiding.x + 2, leiding.y + leiding.h / 2);
   await expect(page.getByTestId(`selectie-${leiding.id}`)).toHaveCount(1);
   await expect(page.getByTestId("schema-nodekeuze")).toContainText("Leiding");
+  // Het paneel volgt de selectie: Eigenschappen in plaats van Onderdelen.
+  await expect(page.getByTestId("werkruimte-eigenschappen")).toHaveAttribute("aria-expanded", "true");
 
-  // Buiten elk raakvlak: de selectie verdwijnt.
+  // Buiten elk raakvlak: de selectie verdwijnt en Onderdelen staat er weer.
   await page.mouse.click(leiding.x - 40, leiding.y + leiding.h / 2);
   await expect(page.getByTestId(`selectie-${leiding.id}`)).toHaveCount(0);
+  await expect(page.getByTestId("werkruimte-onderdelen")).toHaveAttribute("aria-expanded", "true");
 
   // De hoek van het raakvlak van een ander onderdeel selecteert dat onderdeel.
   const ander = doelen.find((d) => d.id !== leiding.id && d.y > leiding.y + leiding.h)!;
@@ -100,4 +103,39 @@ test("de actiebalk bij de selectie: eigenschappen openen, verwijderen en een hel
   // Alles is ongedaan te maken.
   await page.getByTestId("ongedaan-maken").click();
   await expect(canvas.locator("[data-node-id]")).toHaveCount(aantal - 1);
+});
+
+test("een markering toont bij aanwijzen wat er over het onderdeel gemeld is", async ({ page, request }) => {
+  const antwoord = await request.post("/api/projecten", {
+    data: { naam: `Test Markeringtip ${Date.now()}`, klantnaam: "", stroomtype: "2x230V" },
+  });
+  expect(antwoord.status()).toBe(201);
+  const { id } = (await antwoord.json()) as { id: string };
+
+  await page.goto(`/projecten/${id}`);
+  await page.getByRole("button", { name: "Kring stopcontacten" }).click();
+  await bevestigSjabloonOpBord(page);
+  await page.getByRole("button", { name: "Passend maken" }).click();
+
+  // Elke contactdoos staat nog niet op een plan: een markering ter info. De bovenste markering
+  // hoort bij de laatste contactdoos van de kring.
+  const bovenste = await page.getByTestId("schema-canvas").locator('[data-testid^="markering-"][data-ernst="info"]').evaluateAll((tekens) =>
+    tekens.reduce((a, b) => (b.getBoundingClientRect().y < a.getBoundingClientRect().y ? b : a)).getAttribute("data-testid")!,
+  );
+  const markering = page.getByTestId(bovenste);
+  await expect(page.getByTestId("markering-tip")).toHaveCount(0);
+  await markering.hover();
+  await expect(page.getByTestId("markering-tip")).toContainText("is nog niet op een situatieplan geplaatst");
+  // De aanwijzer weg: de tooltip verdwijnt.
+  await page.mouse.move(5, 300);
+  await expect(page.getByTestId("markering-tip")).toHaveCount(0);
+
+  // Een klik zet de tooltip vast en kiest het onderdeel; een klik elders sluit hem.
+  await markering.click();
+  await expect(page.getByTestId("markering-tip")).toBeVisible();
+  await expect(page.getByTestId("schema-nodekeuze")).toContainText("Contactdoos");
+  await page.mouse.move(5, 300);
+  await expect(page.getByTestId("markering-tip")).toBeVisible();
+  await page.mouse.click(5, 300);
+  await expect(page.getByTestId("markering-tip")).toHaveCount(0);
 });
