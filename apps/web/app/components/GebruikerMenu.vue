@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Het menu van de ingelogde gebruiker: zijn naam, "Mijn organisatie", "Bedrijfsgegevens", "Abonnement" en
-// "Uitloggen", de taal als submenu en de themakeuze. Uitloggen gaat via de
+// "Uitloggen", de taal als submenu en de themakeuze. Onderaan de versie (korte git-sha), niet lokaal. Uitloggen gaat via de
 // sessie-store, dus eerst langs `voorVertrek`.
 import type { DropdownMenuItem } from "@nuxt/ui";
 import { taalKeuzes } from "~/sessie/taal";
@@ -14,6 +14,7 @@ const sessie = useSessieStore();
 const toast = useToast();
 const { taal, zetTaal } = useTaal();
 const colorMode = useColorMode();
+const versie = useVersie();
 const donker = computed(() => colorMode.value === "dark");
 
 const bezig = ref(false);
@@ -71,6 +72,7 @@ const items = computed<DropdownMenuItem[][]>(() => [
     },
   ],
   [{ label: t("menu.uitloggen"), icon: "i-lucide-log-out", slot: "uitloggen" as const, onSelect: uitloggen }],
+  ...(versie.value ? [[{ type: "label" as const, label: t("menu.versie", { versie: versie.value }), slot: "versie" as const }]] : []),
 ]);
 </script>
 
@@ -102,6 +104,9 @@ const items = computed<DropdownMenuItem[][]>(() => [
     </template>
     <template #taal-label>
       <span data-testid="taal-menu">{{ $t("taal.label") }}</span>
+    </template>
+    <template #versie-label>
+      <span class="font-mono text-xs font-normal text-dimmed" data-testid="app-versie">{{ $t("menu.versie", { versie }) }}</span>
     </template>
     <template #uitloggen-label>
       <span data-testid="uitloggen">{{ $t("menu.uitloggen") }}</span>

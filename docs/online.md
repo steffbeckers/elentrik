@@ -435,7 +435,7 @@ Test de proxy van binnenuit, met de hostnaam die Cloudflare meestuurt:
 sudo docker exec elentrik-proxy wget -qO- --header "Host: elentrik.app" http://127.0.0.1:8080/api/gezondheid
 ```
 
-Verwacht: `{"ok":true}`. Een andere hostnaam geeft een 404 van de proxy.
+Verwacht: `{"ok":true,"versie":"<korte sha>"}`. Een andere hostnaam geeft een 404 van de proxy.
 
 Test de gezondheidsroute van binnenuit (er is nog geen tunnel nodig):
 
@@ -443,7 +443,7 @@ Test de gezondheidsroute van binnenuit (er is nog geen tunnel nodig):
 sudo docker exec elentrik-web node -e "fetch('http://127.0.0.1:3000/api/gezondheid').then(r=>r.text().then(t=>console.log(r.status,t)))"
 ```
 
-Verwacht: `200 {"ok":true}`.
+Verwacht: `200 {"ok":true,"versie":"<korte sha>"}`.
 
 Voer nu **sectie 1, stap 4** uit (`docker network connect elentrik <cloudflared>`), als je dat nog niet deed, en
 controleer van buiten:
@@ -452,7 +452,7 @@ controleer van buiten:
 curl -s https://elentrik.app/api/gezondheid
 ```
 
-Verwacht: `{"ok":true}`. Een 502 van Cloudflare betekent meestal dat `cloudflared` niet aan het netwerk
+Verwacht: `{"ok":true,"versie":"<korte sha>"}`. Een 502 van Cloudflare betekent meestal dat `cloudflared` niet aan het netwerk
 `elentrik` hangt, of dat de public hostname een verkeerde URL heeft (die hoort `elentrik-proxy:8080` te zijn).
 
 Het is geen goed teken als `web` blijft herstarten: de app weigert in productie te starten bij een
@@ -1103,7 +1103,7 @@ sudo docker compose logs --tail 50 web-staging
 curl -s https://staging.elentrik.app/api/gezondheid
 ```
 
-Verwacht `{"ok":true}`; de pagina toont de balk "Staging: testomgeving, geen echte gegevens". Registreer een
+Verwacht `{"ok":true,"versie":"<korte sha>"}`; de pagina toont de balk "Staging: testomgeving, geen echte gegevens". Registreer een
 testaccount: de bevestigingsmail staat in `https://mailpit-staging.elentrik.app`. Mailpit bewaart hoogstens 500
 mails, in het geheugen: ze verdwijnen bij een herstart. Start `web-staging` niet op, dan noemt de log de **naam** van
 de variabele die niet klopt.

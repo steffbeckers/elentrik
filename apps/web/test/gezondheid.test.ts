@@ -1,9 +1,10 @@
-// GET /api/gezondheid: publiek, 200 { ok: true } met een bereikbare database, anders 503 { ok: false }
-// zonder foutdetails.
+// GET /api/gezondheid: publiek, 200 { ok: true, versie } met een bereikbare database, anders 503
+// { ok: false, versie } zonder foutdetails. `versie` is de korte sha uit ELENTRIK_REVISIE, of null.
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createApp, createRouter, toNodeListener, type EventHandler } from "h3";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { leesVersie } from "../shared/versie";
 import { type Db, zetDb } from "../server/db";
 import { maakTestDb } from "./db";
 
@@ -24,6 +25,10 @@ beforeAll(async () => {
   basis = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }, 120_000);
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 afterAll(async () => {
   await new Promise((klaar) => server?.close(klaar));
 });
@@ -33,7 +38,7 @@ describe("GET /api/gezondheid", () => {
     zetDb(db);
     const antwoord = await fetch(`${basis}/api/gezondheid`);
     expect(antwoord.status).toBe(200);
-    expect(await antwoord.json()).toEqual({ ok: true });
+    expect(await antwoord.json()).toEqual({ ok: true, versie: null });
   });
 
   test("met een database die gooit: 503 { ok: false }, zonder foutdetails", async () => {
@@ -45,7 +50,7 @@ describe("GET /api/gezondheid", () => {
     const antwoord = await fetch(`${basis}/api/gezondheid`);
     const tekst = await antwoord.text();
     expect(antwoord.status).toBe(503);
-    expect(JSON.parse(tekst)).toEqual({ ok: false });
+    expect(JSON.parse(tekst)).toEqual({ ok: false, versie: null });
     expect(tekst).not.toContain("geheim-xyz");
     expect(tekst).not.toContain("ECONNREFUSED");
   });
@@ -54,6 +59,26 @@ describe("GET /api/gezondheid", () => {
     zetDb({ execute: () => new Promise(() => {}) } as unknown as Db);
     const antwoord = await fetch(`${basis}/api/gezondheid`);
     expect(antwoord.status).toBe(503);
-    expect(await antwoord.json()).toEqual({ ok: false });
+    expect(await antwoord.json()).toEqual({ ok: false, versie: null });
   }, 15_000);
+
+  test("met ELENTRIK_REVISIE: de korte sha als versie", async () => {
+    zetDb(db);
+    vi.stubEnv("ELENTRIK_REVISIE", "025fc73b1e2d3c4f5a6b7c8d9e0f112233445566");
+    const antwoord = await fetch(`${basis}/api/gezondheid`);
+    expect(await antwoord.json()).toEqual({ ok: true, versie: "025fc73" });
+  });
+});
+
+describe("leesVersie", () => {
+  test.each([
+    ["025FC73B1E2D3C4F5A6B7C8D9E0F112233445566", "025fc73"],
+    [" 025fc73 ", "025fc73"],
+    ["", null],
+    [undefined, null],
+    ["abc", null],
+    ["geen-sha-maar-tekst", null],
+  ] as const)("%j -> %j", (waarde, verwacht) => {
+    expect(leesVersie({ ELENTRIK_REVISIE: waarde })).toBe(verwacht);
+  });
 });

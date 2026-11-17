@@ -1503,6 +1503,7 @@
     "bedrijfsgegevens": "Données de l'entreprise",
     "abonnement": "Abonnement",
     "uitloggen": "Se déconnecter",
+    "versie": "Version {versie}",
     "wisselenMislukt": "Le changement d'organisation n'a pas abouti.",
     "uitloggenMislukt": "La déconnexion n'a pas abouti.",
     "organisatieKeuzeMet": "Choisir une organisation : {organisatie}"

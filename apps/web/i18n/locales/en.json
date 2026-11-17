@@ -1503,6 +1503,7 @@
     "bedrijfsgegevens": "Company details",
     "abonnement": "Subscription",
     "uitloggen": "Sign out",
+    "versie": "Version {versie}",
     "wisselenMislukt": "Switching organisation did not work.",
     "uitloggenMislukt": "Signing out did not work.",
     "organisatieKeuzeMet": "Choose organisation: {organisatie}"
