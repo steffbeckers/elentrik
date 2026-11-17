@@ -603,6 +603,19 @@ describe("symbolen voor punten, leiding en onderbord", () => {
   });
 
   describe("toestel", () => {
+    test.each(ToestelsoortSchema.options)("%s: als laatste punt geen lijntje boven het symbool, wel de aansluiting onderaan", (soort) => {
+      const doorlopend = tekenSymbool(toestel(soort));
+      const laatste = tekenSymbool(toestel(soort), { einde: true });
+      // Zonder `einde` loopt het symbool door tot `uit`, voor het volgende punt van de kring.
+      expect(raakt(doorlopend, doorlopend.maat.uit)).toBe(true);
+      // Als laatste punt is er geen leiding verder: niets raakt `uit`, de aansluiting `in` blijft.
+      expect(raakt(laatste, laatste.maat.uit)).toBe(false);
+      expect(raakt(laatste, laatste.maat.in)).toBe(true);
+      // De maat blijft dezelfde, zodat de opmaak van het schema niet verschuift.
+      expect(laatste.maat).toEqual(doorlopend.maat);
+      expect(isGoedgevormd(laatste)).toBe(true);
+    });
+
     type Element = { naam: string; a: Map<string, string> };
     const elementen = (svg: string): Element[] =>
       [...svg.matchAll(/<(line|circle|rect|path|text)\b([^>]*)>/g)].map(([, naam = "", tekst = ""]) => ({
